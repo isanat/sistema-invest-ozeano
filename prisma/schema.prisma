@@ -1,7 +1,7 @@
 // ============================================================================
-// MINING PROTOCOL - PRODUCTION SCHEMA (SQLite)
+// MINING PROTOCOL - PRODUCTION SCHEMA (PostgreSQL)
 // ============================================================================
-// USDT primary currency. All financial values as String (SQLite-safe).
+// USDT primary currency. All financial values as String (precision-safe).
 // ============================================================================
 
 generator client {
@@ -9,7 +9,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 

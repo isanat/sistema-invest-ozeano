@@ -88,8 +88,8 @@ export async function PUT(request: NextRequest) {
           },
         });
 
-        // Credit user balance atomically using raw SQL (SQLite-compatible)
-        await tx.$executeRaw`UPDATE "User" SET balance = CAST(CAST(balance AS REAL) + ${d(investment.amount)} AS TEXT), "totalInvested" = CAST(CAST("totalInvested" AS REAL) + ${d(investment.amount)} AS TEXT) WHERE id = ${investment.userId}`;
+        // Credit user balance atomically using raw SQL (PostgreSQL)
+        await tx.$executeRaw`UPDATE "User" SET balance = (CAST(balance AS NUMERIC) + ${d(investment.amount)})::text, "totalInvested" = (CAST("totalInvested" AS NUMERIC) + ${d(investment.amount)})::text WHERE id = ${investment.userId}`;
 
         await tx.user.update({
           where: { id: investment.userId },

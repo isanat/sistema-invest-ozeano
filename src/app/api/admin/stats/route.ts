@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    // Deposits - fetch and sum manually since SQLite stores financial values as Strings
+    // Deposits - fetch and sum manually since financial values are stored as Strings
     const allDeposits = await db.investment.findMany({
       where: { type: 'deposit' },
       select: { amount: true, status: true },

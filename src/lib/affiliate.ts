@@ -377,7 +377,7 @@ async function processRevenuePoolCommission(
         },
       });
 
-      await tx.$executeRaw`UPDATE "User" SET "affiliateBalance" = CAST(CAST("affiliateBalance" AS REAL) + ${commissionAmount} AS TEXT), "totalAffiliateEarnings" = CAST(CAST("totalAffiliateEarnings" AS REAL) + ${commissionAmount} AS TEXT) WHERE id = ${referrer.id}`;
+      await tx.$executeRaw`UPDATE "User" SET "affiliateBalance" = (CAST("affiliateBalance" AS NUMERIC) + ${commissionAmount})::text, "totalAffiliateEarnings" = (CAST("totalAffiliateEarnings" AS NUMERIC) + ${commissionAmount})::text WHERE id = ${referrer.id}`;
 
       await tx.transaction.create({
         data: {
@@ -514,7 +514,7 @@ async function walkUpReferralChain(
         },
       });
 
-      await tx.$executeRaw`UPDATE "User" SET "affiliateBalance" = CAST(CAST("affiliateBalance" AS REAL) + ${scaledCommission} AS TEXT), "totalAffiliateEarnings" = CAST(CAST("totalAffiliateEarnings" AS REAL) + ${scaledCommission} AS TEXT) WHERE id = ${ref.id}`;
+      await tx.$executeRaw`UPDATE "User" SET "affiliateBalance" = (CAST("affiliateBalance" AS NUMERIC) + ${scaledCommission})::text, "totalAffiliateEarnings" = (CAST("totalAffiliateEarnings" AS NUMERIC) + ${scaledCommission})::text WHERE id = ${ref.id}`;
 
       const modeLabel = isRentalBonus
         ? `Bônus locação (${ref.percentage}% do bônus)`

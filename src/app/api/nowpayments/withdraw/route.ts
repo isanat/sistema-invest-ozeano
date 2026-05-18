@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
       }
 
       // Deduct balance atomically
-      await tx.$executeRaw`UPDATE "User" SET balance = CAST(CAST(balance AS REAL) - ${amount} AS TEXT) WHERE id = ${session.userId} AND CAST(balance AS REAL) >= ${amount}`;
+      await tx.$executeRaw`UPDATE "User" SET balance = (CAST(balance AS NUMERIC) - ${amount})::text WHERE id = ${session.userId} AND CAST(balance AS NUMERIC) >= ${amount}`;
 
       // Verify deduction
       const updatedUser = await tx.user.findUnique({ where: { id: session.userId } });

@@ -106,7 +106,7 @@ export async function requireAdmin(): Promise<SessionPayload> {
   return session;
 }
 
-// ============ Decimal Helpers (for SQLite string storage) ============
+// ============ Decimal Helpers (for PostgreSQL string storage) ============
 
 export function d(val: string | number | null | undefined): number {
   if (val === null || val === undefined) return 0;

@@ -42,7 +42,7 @@ export async function GET() {
     ]);
 
     // Dynamic stats from real data
-    // Note: Can't use aggregate/_sum on String fields in SQLite, so we fetch and sum manually
+    // Note: Can't use aggregate/_sum on String fields, so we fetch and sum manually
     const [
       totalUsers,
       activeRentals,

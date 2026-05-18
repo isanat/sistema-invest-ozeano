@@ -103,7 +103,8 @@ export async function PUT(request: NextRequest) {
 
     // Use transaction with row lock for balance changes to create audit trail and prevent race conditions
     const result = await db.$transaction(async (tx) => {
-      // SQLite: serialized transactions provide sufficient concurrency protection
+      // PostgreSQL: acquire row-level lock to prevent concurrent modifications
+      await tx.$queryRaw`SELECT 1 FROM "User" WHERE id = ${id} FOR UPDATE`;
       const lockedUser = await tx.user.findUnique({ where: { id } });
       if (!lockedUser) throw new Error('Usuário não encontrado');
 

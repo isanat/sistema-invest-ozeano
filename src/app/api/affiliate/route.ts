@@ -289,7 +289,7 @@ export async function GET(request: NextRequest) {
             if (badge && badge.rewardType === 'cash') {
               const rewardValue = d(badge.rewardValue);
               if (rewardValue > 0) {
-                await db.$executeRaw`UPDATE "User" SET "affiliateBalance" = CAST(CAST("affiliateBalance" AS REAL) + ${rewardValue} AS TEXT), "totalAffiliateEarnings" = CAST(CAST("totalAffiliateEarnings" AS REAL) + ${rewardValue} AS TEXT) WHERE id = ${session.userId}`;
+                await db.$executeRaw`UPDATE "User" SET "affiliateBalance" = (CAST("affiliateBalance" AS NUMERIC) + ${rewardValue})::text, "totalAffiliateEarnings" = (CAST("totalAffiliateEarnings" AS NUMERIC) + ${rewardValue})::text WHERE id = ${session.userId}`;
                 await db.transaction.create({
                   data: {
                     userId: session.userId,
@@ -474,7 +474,7 @@ export async function POST(request: NextRequest) {
       if (milestone.rewardType === 'cash') {
         const rewardValue = d(milestone.rewardValue);
         if (rewardValue > 0) {
-          await db.$executeRaw`UPDATE "User" SET "affiliateBalance" = CAST(CAST("affiliateBalance" AS REAL) + ${rewardValue} AS TEXT), "totalAffiliateEarnings" = CAST(CAST("totalAffiliateEarnings" AS REAL) + ${rewardValue} AS TEXT) WHERE id = ${session.userId}`;
+          await db.$executeRaw`UPDATE "User" SET "affiliateBalance" = (CAST("affiliateBalance" AS NUMERIC) + ${rewardValue})::text, "totalAffiliateEarnings" = (CAST("totalAffiliateEarnings" AS NUMERIC) + ${rewardValue})::text WHERE id = ${session.userId}`;
 
           await db.transaction.create({
             data: {

@@ -332,3 +332,81 @@ Added NowPayments configuration variables:
 - Enable NowPayments from admin panel after credentials are set
 - Webhook URL: `{YOUR_DOMAIN}/api/nowpayments/webhook`
 - JWT tokens expire every 5 minutes — auto-refresh handled by service
+
+## Task 4 - PostgreSQL Migration (Completed)
+
+**Agent**: Database Migration Specialist  
+**Date**: 2025-06-05
+
+### Summary
+Migrated the mining-protocol project from SQLite back to PostgreSQL for production deployment with Coolify. Reversed all SQLite-specific patterns from Task 1, added Docker production deployment support, and added PostgreSQL-specific concurrency features (FOR UPDATE locks, pg_advisory_lock).
+
+### Changes Made
+
+#### 1. Prisma Schema (`prisma/schema.prisma`)
+- Changed `provider` from `"sqlite"` to `"postgresql"`
+- Updated header comment from "SQLite" to "PostgreSQL"
+- All models, relations, indexes, and constraints remain identical
+- All String fields storing decimal values remain as String (designed for precision)
+
+#### 2. Raw SQL Query Reversals (SQLite → PostgreSQL)
+
+| Pattern | SQLite (current) | PostgreSQL (restored) |
+|---------|-----------------|----------------------|
+| Type cast in arithmetic | `CAST(x AS REAL)` | `CAST(x AS NUMERIC)` |
+| Text result cast | `) AS TEXT)` | `)::text` |
+| Row-level lock | Removed | `SELECT 1 FROM "User" WHERE id = $id FOR UPDATE` |
+| Advisory lock | Removed | `SELECT pg_advisory_lock(12345)` / `pg_advisory_unlock(12345)` |
+| Boolean literal | `hasInvested = 1` | `hasInvested = true` |
+
+**Full replacement example:**
+- Before: `CAST(CAST(balance AS REAL) - ${amount} AS TEXT)`
+- After: `(CAST(balance AS NUMERIC) - ${amount})::text`
+
+#### 3. Files Modified
+
+| File | Changes |
+|------|---------|
+| `prisma/schema.prisma` | Changed provider to postgresql |
+| `src/lib/affiliate.ts` | Replaced 2 SQLite CAST patterns with PostgreSQL `CAST AS NUMERIC)::text` |
+| `src/app/api/admin/affiliate-withdrawals/route.ts` | Replaced 2 SQLite CAST patterns (totalWithdrawn and affiliateBalance refund) |
+| `src/app/api/admin/deposits/route.ts` | Replaced SQLite CAST pattern (balance + totalInvested credit) |
+| `src/app/api/rentals/route.ts` | Added `FOR UPDATE` row lock, replaced SQLite CAST pattern (balance deduction) |
+| `src/app/api/nowpayments/webhook/route.ts` | Replaced 3 SQLite CAST patterns, fixed `hasInvested = 1` → `hasInvested = true` |
+| `src/app/api/nowpayments/withdraw/route.ts` | Replaced SQLite CAST pattern (balance deduction) |
+| `src/app/api/affiliate/route.ts` | Replaced 2 SQLite CAST patterns (badge reward and milestone reward) |
+| `src/app/api/affiliate/withdraw/route.ts` | Added `FOR UPDATE` row lock, replaced SQLite CAST pattern (affiliateBalance deduction) |
+| `src/app/api/cron/distribute/route.ts` | Added `pg_advisory_lock(12345)` / `pg_advisory_unlock(12345)` with `lockReleased` tracking, replaced SQLite CAST pattern (balance + totalMined credit) |
+| `src/app/api/withdraw/route.ts` | Added `FOR UPDATE` row lock, replaced SQLite CAST pattern (balance deduction) |
+| `src/app/api/admin/users/route.ts` | Added `FOR UPDATE` row lock for admin user updates |
+| `src/lib/auth.ts` | Updated comment from "SQLite string storage" to "PostgreSQL string storage" |
+| `src/app/api/admin/stats/route.ts` | Updated comment removing SQLite reference |
+| `src/app/api/landing/route.ts` | Updated comment removing SQLite reference |
+
+#### 4. Docker Production Deployment
+
+| File | Purpose |
+|------|---------|
+| `Dockerfile` | Multi-stage production build: node:20-alpine base, bun for deps, prisma generate, next build with standalone output, minimal runner image |
+| `.dockerignore` | Excludes node_modules, .next, db/, .env, logs, IDE files from Docker context |
+
+#### 5. Package.json Updates
+- `start` script: Changed from `bun .next/standalone/server.js` to `node .next/standalone/server.js` (Node.js for production Docker)
+- Added `db:migrate:deploy` script for production PostgreSQL migrations
+- Added `docker:build` and `docker:run` helper scripts
+
+#### 6. db.ts
+- No changes needed — PrismaClient works the same with both SQLite and PostgreSQL
+
+#### 7. Verification
+- `bun run lint` — No errors (clean pass)
+- Grep confirmed zero remaining `AS REAL`, `AS TEXT`, or `sqlite` references in `src/`
+- All 15 raw SQL queries now use PostgreSQL `CAST AS NUMERIC)::text` pattern
+- All 4 transaction-critical routes have `FOR UPDATE` row-level locks
+- Cron distribute has `pg_advisory_lock/unlock` with proper error handling
+
+#### 8. Production Deployment Notes
+- Set `DATABASE_URL` in Coolify environment variables (PostgreSQL connection string)
+- Run `prisma migrate deploy` or `prisma db push` against the PostgreSQL database
+- The `hasInvested = true` boolean is now correct for PostgreSQL (was `= 1` for SQLite)
+- Advisory lock key 12345 prevents concurrent cron distribution runs

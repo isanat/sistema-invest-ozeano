@@ -192,7 +192,7 @@ async function processPaymentWebhook(
     // Credit user balance
     await db.$transaction(async (tx) => {
       // Add to user balance
-      await tx.$executeRaw`UPDATE "User" SET balance = CAST(CAST(balance AS REAL) + ${userAmount} AS TEXT), "totalInvested" = CAST(CAST("totalInvested" AS REAL) + ${userAmount} AS TEXT), "hasInvested" = 1 WHERE id = ${deposit.userId}`;
+      await tx.$executeRaw`UPDATE "User" SET balance = (CAST(balance AS NUMERIC) + ${userAmount})::text, "totalInvested" = (CAST("totalInvested" AS NUMERIC) + ${userAmount})::text, "hasInvested" = true WHERE id = ${deposit.userId}`;
 
       // Update investment status if linked
       if (deposit.investmentId) {
@@ -327,7 +327,7 @@ async function processPayoutWebhook(
     }
 
     // Update user totalWithdrawn
-    await db.$executeRaw`UPDATE "User" SET "totalWithdrawn" = CAST(CAST("totalWithdrawn" AS REAL) + ${d(payout.amount)} AS TEXT) WHERE id = ${payout.userId}`;
+    await db.$executeRaw`UPDATE "User" SET "totalWithdrawn" = (CAST("totalWithdrawn" AS NUMERIC) + ${d(payout.amount)})::text WHERE id = ${payout.userId}`;
 
   } else if (payoutStatus === 'FAILED' || payoutStatus === 'REJECTED') {
     // Refund the user's balance since payout failed
@@ -335,7 +335,7 @@ async function processPayoutWebhook(
 
     await db.$transaction(async (tx) => {
       // Refund balance
-      await tx.$executeRaw`UPDATE "User" SET balance = CAST(CAST(balance AS REAL) + ${refundAmount} AS TEXT), "totalWithdrawn" = CAST(CAST("totalWithdrawn" AS REAL) - ${d(payout.amount)} AS TEXT) WHERE id = ${payout.userId}`;
+      await tx.$executeRaw`UPDATE "User" SET balance = (CAST(balance AS NUMERIC) + ${refundAmount})::text, "totalWithdrawn" = (CAST("totalWithdrawn" AS NUMERIC) - ${d(payout.amount)})::text WHERE id = ${payout.userId}`;
 
       // Update investment
       if (payout.investmentId) {

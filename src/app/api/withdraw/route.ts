@@ -32,7 +32,8 @@ export async function POST(request: NextRequest) {
 
     // Use transaction for atomicity - deduct balance immediately with row lock
     const result = await db.$transaction(async (tx) => {
-      // SQLite: serialized transactions provide sufficient concurrency protection
+      // PostgreSQL: acquire row-level lock to prevent concurrent balance modifications
+      await tx.$queryRaw`SELECT 1 FROM "User" WHERE id = ${session.userId} FOR UPDATE`;
 
       const user = await tx.user.findUnique({ where: { id: session.userId } });
       if (!user) throw new Error('User not found');
@@ -47,8 +48,8 @@ export async function POST(request: NextRequest) {
       const fee = data.amount * (feePct / 100);
       const netAmount = data.amount - fee;
 
-      // Deduct balance atomically using SQL (avoids float precision loss)
-      await tx.$executeRaw`UPDATE "User" SET balance = CAST(CAST(balance AS REAL) - ${data.amount} AS TEXT) WHERE id = ${session.userId} AND CAST(balance AS REAL) >= ${data.amount}`;
+      // Deduct balance atomically using SQL (PostgreSQL)
+      await tx.$executeRaw`UPDATE "User" SET balance = (CAST(balance AS NUMERIC) - ${data.amount})::text WHERE id = ${session.userId} AND CAST(balance AS NUMERIC) >= ${data.amount}`;
       // Verify the deduction actually happened (balance was sufficient)
       const updatedUser = await tx.user.findUnique({ where: { id: session.userId } });
       if (d(updatedUser!.balance) === currentBalance) {

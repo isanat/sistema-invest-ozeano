@@ -78,9 +78,13 @@ export async function POST(request: NextRequest) {
 
     console.log('[CRON] Starting daily mining profit distribution...', new Date().toISOString());
 
-    // SQLite: advisory locks not available; idempotency check on MiningHistory
-    // prevents double-distribution. SQLite's serialized access provides
-    // sufficient concurrency protection for single-process deployments.
+    // PostgreSQL: acquire advisory lock to prevent concurrent cron execution
+    let lockReleased = false;
+    try {
+      await db.$queryRaw`SELECT pg_advisory_lock(12345)`;
+    } catch (lockErr) {
+      console.warn('[CRON] Could not acquire advisory lock, proceeding with caution:', lockErr);
+    }
 
     // Get all active rentals
     const activeRentals = await db.miningRental.findMany({
@@ -223,8 +227,8 @@ export async function POST(request: NextRequest) {
             },
           });
 
-          // Credit user balance atomically using raw SQL (SQLite-compatible)
-          await tx.$executeRaw`UPDATE "User" SET balance = CAST(CAST(balance AS REAL) + ${dailyProfit} AS TEXT), "totalMined" = CAST(CAST("totalMined" AS REAL) + ${dailyProfit} AS TEXT) WHERE id = ${rental.userId}`;
+          // Credit user balance atomically using raw SQL (PostgreSQL)
+          await tx.$executeRaw`UPDATE "User" SET balance = (CAST(balance AS NUMERIC) + ${dailyProfit})::text, "totalMined" = (CAST("totalMined" AS NUMERIC) + ${dailyProfit})::text WHERE id = ${rental.userId}`;
 
           // Create transaction record
           await tx.transaction.create({
@@ -263,6 +267,16 @@ export async function POST(request: NextRequest) {
     const summary = `Processed: ${processed}, Skipped: ${skipped}, Completed: ${completed}, Total: $${totalDistributed.toFixed(2)}`;
     console.log(`[CRON] Distribution complete: ${summary}`);
 
+    // Release PostgreSQL advisory lock
+    if (!lockReleased) {
+      try {
+        await db.$queryRaw`SELECT pg_advisory_unlock(12345)`;
+        lockReleased = true;
+      } catch (unlockErr) {
+        console.warn('[CRON] Could not release advisory lock:', unlockErr);
+      }
+    }
+
     return apiSuccess({
       message: `Distribuição concluída: ${processed} locações processadas`,
       processed,
@@ -274,6 +288,12 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('[CRON] Fatal error:', error);
+    // Release PostgreSQL advisory lock on error
+    try {
+      await db.$queryRaw`SELECT pg_advisory_unlock(12345)`;
+    } catch (unlockErr) {
+      console.warn('[CRON] Could not release advisory lock on error:', unlockErr);
+    }
     return handleApiError(error);
   }
 }
