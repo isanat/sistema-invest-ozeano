@@ -618,3 +618,21 @@ Stage Summary:
 - All 3 user financial pages now properly display data from the correct sources (Investment + NowPayments models)
 - Admin NowPayments dashboard added with full visibility into deposits, payouts, wallets, splits, webhooks
 - Deployment to flashminings.com triggered and building
+
+---
+Task ID: 10
+Agent: Main Agent
+Task: Fix Select.Item empty string value error
+
+Work Log:
+- Identified the root cause: 3 instances of `<SelectItem value="">` in page.tsx (lines 3056, 3237, 3401)
+- Radix UI Select component does not allow empty string as a value prop - it's reserved for clearing the selection
+- Changed all 3 empty string values to `"all"`: Todas/Todos filter options
+- Updated state initializers: `depositFilter`, `payoutFilter`, `statementFilter` all changed from `''` to `'all'`
+- Updated API fetch logic to treat `'all'` the same as no filter (skip adding query param)
+- Ran lint - clean pass
+
+Stage Summary:
+- Fixed the crash: `A <Select.Item /> must have a value prop that is not an empty string` ✅
+- All 3 filter Select components now use value="all" instead of value="" ✅
+- Filter logic properly handles the "all" case by not appending query params ✅

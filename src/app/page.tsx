@@ -527,9 +527,9 @@ export default function MiningProtocol() {
   const [depositsLoading, setDepositsLoading] = useState(false);
   const [payoutsLoading, setPayoutsLoading] = useState(false);
   const [statementLoading, setStatementLoading] = useState(false);
-  const [depositFilter, setDepositFilter] = useState<string>('');
-  const [payoutFilter, setPayoutFilter] = useState<string>('');
-  const [statementFilter, setStatementFilter] = useState<string>('');
+  const [depositFilter, setDepositFilter] = useState<string>('all');
+  const [payoutFilter, setPayoutFilter] = useState<string>('all');
+  const [statementFilter, setStatementFilter] = useState<string>('all');
 
   // Admin NowPayments state
   const [adminNpDeposits, setAdminNpDeposits] = useState<any[]>([]);
@@ -664,7 +664,7 @@ export default function MiningProtocol() {
   const fetchUserDeposits = async () => {
     setDepositsLoading(true);
     try {
-      const data = await api<{ success: boolean; deposits: any[]; stats: any }>(`/api/nowpayments/user-deposits${depositFilter ? `?status=${depositFilter}` : ''}`);
+      const data = await api<{ success: boolean; deposits: any[]; stats: any }>(`/api/nowpayments/user-deposits${depositFilter && depositFilter !== 'all' ? `?status=${depositFilter}` : ''}`);
       setUserDeposits(data.deposits || []);
       setUserDepositStats(data.stats || null);
     } catch (e) {
@@ -678,7 +678,7 @@ export default function MiningProtocol() {
   const fetchUserPayouts = async () => {
     setPayoutsLoading(true);
     try {
-      const data = await api<{ success: boolean; withdrawals: any[]; stats: any }>(`/api/nowpayments/user-payouts${payoutFilter ? `?status=${payoutFilter}` : ''}`);
+      const data = await api<{ success: boolean; withdrawals: any[]; stats: any }>(`/api/nowpayments/user-payouts${payoutFilter && payoutFilter !== 'all' ? `?status=${payoutFilter}` : ''}`);
       setUserPayouts(data.withdrawals || []);
       setUserPayoutStats(data.stats || null);
     } catch (e) {
@@ -693,7 +693,7 @@ export default function MiningProtocol() {
     setStatementLoading(true);
     try {
       const params = new URLSearchParams();
-      if (statementFilter) params.set('type', statementFilter);
+      if (statementFilter && statementFilter !== 'all') params.set('type', statementFilter);
       const data = await api<{ success: boolean; statement: any[]; summary: any }>(`/api/nowpayments/statement${params.toString() ? `?${params.toString()}` : ''}`);
       setStatementData(data.statement || []);
       setStatementSummary(data.summary || null);
@@ -3053,7 +3053,7 @@ export default function MiningProtocol() {
                             <SelectValue placeholder="Filtrar" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="">Todas</SelectItem>
+                            <SelectItem value="all">Todas</SelectItem>
                             <SelectItem value="pending">Pendentes</SelectItem>
                             <SelectItem value="confirmed">Confirmadas</SelectItem>
                             <SelectItem value="rejected">Rejeitadas</SelectItem>
@@ -3234,7 +3234,7 @@ export default function MiningProtocol() {
                             <SelectValue placeholder="Filtrar" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="">Todos</SelectItem>
+                            <SelectItem value="all">Todos</SelectItem>
                             <SelectItem value="pending">Pendentes</SelectItem>
                             <SelectItem value="confirmed">Concluídos</SelectItem>
                             <SelectItem value="rejected">Rejeitados</SelectItem>
@@ -3398,7 +3398,7 @@ export default function MiningProtocol() {
                             <SelectValue placeholder="Filtrar tipo" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="">Todos</SelectItem>
+                            <SelectItem value="all">Todos</SelectItem>
                             <SelectItem value="deposit">Depósitos</SelectItem>
                             <SelectItem value="withdrawal">Saques</SelectItem>
                             <SelectItem value="mining_profit">Lucros</SelectItem>
