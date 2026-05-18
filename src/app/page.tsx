@@ -2037,6 +2037,9 @@ export default function MiningProtocol() {
     { id: 'home', label: t('sidebar.home'), icon: Home },
     { id: 'mineradoras', label: t('sidebar.miners'), icon: Pickaxe },
     { id: 'alugueis', label: t('dashboard.activeRentals'), icon: Clock },
+    { id: 'faturas', label: 'Faturas', icon: Banknote },
+    { id: 'saques', label: 'Saques', icon: HandCoins },
+    { id: 'extrato', label: 'Extrato', icon: FileText },
     { id: 'historico', label: t('sidebar.history'), icon: History },
     { id: 'afiliados', label: t('sidebar.affiliates'), icon: Users },
     { id: 'perfil', label: t('sidebar.profile'), icon: User },
@@ -2931,6 +2934,376 @@ export default function MiningProtocol() {
                         )}
                       </>
                     )}
+                  </div>
+                )}
+
+                {/* ====== FATURAS (DEPÓSITOS) TAB ====== */}
+                {activeTab === 'faturas' && (
+                  <div className="space-y-6">
+                    <div className="flex items-center justify-between">
+                      <h2 className="text-xl sm:text-2xl font-bold">Faturas de Depósito</h2>
+                      <Button className="bg-emerald-600 hover:bg-emerald-700" onClick={() => setDepositDialog(true)}>
+                        <ArrowDownLeft className="h-4 w-4 mr-2" /> Novo Depósito
+                      </Button>
+                    </div>
+
+                    {/* Summary Cards */}
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                      <Card className="bg-zinc-900 border-zinc-800">
+                        <CardContent className="p-4">
+                          <p className="text-zinc-400 text-xs">Total Depositado</p>
+                          <p className="text-emerald-400 font-bold text-lg">${fmtUSDT(user?.balance ? (d(user.totalInvested)).toString() : '0')}</p>
+                        </CardContent>
+                      </Card>
+                      <Card className="bg-zinc-900 border-zinc-800">
+                        <CardContent className="p-4">
+                          <p className="text-zinc-400 text-xs">Pendente</p>
+                          <p className="text-amber-400 font-bold text-lg">
+                            ${transactions.filter(t => t.type === 'deposit' && t.status === 'pending').reduce((s, t) => s + d(t.amount), 0).toFixed(2)}
+                          </p>
+                        </CardContent>
+                      </Card>
+                      <Card className="bg-zinc-900 border-zinc-800">
+                        <CardContent className="p-4">
+                          <p className="text-zinc-400 text-xs">Confirmados</p>
+                          <p className="text-white font-bold text-lg">
+                            ${transactions.filter(t => t.type === 'deposit' && t.status === 'approved').reduce((s, t) => s + d(t.amount), 0).toFixed(2)}
+                          </p>
+                        </CardContent>
+                      </Card>
+                      <Card className="bg-zinc-900 border-zinc-800">
+                        <CardContent className="p-4">
+                          <p className="text-zinc-400 text-xs">Total Faturas</p>
+                          <p className="text-white font-bold text-lg">{transactions.filter(t => t.type === 'deposit').length}</p>
+                        </CardContent>
+                      </Card>
+                    </div>
+
+                    {/* Deposits List */}
+                    <Card className="bg-zinc-900 border-zinc-800">
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-base">Todas as Faturas</CardTitle>
+                      </CardHeader>
+                      <CardContent className="p-0">
+                        {(() => {
+                          const deposits = transactions.filter(t => t.type === 'deposit' || t.type === 'deposit_nowpayments');
+                          if (deposits.length === 0) {
+                            return (
+                              <div className="text-center py-12">
+                                <Banknote className="h-12 w-12 text-zinc-600 mx-auto mb-3" />
+                                <p className="text-zinc-400">Nenhuma fatura encontrada</p>
+                                <p className="text-zinc-500 text-sm mt-1">Faça seu primeiro depósito para começar a minerar</p>
+                              </div>
+                            );
+                          }
+                          return (
+                            <div className="divide-y divide-zinc-800 max-h-[600px] overflow-y-auto">
+                              {deposits.map(tx => (
+                                <div key={tx.id} className="flex items-center justify-between gap-3 p-3 sm:p-4 hover:bg-zinc-800/30">
+                                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                                      tx.status === 'approved' ? 'bg-emerald-500/10 text-emerald-400' :
+                                      tx.status === 'pending' ? 'bg-amber-500/10 text-amber-400' :
+                                      tx.status === 'rejected' ? 'bg-red-500/10 text-red-400' :
+                                      'bg-zinc-500/10 text-zinc-400'
+                                    }`}>
+                                      <ArrowDownLeft className="h-5 w-5" />
+                                    </div>
+                                    <div className="min-w-0">
+                                      <div className="font-medium text-sm truncate">{tx.description}</div>
+                                      <div className="text-xs text-zinc-400">{fmtDateTime(tx.createdAt)}</div>
+                                    </div>
+                                  </div>
+                                  <div className="text-right flex-shrink-0">
+                                    <div className="text-emerald-400 font-semibold text-sm">+${fmtUSDT(tx.amount)}</div>
+                                    <Badge className={`text-[10px] px-1.5 py-0 ${
+                                      tx.status === 'approved' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' :
+                                      tx.status === 'pending' ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' :
+                                      tx.status === 'rejected' ? 'bg-red-500/20 text-red-400 border-red-500/30' :
+                                      'bg-zinc-500/20 text-zinc-400 border-zinc-500/30'
+                                    }`} variant="outline">
+                                      {tx.status === 'approved' ? 'Confirmado' :
+                                       tx.status === 'pending' ? 'Pendente' :
+                                       tx.status === 'rejected' ? 'Rejeitado' :
+                                       tx.status === 'processing' ? 'Processando' : tx.status}
+                                    </Badge>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          );
+                        })()}
+                      </CardContent>
+                    </Card>
+                  </div>
+                )}
+
+                {/* ====== SAQUES TAB ====== */}
+                {activeTab === 'saques' && (
+                  <div className="space-y-6">
+                    <div className="flex items-center justify-between">
+                      <h2 className="text-xl sm:text-2xl font-bold">Saques</h2>
+                      <Button className="bg-emerald-600 hover:bg-emerald-700" onClick={() => setWithdrawDialog(true)} disabled={d(user?.balance || '0') < 10}>
+                        <ArrowUpRight className="h-4 w-4 mr-2" /> Solicitar Saque
+                      </Button>
+                    </div>
+
+                    {/* Summary Cards */}
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                      <Card className="bg-zinc-900 border-zinc-800">
+                        <CardContent className="p-4">
+                          <p className="text-zinc-400 text-xs">Total Sacado</p>
+                          <p className="text-red-400 font-bold text-lg">${fmtUSDT(user?.totalWithdrawn || '0')}</p>
+                        </CardContent>
+                      </Card>
+                      <Card className="bg-zinc-900 border-zinc-800">
+                        <CardContent className="p-4">
+                          <p className="text-zinc-400 text-xs">Pendente</p>
+                          <p className="text-amber-400 font-bold text-lg">
+                            ${transactions.filter(t => t.type === 'withdrawal' && t.status === 'pending').reduce((s, t) => s + d(t.amount), 0).toFixed(2)}
+                          </p>
+                        </CardContent>
+                      </Card>
+                      <Card className="bg-zinc-900 border-zinc-800">
+                        <CardContent className="p-4">
+                          <p className="text-zinc-400 text-xs">Saldo Disponível</p>
+                          <p className="text-emerald-400 font-bold text-lg">${fmtUSDT(user?.balance || '0')}</p>
+                        </CardContent>
+                      </Card>
+                      <Card className="bg-zinc-900 border-zinc-800">
+                        <CardContent className="p-4">
+                          <p className="text-zinc-400 text-xs">Total Saques</p>
+                          <p className="text-white font-bold text-lg">{transactions.filter(t => t.type === 'withdrawal').length}</p>
+                        </CardContent>
+                      </Card>
+                    </div>
+
+                    {/* Withdrawals List */}
+                    <Card className="bg-zinc-900 border-zinc-800">
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-base">Histórico de Saques</CardTitle>
+                      </CardHeader>
+                      <CardContent className="p-0">
+                        {(() => {
+                          const withdrawals = transactions.filter(t => t.type === 'withdrawal' || t.type === 'withdrawal_nowpayments');
+                          if (withdrawals.length === 0) {
+                            return (
+                              <div className="text-center py-12">
+                                <HandCoins className="h-12 w-12 text-zinc-600 mx-auto mb-3" />
+                                <p className="text-zinc-400">Nenhum saque realizado</p>
+                                <p className="text-zinc-500 text-sm mt-1">Solicite um saque quando tiver saldo disponível</p>
+                              </div>
+                            );
+                          }
+                          return (
+                            <div className="divide-y divide-zinc-800 max-h-[600px] overflow-y-auto">
+                              {withdrawals.map(tx => (
+                                <div key={tx.id} className="flex items-center justify-between gap-3 p-3 sm:p-4 hover:bg-zinc-800/30">
+                                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                                      tx.status === 'approved' ? 'bg-emerald-500/10 text-emerald-400' :
+                                      tx.status === 'pending' ? 'bg-amber-500/10 text-amber-400' :
+                                      tx.status === 'rejected' ? 'bg-red-500/10 text-red-400' :
+                                      'bg-zinc-500/10 text-zinc-400'
+                                    }`}>
+                                      <ArrowUpRight className="h-5 w-5" />
+                                    </div>
+                                    <div className="min-w-0">
+                                      <div className="font-medium text-sm truncate">{tx.description}</div>
+                                      <div className="text-xs text-zinc-400">{fmtDateTime(tx.createdAt)}</div>
+                                    </div>
+                                  </div>
+                                  <div className="text-right flex-shrink-0">
+                                    <div className="text-red-400 font-semibold text-sm">-${fmtUSDT(tx.amount)}</div>
+                                    <Badge className={`text-[10px] px-1.5 py-0 ${
+                                      tx.status === 'approved' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' :
+                                      tx.status === 'pending' ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' :
+                                      tx.status === 'rejected' ? 'bg-red-500/20 text-red-400 border-red-500/30' :
+                                      tx.status === 'processing' ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' :
+                                      'bg-zinc-500/20 text-zinc-400 border-zinc-500/30'
+                                    }`} variant="outline">
+                                      {tx.status === 'approved' ? 'Concluído' :
+                                       tx.status === 'pending' ? 'Pendente' :
+                                       tx.status === 'rejected' ? 'Rejeitado' :
+                                       tx.status === 'processing' ? 'Processando' : tx.status}
+                                    </Badge>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          );
+                        })()}
+                      </CardContent>
+                    </Card>
+                  </div>
+                )}
+
+                {/* ====== EXTRATO TAB ====== */}
+                {activeTab === 'extrato' && (
+                  <div className="space-y-6">
+                    <h2 className="text-xl sm:text-2xl font-bold">Extrato</h2>
+
+                    {/* Balance Overview */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <Card className="bg-gradient-to-br from-emerald-900/30 to-zinc-900 border-emerald-500/20">
+                        <CardContent className="p-5">
+                          <div className="flex items-center gap-2 mb-2">
+                            <div className="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center">
+                              <TrendingUp className="h-4 w-4 text-emerald-400" />
+                            </div>
+                            <span className="text-zinc-400 text-sm">Entradas</span>
+                          </div>
+                          <p className="text-emerald-400 font-bold text-2xl">
+                            +${transactions.filter(t => ['deposit', 'mining_profit', 'affiliate_commission'].includes(t.type) && t.status === 'approved').reduce((s, t) => s + d(t.amount), 0).toFixed(2)}
+                          </p>
+                          <p className="text-zinc-500 text-xs mt-1">Depósitos + Lucros + Comissões</p>
+                        </CardContent>
+                      </Card>
+                      <Card className="bg-gradient-to-br from-red-900/30 to-zinc-900 border-red-500/20">
+                        <CardContent className="p-5">
+                          <div className="flex items-center gap-2 mb-2">
+                            <div className="w-8 h-8 rounded-lg bg-red-500/20 flex items-center justify-center">
+                              <TrendingDown className="h-4 w-4 text-red-400" />
+                            </div>
+                            <span className="text-zinc-400 text-sm">Saídas</span>
+                          </div>
+                          <p className="text-red-400 font-bold text-2xl">
+                            -${transactions.filter(t => ['withdrawal', 'rental_payment'].includes(t.type) && t.status === 'approved').reduce((s, t) => s + d(t.amount), 0).toFixed(2)}
+                          </p>
+                          <p className="text-zinc-500 text-xs mt-1">Saques + Aluguéis</p>
+                        </CardContent>
+                      </Card>
+                      <Card className="bg-gradient-to-br from-zinc-800 to-zinc-900 border-zinc-700">
+                        <CardContent className="p-5">
+                          <div className="flex items-center gap-2 mb-2">
+                            <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center">
+                              <DollarSign className="h-4 w-4 text-white" />
+                            </div>
+                            <span className="text-zinc-400 text-sm">Saldo Atual</span>
+                          </div>
+                          <p className="text-white font-bold text-2xl">${fmtUSDT(user?.balance || '0')}</p>
+                          <p className="text-zinc-500 text-xs mt-1">≈ R$ {(d(user?.balance || '0') * usdtBrlRate).toFixed(2)}</p>
+                        </CardContent>
+                      </Card>
+                    </div>
+
+                    {/* Detailed Balance Breakdown */}
+                    <Card className="bg-zinc-900 border-zinc-800">
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-base">Resumo Financeiro</CardTitle>
+                      </CardHeader>
+                      <CardContent className="p-4 space-y-3">
+                        <div className="flex justify-between items-center">
+                          <div className="flex items-center gap-2">
+                            <ArrowDownLeft className="h-4 w-4 text-emerald-400" />
+                            <span className="text-zinc-300 text-sm">Total Depositado</span>
+                          </div>
+                          <span className="text-emerald-400 font-semibold">${fmtUSDT(user?.totalInvested || '0')}</span>
+                        </div>
+                        <Separator className="bg-zinc-800" />
+                        <div className="flex justify-between items-center">
+                          <div className="flex items-center gap-2">
+                            <TrendingUp className="h-4 w-4 text-emerald-400" />
+                            <span className="text-zinc-300 text-sm">Total Minado (Lucros)</span>
+                          </div>
+                          <span className="text-emerald-400 font-semibold">${fmtUSDT(user?.totalMined || '0')}</span>
+                        </div>
+                        <Separator className="bg-zinc-800" />
+                        <div className="flex justify-between items-center">
+                          <div className="flex items-center gap-2">
+                            <Users className="h-4 w-4 text-blue-400" />
+                            <span className="text-zinc-300 text-sm">Comissões Afiliado</span>
+                          </div>
+                          <span className="text-blue-400 font-semibold">${fmtUSDT(user?.totalAffiliateEarnings || '0')}</span>
+                        </div>
+                        <Separator className="bg-zinc-800" />
+                        <div className="flex justify-between items-center">
+                          <div className="flex items-center gap-2">
+                            <ArrowUpRight className="h-4 w-4 text-red-400" />
+                            <span className="text-zinc-300 text-sm">Total Sacado</span>
+                          </div>
+                          <span className="text-red-400 font-semibold">${fmtUSDT(user?.totalWithdrawn || '0')}</span>
+                        </div>
+                        <Separator className="bg-zinc-800" />
+                        <div className="flex justify-between items-center pt-1">
+                          <div className="flex items-center gap-2">
+                            <DollarSign className="h-4 w-4 text-white" />
+                            <span className="text-white font-medium">Saldo Disponível</span>
+                          </div>
+                          <span className="text-white font-bold text-lg">${fmtUSDT(user?.balance || '0')}</span>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* Full Transaction Statement */}
+                    <Card className="bg-zinc-900 border-zinc-800">
+                      <CardHeader className="pb-3">
+                        <div className="flex items-center justify-between">
+                          <CardTitle className="text-base">Extrato Completo</CardTitle>
+                          <Badge variant="outline" className="border-zinc-700 text-zinc-400">{transactions.length} transações</Badge>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="p-0">
+                        {transactions.length === 0 ? (
+                          <div className="text-center py-12">
+                            <FileText className="h-12 w-12 text-zinc-600 mx-auto mb-3" />
+                            <p className="text-zinc-400">Nenhuma transação registrada</p>
+                          </div>
+                        ) : (
+                          <div className="divide-y divide-zinc-800 max-h-[600px] overflow-y-auto">
+                            {transactions.map(tx => {
+                              const isPositive = ['deposit', 'mining_profit', 'affiliate_commission'].includes(tx.type);
+                              const Icon = txTypeIcon(tx.type);
+                              return (
+                                <div key={tx.id} className="flex items-center justify-between gap-3 p-3 sm:p-4 hover:bg-zinc-800/30">
+                                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${isPositive ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
+                                      <Icon className="h-5 w-5" />
+                                    </div>
+                                    <div className="min-w-0">
+                                      <div className="font-medium text-sm truncate">{tx.description}</div>
+                                      <div className="text-xs text-zinc-400 flex items-center gap-2">
+                                        <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                                          tx.type === 'deposit' ? 'bg-emerald-500/10 text-emerald-400' :
+                                          tx.type === 'mining_profit' ? 'bg-blue-500/10 text-blue-400' :
+                                          tx.type === 'affiliate_commission' ? 'bg-purple-500/10 text-purple-400' :
+                                          tx.type === 'withdrawal' ? 'bg-red-500/10 text-red-400' :
+                                          tx.type === 'rental_payment' ? 'bg-amber-500/10 text-amber-400' :
+                                          'bg-zinc-500/10 text-zinc-400'
+                                        }`}>
+                                          {tx.type === 'deposit' ? 'Depósito' :
+                                           tx.type === 'mining_profit' ? 'Lucro Mineração' :
+                                           tx.type === 'affiliate_commission' ? 'Comissão' :
+                                           tx.type === 'withdrawal' ? 'Saque' :
+                                           tx.type === 'rental_payment' ? 'Aluguel' :
+                                           tx.type}
+                                        </span>
+                                        <span>{fmtDateTime(tx.createdAt)}</span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <div className="text-right flex-shrink-0">
+                                    <div className={`font-semibold text-sm ${isPositive ? 'text-emerald-400' : 'text-red-400'}`}>
+                                      {isPositive ? '+' : '-'}${fmtUSDT(tx.amount)}
+                                    </div>
+                                    <Badge className={`text-[10px] px-1.5 py-0 ${
+                                      tx.status === 'approved' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' :
+                                      tx.status === 'pending' ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' :
+                                      tx.status === 'rejected' ? 'bg-red-500/20 text-red-400 border-red-500/30' :
+                                      'bg-zinc-500/20 text-zinc-400 border-zinc-500/30'
+                                    }`} variant="outline">
+                                      {tx.status === 'approved' ? 'Confirmado' :
+                                       tx.status === 'pending' ? 'Pendente' :
+                                       tx.status === 'rejected' ? 'Rejeitado' : tx.status}
+                                    </Badge>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
                   </div>
                 )}
 
