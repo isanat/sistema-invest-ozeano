@@ -1,20 +1,94 @@
 // ============================================================================
 // NOWPAYMENTS API SERVICE
+// Supports both environment variables and SystemConfig (database) credentials
+// Environment variables take priority, database config is fallback
 // ============================================================================
 
 import crypto from 'crypto';
 import { authenticator } from 'otplib';
+import { db } from '@/lib/db';
 
 // ============================================================================
-// CONFIGURATION
+// DYNAMIC CONFIGURATION - reads from env vars + database with caching
 // ============================================================================
 
-const BASE_URL = process.env.NOWPAYMENTS_BASE_URL || 'https://api.nowpayments.io/v1';
-const API_KEY = process.env.NOWPAYMENTS_API_KEY || '';
-const IPN_SECRET = process.env.NOWPAYMENTS_IPN_SECRET || '';
-const AUTH_EMAIL = process.env.NOWPAYMENTS_EMAIL || '';
-const AUTH_PASSWORD = process.env.NOWPAYMENTS_PASSWORD || '';
-const TWO_FA_SECRET = process.env.NOWPAYMENTS_2FA_SECRET || '';
+interface NowPaymentsConfig {
+  baseUrl: string;
+  apiKey: string;
+  ipnSecret: string;
+  email: string;
+  password: string;
+  twoFaSecret: string;
+}
+
+let configCache: NowPaymentsConfig | null = null;
+let configCacheExpiry: number = 0;
+const CONFIG_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+async function getConfig(): Promise<NowPaymentsConfig> {
+  // Return cached config if still valid
+  if (configCache && Date.now() < configCacheExpiry) {
+    return configCache;
+  }
+
+  // Start with env vars
+  const envConfig: NowPaymentsConfig = {
+    baseUrl: process.env.NOWPAYMENTS_BASE_URL || 'https://api.nowpayments.io/v1',
+    apiKey: process.env.NOWPAYMENTS_API_KEY || '',
+    ipnSecret: process.env.NOWPAYMENTS_IPN_SECRET || '',
+    email: process.env.NOWPAYMENTS_EMAIL || '',
+    password: process.env.NOWPAYMENTS_PASSWORD || '',
+    twoFaSecret: process.env.NOWPAYMENTS_2FA_SECRET || '',
+  };
+
+  // If all critical env vars are set, use them directly
+  if (envConfig.apiKey && envConfig.email && envConfig.password) {
+    configCache = envConfig;
+    configCacheExpiry = Date.now() + CONFIG_CACHE_TTL;
+    return envConfig;
+  }
+
+  // Otherwise, try to supplement from database (SystemConfig)
+  try {
+    const dbKeys = [
+      'nowpayments_api_key',
+      'nowpayments_email',
+      'nowpayments_password',
+      'nowpayments_ipn_secret',
+      'nowpayments_2fa_secret',
+      'nowpayments_base_url',
+    ];
+    const configs = await db.systemConfig.findMany({
+      where: { key: { in: dbKeys }, isActive: true },
+    });
+    const configMap = Object.fromEntries(configs.map((c) => [c.key, c.value]));
+
+    const merged: NowPaymentsConfig = {
+      baseUrl: envConfig.baseUrl || configMap.nowpayments_base_url || 'https://api.nowpayments.io/v1',
+      apiKey: envConfig.apiKey || configMap.nowpayments_api_key || '',
+      ipnSecret: envConfig.ipnSecret || configMap.nowpayments_ipn_secret || '',
+      email: envConfig.email || configMap.nowpayments_email || '',
+      password: envConfig.password || configMap.nowpayments_password || '',
+      twoFaSecret: envConfig.twoFaSecret || configMap.nowpayments_2fa_secret || '',
+    };
+
+    configCache = merged;
+    configCacheExpiry = Date.now() + CONFIG_CACHE_TTL;
+    return merged;
+  } catch (err) {
+    // If database query fails, just use env vars
+    console.warn('[NowPayments] Failed to load config from database, using env vars only:', err);
+    configCache = envConfig;
+    configCacheExpiry = Date.now() + CONFIG_CACHE_TTL;
+    return envConfig;
+  }
+}
+
+export function clearConfigCache(): void {
+  configCache = null;
+  configCacheExpiry = 0;
+  clearJwtToken();
+}
 
 // ============================================================================
 // JWT TOKEN MANAGEMENT (5-minute expiry, auto-refresh)
@@ -29,11 +103,13 @@ export async function getJwtToken(): Promise<string> {
     return jwtToken;
   }
 
+  const config = await getConfig();
+
   // Authenticate with email/password
-  const res = await fetch(`${BASE_URL}/auth`, {
+  const res = await fetch(`${config.baseUrl}/auth`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email: AUTH_EMAIL, password: AUTH_PASSWORD }),
+    body: JSON.stringify({ email: config.email, password: config.password }),
   });
 
   if (!res.ok) {
@@ -65,9 +141,10 @@ async function apiRequest(
   } = {}
 ): Promise<unknown> {
   const { method = 'GET', body, requireJwt = false } = options;
+  const config = await getConfig();
 
   const headers: Record<string, string> = {
-    'x-api-key': API_KEY,
+    'x-api-key': config.apiKey,
     'Content-Type': 'application/json',
   };
 
@@ -75,7 +152,7 @@ async function apiRequest(
     headers['Authorization'] = `Bearer ${await getJwtToken()}`;
   }
 
-  const res = await fetch(`${BASE_URL}${endpoint}`, {
+  const res = await fetch(`${config.baseUrl}${endpoint}`, {
     method,
     headers,
     body: body ? JSON.stringify(body) : undefined,
@@ -185,13 +262,6 @@ export async function createInvoicePayment(invoiceId: string, payCurrency: strin
 // ============================================================================
 // SUB-PARTNER / CUSTODY API - Per-user deposit accounts
 // ============================================================================
-// NOTE: NowPayments Sub-Partner API uses these parameter names:
-//   - Create: { name: string } → returns { result: { id, name, created_at } }
-//   - Deposit: { sub_partner_id: string, currency: string } (requires Payment API key)
-//   - Write-off: { sub_partner_id: string, currency: string, amount: number }
-//   - Transfer: { from_id: string, sub_partner_id: string, currency: string, amount: number }
-//   - Balance: GET /sub-partner/balance/{id} (requires Payment API key)
-// ============================================================================
 
 export interface SubPartnerAccount {
   id: string;
@@ -204,11 +274,6 @@ export interface CreateSubPartnerResult {
   result: SubPartnerAccount;
 }
 
-/**
- * Create a sub-partner account in NowPayments.
- * Uses `name` parameter (not `user_id`).
- * Returns the sub-partner account with ID.
- */
 export async function createSubPartnerAccount(name: string): Promise<CreateSubPartnerResult> {
   return apiRequest('/sub-partner/balance', {
     method: 'POST',
@@ -237,12 +302,6 @@ export interface SubPartnerDepositResponse {
   };
 }
 
-/**
- * Generate a deposit address for a sub-partner.
- * NOTE: This requires the API key to have "Payment" permissions.
- * If using a Custody-only API key, this will fail with INVALID_API_KEY.
- * Falls back to using the standard payment flow in that case.
- */
 export async function createSubPartnerDeposit(params: SubPartnerDepositParams): Promise<SubPartnerDepositResponse> {
   return apiRequest('/sub-partner/deposit', {
     method: 'POST',
@@ -319,6 +378,8 @@ export async function createPayout(withdrawals: PayoutWithdrawal[], description?
   const body: Record<string, unknown> = { withdrawals };
   if (description) body.payout_description = description;
 
+  const config = await getConfig();
+
   const result = await apiRequest('/payout', {
     method: 'POST',
     body,
@@ -326,9 +387,9 @@ export async function createPayout(withdrawals: PayoutWithdrawal[], description?
   }) as CreatePayoutResponse;
 
   // Auto-verify payout with 2FA if secret is configured
-  if (TWO_FA_SECRET && result.withdrawals?.length > 0) {
+  if (config.twoFaSecret && result.withdrawals?.length > 0) {
     try {
-      const verificationCode = generate2FACode();
+      const verificationCode = generate2FACode(config.twoFaSecret);
       if (verificationCode) {
         const batchWithdrawalId = result.withdrawals[0].batch_withdrawal_id;
         if (batchWithdrawalId) {
@@ -339,7 +400,6 @@ export async function createPayout(withdrawals: PayoutWithdrawal[], description?
       }
     } catch (err) {
       console.error('[NowPayments] Failed to auto-verify payout:', err);
-      // Don't throw - payout was created, just verification failed
     }
   }
 
@@ -414,15 +474,17 @@ function sortObject(obj: Record<string, unknown>): Record<string, unknown> {
   }, {});
 }
 
-export function verifyWebhookSignature(body: Record<string, unknown>, signature: string): boolean {
-  if (!IPN_SECRET) {
+export async function verifyWebhookSignature(body: Record<string, unknown>, signature: string): Promise<boolean> {
+  const config = await getConfig();
+
+  if (!config.ipnSecret) {
     console.warn('[NowPayments] IPN_SECRET not configured, skipping webhook verification');
     return true; // Allow in development
   }
 
   try {
     const sortedBody = sortObject(body);
-    const hmac = crypto.createHmac('sha512', IPN_SECRET);
+    const hmac = crypto.createHmac('sha512', config.ipnSecret);
     hmac.update(JSON.stringify(sortedBody));
     const computed = hmac.digest('hex');
 
@@ -510,14 +572,16 @@ export function fromNowPaymentsCurrency(npCurrency: string): string {
  * Generate a TOTP verification code from the configured 2FA secret.
  * Used for NowPayments payout verification.
  */
-export function generate2FACode(): string | null {
-  if (!TWO_FA_SECRET) {
+export function generate2FACode(secret?: string): string | null {
+  // Use provided secret or try to read from config
+  const twoFaSecret = secret || process.env.NOWPAYMENTS_2FA_SECRET || '';
+  if (!twoFaSecret) {
     console.warn('[NowPayments] 2FA secret not configured, cannot generate verification code');
     return null;
   }
   try {
     authenticator.options = { step: 30 };
-    return authenticator.generate(TWO_FA_SECRET);
+    return authenticator.generate(twoFaSecret);
   } catch (err) {
     console.error('[NowPayments] Failed to generate 2FA code:', err);
     return null;
@@ -526,13 +590,13 @@ export function generate2FACode(): string | null {
 
 /**
  * Verify a TOTP code against the configured 2FA secret.
- * Useful for admin UI to test 2FA configuration.
  */
-export function validate2FACode(code: string): boolean {
-  if (!TWO_FA_SECRET) return false;
+export function validate2FACode(code: string, secret?: string): boolean {
+  const twoFaSecret = secret || process.env.NOWPAYMENTS_2FA_SECRET || '';
+  if (!twoFaSecret) return false;
   try {
     authenticator.options = { step: 30 };
-    return authenticator.verify({ token: code, secret: TWO_FA_SECRET });
+    return authenticator.verify({ token: code, secret: twoFaSecret });
   } catch {
     return false;
   }
@@ -542,11 +606,12 @@ export function validate2FACode(code: string): boolean {
 // CONFIGURATION CHECK
 // ============================================================================
 
-export function isNowPaymentsConfigured(): boolean {
-  return !!(API_KEY && AUTH_EMAIL && AUTH_PASSWORD);
+export async function isNowPaymentsConfigured(): Promise<boolean> {
+  const config = await getConfig();
+  return !!(config.apiKey && config.email && config.password);
 }
 
-export function getNowPaymentsConfig(): {
+export async function getNowPaymentsConfig(): Promise<{
   configured: boolean;
   hasApiKey: boolean;
   hasEmail: boolean;
@@ -554,15 +619,16 @@ export function getNowPaymentsConfig(): {
   hasIpnSecret: boolean;
   has2FA: boolean;
   baseUrl: string;
-} {
+}> {
+  const config = await getConfig();
   return {
-    configured: isNowPaymentsConfigured(),
-    hasApiKey: !!API_KEY,
-    hasEmail: !!AUTH_EMAIL,
-    hasPassword: !!AUTH_PASSWORD,
-    hasIpnSecret: !!IPN_SECRET,
-    has2FA: !!TWO_FA_SECRET,
-    baseUrl: BASE_URL,
+    configured: !!(config.apiKey && config.email && config.password),
+    hasApiKey: !!config.apiKey,
+    hasEmail: !!config.email,
+    hasPassword: !!config.password,
+    hasIpnSecret: !!config.ipnSecret,
+    has2FA: !!config.twoFaSecret,
+    baseUrl: config.baseUrl,
   };
 }
 

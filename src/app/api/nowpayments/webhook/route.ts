@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
     const signature = request.headers.get('x-nowpayments-sig') || '';
 
     // Verify webhook signature
-    const signatureValid = verifyWebhookSignature(body, signature);
+    const signatureValid = await verifyWebhookSignature(body, signature);
 
     // Extract key fields from webhook payload
     const paymentId = body.payment_id ? String(body.payment_id) : null;
