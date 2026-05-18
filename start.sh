@@ -7,16 +7,12 @@ echo "============================================"
 echo "NODE_ENV: $NODE_ENV"
 echo "PORT: $PORT"
 echo "DATABASE_URL is set: $([ -n "$DATABASE_URL" ] && echo 'yes' || echo 'no')"
-echo "NOWPAYMENTS_API_KEY is set: $([ -n "$NOWPAYMENTS_API_KEY" ] && echo 'yes' || echo 'no')"
-echo "NOWPAYMENTS_EMAIL is set: $([ -n "$NOWPAYMENTS_EMAIL" ] && echo 'yes' || echo 'no')"
-echo "NOWPAYMENTS_PASSWORD is set: $([ -n "$NOWPAYMENTS_PASSWORD" ] && echo 'yes' || echo 'no')"
-echo "NOWPAYMENTS_2FA_SECRET is set: $([ -n "$NOWPAYMENTS_2FA_SECRET" ] && echo 'yes' || echo 'no')"
-echo "NOWPAYMENTS_IPN_SECRET is set: $([ -n "$NOWPAYMENTS_IPN_SECRET" ] && echo 'yes' || echo 'no')"
 
-# Run Prisma migrations
-echo "[1/2] Running database migrations..."
 cd /app
-npx prisma db push --accept-data-loss || echo "WARNING: Database migration failed, continuing..."
+
+# Run Prisma migrations (non-blocking)
+echo "[1/2] Running database migrations..."
+npx prisma db push --accept-data-loss 2>/dev/null || echo "WARNING: Database migration issue, continuing..."
 
 echo "[2/2] Starting Next.js server..."
 exec node server.js
