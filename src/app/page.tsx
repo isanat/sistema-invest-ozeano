@@ -517,6 +517,29 @@ export default function MiningProtocol() {
   const [notesDialog, setNotesDialog] = useState<{ open: boolean; id: string; action: 'approve' | 'reject' | 'complete'; type: 'deposit' | 'withdrawal' }>({ open: false, id: '', action: 'approve', type: 'deposit' });
   const [adminNotes, setAdminNotes] = useState('');
 
+  // Deposits/Payouts/Statement state (for Faturas, Saques, Extrato tabs)
+  const [userDeposits, setUserDeposits] = useState<any[]>([]);
+  const [userDepositStats, setUserDepositStats] = useState<any>(null);
+  const [userPayouts, setUserPayouts] = useState<any[]>([]);
+  const [userPayoutStats, setUserPayoutStats] = useState<any>(null);
+  const [statementData, setStatementData] = useState<any[]>([]);
+  const [statementSummary, setStatementSummary] = useState<any>(null);
+  const [depositsLoading, setDepositsLoading] = useState(false);
+  const [payoutsLoading, setPayoutsLoading] = useState(false);
+  const [statementLoading, setStatementLoading] = useState(false);
+  const [depositFilter, setDepositFilter] = useState<string>('');
+  const [payoutFilter, setPayoutFilter] = useState<string>('');
+  const [statementFilter, setStatementFilter] = useState<string>('');
+
+  // Admin NowPayments state
+  const [adminNpDeposits, setAdminNpDeposits] = useState<any[]>([]);
+  const [adminNpPayouts, setAdminNpPayouts] = useState<any[]>([]);
+  const [adminNpWallets, setAdminNpWallets] = useState<any[]>([]);
+  const [adminNpWebhooks, setAdminNpWebhooks] = useState<any[]>([]);
+  const [adminNpStats, setAdminNpStats] = useState<any>(null);
+  const [adminNpLoading, setAdminNpLoading] = useState(false);
+  const [adminNpSection, setAdminNpSection] = useState<string>('deposits');
+
   // Hydration guard: set mounted after first client render
   useEffect(() => {
     setMounted(true);
@@ -637,15 +660,94 @@ export default function MiningProtocol() {
     }
   };
 
+  // Fetch user deposits (for Faturas tab)
+  const fetchUserDeposits = async () => {
+    setDepositsLoading(true);
+    try {
+      const data = await api<{ success: boolean; deposits: any[]; stats: any }>(`/api/nowpayments/user-deposits${depositFilter ? `?status=${depositFilter}` : ''}`);
+      setUserDeposits(data.deposits || []);
+      setUserDepositStats(data.stats || null);
+    } catch (e) {
+      console.error('User deposits error:', e);
+    } finally {
+      setDepositsLoading(false);
+    }
+  };
+
+  // Fetch user payouts (for Saques tab)
+  const fetchUserPayouts = async () => {
+    setPayoutsLoading(true);
+    try {
+      const data = await api<{ success: boolean; withdrawals: any[]; stats: any }>(`/api/nowpayments/user-payouts${payoutFilter ? `?status=${payoutFilter}` : ''}`);
+      setUserPayouts(data.withdrawals || []);
+      setUserPayoutStats(data.stats || null);
+    } catch (e) {
+      console.error('User payouts error:', e);
+    } finally {
+      setPayoutsLoading(false);
+    }
+  };
+
+  // Fetch statement (for Extrato tab)
+  const fetchStatement = async () => {
+    setStatementLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (statementFilter) params.set('type', statementFilter);
+      const data = await api<{ success: boolean; statement: any[]; summary: any }>(`/api/nowpayments/statement${params.toString() ? `?${params.toString()}` : ''}`);
+      setStatementData(data.statement || []);
+      setStatementSummary(data.summary || null);
+    } catch (e) {
+      console.error('Statement error:', e);
+    } finally {
+      setStatementLoading(false);
+    }
+  };
+
+  // Fetch admin NowPayments data
+  const fetchAdminNpData = async () => {
+    setAdminNpLoading(true);
+    try {
+      const data = await api<{ success: boolean; deposits?: any[]; payouts?: any[]; wallets?: any[]; webhooks?: any[]; stats?: any }>('/api/admin/nowpayments?section=all');
+      setAdminNpDeposits(data.deposits || []);
+      setAdminNpPayouts(data.payouts || []);
+      setAdminNpWallets(data.wallets || []);
+      setAdminNpWebhooks(data.webhooks || []);
+      setAdminNpStats(data.stats || null);
+    } catch (e) {
+      console.error('Admin NP data error:', e);
+    } finally {
+      setAdminNpLoading(false);
+    }
+  };
+
   // Load affiliate data when tab is selected
   useEffect(() => {
     if (activeTab === 'afiliados' && user) fetchAffiliateData();
   }, [activeTab, user]);
 
+  // Load deposits/payouts/statement when tabs are selected
+  useEffect(() => {
+    if (activeTab === 'faturas' && user) fetchUserDeposits();
+  }, [activeTab, user, depositFilter]);
+
+  useEffect(() => {
+    if (activeTab === 'saques' && user) fetchUserPayouts();
+  }, [activeTab, user, payoutFilter]);
+
+  useEffect(() => {
+    if (activeTab === 'extrato' && user) fetchStatement();
+  }, [activeTab, user, statementFilter]);
+
   // Load admin data when admin tab is selected
   useEffect(() => {
     if (activeTab === 'admin' && user?.role === 'admin') fetchAdminData();
   }, [activeTab, user]);
+
+  // Load admin NowPayments data when that sub-tab is selected
+  useEffect(() => {
+    if (activeTab === 'admin' && adminTab === 'nowpayments' && user?.role === 'admin') fetchAdminNpData();
+  }, [activeTab, adminTab, user]);
 
   // ==========================================
   // NOTIFICATION SYSTEM: Load from storage + generate from transactions
@@ -983,6 +1085,8 @@ export default function MiningProtocol() {
         setNpEstimatedFee(data.paymentInfo.estimatedFee || 0);
         setNpDepositStatus('waiting');
         toast.success('Endereço de depósito gerado! Envie o valor para a carteira abaixo.');
+        // Refresh deposits list so the new invoice appears in Faturas tab
+        fetchUserDeposits();
       } else {
         // Should not reach here anymore - API returns error if no address
         toast.error('Não foi possível gerar o endereço de depósito. Tente novamente.');
@@ -2053,6 +2157,7 @@ export default function MiningProtocol() {
     { id: 'users', label: t('adminSidebar.users'), icon: UserCog },
     { id: 'deposits', label: t('adminSidebar.deposits'), icon: Banknote },
     { id: 'withdrawals', label: t('adminSidebar.withdrawals'), icon: HandCoins },
+    { id: 'nowpayments', label: 'NowPayments', icon: Globe },
     { id: 'affiliates', label: t('adminSidebar.affiliates'), icon: Link2 },
     { id: 'affiliateWithdrawals', label: t('adminSidebar.affiliateWithdrawals'), icon: Gift },
     { id: 'affiliateRanks', label: t('admin.affiliateRanks'), icon: Crown },
@@ -2942,9 +3047,22 @@ export default function MiningProtocol() {
                   <div className="space-y-6">
                     <div className="flex items-center justify-between">
                       <h2 className="text-xl sm:text-2xl font-bold">Faturas de Depósito</h2>
-                      <Button className="bg-emerald-600 hover:bg-emerald-700" onClick={() => setDepositDialog(true)}>
-                        <ArrowDownLeft className="h-4 w-4 mr-2" /> Novo Depósito
-                      </Button>
+                      <div className="flex items-center gap-2">
+                        <Select value={depositFilter} onValueChange={setDepositFilter}>
+                          <SelectTrigger className="w-[130px] h-9 text-xs bg-zinc-900 border-zinc-800">
+                            <SelectValue placeholder="Filtrar" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="">Todas</SelectItem>
+                            <SelectItem value="pending">Pendentes</SelectItem>
+                            <SelectItem value="confirmed">Confirmadas</SelectItem>
+                            <SelectItem value="rejected">Rejeitadas</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Button className="bg-emerald-600 hover:bg-emerald-700" onClick={() => setDepositDialog(true)}>
+                          <ArrowDownLeft className="h-4 w-4 mr-2" /> Novo Depósito
+                        </Button>
+                      </div>
                     </div>
 
                     {/* Summary Cards */}
@@ -2952,29 +3070,25 @@ export default function MiningProtocol() {
                       <Card className="bg-zinc-900 border-zinc-800">
                         <CardContent className="p-4">
                           <p className="text-zinc-400 text-xs">Total Depositado</p>
-                          <p className="text-emerald-400 font-bold text-lg">${fmtUSDT(user?.balance ? (d(user.totalInvested)).toString() : '0')}</p>
+                          <p className="text-emerald-400 font-bold text-lg">${fmtUSDT(userDepositStats?.totalDeposited?.toString() || user?.totalInvested || '0')}</p>
                         </CardContent>
                       </Card>
                       <Card className="bg-zinc-900 border-zinc-800">
                         <CardContent className="p-4">
                           <p className="text-zinc-400 text-xs">Pendente</p>
-                          <p className="text-amber-400 font-bold text-lg">
-                            ${transactions.filter(t => t.type === 'deposit' && t.status === 'pending').reduce((s, t) => s + d(t.amount), 0).toFixed(2)}
-                          </p>
+                          <p className="text-amber-400 font-bold text-lg">${(userDepositStats?.pendingAmount || 0).toFixed(2)}</p>
                         </CardContent>
                       </Card>
                       <Card className="bg-zinc-900 border-zinc-800">
                         <CardContent className="p-4">
-                          <p className="text-zinc-400 text-xs">Confirmados</p>
-                          <p className="text-white font-bold text-lg">
-                            ${transactions.filter(t => t.type === 'deposit' && t.status === 'approved').reduce((s, t) => s + d(t.amount), 0).toFixed(2)}
-                          </p>
+                          <p className="text-zinc-400 text-xs">Confirmadas</p>
+                          <p className="text-white font-bold text-lg">{userDepositStats?.confirmedCount || 0}</p>
                         </CardContent>
                       </Card>
                       <Card className="bg-zinc-900 border-zinc-800">
                         <CardContent className="p-4">
                           <p className="text-zinc-400 text-xs">Total Faturas</p>
-                          <p className="text-white font-bold text-lg">{transactions.filter(t => t.type === 'deposit').length}</p>
+                          <p className="text-white font-bold text-lg">{userDepositStats?.totalInvoices || 0}</p>
                         </CardContent>
                       </Card>
                     </div>
@@ -2982,57 +3096,128 @@ export default function MiningProtocol() {
                     {/* Deposits List */}
                     <Card className="bg-zinc-900 border-zinc-800">
                       <CardHeader className="pb-3">
-                        <CardTitle className="text-base">Todas as Faturas</CardTitle>
+                        <div className="flex items-center justify-between">
+                          <CardTitle className="text-base">Todas as Faturas</CardTitle>
+                          <Button variant="ghost" size="sm" onClick={fetchUserDeposits} disabled={depositsLoading}>
+                            <RefreshCw className={`h-4 w-4 ${depositsLoading ? 'animate-spin' : ''}`} />
+                          </Button>
+                        </div>
                       </CardHeader>
                       <CardContent className="p-0">
-                        {(() => {
-                          const deposits = transactions.filter(t => t.type === 'deposit' || t.type === 'deposit_nowpayments');
-                          if (deposits.length === 0) {
-                            return (
-                              <div className="text-center py-12">
-                                <Banknote className="h-12 w-12 text-zinc-600 mx-auto mb-3" />
-                                <p className="text-zinc-400">Nenhuma fatura encontrada</p>
-                                <p className="text-zinc-500 text-sm mt-1">Faça seu primeiro depósito para começar a minerar</p>
-                              </div>
-                            );
-                          }
-                          return (
-                            <div className="divide-y divide-zinc-800 max-h-[600px] overflow-y-auto">
-                              {deposits.map(tx => (
-                                <div key={tx.id} className="flex items-center justify-between gap-3 p-3 sm:p-4 hover:bg-zinc-800/30">
+                        {depositsLoading ? (
+                          <div className="space-y-3 p-4">
+                            {[1,2,3].map(i => <Skeleton key={i} className="h-20 w-full bg-zinc-800" />)}
+                          </div>
+                        ) : userDeposits.length === 0 ? (
+                          <div className="text-center py-12">
+                            <Banknote className="h-12 w-12 text-zinc-600 mx-auto mb-3" />
+                            <p className="text-zinc-400">Nenhuma fatura encontrada</p>
+                            <p className="text-zinc-500 text-sm mt-1">Faça seu primeiro depósito para começar a minerar</p>
+                          </div>
+                        ) : (
+                          <div className="divide-y divide-zinc-800 max-h-[600px] overflow-y-auto">
+                            {userDeposits.map((dep: any) => (
+                              <div key={dep.id} className="p-3 sm:p-4 hover:bg-zinc-800/30">
+                                <div className="flex items-center justify-between gap-3">
                                   <div className="flex items-center gap-3 min-w-0 flex-1">
                                     <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                                      tx.status === 'approved' ? 'bg-emerald-500/10 text-emerald-400' :
-                                      tx.status === 'pending' ? 'bg-amber-500/10 text-amber-400' :
-                                      tx.status === 'rejected' ? 'bg-red-500/10 text-red-400' :
+                                      dep.status === 'confirmed' || dep.status === 'approved' ? 'bg-emerald-500/10 text-emerald-400' :
+                                      dep.status === 'pending' ? 'bg-amber-500/10 text-amber-400' :
+                                      dep.status === 'rejected' ? 'bg-red-500/10 text-red-400' :
                                       'bg-zinc-500/10 text-zinc-400'
                                     }`}>
                                       <ArrowDownLeft className="h-5 w-5" />
                                     </div>
                                     <div className="min-w-0">
-                                      <div className="font-medium text-sm truncate">{tx.description}</div>
-                                      <div className="text-xs text-zinc-400">{fmtDateTime(tx.createdAt)}</div>
+                                      <div className="font-medium text-sm truncate">{dep.description || 'Depósito'}</div>
+                                      <div className="text-xs text-zinc-400 flex items-center gap-2 flex-wrap">
+                                        <span>{fmtDateTime(dep.createdAt)}</span>
+                                        {dep.method && (
+                                          <Badge className="text-[10px] px-1.5 py-0 bg-zinc-800 text-zinc-300 border-zinc-700" variant="outline">
+                                            {dep.method === 'usdttrc20' ? 'USDT TRC20' :
+                                             dep.method === 'usdtmatic' ? 'USDT Polygon' :
+                                             dep.method === 'pix' ? 'PIX' : dep.method.toUpperCase()}
+                                          </Badge>
+                                        )}
+                                        {dep.network && (
+                                          <Badge className="text-[10px] px-1.5 py-0 bg-sky-500/10 text-sky-400 border-sky-500/30" variant="outline">
+                                            {dep.network}
+                                          </Badge>
+                                        )}
+                                      </div>
                                     </div>
                                   </div>
                                   <div className="text-right flex-shrink-0">
-                                    <div className="text-emerald-400 font-semibold text-sm">+${fmtUSDT(tx.amount)}</div>
+                                    <div className="text-emerald-400 font-semibold text-sm">+${fmtUSDT(dep.amount)}</div>
                                     <Badge className={`text-[10px] px-1.5 py-0 ${
-                                      tx.status === 'approved' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' :
-                                      tx.status === 'pending' ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' :
-                                      tx.status === 'rejected' ? 'bg-red-500/20 text-red-400 border-red-500/30' :
+                                      dep.status === 'confirmed' || dep.status === 'approved' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' :
+                                      dep.status === 'pending' ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' :
+                                      dep.status === 'rejected' ? 'bg-red-500/20 text-red-400 border-red-500/30' :
                                       'bg-zinc-500/20 text-zinc-400 border-zinc-500/30'
                                     }`} variant="outline">
-                                      {tx.status === 'approved' ? 'Confirmado' :
-                                       tx.status === 'pending' ? 'Pendente' :
-                                       tx.status === 'rejected' ? 'Rejeitado' :
-                                       tx.status === 'processing' ? 'Processando' : tx.status}
+                                      {dep.status === 'confirmed' || dep.status === 'approved' ? 'Confirmado' :
+                                       dep.status === 'pending' ? 'Pendente' :
+                                       dep.status === 'rejected' ? 'Rejeitado' :
+                                       dep.status}
                                     </Badge>
                                   </div>
                                 </div>
-                              ))}
-                            </div>
-                          );
-                        })()}
+                                {/* NowPayments details */}
+                                {dep.nowpayments && (
+                                  <div className="mt-3 p-3 bg-zinc-800/50 rounded-lg space-y-2">
+                                    <div className="flex items-center gap-2 text-xs">
+                                      <Globe className="h-3 w-3 text-sky-400" />
+                                      <span className="text-zinc-400">NowPayments</span>
+                                      <Badge className={`text-[10px] px-1.5 py-0 ${
+                                        dep.nowpayments.paymentStatus === 'finished' || dep.nowpayments.paymentStatus === 'confirmed' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' :
+                                        dep.nowpayments.paymentStatus === 'waiting' ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' :
+                                        dep.nowpayments.paymentStatus === 'expired' ? 'bg-red-500/20 text-red-400 border-red-500/30' :
+                                        'bg-blue-500/20 text-blue-400 border-blue-500/30'
+                                      }`} variant="outline">
+                                        {dep.nowpayments.paymentStatus}
+                                      </Badge>
+                                      {dep.nowpayments.splitProcessed && (
+                                        <Badge className="text-[10px] px-1.5 py-0 bg-purple-500/20 text-purple-400 border-purple-500/30" variant="outline">
+                                          Split {dep.nowpayments.splitPct}%
+                                        </Badge>
+                                      )}
+                                    </div>
+                                    {dep.nowpayments.payAddress && (
+                                      <div className="flex items-center gap-2 text-xs">
+                                        <Wallet className="h-3 w-3 text-zinc-400" />
+                                        <span className="text-zinc-500 font-mono truncate max-w-[200px] sm:max-w-[350px]">{dep.nowpayments.payAddress}</span>
+                                        <Button variant="ghost" size="sm" className="h-5 w-5 p-0" onClick={() => {
+                                          navigator.clipboard.writeText(dep.nowpayments.payAddress);
+                                          toast.success('Endereço copiado!');
+                                        }}>
+                                          <Copy className="h-3 w-3" />
+                                        </Button>
+                                      </div>
+                                    )}
+                                    {dep.nowpayments.payAmount && (
+                                      <div className="flex items-center gap-2 text-xs">
+                                        <Coins className="h-3 w-3 text-zinc-400" />
+                                        <span className="text-zinc-400">Pagar: </span>
+                                        <span className="text-white">{dep.nowpayments.payAmount} {dep.nowpayments.payCurrency?.toUpperCase()}</span>
+                                      </div>
+                                    )}
+                                    {dep.nowpayments.expiresAt && dep.status === 'pending' && (
+                                      <div className="flex items-center gap-2 text-xs">
+                                        <Clock4 className="h-3 w-3 text-amber-400" />
+                                        <span className="text-zinc-400">Expira: </span>
+                                        <span className={`${
+                                          new Date(dep.nowpayments.expiresAt) < new Date() ? 'text-red-400' : 'text-amber-400'
+                                        }`}>
+                                          {new Date(dep.nowpayments.expiresAt) < new Date() ? 'Expirado' : fmtDateTime(dep.nowpayments.expiresAt)}
+                                        </span>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </CardContent>
                     </Card>
                   </div>
@@ -3043,9 +3228,22 @@ export default function MiningProtocol() {
                   <div className="space-y-6">
                     <div className="flex items-center justify-between">
                       <h2 className="text-xl sm:text-2xl font-bold">Saques</h2>
-                      <Button className="bg-emerald-600 hover:bg-emerald-700" onClick={() => setWithdrawDialog(true)} disabled={d(user?.balance || '0') < 10}>
-                        <ArrowUpRight className="h-4 w-4 mr-2" /> Solicitar Saque
-                      </Button>
+                      <div className="flex items-center gap-2">
+                        <Select value={payoutFilter} onValueChange={setPayoutFilter}>
+                          <SelectTrigger className="w-[130px] h-9 text-xs bg-zinc-900 border-zinc-800">
+                            <SelectValue placeholder="Filtrar" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="">Todos</SelectItem>
+                            <SelectItem value="pending">Pendentes</SelectItem>
+                            <SelectItem value="confirmed">Concluídos</SelectItem>
+                            <SelectItem value="rejected">Rejeitados</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Button className="bg-emerald-600 hover:bg-emerald-700" onClick={() => setWithdrawDialog(true)} disabled={d(user?.balance || '0') < 10}>
+                          <ArrowUpRight className="h-4 w-4 mr-2" /> Solicitar Saque
+                        </Button>
+                      </div>
                     </div>
 
                     {/* Summary Cards */}
@@ -3053,15 +3251,13 @@ export default function MiningProtocol() {
                       <Card className="bg-zinc-900 border-zinc-800">
                         <CardContent className="p-4">
                           <p className="text-zinc-400 text-xs">Total Sacado</p>
-                          <p className="text-red-400 font-bold text-lg">${fmtUSDT(user?.totalWithdrawn || '0')}</p>
+                          <p className="text-red-400 font-bold text-lg">${fmtUSDT(userPayoutStats?.totalWithdrawn?.toString() || user?.totalWithdrawn || '0')}</p>
                         </CardContent>
                       </Card>
                       <Card className="bg-zinc-900 border-zinc-800">
                         <CardContent className="p-4">
                           <p className="text-zinc-400 text-xs">Pendente</p>
-                          <p className="text-amber-400 font-bold text-lg">
-                            ${transactions.filter(t => t.type === 'withdrawal' && t.status === 'pending').reduce((s, t) => s + d(t.amount), 0).toFixed(2)}
-                          </p>
+                          <p className="text-amber-400 font-bold text-lg">${(userPayoutStats?.pendingAmount || 0).toFixed(2)}</p>
                         </CardContent>
                       </Card>
                       <Card className="bg-zinc-900 border-zinc-800">
@@ -3073,7 +3269,7 @@ export default function MiningProtocol() {
                       <Card className="bg-zinc-900 border-zinc-800">
                         <CardContent className="p-4">
                           <p className="text-zinc-400 text-xs">Total Saques</p>
-                          <p className="text-white font-bold text-lg">{transactions.filter(t => t.type === 'withdrawal').length}</p>
+                          <p className="text-white font-bold text-lg">{userPayoutStats?.totalWithdrawals || 0}</p>
                         </CardContent>
                       </Card>
                     </div>
@@ -3081,58 +3277,111 @@ export default function MiningProtocol() {
                     {/* Withdrawals List */}
                     <Card className="bg-zinc-900 border-zinc-800">
                       <CardHeader className="pb-3">
-                        <CardTitle className="text-base">Histórico de Saques</CardTitle>
+                        <div className="flex items-center justify-between">
+                          <CardTitle className="text-base">Histórico de Saques</CardTitle>
+                          <Button variant="ghost" size="sm" onClick={fetchUserPayouts} disabled={payoutsLoading}>
+                            <RefreshCw className={`h-4 w-4 ${payoutsLoading ? 'animate-spin' : ''}`} />
+                          </Button>
+                        </div>
                       </CardHeader>
                       <CardContent className="p-0">
-                        {(() => {
-                          const withdrawals = transactions.filter(t => t.type === 'withdrawal' || t.type === 'withdrawal_nowpayments');
-                          if (withdrawals.length === 0) {
-                            return (
-                              <div className="text-center py-12">
-                                <HandCoins className="h-12 w-12 text-zinc-600 mx-auto mb-3" />
-                                <p className="text-zinc-400">Nenhum saque realizado</p>
-                                <p className="text-zinc-500 text-sm mt-1">Solicite um saque quando tiver saldo disponível</p>
-                              </div>
-                            );
-                          }
-                          return (
-                            <div className="divide-y divide-zinc-800 max-h-[600px] overflow-y-auto">
-                              {withdrawals.map(tx => (
-                                <div key={tx.id} className="flex items-center justify-between gap-3 p-3 sm:p-4 hover:bg-zinc-800/30">
+                        {payoutsLoading ? (
+                          <div className="space-y-3 p-4">
+                            {[1,2,3].map(i => <Skeleton key={i} className="h-20 w-full bg-zinc-800" />)}
+                          </div>
+                        ) : userPayouts.length === 0 ? (
+                          <div className="text-center py-12">
+                            <HandCoins className="h-12 w-12 text-zinc-600 mx-auto mb-3" />
+                            <p className="text-zinc-400">Nenhum saque realizado</p>
+                            <p className="text-zinc-500 text-sm mt-1">Solicite um saque quando tiver saldo disponível</p>
+                          </div>
+                        ) : (
+                          <div className="divide-y divide-zinc-800 max-h-[600px] overflow-y-auto">
+                            {userPayouts.map((wd: any) => (
+                              <div key={wd.id} className="p-3 sm:p-4 hover:bg-zinc-800/30">
+                                <div className="flex items-center justify-between gap-3">
                                   <div className="flex items-center gap-3 min-w-0 flex-1">
                                     <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                                      tx.status === 'approved' ? 'bg-emerald-500/10 text-emerald-400' :
-                                      tx.status === 'pending' ? 'bg-amber-500/10 text-amber-400' :
-                                      tx.status === 'rejected' ? 'bg-red-500/10 text-red-400' :
+                                      wd.status === 'confirmed' || wd.status === 'approved' ? 'bg-emerald-500/10 text-emerald-400' :
+                                      wd.status === 'pending' ? 'bg-amber-500/10 text-amber-400' :
+                                      wd.status === 'rejected' ? 'bg-red-500/10 text-red-400' :
                                       'bg-zinc-500/10 text-zinc-400'
                                     }`}>
                                       <ArrowUpRight className="h-5 w-5" />
                                     </div>
                                     <div className="min-w-0">
-                                      <div className="font-medium text-sm truncate">{tx.description}</div>
-                                      <div className="text-xs text-zinc-400">{fmtDateTime(tx.createdAt)}</div>
+                                      <div className="font-medium text-sm truncate">{wd.description || 'Saque'}</div>
+                                      <div className="text-xs text-zinc-400 flex items-center gap-2 flex-wrap">
+                                        <span>{fmtDateTime(wd.createdAt)}</span>
+                                        {wd.method && (
+                                          <Badge className="text-[10px] px-1.5 py-0 bg-zinc-800 text-zinc-300 border-zinc-700" variant="outline">
+                                            {wd.method === 'usdt_trc20' ? 'USDT TRC20' :
+                                             wd.method === 'usdt_polygon' ? 'USDT Polygon' :
+                                             wd.method === 'pix' ? 'PIX' : wd.method.toUpperCase()}
+                                          </Badge>
+                                        )}
+                                        {wd.destination && (
+                                          <span className="text-zinc-500 font-mono truncate max-w-[120px]">{wd.destination}</span>
+                                        )}
+                                      </div>
                                     </div>
                                   </div>
                                   <div className="text-right flex-shrink-0">
-                                    <div className="text-red-400 font-semibold text-sm">-${fmtUSDT(tx.amount)}</div>
+                                    <div className="text-red-400 font-semibold text-sm">-${fmtUSDT(wd.amount)}</div>
                                     <Badge className={`text-[10px] px-1.5 py-0 ${
-                                      tx.status === 'approved' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' :
-                                      tx.status === 'pending' ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' :
-                                      tx.status === 'rejected' ? 'bg-red-500/20 text-red-400 border-red-500/30' :
-                                      tx.status === 'processing' ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' :
+                                      wd.status === 'confirmed' || wd.status === 'approved' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' :
+                                      wd.status === 'pending' ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' :
+                                      wd.status === 'rejected' ? 'bg-red-500/20 text-red-400 border-red-500/30' :
+                                      wd.status === 'processing' ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' :
                                       'bg-zinc-500/20 text-zinc-400 border-zinc-500/30'
                                     }`} variant="outline">
-                                      {tx.status === 'approved' ? 'Concluído' :
-                                       tx.status === 'pending' ? 'Pendente' :
-                                       tx.status === 'rejected' ? 'Rejeitado' :
-                                       tx.status === 'processing' ? 'Processando' : tx.status}
+                                      {wd.status === 'confirmed' || wd.status === 'approved' ? 'Concluído' :
+                                       wd.status === 'pending' ? 'Pendente' :
+                                       wd.status === 'rejected' ? 'Rejeitado' :
+                                       wd.status === 'processing' ? 'Processando' : wd.status}
                                     </Badge>
                                   </div>
                                 </div>
-                              ))}
-                            </div>
-                          );
-                        })()}
+                                {/* NowPayments payout details */}
+                                {wd.nowpayments && (
+                                  <div className="mt-3 p-3 bg-zinc-800/50 rounded-lg space-y-2">
+                                    <div className="flex items-center gap-2 text-xs">
+                                      <Globe className="h-3 w-3 text-sky-400" />
+                                      <span className="text-zinc-400">NowPayments Payout</span>
+                                      <Badge className={`text-[10px] px-1.5 py-0 ${
+                                        wd.nowpayments.payoutStatus === 'FINISHED' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' :
+                                        wd.nowpayments.payoutStatus === 'FAILED' || wd.nowpayments.payoutStatus === 'REJECTED' ? 'bg-red-500/20 text-red-400 border-red-500/30' :
+                                        'bg-blue-500/20 text-blue-400 border-blue-500/30'
+                                      }`} variant="outline">
+                                        {wd.nowpayments.payoutStatus}
+                                      </Badge>
+                                    </div>
+                                    {wd.nowpayments.destinationAddress && (
+                                      <div className="flex items-center gap-2 text-xs">
+                                        <Wallet className="h-3 w-3 text-zinc-400" />
+                                        <span className="text-zinc-500 font-mono truncate max-w-[200px] sm:max-w-[350px]">{wd.nowpayments.destinationAddress}</span>
+                                      </div>
+                                    )}
+                                    {wd.nowpayments.txHash && (
+                                      <div className="flex items-center gap-2 text-xs">
+                                        <ExternalLink className="h-3 w-3 text-zinc-400" />
+                                        <span className="text-zinc-400">TX: </span>
+                                        <span className="text-white font-mono truncate max-w-[200px]">{wd.nowpayments.txHash}</span>
+                                      </div>
+                                    )}
+                                    {wd.nowpayments.fee && d(wd.nowpayments.fee) > 0 && (
+                                      <div className="flex items-center gap-2 text-xs">
+                                        <Percent className="h-3 w-3 text-zinc-400" />
+                                        <span className="text-zinc-400">Taxa: </span>
+                                        <span className="text-white">{wd.nowpayments.fee} {wd.nowpayments.currency?.toUpperCase()}</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </CardContent>
                     </Card>
                   </div>
@@ -3141,7 +3390,27 @@ export default function MiningProtocol() {
                 {/* ====== EXTRATO TAB ====== */}
                 {activeTab === 'extrato' && (
                   <div className="space-y-6">
-                    <h2 className="text-xl sm:text-2xl font-bold">Extrato</h2>
+                    <div className="flex items-center justify-between">
+                      <h2 className="text-xl sm:text-2xl font-bold">Extrato</h2>
+                      <div className="flex items-center gap-2">
+                        <Select value={statementFilter} onValueChange={setStatementFilter}>
+                          <SelectTrigger className="w-[150px] h-9 text-xs bg-zinc-900 border-zinc-800">
+                            <SelectValue placeholder="Filtrar tipo" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="">Todos</SelectItem>
+                            <SelectItem value="deposit">Depósitos</SelectItem>
+                            <SelectItem value="withdrawal">Saques</SelectItem>
+                            <SelectItem value="mining_profit">Lucros</SelectItem>
+                            <SelectItem value="affiliate_commission">Comissões</SelectItem>
+                            <SelectItem value="rental_payment">Aluguéis</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Button variant="ghost" size="sm" onClick={fetchStatement} disabled={statementLoading}>
+                          <RefreshCw className={`h-4 w-4 ${statementLoading ? 'animate-spin' : ''}`} />
+                        </Button>
+                      </div>
+                    </div>
 
                     {/* Balance Overview */}
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -3154,7 +3423,7 @@ export default function MiningProtocol() {
                             <span className="text-zinc-400 text-sm">Entradas</span>
                           </div>
                           <p className="text-emerald-400 font-bold text-2xl">
-                            +${transactions.filter(t => ['deposit', 'mining_profit', 'affiliate_commission'].includes(t.type) && t.status === 'approved').reduce((s, t) => s + d(t.amount), 0).toFixed(2)}
+                            +${(statementSummary?.totalIncome || 0).toFixed(2)}
                           </p>
                           <p className="text-zinc-500 text-xs mt-1">Depósitos + Lucros + Comissões</p>
                         </CardContent>
@@ -3168,7 +3437,7 @@ export default function MiningProtocol() {
                             <span className="text-zinc-400 text-sm">Saídas</span>
                           </div>
                           <p className="text-red-400 font-bold text-2xl">
-                            -${transactions.filter(t => ['withdrawal', 'rental_payment'].includes(t.type) && t.status === 'approved').reduce((s, t) => s + d(t.amount), 0).toFixed(2)}
+                            -${(statementSummary?.totalExpense || 0).toFixed(2)}
                           </p>
                           <p className="text-zinc-500 text-xs mt-1">Saques + Aluguéis</p>
                         </CardContent>
@@ -3181,8 +3450,8 @@ export default function MiningProtocol() {
                             </div>
                             <span className="text-zinc-400 text-sm">Saldo Atual</span>
                           </div>
-                          <p className="text-white font-bold text-2xl">${fmtUSDT(user?.balance || '0')}</p>
-                          <p className="text-zinc-500 text-xs mt-1">≈ R$ {(d(user?.balance || '0') * usdtBrlRate).toFixed(2)}</p>
+                          <p className="text-white font-bold text-2xl">${fmtUSDT(statementSummary?.currentBalance?.toString() || user?.balance || '0')}</p>
+                          <p className="text-zinc-500 text-xs mt-1">≈ R$ {((statementSummary?.currentBalance || d(user?.balance || '0')) * usdtBrlRate).toFixed(2)}</p>
                         </CardContent>
                       </Card>
                     </div>
@@ -3198,7 +3467,7 @@ export default function MiningProtocol() {
                             <ArrowDownLeft className="h-4 w-4 text-emerald-400" />
                             <span className="text-zinc-300 text-sm">Total Depositado</span>
                           </div>
-                          <span className="text-emerald-400 font-semibold">${fmtUSDT(user?.totalInvested || '0')}</span>
+                          <span className="text-emerald-400 font-semibold">${fmtUSDT(statementSummary?.totalInvested?.toString() || user?.totalInvested || '0')}</span>
                         </div>
                         <Separator className="bg-zinc-800" />
                         <div className="flex justify-between items-center">
@@ -3206,7 +3475,7 @@ export default function MiningProtocol() {
                             <TrendingUp className="h-4 w-4 text-emerald-400" />
                             <span className="text-zinc-300 text-sm">Total Minado (Lucros)</span>
                           </div>
-                          <span className="text-emerald-400 font-semibold">${fmtUSDT(user?.totalMined || '0')}</span>
+                          <span className="text-emerald-400 font-semibold">${fmtUSDT(statementSummary?.totalMined?.toString() || user?.totalMined || '0')}</span>
                         </div>
                         <Separator className="bg-zinc-800" />
                         <div className="flex justify-between items-center">
@@ -3214,7 +3483,7 @@ export default function MiningProtocol() {
                             <Users className="h-4 w-4 text-blue-400" />
                             <span className="text-zinc-300 text-sm">Comissões Afiliado</span>
                           </div>
-                          <span className="text-blue-400 font-semibold">${fmtUSDT(user?.totalAffiliateEarnings || '0')}</span>
+                          <span className="text-blue-400 font-semibold">${fmtUSDT(statementSummary?.totalAffiliateEarnings?.toString() || user?.totalAffiliateEarnings || '0')}</span>
                         </div>
                         <Separator className="bg-zinc-800" />
                         <div className="flex justify-between items-center">
@@ -3222,7 +3491,7 @@ export default function MiningProtocol() {
                             <ArrowUpRight className="h-4 w-4 text-red-400" />
                             <span className="text-zinc-300 text-sm">Total Sacado</span>
                           </div>
-                          <span className="text-red-400 font-semibold">${fmtUSDT(user?.totalWithdrawn || '0')}</span>
+                          <span className="text-red-400 font-semibold">${fmtUSDT(statementSummary?.totalWithdrawn?.toString() || user?.totalWithdrawn || '0')}</span>
                         </div>
                         <Separator className="bg-zinc-800" />
                         <div className="flex justify-between items-center pt-1">
@@ -3230,71 +3499,85 @@ export default function MiningProtocol() {
                             <DollarSign className="h-4 w-4 text-white" />
                             <span className="text-white font-medium">Saldo Disponível</span>
                           </div>
-                          <span className="text-white font-bold text-lg">${fmtUSDT(user?.balance || '0')}</span>
+                          <span className="text-white font-bold text-lg">${fmtUSDT(statementSummary?.currentBalance?.toString() || user?.balance || '0')}</span>
                         </div>
                       </CardContent>
                     </Card>
 
-                    {/* Full Transaction Statement */}
+                    {/* Full Transaction Statement with Running Balance */}
                     <Card className="bg-zinc-900 border-zinc-800">
                       <CardHeader className="pb-3">
                         <div className="flex items-center justify-between">
                           <CardTitle className="text-base">Extrato Completo</CardTitle>
-                          <Badge variant="outline" className="border-zinc-700 text-zinc-400">{transactions.length} transações</Badge>
+                          <Badge variant="outline" className="border-zinc-700 text-zinc-400">{statementData.length} movimentações</Badge>
                         </div>
                       </CardHeader>
                       <CardContent className="p-0">
-                        {transactions.length === 0 ? (
+                        {statementLoading ? (
+                          <div className="space-y-3 p-4">
+                            {[1,2,3,4,5].map(i => <Skeleton key={i} className="h-16 w-full bg-zinc-800" />)}
+                          </div>
+                        ) : statementData.length === 0 ? (
                           <div className="text-center py-12">
                             <FileText className="h-12 w-12 text-zinc-600 mx-auto mb-3" />
-                            <p className="text-zinc-400">Nenhuma transação registrada</p>
+                            <p className="text-zinc-400">Nenhuma movimentação registrada</p>
                           </div>
                         ) : (
                           <div className="divide-y divide-zinc-800 max-h-[600px] overflow-y-auto">
-                            {transactions.map(tx => {
-                              const isPositive = ['deposit', 'mining_profit', 'affiliate_commission'].includes(tx.type);
-                              const Icon = txTypeIcon(tx.type);
+                            {statementData.map((entry: any) => {
+                              const isPositive = entry.category === 'income';
+                              const IconComp = isPositive
+                                ? (entry.type === 'deposit' ? ArrowDownLeft :
+                                   entry.type === 'mining_profit' ? Pickaxe :
+                                   entry.type === 'affiliate_commission' ? Users : TrendingUp)
+                                : (entry.type === 'withdrawal' ? ArrowUpRight : Clock);
                               return (
-                                <div key={tx.id} className="flex items-center justify-between gap-3 p-3 sm:p-4 hover:bg-zinc-800/30">
+                                <div key={entry.id} className="flex items-center justify-between gap-3 p-3 sm:p-4 hover:bg-zinc-800/30">
                                   <div className="flex items-center gap-3 min-w-0 flex-1">
                                     <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${isPositive ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
-                                      <Icon className="h-5 w-5" />
+                                      <IconComp className="h-5 w-5" />
                                     </div>
                                     <div className="min-w-0">
-                                      <div className="font-medium text-sm truncate">{tx.description}</div>
-                                      <div className="text-xs text-zinc-400 flex items-center gap-2">
+                                      <div className="font-medium text-sm truncate">{entry.description}</div>
+                                      <div className="text-xs text-zinc-400 flex items-center gap-2 flex-wrap">
                                         <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${
-                                          tx.type === 'deposit' ? 'bg-emerald-500/10 text-emerald-400' :
-                                          tx.type === 'mining_profit' ? 'bg-blue-500/10 text-blue-400' :
-                                          tx.type === 'affiliate_commission' ? 'bg-purple-500/10 text-purple-400' :
-                                          tx.type === 'withdrawal' ? 'bg-red-500/10 text-red-400' :
-                                          tx.type === 'rental_payment' ? 'bg-amber-500/10 text-amber-400' :
+                                          entry.type === 'deposit' ? 'bg-emerald-500/10 text-emerald-400' :
+                                          entry.type === 'mining_profit' ? 'bg-blue-500/10 text-blue-400' :
+                                          entry.type === 'affiliate_commission' ? 'bg-purple-500/10 text-purple-400' :
+                                          entry.type === 'withdrawal' ? 'bg-red-500/10 text-red-400' :
+                                          entry.type === 'rental_payment' ? 'bg-amber-500/10 text-amber-400' :
                                           'bg-zinc-500/10 text-zinc-400'
                                         }`}>
-                                          {tx.type === 'deposit' ? 'Depósito' :
-                                           tx.type === 'mining_profit' ? 'Lucro Mineração' :
-                                           tx.type === 'affiliate_commission' ? 'Comissão' :
-                                           tx.type === 'withdrawal' ? 'Saque' :
-                                           tx.type === 'rental_payment' ? 'Aluguel' :
-                                           tx.type}
+                                          {entry.type === 'deposit' ? 'Depósito' :
+                                           entry.type === 'mining_profit' ? 'Lucro Mineração' :
+                                           entry.type === 'affiliate_commission' ? 'Comissão' :
+                                           entry.type === 'withdrawal' ? 'Saque' :
+                                           entry.type === 'rental_payment' ? 'Aluguel' :
+                                           entry.type}
                                         </span>
-                                        <span>{fmtDateTime(tx.createdAt)}</span>
+                                        <span>{fmtDateTime(entry.date)}</span>
+                                        {entry.method && (
+                                          <span className="text-zinc-500">{entry.method}</span>
+                                        )}
                                       </div>
                                     </div>
                                   </div>
                                   <div className="text-right flex-shrink-0">
                                     <div className={`font-semibold text-sm ${isPositive ? 'text-emerald-400' : 'text-red-400'}`}>
-                                      {isPositive ? '+' : '-'}${fmtUSDT(tx.amount)}
+                                      {isPositive ? '+' : '-'}${fmtUSDT(entry.amount)}
+                                    </div>
+                                    <div className="text-[10px] text-zinc-500">
+                                      Saldo: ${fmtUSDT(entry.runningBalance?.toString() || '0')}
                                     </div>
                                     <Badge className={`text-[10px] px-1.5 py-0 ${
-                                      tx.status === 'approved' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' :
-                                      tx.status === 'pending' ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' :
-                                      tx.status === 'rejected' ? 'bg-red-500/20 text-red-400 border-red-500/30' :
+                                      entry.status === 'approved' || entry.status === 'completed' || entry.status === 'confirmed' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' :
+                                      entry.status === 'pending' ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' :
+                                      entry.status === 'rejected' ? 'bg-red-500/20 text-red-400 border-red-500/30' :
                                       'bg-zinc-500/20 text-zinc-400 border-zinc-500/30'
                                     }`} variant="outline">
-                                      {tx.status === 'approved' ? 'Confirmado' :
-                                       tx.status === 'pending' ? 'Pendente' :
-                                       tx.status === 'rejected' ? 'Rejeitado' : tx.status}
+                                      {entry.status === 'approved' || entry.status === 'completed' || entry.status === 'confirmed' ? 'Confirmado' :
+                                       entry.status === 'pending' ? 'Pendente' :
+                                       entry.status === 'rejected' ? 'Rejeitado' : entry.status}
                                     </Badge>
                                   </div>
                                 </div>
@@ -3991,6 +4274,268 @@ export default function MiningProtocol() {
                           </Table>
                         </CardContent>
                       </Card>
+                    )}
+
+                    {/* Admin NowPayments */}
+                    {adminTab === 'nowpayments' && (
+                      <div className="space-y-6">
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-lg font-bold">NowPayments</h3>
+                          <Button variant="ghost" size="sm" onClick={fetchAdminNpData} disabled={adminNpLoading}>
+                            <RefreshCw className={`h-4 w-4 ${adminNpLoading ? 'animate-spin' : ''}`} />
+                          </Button>
+                        </div>
+
+                        {/* Stats Cards */}
+                        {adminNpStats && (
+                          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                            <Card className="bg-zinc-900 border-zinc-800">
+                              <CardContent className="p-4">
+                                <p className="text-zinc-400 text-xs">Total Depositado (NP)</p>
+                                <p className="text-emerald-400 font-bold text-lg">${(adminNpStats.totalDeposited || 0).toFixed(2)}</p>
+                              </CardContent>
+                            </Card>
+                            <Card className="bg-zinc-900 border-zinc-800">
+                              <CardContent className="p-4">
+                                <p className="text-zinc-400 text-xs">Total Pago (NP)</p>
+                                <p className="text-red-400 font-bold text-lg">${(adminNpStats.totalPaidOut || 0).toFixed(2)}</p>
+                              </CardContent>
+                            </Card>
+                            <Card className="bg-zinc-900 border-zinc-800">
+                              <CardContent className="p-4">
+                                <p className="text-zinc-400 text-xs">Split Recebido</p>
+                                <p className="text-purple-400 font-bold text-lg">${(adminNpStats.totalSplitReceived || 0).toFixed(2)}</p>
+                              </CardContent>
+                            </Card>
+                            <Card className="bg-zinc-900 border-zinc-800">
+                              <CardContent className="p-4">
+                                <p className="text-zinc-400 text-xs">Pendentes</p>
+                                <p className="text-amber-400 font-bold text-lg">{adminNpStats.pendingDepositCount || 0} deps / {adminNpStats.pendingPayoutCount || 0} payouts</p>
+                              </CardContent>
+                            </Card>
+                          </div>
+                        )}
+
+                        {/* Section Tabs */}
+                        <div className="flex gap-2 flex-wrap">
+                          {['deposits', 'payouts', 'wallets', 'webhooks'].map(section => (
+                            <Button key={section} variant={adminNpSection === section ? 'default' : 'outline'} size="sm"
+                              className={adminNpSection === section ? 'bg-emerald-600 hover:bg-emerald-700' : 'border-zinc-700'}
+                              onClick={() => setAdminNpSection(section)}>
+                              {section === 'deposits' ? 'Depósitos' :
+                               section === 'payouts' ? 'Pagamentos' :
+                               section === 'wallets' ? 'Carteiras' : 'Webhooks'}
+                            </Button>
+                          ))}
+                        </div>
+
+                        {/* Deposits Section */}
+                        {adminNpSection === 'deposits' && (
+                          <Card className="bg-zinc-900 border-zinc-800">
+                            <CardHeader className="pb-3">
+                              <CardTitle className="text-base">Depósitos NowPayments ({adminNpDeposits.length})</CardTitle>
+                            </CardHeader>
+                            <CardContent className="p-0">
+                              {adminNpDeposits.length === 0 ? (
+                                <div className="text-center py-8 text-zinc-500">Nenhum depósito via NowPayments</div>
+                              ) : (
+                                <div className="overflow-x-auto">
+                                  <Table>
+                                    <TableHeader>
+                                      <TableRow className="border-zinc-800">
+                                        <TableHead className="text-zinc-400">Usuário</TableHead>
+                                        <TableHead className="text-zinc-400">Valor</TableHead>
+                                        <TableHead className="text-zinc-400">Moeda</TableHead>
+                                        <TableHead className="text-zinc-400">Status</TableHead>
+                                        <TableHead className="text-zinc-400">Endereço</TableHead>
+                                        <TableHead className="text-zinc-400">Split</TableHead>
+                                        <TableHead className="text-zinc-400">Data</TableHead>
+                                      </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                      {adminNpDeposits.map((dep: any) => (
+                                        <TableRow key={dep.id} className="border-zinc-800">
+                                          <TableCell className="text-xs">
+                                            <div className="font-medium">{dep.user?.name || 'N/A'}</div>
+                                            <div className="text-zinc-500">{dep.user?.email}</div>
+                                          </TableCell>
+                                          <TableCell className="text-xs text-emerald-400 font-semibold">${fmtUSDT(dep.priceAmount)}</TableCell>
+                                          <TableCell className="text-xs">{dep.payCurrency?.toUpperCase()}</TableCell>
+                                          <TableCell>
+                                            <Badge className={`text-[10px] px-1.5 py-0 ${
+                                              dep.paymentStatus === 'finished' || dep.paymentStatus === 'confirmed' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' :
+                                              dep.paymentStatus === 'waiting' ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' :
+                                              dep.paymentStatus === 'expired' || dep.paymentStatus === 'failed' ? 'bg-red-500/20 text-red-400 border-red-500/30' :
+                                              'bg-blue-500/20 text-blue-400 border-blue-500/30'
+                                            }`} variant="outline">{dep.paymentStatus}</Badge>
+                                          </TableCell>
+                                          <TableCell className="text-xs font-mono max-w-[120px] truncate">{dep.payAddress || '-'}</TableCell>
+                                          <TableCell className="text-xs">
+                                            {dep.splitProcessed ? (
+                                              <span className="text-purple-400">{dep.splitPct}% (${fmtUSDT(dep.splitAmount)})</span>
+                                            ) : (
+                                              <span className="text-zinc-500">-</span>
+                                            )}
+                                          </TableCell>
+                                          <TableCell className="text-xs text-zinc-400">{fmtDateTime(dep.createdAt)}</TableCell>
+                                        </TableRow>
+                                      ))}
+                                    </TableBody>
+                                  </Table>
+                                </div>
+                              )}
+                            </CardContent>
+                          </Card>
+                        )}
+
+                        {/* Payouts Section */}
+                        {adminNpSection === 'payouts' && (
+                          <Card className="bg-zinc-900 border-zinc-800">
+                            <CardHeader className="pb-3">
+                              <CardTitle className="text-base">Pagamentos NowPayments ({adminNpPayouts.length})</CardTitle>
+                            </CardHeader>
+                            <CardContent className="p-0">
+                              {adminNpPayouts.length === 0 ? (
+                                <div className="text-center py-8 text-zinc-500">Nenhum pagamento via NowPayments</div>
+                              ) : (
+                                <div className="overflow-x-auto">
+                                  <Table>
+                                    <TableHeader>
+                                      <TableRow className="border-zinc-800">
+                                        <TableHead className="text-zinc-400">Usuário</TableHead>
+                                        <TableHead className="text-zinc-400">Valor</TableHead>
+                                        <TableHead className="text-zinc-400">Moeda</TableHead>
+                                        <TableHead className="text-zinc-400">Status</TableHead>
+                                        <TableHead className="text-zinc-400">Destino</TableHead>
+                                        <TableHead className="text-zinc-400">TX Hash</TableHead>
+                                        <TableHead className="text-zinc-400">Data</TableHead>
+                                      </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                      {adminNpPayouts.map((pay: any) => (
+                                        <TableRow key={pay.id} className="border-zinc-800">
+                                          <TableCell className="text-xs">
+                                            <div className="font-medium">{pay.user?.name || 'N/A'}</div>
+                                            <div className="text-zinc-500">{pay.user?.email}</div>
+                                          </TableCell>
+                                          <TableCell className="text-xs text-red-400 font-semibold">${fmtUSDT(pay.amount)}</TableCell>
+                                          <TableCell className="text-xs">{pay.currency?.toUpperCase()}</TableCell>
+                                          <TableCell>
+                                            <Badge className={`text-[10px] px-1.5 py-0 ${
+                                              pay.payoutStatus === 'FINISHED' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' :
+                                              pay.payoutStatus === 'FAILED' || pay.payoutStatus === 'REJECTED' ? 'bg-red-500/20 text-red-400 border-red-500/30' :
+                                              'bg-blue-500/20 text-blue-400 border-blue-500/30'
+                                            }`} variant="outline">{pay.payoutStatus}</Badge>
+                                          </TableCell>
+                                          <TableCell className="text-xs font-mono max-w-[120px] truncate">{pay.destinationAddress}</TableCell>
+                                          <TableCell className="text-xs font-mono max-w-[120px] truncate">{pay.txHash || '-'}</TableCell>
+                                          <TableCell className="text-xs text-zinc-400">{fmtDateTime(pay.createdAt)}</TableCell>
+                                        </TableRow>
+                                      ))}
+                                    </TableBody>
+                                  </Table>
+                                </div>
+                              )}
+                            </CardContent>
+                          </Card>
+                        )}
+
+                        {/* Wallets Section */}
+                        {adminNpSection === 'wallets' && (
+                          <Card className="bg-zinc-900 border-zinc-800">
+                            <CardHeader className="pb-3">
+                              <CardTitle className="text-base">Carteiras Sub-Contas ({adminNpWallets.length})</CardTitle>
+                            </CardHeader>
+                            <CardContent className="p-0">
+                              {adminNpWallets.length === 0 ? (
+                                <div className="text-center py-8 text-zinc-500">Nenhuma sub-conta cadastrada</div>
+                              ) : (
+                                <div className="overflow-x-auto">
+                                  <Table>
+                                    <TableHeader>
+                                      <TableRow className="border-zinc-800">
+                                        <TableHead className="text-zinc-400">Usuário</TableHead>
+                                        <TableHead className="text-zinc-400">NP User ID</TableHead>
+                                        <TableHead className="text-zinc-400">BTC</TableHead>
+                                        <TableHead className="text-zinc-400">USDT TRC20</TableHead>
+                                        <TableHead className="text-zinc-400">USDT Polygon</TableHead>
+                                        <TableHead className="text-zinc-400">Saldo</TableHead>
+                                      </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                      {adminNpWallets.map((w: any) => (
+                                        <TableRow key={w.id} className="border-zinc-800">
+                                          <TableCell className="text-xs">
+                                            <div className="font-medium">{w.user?.name || 'N/A'}</div>
+                                            <div className="text-zinc-500">{w.user?.email}</div>
+                                          </TableCell>
+                                          <TableCell className="text-xs font-mono">{w.nowpaymentsUserId}</TableCell>
+                                          <TableCell className="text-xs font-mono max-w-[100px] truncate">{w.depositAddressBtc || '-'}</TableCell>
+                                          <TableCell className="text-xs font-mono max-w-[100px] truncate">{w.depositAddressUsdt || '-'}</TableCell>
+                                          <TableCell className="text-xs font-mono max-w-[100px] truncate">{w.depositAddressUsdtPolygon || '-'}</TableCell>
+                                          <TableCell className="text-xs">
+                                            <span className="text-emerald-400">${fmtUSDT(w.user?.balance || '0')}</span>
+                                            <span className="text-zinc-500 ml-1">invest: ${fmtUSDT(w.user?.totalInvested || '0')}</span>
+                                          </TableCell>
+                                        </TableRow>
+                                      ))}
+                                    </TableBody>
+                                  </Table>
+                                </div>
+                              )}
+                            </CardContent>
+                          </Card>
+                        )}
+
+                        {/* Webhooks Section */}
+                        {adminNpSection === 'webhooks' && (
+                          <Card className="bg-zinc-900 border-zinc-800">
+                            <CardHeader className="pb-3">
+                              <CardTitle className="text-base">Webhook Logs ({adminNpWebhooks.length})</CardTitle>
+                            </CardHeader>
+                            <CardContent className="p-0">
+                              {adminNpWebhooks.length === 0 ? (
+                                <div className="text-center py-8 text-zinc-500">Nenhum webhook recebido</div>
+                              ) : (
+                                <div className="divide-y divide-zinc-800 max-h-[500px] overflow-y-auto">
+                                  {adminNpWebhooks.map((wh: any) => (
+                                    <div key={wh.id} className="p-3 sm:p-4">
+                                      <div className="flex items-center justify-between gap-2">
+                                        <div className="flex items-center gap-2">
+                                          <Badge className={`text-[10px] px-1.5 py-0 ${
+                                            wh.processed ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' :
+                                            'bg-amber-500/20 text-amber-400 border-amber-500/30'
+                                          }`} variant="outline">
+                                            {wh.processed ? 'Processado' : 'Pendente'}
+                                          </Badge>
+                                          <Badge className="text-[10px] px-1.5 py-0 bg-zinc-700 text-zinc-300" variant="outline">
+                                            {wh.eventType}
+                                          </Badge>
+                                          {wh.signatureValid !== null && (
+                                            <Badge className={`text-[10px] px-1.5 py-0 ${
+                                              wh.signatureValid ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' :
+                                              'bg-red-500/20 text-red-400 border-red-500/30'
+                                            }`} variant="outline">
+                                              {wh.signatureValid ? 'Assinatura OK' : 'Assinatura Inválida'}
+                                            </Badge>
+                                          )}
+                                        </div>
+                                        <span className="text-xs text-zinc-500">{fmtDateTime(wh.createdAt)}</span>
+                                      </div>
+                                      {wh.paymentId && (
+                                        <div className="text-xs text-zinc-400 mt-1">Payment ID: {wh.paymentId}</div>
+                                      )}
+                                      {wh.processingError && (
+                                        <div className="text-xs text-red-400 mt-1">Erro: {wh.processingError}</div>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </CardContent>
+                          </Card>
+                        )}
+                      </div>
                     )}
 
                     {/* Admin Affiliates */}
