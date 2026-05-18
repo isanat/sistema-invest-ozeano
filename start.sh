@@ -6,8 +6,11 @@ echo "============================================"
 # Show environment (without sensitive values)
 echo "NODE_ENV: $NODE_ENV"
 echo "PORT: $PORT"
+echo "HOSTNAME: $HOSTNAME"
 echo "DATABASE_URL is set: $([ -n "$DATABASE_URL" ] && echo 'yes' || echo 'no')"
 echo "NEXT_PUBLIC_APP_URL: $NEXT_PUBLIC_APP_URL"
+echo "PWD: $(pwd)"
+echo "Files in /app: $(ls /app/ | head -20)"
 
 cd /app
 
@@ -18,4 +21,5 @@ npx prisma db push --accept-data-loss 2>&1 || {
 }
 
 echo "[2/2] Starting Next.js server..."
-exec node server.js
+echo "node version: $(node --version)"
+exec npx next start -p 3000 -H 0.0.0.0
