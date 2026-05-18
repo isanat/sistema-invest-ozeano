@@ -521,3 +521,35 @@ Stage Summary:
 - New code pushed to GitHub but Coolify deployment still in progress
 - Admin user available: admintest@flashminings.com / Admin@2024!
 - Production site: https://flashminings.com (running but with old code until deployment completes)
+
+---
+Task ID: 8
+Agent: Main Agent
+Task: Fix Coolify deployment failure and update NowPayments credentials
+
+Work Log:
+- Diagnosed Coolify deployment error: git repository URL was doubled (`https://github.com/https://github.com/isanat/mining-protocol.git`)
+- Fixed git_repository in Coolify from `https://github.com/isanat/mining-protocol.git` to `isanat/mining-protocol.git` (Coolify's GithubApp source auto-prepends `https://github.com/`)
+- Updated NowPayments credentials in Coolify environment variables:
+  - API_KEY: `4XQ60HD-2DMMX2S-MJYJ849-XKCTB6P` → `XYEW1J7-1ZE4ZA7-PCH88Y7-H6SXB6F`
+  - IPN_SECRET: `L9Lrzr86bxDGwpYEUuWVLXSi/zTBukrd` → `iNGOMpo5fLmlr+o1ZFgdLgK341wZ0A1D`
+  - 2FA_SECRET: `F5BGCOL5OVVSYM2M` → `JFVWYMSRGEXHKM2X`
+- Updated SystemConfig in production PostgreSQL database with new credentials
+- Updated local .env with new credentials
+- Removed .env from git tracking (security fix), added .env.example with placeholders
+- Fixed DATABASE_URL in Coolify: changed from external URL (`164.68.126.14:5435`) to internal Docker network URL (`b12p2y3sknva5zyk1b4f4w1j:5432`) — the container couldn't reach the database via the external IP
+- Simplified Dockerfile: removed standalone mode, copy full app instead, install curl for health checks
+- Changed start.sh to use `npx next start -p 3000 -H 0.0.0.0` instead of `node server.js`
+- Updated health check settings: start_period 30s, interval 10s, timeout 10s, retries 5
+- Pushed 3 commits to GitHub and triggered successful Coolify deployments
+- Deleted duplicate DATABASE_URL and NOWPAYMENTS_2FA_SECRET env vars in Coolify
+
+Stage Summary:
+- Production site https://flashminings.com is LIVE and healthy ✅
+- Coolify container status: `running:healthy` ✅
+- NowPayments credentials fully configured (API key, email, password, IPN secret, 2FA secret) ✅
+- Landing API returns 200 with site data ✅
+- Admin user works: admintest@flashminings.com / Admin@2024! ✅
+- All NowPayments config flags show `true` (hasApiKey, hasEmail, hasPassword, hasIpnSecret, has2FA) ✅
+- Security fix: .env removed from git tracking ✅
+- Database uses internal Docker network URL for reliable container-to-container communication ✅
