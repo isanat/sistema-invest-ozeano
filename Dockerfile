@@ -31,8 +31,8 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
-# Install Prisma CLI for runtime migrations
-RUN npm install -g prisma
+# Install Prisma CLI v6 (matches the project's @prisma/client version)
+RUN npm install -g prisma@6
 
 # Create user
 RUN addgroup --system --gid 1001 nodejs && \
