@@ -1,0 +1,8 @@
+[phases.install]
+cmds = ['bun install']
+
+[phases.build]
+cmds = ['npx prisma generate', 'npm run build']
+
+[start]
+cmd = 'npx prisma db push --skip-generate --accept-data-loss 2>/dev/null; node .next/standalone/server.js'
