@@ -35,6 +35,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
+import { QRCodeSVG } from 'qrcode.react';
 import { useI18n } from '@/lib/i18n';
 
 // ============================================================================
@@ -488,6 +489,12 @@ export default function MiningProtocol() {
   const [npDepositPaymentId, setNpDepositPaymentId] = useState<string | null>(null);
   const [npGeneratingAddress, setNpGeneratingAddress] = useState(false);
   const [npAddressCopied, setNpAddressCopied] = useState(false);
+  const [npDepositId, setNpDepositId] = useState<string | null>(null);
+  const [npPayAmount, setNpPayAmount] = useState<string | null>(null);
+  const [npPriceAmount, setNpPriceAmount] = useState<number | null>(null);
+  const [npExpirationDate, setNpExpirationDate] = useState<string | null>(null);
+  const [npEstimatedFee, setNpEstimatedFee] = useState<number>(0);
+  const [npCountdown, setNpCountdown] = useState<string>('');
 
   // Plans filter state
   const [plansCoinFilter, setPlansCoinFilter] = useState<string>('ALL');
@@ -958,16 +965,21 @@ export default function MiningProtocol() {
     }
     setNpGeneratingAddress(true);
     try {
-      const data = await api<{ success: boolean; deposit: any; paymentInfo: any }>('/api/nowpayments/deposit', {
+      const data = await api<{ success: boolean; depositId: string; deposit: any; paymentInfo: any }>('/api/nowpayments/deposit', {
         method: 'POST',
         body: JSON.stringify({
           amount: parseFloat(npDepositAmount),
           pay_currency: npDepositCurrency,
         }),
       });
-      if (data.paymentInfo?.pay_address) {
-        setNpDepositAddress(data.paymentInfo.pay_address);
-        setNpDepositPaymentId(data.paymentInfo.payment_id?.toString() || null);
+      if (data.paymentInfo?.depositAddress) {
+        setNpDepositAddress(data.paymentInfo.depositAddress);
+        setNpDepositPaymentId(data.paymentInfo.paymentId?.toString() || null);
+        setNpDepositId(data.depositId || null);
+        setNpPayAmount(data.paymentInfo.payAmount ? String(data.paymentInfo.payAmount) : null);
+        setNpPriceAmount(data.paymentInfo.priceAmount || parseFloat(npDepositAmount));
+        setNpExpirationDate(data.paymentInfo.expirationDate || null);
+        setNpEstimatedFee(data.paymentInfo.estimatedFee || 0);
         setNpDepositStatus('waiting');
         toast.success('Endereço de depósito gerado! Envie o valor para a carteira abaixo.');
       } else {
@@ -999,6 +1011,12 @@ export default function MiningProtocol() {
     setNpDepositStatus(null);
     setNpDepositPaymentId(null);
     setNpAddressCopied(false);
+    setNpDepositId(null);
+    setNpPayAmount(null);
+    setNpPriceAmount(null);
+    setNpExpirationDate(null);
+    setNpEstimatedFee(0);
+    setNpCountdown('');
   };
 
   // Poll NowPayments deposit status
@@ -1006,24 +1024,46 @@ export default function MiningProtocol() {
     if (!npDepositPaymentId || !npDepositAddress) return;
     const poll = setInterval(async () => {
       try {
-        const data = await api<{ success: boolean; status: string }>(`/api/nowpayments/status?depositPaymentId=${npDepositPaymentId}`);
-        if (data.status && data.status !== npDepositStatus) {
-          setNpDepositStatus(data.status);
-          if (['finished', 'confirmed', 'sending'].includes(data.status)) {
+        const data = await api<{ success: boolean; type: string; deposit: { paymentStatus: string } }>(`/api/nowpayments/status?nowpaymentsPaymentId=${npDepositPaymentId}`);
+        const status = data.deposit?.paymentStatus;
+        if (status && status !== npDepositStatus) {
+          setNpDepositStatus(status);
+          if (['finished', 'confirmed', 'sending'].includes(status)) {
             toast.success('Depósito confirmado! Saldo creditado.');
             setDepositDialog(false);
             resetNpDeposit();
             fetchDashboardData();
             checkAuth();
-          } else if (['failed', 'expired', 'refunded'].includes(data.status)) {
+          } else if (['failed', 'expired', 'refunded'].includes(status)) {
             toast.error('Depósito falhou ou expirou.');
-            setNpDepositStatus(data.status);
+            setNpDepositStatus(status);
           }
         }
       } catch { /* ignore poll errors */ }
     }, 15000);
     return () => clearInterval(poll);
   }, [npDepositPaymentId, npDepositAddress, npDepositStatus]);
+
+  // Countdown timer for deposit expiration
+  useEffect(() => {
+    if (!npExpirationDate || !npDepositAddress) return;
+    const updateCountdown = () => {
+      const now = Date.now();
+      const expiry = new Date(npExpirationDate).getTime();
+      const diff = expiry - now;
+      if (diff <= 0) {
+        setNpCountdown('Expirado');
+        return;
+      }
+      const hours = Math.floor(diff / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+      setNpCountdown(`${hours}h ${minutes}m ${seconds}s`);
+    };
+    updateCountdown();
+    const timer = setInterval(updateCountdown, 1000);
+    return () => clearInterval(timer);
+  }, [npExpirationDate, npDepositAddress]);
 
   // Withdraw handler - tries NowPayments first for crypto, falls back to manual
   const handleWithdraw = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -4469,7 +4509,7 @@ Seus 10 indicados diretos mineram $100/dia cada:
 
       {/* Deposit Dialog */}
       <Dialog open={depositDialog} onOpenChange={(open) => { setDepositDialog(open); if (!open) resetNpDeposit(); }}>
-        <DialogContent className="bg-zinc-900 border-zinc-800 text-white max-w-md w-[95vw] sm:w-full">
+        <DialogContent className="bg-zinc-900 border-zinc-800 text-white max-w-lg w-[95vw] sm:w-full">
           <DialogHeader><DialogTitle>{t('dashboard.deposit')}</DialogTitle><DialogDescription className="text-zinc-400">Deposite USDT via NowPayments ou manualmente</DialogDescription></DialogHeader>
 
           {!npDepositAddress ? (
@@ -4517,49 +4557,106 @@ Seus 10 indicados diretos mineram $100/dia cada:
             </div>
           ) : (
             <div className="space-y-4">
-              <div className="text-center">
-                <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-emerald-500/20 mb-2">
-                  <Wallet className="h-6 w-6 text-emerald-400" />
-                </div>
-                <h3 className="text-white font-semibold">Endereço de Depósito</h3>
-                <p className="text-zinc-400 text-sm">Envie <span className="text-emerald-400 font-bold">{npDepositAmount} USDT</span> para:</p>
-              </div>
-
-              <div className="bg-zinc-800 rounded-lg p-4 border border-zinc-700">
-                <div className="flex items-center gap-2">
-                  <code className="text-emerald-400 text-sm break-all flex-1 font-mono">{npDepositAddress}</code>
-                  <Button variant="ghost" size="sm" onClick={copyDepositAddress} className="text-zinc-400 hover:text-white shrink-0">
-                    {npAddressCopied ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
-                  </Button>
-                </div>
-              </div>
-
+              {/* Status Badge */}
               {npDepositStatus && (
-                <div className="flex items-center gap-2 text-sm">
-                  <div className={`h-2 w-2 rounded-full ${
+                <div className="flex items-center justify-center gap-2 text-sm">
+                  <div className={`h-2.5 w-2.5 rounded-full ${
                     npDepositStatus === 'waiting' ? 'bg-amber-400 animate-pulse' :
                     ['confirming', 'confirmed', 'sending'].includes(npDepositStatus) ? 'bg-blue-400 animate-pulse' :
                     npDepositStatus === 'finished' ? 'bg-emerald-400' :
                     'bg-red-400'
                   }`} />
-                  <span className="text-zinc-300">
+                  <span className={`font-medium ${
+                    npDepositStatus === 'waiting' ? 'text-amber-400' :
+                    ['confirming', 'confirmed', 'sending'].includes(npDepositStatus) ? 'text-blue-400' :
+                    npDepositStatus === 'finished' ? 'text-emerald-400' :
+                    'text-red-400'
+                  }`}>
                     {npDepositStatus === 'waiting' && 'Aguardando pagamento...'}
                     {npDepositStatus === 'confirming' && 'Confirmando na blockchain...'}
                     {npDepositStatus === 'confirmed' && 'Confirmado! Processando...'}
                     {npDepositStatus === 'sending' && 'Enviando para sua conta...'}
-                    {npDepositStatus === 'finished' && 'Depósito concluído! ✅'}
-                    {npDepositStatus === 'failed' && 'Falha no depósito ❌'}
-                    {npDepositStatus === 'expired' && 'Depósito expirado ⏰'}
+                    {npDepositStatus === 'finished' && 'Depósito concluído!'}
+                    {npDepositStatus === 'failed' && 'Falha no depósito'}
+                    {npDepositStatus === 'expired' && 'Depósito expirado'}
                   </span>
                 </div>
               )}
 
+              {/* QR Code */}
+              <div className="flex flex-col items-center">
+                <div className="bg-white p-3 rounded-xl shadow-lg shadow-emerald-500/10">
+                  <QRCodeSVG
+                    value={npDepositAddress}
+                    size={180}
+                    level="H"
+                    includeMargin={false}
+                    bgColor="#ffffff"
+                    fgColor="#0a0a0a"
+                  />
+                </div>
+                <p className="text-zinc-500 text-xs mt-2">Escaneie o QR Code com sua carteira</p>
+              </div>
+
+              {/* Amount Details */}
+              <div className="bg-zinc-800/80 rounded-lg p-4 border border-zinc-700/50 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-zinc-400 text-sm">Valor USDT</span>
+                  <span className="text-white font-bold text-lg">{npPriceAmount || npDepositAmount} USDT</span>
+                </div>
+                {npPayAmount && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-zinc-400 text-sm">Valor em {npDepositCurrency.toUpperCase()}</span>
+                    <span className="text-emerald-400 font-semibold">{npPayAmount} {npDepositCurrency.toUpperCase()}</span>
+                  </div>
+                )}
+                {npEstimatedFee > 0 && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-zinc-400 text-sm">Taxa de serviço</span>
+                    <span className="text-zinc-300 text-sm">{npEstimatedFee}%</span>
+                  </div>
+                )}
+                <Separator className="bg-zinc-700/50" />
+                <div className="flex items-center justify-between">
+                  <span className="text-zinc-400 text-sm">Rede</span>
+                  <Badge variant="outline" className="border-emerald-500/30 text-emerald-400 bg-emerald-500/10">
+                    {npDepositCurrency === 'usdttrc20' ? 'TRC20' :
+                     npDepositCurrency === 'usdtmatic' ? 'Polygon' :
+                     npDepositCurrency === 'btc' ? 'Bitcoin' :
+                     npDepositCurrency === 'eth' ? 'Ethereum' :
+                     npDepositCurrency === 'trx' ? 'TRON' :
+                     npDepositCurrency.toUpperCase()}
+                  </Badge>
+                </div>
+                {npCountdown && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-zinc-400 text-sm">Expira em</span>
+                    <span className={`text-sm font-mono ${npCountdown === 'Expirado' ? 'text-red-400' : 'text-amber-400'}`}>
+                      <Clock4 className="h-3 w-3 inline mr-1" />{npCountdown}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Wallet Address */}
+              <div className="bg-zinc-800 rounded-lg p-4 border border-zinc-700">
+                <Label className="text-zinc-400 text-xs mb-2 block">Endereço da Carteira</Label>
+                <div className="flex items-center gap-2">
+                  <code className="text-emerald-400 text-xs sm:text-sm break-all flex-1 font-mono leading-relaxed">{npDepositAddress}</code>
+                  <Button variant="ghost" size="sm" onClick={copyDepositAddress} className="text-zinc-400 hover:text-white shrink-0 hover:bg-zinc-700">
+                    {npAddressCopied ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
+                  </Button>
+                </div>
+              </div>
+
+              {/* Warnings */}
               <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 text-sm">
-                <p className="text-amber-300 font-medium">⚠️ Importante:</p>
-                <ul className="text-amber-200/70 text-xs mt-1 space-y-1">
-                  <li>• Envie exatamente o valor especificado</li>
-                  <li>• Use a rede correta (TRC20 para USDT)</li>
-                  <li>• O saldo será creditado automaticamente após confirmação</li>
+                <p className="text-amber-300 font-medium flex items-center gap-1"><AlertTriangle className="h-4 w-4" /> Importante:</p>
+                <ul className="text-amber-200/70 text-xs mt-1.5 space-y-1">
+                  <li>• Envie exatamente o valor especificado para este endereço</li>
+                  <li>• Use apenas a rede <strong>{npDepositCurrency === 'usdttrc20' ? 'TRC20' : npDepositCurrency === 'usdtmatic' ? 'Polygon' : npDepositCurrency.toUpperCase()}</strong> — envios por outra rede resultarão em perda</li>
+                  <li>• O saldo será creditado automaticamente após confirmação na blockchain</li>
+                  <li>• Não envie outros tokens para este endereço</li>
                 </ul>
               </div>
 

@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const currency = String(body.currency || 'usdttrc20');
 
-    if (!isNowPaymentsConfigured()) {
+    if (!await isNowPaymentsConfigured()) {
       return apiError('NowPayments não está configurado', 503);
     }
 

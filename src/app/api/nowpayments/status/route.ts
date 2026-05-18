@@ -18,17 +18,29 @@ export async function GET(request: NextRequest) {
     const depositId = searchParams.get('depositId');
     const payoutId = searchParams.get('payoutId');
 
-    if (!depositId && !payoutId) {
-      return apiError('Forneça depositId ou payoutId');
+    const nowpaymentsPaymentIdParam = searchParams.get('nowpaymentsPaymentId');
+
+    if (!depositId && !payoutId && !nowpaymentsPaymentIdParam) {
+      return apiError('Forneça depositId, nowpaymentsPaymentId ou payoutId');
     }
 
-    const npConfigured = isNowPaymentsConfigured();
+    const npConfigured = await isNowPaymentsConfigured();
+
+    // Also support lookup by NowPayments payment ID
+    const nowpaymentsPaymentId = nowpaymentsPaymentIdParam;
 
     // Check deposit status
-    if (depositId) {
-      const deposit = await db.nowPaymentsDeposit.findUnique({
-        where: { id: depositId },
-      });
+    if (depositId || nowpaymentsPaymentId) {
+      let deposit;
+      if (nowpaymentsPaymentId) {
+        deposit = await db.nowPaymentsDeposit.findFirst({
+          where: { nowpaymentsPaymentId },
+        });
+      } else {
+        deposit = await db.nowPaymentsDeposit.findUnique({
+          where: { id: depositId },
+        });
+      }
 
       if (!deposit) {
         return apiError('Depósito não encontrado', 404);

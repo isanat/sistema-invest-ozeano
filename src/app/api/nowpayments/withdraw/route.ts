@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
 
     // Try to get NowPayments payout fee
     let npFee = 0;
-    const npConfigured = isNowPaymentsConfigured();
+    const npConfigured = await isNowPaymentsConfigured();
     if (npConfigured) {
       try {
         const feeResult = await calculatePayoutFee(npCurrency, netAmount);

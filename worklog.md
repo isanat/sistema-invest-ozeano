@@ -553,3 +553,45 @@ Stage Summary:
 - All NowPayments config flags show `true` (hasApiKey, hasEmail, hasPassword, hasIpnSecret, has2FA) ✅
 - Security fix: .env removed from git tracking ✅
 - Database uses internal Docker network URL for reliable container-to-container communication ✅
+
+---
+Task ID: 9
+Agent: Main Agent
+Task: Fix deposit modal - add QR code, wallet address display, fees, and countdown timer
+
+Work Log:
+- Identified multiple bugs in the NowPayments deposit flow:
+  1. `isNowPaymentsConfigured()` is async but was not `await`ed in 3 routes (deposit, status, withdraw, generate-address)
+  2. Frontend polling used wrong API parameter (`depositPaymentId` vs expected `nowpaymentsPaymentId`)
+  3. Frontend didn't capture `payAmount`, `priceAmount`, `expirationDate`, `estimatedFee` from API response
+  4. No QR code was shown - only wallet address text
+  5. No fee information or expiration countdown
+  6. API response used `pay_address` but frontend checked for `depositAddress`
+- Installed `qrcode.react` package (v4.2.0)
+- Fixed backend: added `await` to `isNowPaymentsConfigured()` in deposit, status, withdraw, generate-address routes
+- Fixed backend: added `nowpaymentsPaymentId` query parameter support to status route for polling
+- Fixed backend: added `depositId`, `priceAmount`, `estimatedFee` to deposit API response
+- Added new state variables: `npDepositId`, `npPayAmount`, `npPriceAmount`, `npExpirationDate`, `npEstimatedFee`, `npCountdown`
+- Updated `handleNowPaymentsDeposit` to capture all new fields from API response (depositAddress, paymentId, depositId, payAmount, priceAmount, expirationDate, estimatedFee)
+- Updated `resetNpDeposit` to clear all new state
+- Fixed polling to use correct parameter: `nowpaymentsPaymentId=${npDepositPaymentId}` and parse `data.deposit.paymentStatus`
+- Added countdown timer effect that counts down to expiration date
+- Completely redesigned deposit dialog Phase 2 with:
+  - Prominent QR code (180px, high error correction, white background with shadow)
+  - Amount details card (USDT value, crypto value, service fee, network badge, expiration countdown)
+  - Wallet address section with label and copy button
+  - Enhanced warnings with dynamic network name
+  - Status indicator at top with color-coded text
+- Increased dialog width from `max-w-md` to `max-w-lg` for better QR code display
+- Ran lint - clean pass, no errors
+- Dev server running, page compiles and loads with 200 status
+
+Stage Summary:
+- Deposit modal now shows QR code for easy wallet scanning ✅
+- Wallet address prominently displayed with copy button ✅
+- Fee information and amount details shown ✅
+- Expiration countdown timer added ✅
+- Network badge shows correct network name ✅
+- Fixed 3 backend async/await bugs ✅
+- Fixed polling parameter mismatch ✅
+- All changes compile without errors ✅

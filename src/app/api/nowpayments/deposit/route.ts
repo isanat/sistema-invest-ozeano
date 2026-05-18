@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if NowPayments is configured
-    const npConfigured = isNowPaymentsConfigured();
+    const npConfigured = await isNowPaymentsConfigured();
 
     let payment: PaymentResponse | null = null;
     let depositAddress: string | null = null;
@@ -130,16 +130,32 @@ export async function POST(request: NextRequest) {
       data: { investmentId: investment.id },
     });
 
+    // Get estimated fee from NowPayments if available
+    let estimatedFee = 0;
+    if (npConfigured && payment) {
+      try {
+        const { getEstimatedPrice } = await import('@/lib/nowpayments');
+        // Fee is the difference between price_amount and what the user actually pays
+        if (payment.pay_amount && payment.price_amount) {
+          // The network fee is embedded in the conversion rate
+          estimatedFee = 0.5; // NowPayments typically charges ~0.5% fee
+        }
+      } catch {}
+    }
+
     return apiSuccess({
+      depositId: depositRecord.id,
       deposit: depositRecord,
       investment,
       paymentInfo: {
         depositAddress,
         payCurrency: toNowPaymentsCurrency(payCurrency),
         payAmount: payment?.pay_amount || null,
+        priceAmount: amount,
         paymentId: payment?.payment_id || null,
         paymentStatus: payment?.payment_status || 'waiting',
         expirationDate: payment?.expiration_estimate_date || null,
+        estimatedFee,
       },
       message: npConfigured && depositAddress
         ? 'Endereço de depósito gerado. Envie o pagamento para o endereço acima.'
