@@ -10,7 +10,7 @@ FROM node:20-alpine AS base
 RUN npm install -g bun
 
 # ============================================================================
-# Stage 1: Dependencies
+# Stage 1: Dependencies (development mode to include devDependencies)
 # ============================================================================
 FROM base AS deps
 
@@ -19,7 +19,7 @@ WORKDIR /app
 # Copy package files
 COPY package.json bun.lock ./
 
-# Install dependencies
+# Install ALL dependencies (including devDependencies needed for build)
 RUN bun install --frozen-lockfile
 
 # ============================================================================
@@ -46,7 +46,7 @@ RUN npm run build
 # ============================================================================
 # Stage 3: Production
 # ============================================================================
-FROM node:20-alpine AS runner
+FROM node:22-alpine AS runner
 
 WORKDIR /app
 
@@ -56,8 +56,7 @@ ENV NODE_ENV=production
 # Install Prisma CLI for runtime migrations
 RUN npm install -g prisma
 
-# Don't run as root initially - we need root for migrations
-# Create user but don't switch yet
+# Create non-root user
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
@@ -73,28 +72,8 @@ COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
 
 # Copy startup script
-COPY --chmod=755 <<'EOF' /app/start.sh
-#!/bin/sh
-set -e
-
-echo "============================================"
-echo "FlashMining - Starting Production Server"
-echo "============================================"
-
-# Run Prisma migrations (push schema to database)
-echo "[1/2] Running database migrations..."
-cd /app
-npx prisma db push --skip-generate --accept-data-loss 2>&1 || {
-    echo "WARNING: Database migration failed. Retrying in 5 seconds..."
-    sleep 5
-    npx prisma db push --skip-generate --accept-data-loss 2>&1 || {
-        echo "ERROR: Database migration failed after retry. Continuing anyway..."
-    }
-}
-
-echo "[2/2] Starting Next.js server..."
-exec node server.js
-EOF
+COPY --from=builder /app/start.sh /app/start.sh
+RUN chmod +x /app/start.sh
 
 # Change ownership
 RUN chown -R nextjs:nodejs /app
