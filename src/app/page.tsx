@@ -959,13 +959,14 @@ export default function MiningProtocol() {
 
   // NowPayments deposit - generate wallet address
   const handleNowPaymentsDeposit = async () => {
-    if (!npDepositAmount || parseFloat(npDepositAmount) < 10) {
-      toast.error('Valor mínimo: 10 USDT');
+    const minAmount = 20; // NowPayments minimum is ~19.22 for USDT TRC20
+    if (!npDepositAmount || parseFloat(npDepositAmount) < minAmount) {
+      toast.error(`Valor mínimo: ${minAmount} USDT`);
       return;
     }
     setNpGeneratingAddress(true);
     try {
-      const data = await api<{ success: boolean; depositId: string; deposit: any; paymentInfo: any }>('/api/nowpayments/deposit', {
+      const data = await api<{ success: boolean; depositId: string; deposit: any; paymentInfo: any; message: string }>('/api/nowpayments/deposit', {
         method: 'POST',
         body: JSON.stringify({
           amount: parseFloat(npDepositAmount),
@@ -983,13 +984,13 @@ export default function MiningProtocol() {
         setNpDepositStatus('waiting');
         toast.success('Endereço de depósito gerado! Envie o valor para a carteira abaixo.');
       } else {
-        // Fallback to manual deposit
-        toast.success(data.message || 'Depósito solicitado');
-        setDepositDialog(false);
-        fetchDashboardData();
+        // Should not reach here anymore - API returns error if no address
+        toast.error('Não foi possível gerar o endereço de depósito. Tente novamente.');
       }
     } catch (err: any) {
-      toast.error(err.message || 'Erro ao gerar endereço de depósito');
+      // Show the specific error message from the API
+      const errorMsg = err.message || 'Erro ao gerar endereço de depósito';
+      toast.error(errorMsg);
     } finally {
       setNpGeneratingAddress(false);
     }
@@ -4514,7 +4515,9 @@ Seus 10 indicados diretos mineram $100/dia cada:
 
           {!npDepositAddress ? (
             <div className="space-y-4">
-              <div><Label className="text-zinc-300">Valor (USDT)</Label><Input type="number" step="0.01" min="10" value={npDepositAmount} onChange={e => setNpDepositAmount(e.target.value)} className="bg-zinc-800 border-zinc-700 mt-1" placeholder="10.00" /></div>
+              <div><Label className="text-zinc-300">Valor (USDT)</Label><Input type="number" step="0.01" min="20" value={npDepositAmount} onChange={e => setNpDepositAmount(e.target.value)} className="bg-zinc-800 border-zinc-700 mt-1" placeholder="20.00" />
+                <p className="text-zinc-500 text-xs mt-1">Mínimo: 20 USDT (exigência NowPayments)</p>
+              </div>
               <div><Label className="text-zinc-300">Moeda de Pagamento</Label>
                 <Select value={npDepositCurrency} onValueChange={setNpDepositCurrency}>
                   <SelectTrigger className="bg-zinc-800 border-zinc-700 mt-1"><SelectValue /></SelectTrigger>
