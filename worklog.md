@@ -595,3 +595,26 @@ Stage Summary:
 - Fixed 3 backend async/await bugs ✅
 - Fixed polling parameter mismatch ✅
 - All changes compile without errors ✅
+---
+Task ID: 1-6
+Agent: Main Agent
+Task: Add user financial management pages (Faturas, Saques, Extrato) and admin NowPayments dashboard
+
+Work Log:
+- Analyzed root cause: Faturas/Saques/Extrato tabs were filtering from `transactions` state but NowPayments deposits only create `Investment` records, not `Transaction` records
+- Created 4 new API endpoints:
+  - /api/nowpayments/user-deposits - all user deposit records with NowPayments details
+  - /api/nowpayments/user-payouts - all user withdrawal records with NowPayments details
+  - /api/nowpayments/statement - bank-style statement with running balance combining transactions + investments
+  - /api/admin/nowpayments - admin dashboard for NowPayments deposits, payouts, wallets, webhooks, split tracking
+- Updated Faturas tab: now fetches from Investment + NowPaymentsDeposit data, shows deposit address, payment status, split info, expiration, filter by status, refresh button
+- Updated Saques tab: now fetches from Investment + NowPaymentsPayout data, shows payout status, destination address, tx hash, network fee, filter by status
+- Updated Extrato tab: now uses /api/nowpayments/statement for comprehensive data with running balance, type filter
+- Added admin NowPayments tab with 4 sections: Deposits, Payouts, Wallets, Webhooks + stats cards
+- Auto-refresh Faturas list after creating a new deposit
+- Committed as f1307ba, pushed to main, deployed to Coolify
+
+Stage Summary:
+- All 3 user financial pages now properly display data from the correct sources (Investment + NowPayments models)
+- Admin NowPayments dashboard added with full visibility into deposits, payouts, wallets, splits, webhooks
+- Deployment to flashminings.com triggered and building
