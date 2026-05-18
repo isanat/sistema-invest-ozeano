@@ -290,3 +290,45 @@ Added NowPayments configuration support:
 - `bun run lint` — No errors (clean pass)
 - Dev server running without compilation errors
 - All existing manual deposit/withdraw functionality preserved as fallback
+
+## Task 6 - Final Testing & GitHub Push (Completed)
+
+**Agent**: Main Agent  
+**Date**: 2025-05-18
+
+### Summary
+Final verification of all components, environment setup, and push to GitHub repository.
+
+### Changes Made
+
+#### 1. Environment Variables (.env)
+Added NowPayments configuration variables:
+- `NOWPAYMENTS_API_KEY`, `NOWPAYMENTS_IPN_SECRET`, `NOWPAYMENTS_EMAIL`, `NOWPAYMENTS_PASSWORD`
+- `NOWPAYMENTS_BASE_URL` (default: https://api.nowpayments.io/v1)
+- `NOWPAYMENTS_SPLIT_PCT` (default: 10%)
+- `NOWPAYMENTS_SPLIT_WALLET` (platform wallet for receiving splits)
+- `JWT_SECRET` for production auth
+- `NEXT_PUBLIC_APP_URL` for webhook callbacks
+
+#### 2. Testing Results
+- `bun run lint` — Clean pass, no errors
+- Homepage (GET /) — 200 OK
+- Landing API (GET /api/landing) — 200 OK, returns miners, config, stats
+- Auth Register (POST /api/auth/register) — 201 Created
+- Auth Login (POST /api/auth/login) — 200 OK
+- NowPayments Config (GET /api/nowpayments/config) — 200 OK, returns configuration status
+- NowPayments Deposit (POST /api/nowpayments/deposit) — Handles gracefully when API not configured
+
+#### 3. GitHub Push
+- Repository: https://github.com/isanat/mining-protocol
+- Branch: main
+- Commit: `feat: integrate NowPayments API with automatic split for deposits/withdrawals`
+- 149 files changed, 25504 insertions
+
+#### 4. Production Deployment Notes
+- Configure NowPayments credentials in Vercel environment variables
+- Set `nowpayments_split_pct` in SystemConfig (e.g., 10 for 10%)
+- Set `nowpayments_split_wallet` in SystemConfig (platform USDT TRC20 address)
+- Enable NowPayments from admin panel after credentials are set
+- Webhook URL: `{YOUR_DOMAIN}/api/nowpayments/webhook`
+- JWT tokens expire every 5 minutes — auto-refresh handled by service
