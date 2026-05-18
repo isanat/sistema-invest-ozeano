@@ -1,0 +1,549 @@
+// ============================================================================
+// MINING PROTOCOL - PRODUCTION SCHEMA (SQLite)
+// ============================================================================
+// USDT primary currency. All financial values as String (SQLite-safe).
+// ============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  password      String
+  name          String
+  walletAddress String?   // USDT wallet (TRC20)
+  pixKey        String?   // PIX key for BRL
+  role          String    @default("user") // user, admin
+  isActive      Boolean   @default(true)
+
+  // Balances (stored as string for precision, parsed as Decimal in app)
+  balance            String   @default("0")       // USDT main balance
+  affiliateBalance   String   @default("0")       // USDT affiliate commissions
+  totalMined         String   @default("0")       // USDT total mined
+  totalInvested      String   @default("0")       // USDT total invested
+  totalWithdrawn     String   @default("0")       // USDT total withdrawn
+
+  // Affiliate fields
+  affiliateCode          String?  @unique
+  referredBy             String?
+  referralLevel          Int      @default(1)
+  totalAffiliateEarnings String   @default("0")
+  hasInvested            Boolean  @default(false)
+  linkUnlocked           Boolean  @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  investments          Investment[]
+  transactions         Transaction[]
+  miningRentals        MiningRental[]
+  miningHistory        MiningHistory[]
+  referredByUser       User?          @relation("Referrals", fields: [referredBy], references: [id])
+  referrals            User[]         @relation("Referrals")
+  affiliateCommissions AffiliateCommission[]
+  affiliateWithdrawals AffiliateWithdrawal[]
+  milestoneClaims      AffiliateMilestoneClaim[]
+  badgeAwards          AffiliateBadgeAward[]
+  adminLogs            AdminLog[]     @relation("AdminActions")
+  nowpaymentsSubAccount NowPaymentsSubAccount?
+  nowpaymentsDeposits   NowPaymentsDeposit[]
+  nowpaymentsPayouts    NowPaymentsPayout[]
+
+  @@index([email])
+  @@index([affiliateCode])
+  @@index([referredBy])
+  @@index([role])
+}
+
+model Miner {
+  id          String  @id @default(cuid())
+  name        String  @unique
+  model       String
+  hashRate    String  // TH/s or GH/s
+  powerConsumption String // Watts
+  coin        String  @default("BTC") // BTC, KAS, LTC, DOGE
+  pool        String  @default("Binance Pool")
+  status      String  @default("online") // online, offline, maintenance
+
+  // Pricing (all in USDT, stored as string for precision)
+  dailyRevenue   String  // Estimated daily revenue in USDT
+  pricePerDay    String  // Rental price per day in USDT
+  minRentalDays  Int     @default(7)
+  maxRentalDays  Int     @default(365)
+  profitSharePct String  @default("70") // User profit share percentage
+
+  efficiency     String  // J/TH
+  image          String?
+  description    String?
+  isFeatured     Boolean @default(false)
+  sortOrder      Int     @default(0)
+  isActive       Boolean @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  rentals       MiningRental[]
+  miningHistory MiningHistory[]
+  plans         MiningPlan[]
+
+  @@index([coin])
+  @@index([isActive])
+  @@index([status])
+}
+
+model MiningPlan {
+  id          String  @id @default(cuid())
+  name        String  @unique // e.g. "Starter", "Pro", "Elite"
+  description String?
+  minerId     String
+  days        Int     // Rental duration in days
+  discountPct String  @default("0") // Discount percentage
+
+  // Calculated pricing (in USDT)
+  totalPrice     String  // Total price for the plan
+  dailyReturn    String  // Estimated daily return
+  totalReturn    String  // Estimated total return
+
+  isActive    Boolean  @default(true)
+  isFeatured  Boolean  @default(false)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  miner Miner @relation(fields: [minerId], references: [id], onDelete: Cascade)
+  rentals MiningRental[]
+
+  @@index([isActive])
+  @@index([minerId])
+}
+
+model MiningRental {
+  id        String  @id @default(cuid())
+  userId    String
+  minerId   String
+  planId    String?
+  startDate DateTime
+  endDate   DateTime
+
+  // Values in USDT
+  amount      String  // Amount paid in USDT
+  hashShare   String  // % of hashrate
+  dailyReturn String  // Daily return in USDT
+  totalReturn String  // Total expected return
+  profitShare String  // Profit share % at time of rental
+
+  status String @default("active") // active, completed, cancelled
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user          User           @relation(fields: [userId], references: [id], onDelete: Restrict)
+  miner         Miner          @relation(fields: [minerId], references: [id], onDelete: Restrict)
+  plan          MiningPlan?    @relation(fields: [planId], references: [id], onDelete: SetNull)
+  miningHistory MiningHistory[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([minerId])
+  @@index([userId, status])
+}
+
+model MiningHistory {
+  id        String  @id @default(cuid())
+  userId    String
+  rentalId  String
+  minerId   String
+  date      DateTime
+
+  hashRate      String  // Hashrate for the day
+  btcMined      String  // BTC mined (or coin)
+  usdtValue     String  // Value in USDT (primary)
+
+  pool        String
+  blockFound  Boolean  @default(false)
+  sharesValid Int      @default(0)
+  sharesInvalid Int    @default(0)
+  createdAt   DateTime @default(now())
+
+  user   User          @relation(fields: [userId], references: [id], onDelete: Restrict)
+  rental MiningRental  @relation(fields: [rentalId], references: [id], onDelete: Cascade)
+  miner  Miner         @relation(fields: [minerId], references: [id], onDelete: Restrict)
+
+  @@unique([rentalId, date])
+  @@index([userId])
+  @@index([date])
+  @@index([rentalId])
+  @@index([rentalId, date])
+}
+
+model Investment {
+  id      String  @id @default(cuid())
+  userId  String
+
+  // All values in USDT
+  amount    String  // USDT amount
+  brlAmount String? // BRL equivalent (for PIX)
+  usdtRate  String? // USDT/BRL rate at time
+
+  type        String  // deposit, withdrawal
+  method      String  // pix, usdt_trc20, usdt_polygon
+  network     String? // TRC20, Polygon
+  status      String  @default("pending") // pending, confirmed, cancelled, rejected
+  txHash      String? // Blockchain tx hash (unique for USDT)
+  pixTxId     String? // PIX transaction ID
+  destination String? // Wallet address or PIX key for withdrawal
+  description String?
+  adminNotes  String?
+  processedBy String?
+  processedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([userId])
+  @@index([status])
+  @@index([type])
+  @@index([userId, status])
+  @@unique([txHash])
+}
+
+model Transaction {
+  id       String  @id @default(cuid())
+  userId   String
+  type     String  // deposit, withdrawal, mining_profit, rental_payment, affiliate_commission, admin_adjust
+  amount   String  // USDT amount
+  brlAmount String? // BRL equivalent
+  usdtRate  String? // Rate used
+  status   String  @default("completed") // pending, completed, failed
+  description String
+  referenceId  String? // Related entity ID
+  referenceType String? // Investment, MiningRental, etc.
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([userId])
+  @@index([type])
+  @@index([createdAt])
+  @@index([userId, type])
+}
+
+model AffiliateCommission {
+  id          String  @id @default(cuid())
+  userId      String  // Who receives
+  fromUserId  String  // Who generated
+  level       Int     // 1-5
+  rentalId    String?
+  miningHistoryId String?
+
+  baseAmount       String // Base value in USDT
+  percentage       String // Commission %
+  commissionAmount String // Commission in USDT
+
+  status  String  @default("pending") // pending, paid, cancelled
+  createdAt DateTime @default(now())
+  paidAt    DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([userId])
+  @@index([fromUserId])
+  @@index([status])
+}
+
+model AffiliateWithdrawal {
+  id       String  @id @default(cuid())
+  userId   String
+
+  amount    String  // USDT requested
+  fee       String  // Fee in USDT
+  netAmount String  // Net in USDT
+  method    String  // pix, usdt_trc20
+  address   String? // USDT address
+  pixKey    String? // PIX key
+  status    String  @default("pending") // pending, approved, processing, completed, rejected
+  adminNotes String?
+  processedBy String?
+  processedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([userId])
+  @@index([status])
+}
+
+model AffiliateLevel {
+  id          String  @id @default(cuid())
+  level       Int     @unique // 1 to 5
+  percentage  String  // Commission %
+  description String?
+  isActive    Boolean @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model SystemConfig {
+  id          String  @id @default(cuid())
+  key         String  @unique
+  value       String
+  type        String  @default("string") // string, number, boolean, json
+  description String?
+  category    String  @default("general") // general, affiliate, withdrawal, mining, deposit
+  isActive    Boolean @default(true)
+  updatedAt   DateTime @updatedAt
+
+  @@index([category])
+  @@index([key])
+}
+
+model AdminLog {
+  id          String  @id @default(cuid())
+  adminId     String?
+  action      String  // create, update, delete, approve, reject
+  entity      String  // user, miner, plan, config, deposit, withdrawal
+  entityId    String?
+  oldValue    String? // JSON
+  newValue    String? // JSON
+  description String
+  ipAddress   String?
+  createdAt   DateTime @default(now())
+
+  admin User? @relation("AdminActions", fields: [adminId], references: [id], onDelete: SetNull)
+
+  @@index([adminId])
+  @@index([entity])
+  @@index([createdAt])
+}
+
+model AffiliateRank {
+  id           String  @id @default(cuid())
+  name         String  @unique // Bronze, Silver, Gold, Platinum, Diamond
+  icon         String  @default("🥉") // Emoji icon
+  color        String  @default("#CD7F32") // Hex color
+  minReferrals Int     @default(0) // Minimum direct referrals to qualify
+  minEarnings  String  @default("0") // Minimum total affiliate earnings in USDT
+  bonusAmount  String  @default("0") // One-time bonus when reaching this rank
+  commissionBoost String @default("0") // Extra % commission boost at this rank
+  perks        String? // JSON array of perk descriptions
+  sortOrder    Int     @default(0)
+  isActive     Boolean @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([sortOrder])
+  @@index([isActive])
+}
+
+model AffiliateMilestone {
+  id          String  @id @default(cuid())
+  name        String  // e.g. "First 5 Referrals"
+  description String?
+  targetCount Int     // Number of referrals needed
+  rewardType  String  @default("cash") // cash, boost, badge
+  rewardValue String  @default("0") // USDT amount for cash, % for boost
+  icon        String  @default("🎯")
+  isActive    Boolean @default(true)
+  sortOrder   Int     @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([isActive])
+  @@index([sortOrder])
+  claims AffiliateMilestoneClaim[]
+}
+
+model AffiliateContest {
+  id          String   @id @default(cuid())
+  name        String   // e.g. "Summer Referral Challenge"
+  description String?
+  startDate   DateTime
+  endDate     DateTime
+  rewardPool  String   @default("0") // Total USDT reward pool
+  metric      String   @default("referrals") // referrals, earnings, active_referrals
+  isActive    Boolean  @default(true)
+  isFeatured  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([isActive])
+  @@index([startDate])
+}
+
+model AffiliateMilestoneClaim {
+  id          String @id @default(cuid())
+  userId      String
+  milestoneId String
+  claimedAt   DateTime @default(now())
+
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  milestone AffiliateMilestone @relation(fields: [milestoneId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, milestoneId])
+  @@index([userId])
+}
+
+model AffiliateBadge {
+  id          String  @id @default(cuid())
+  name        String  // e.g. "First Referral", "Top Recruiter"
+  description String?
+  icon        String  @default("🏅") // Emoji or icon class
+  color       String  @default("#CD7F32") // Hex color for badge background
+  category    String  @default("general") // general, recruitment, earnings, streak, special
+  requirement String  // JSON describing how to earn: {"type":"referrals","count":1}
+  rewardType  String  @default("none") // none, cash, boost
+  rewardValue String  @default("0") // USDT amount or boost %
+  isAuto      Boolean @default(true) // Auto-awarded when requirement met
+  isActive    Boolean @default(true)
+  sortOrder   Int     @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  awards AffiliateBadgeAward[]
+
+  @@index([isActive])
+  @@index([category])
+  @@index([sortOrder])
+}
+
+model AffiliateBadgeAward {
+  id        String   @id @default(cuid())
+  userId    String
+  badgeId   String
+  awardedAt DateTime @default(now())
+
+  user  User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badge AffiliateBadge  @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, badgeId])
+  @@index([userId])
+  @@index([badgeId])
+}
+
+model PoolStatus {
+  id         String  @id @default(cuid())
+  name       String  @unique
+  hashrate   String
+  miners     Int
+  blocks24h  Int
+  lastBlock  DateTime?
+  btcPrice   String
+  difficulty String
+  updatedAt  DateTime @updatedAt
+}
+
+// ============================================================================
+// NOWPAYMENTS INTEGRATION MODELS
+// ============================================================================
+
+model NowPaymentsSubAccount {
+  id                 String  @id @default(cuid())
+  userId             String  @unique  // Our internal user ID
+  nowpaymentsUserId  String  @unique  // NowPayments sub-partner user_id
+  depositAddressBtc  String? // BTC deposit address
+  depositAddressUsdt String? // USDT TRC20 deposit address
+  depositAddressUsdtPolygon String? // USDT Polygon deposit address
+  isActive           Boolean @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([nowpaymentsUserId])
+}
+
+model NowPaymentsDeposit {
+  id                String  @id @default(cuid())
+  userId            String
+  nowpaymentsPaymentId String? // NowPayments payment_id
+  orderId           String? // Our internal order ID
+  priceAmount       String  // Amount in USD/USDT
+  priceCurrency     String  @default("usd")
+  payAmount         String? // Crypto amount to pay
+  payCurrency       String  @default("usdttrc20") // usdttrc20, btc, usdtmatic
+  payAddress        String? // Generated deposit address
+  paymentStatus     String  @default("waiting") // waiting, confirming, confirmed, sending, partially_paid, finished, failed, refunded, expired
+  actuallyPaid      String? // Actual amount paid
+  outcomeAmount     String? // Amount received after fees
+  outcomeCurrency   String? // Currency received
+  
+  // Split tracking
+  splitProcessed    Boolean @default(false) // Whether the split was processed
+  splitAmount       String  @default("0") // Amount sent to platform wallet
+  splitPct          String  @default("0") // Split percentage used
+  
+  // Investment relation
+  investmentId      String? // Link to our Investment record
+  
+  purchaseId        String? // NowPayments purchase_id
+  expiresAt         DateTime?
+  confirmedAt       DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([paymentStatus])
+  @@index([nowpaymentsPaymentId])
+  @@index([orderId])
+}
+
+model NowPaymentsPayout {
+  id                    String  @id @default(cuid())
+  userId                String
+  nowpaymentsBatchId    String? // NowPayments batch_withdrawal_id
+  nowpaymentsWithdrawalId String? // Individual withdrawal ID
+  amount                String  // Amount in crypto
+  currency              String  @default("usdttrc20") // usdttrc20, btc, trx
+  destinationAddress    String  // User's wallet address
+  payoutStatus          String  @default("CREATED") // CREATED, WAITING, PROCESSING, SENDING, FINISHED, FAILED, REJECTED
+  verificationCode      String? // 2FA code
+  verifiedAt            DateTime?
+  payoutDescription     String?
+  fee                   String  @default("0") // Network fee
+  netAmount             String  @default("0") // Amount after fee
+  txHash                String? // Blockchain tx hash
+  
+  // Investment relation
+  investmentId          String? // Link to our Investment record
+  
+  processedAt           DateTime?
+  completedAt           DateTime?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([payoutStatus])
+  @@index([nowpaymentsBatchId])
+}
+
+model NowPaymentsWebhookLog {
+  id                String  @id @default(cuid())
+  eventType         String  // payment_status_changed, payout_status_changed
+  paymentId         String? // NowPayments payment_id
+  payoutId          String? // NowPayments payout ID
+  payload           String  // Full JSON payload
+  signature         String? // x-nowpayments-sig header
+  signatureValid    Boolean @default(false)
+  processed         Boolean @default(false)
+  processingError   String?
+  createdAt         DateTime @default(now())
+
+  @@index([eventType])
+  @@index([paymentId])
+  @@index([processed])
+  @@index([createdAt])
+}
