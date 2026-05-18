@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
           subAccount = await db.nowPaymentsSubAccount.create({
             data: {
               userId: session.userId,
-              nowpaymentsUserId: String(npAccount.id),
+              nowpaymentsUserId: String(npAccount.result.id),
             },
           });
         } catch (err) {
@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      // Create NowPayments payment
+      // Create NowPayments payment to generate deposit address
       const orderId = `deposit_${session.userId}_${Date.now()}`;
       try {
         payment = await createPayment({
@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
           price_currency: 'usd',
           pay_currency: toNowPaymentsCurrency(payCurrency),
           order_id: orderId,
-          order_description: `Mining Protocol Deposit - ${amount} USDT`,
+          order_description: `FlashMining Deposit - ${amount} USDT`,
           ipn_callback_url: `${process.env.NEXT_PUBLIC_APP_URL || ''}/api/nowpayments/webhook`,
         });
         depositAddress = payment.pay_address;

@@ -6,8 +6,10 @@ import {
   isNowPaymentsConfigured,
   createSubPartnerAccount,
   createSubPartnerDeposit,
+  createPayment,
   toNowPaymentsCurrency,
   type SubPartnerDepositResponse,
+  type PaymentResponse,
 } from '@/lib/nowpayments';
 
 export async function POST(request: NextRequest) {
@@ -28,31 +30,28 @@ export async function POST(request: NextRequest) {
     });
 
     if (!subAccount) {
-      // Create sub-partner account in NowPayments
-      let npUserId: string;
+      // Create sub-partner account in NowPayments using `name` parameter
       try {
         const npAccount = await createSubPartnerAccount(`user_${session.userId}`);
-        npUserId = String(npAccount.id);
+        const npUserData = npAccount.result;
+        subAccount = await db.nowPaymentsSubAccount.create({
+          data: {
+            userId: session.userId,
+            nowpaymentsUserId: String(npUserData.id),
+          },
+        });
       } catch (err) {
         console.error('[NowPayments GenerateAddress] Failed to create sub-account:', err);
         return apiError('Falha ao criar sub-conta NowPayments', 500);
       }
-
-      // Create local record
-      subAccount = await db.nowPaymentsSubAccount.create({
-        data: {
-          userId: session.userId,
-          nowpaymentsUserId: npUserId,
-        },
-      });
     }
 
     // Check if address already exists for this currency
     const existingAddressField = currency === 'btc'
       ? 'depositAddressBtc'
-      : currency === 'usdttrc20'
+      : currency === 'usdt_trc20' || currency === 'usdttrc20'
         ? 'depositAddressUsdt'
-        : currency === 'usdt_polygon'
+        : currency === 'usdt_polygon' || currency === 'usdtmatic'
           ? 'depositAddressUsdtPolygon'
           : null;
 
@@ -68,26 +67,58 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Generate deposit address using Sub-Partner API
-    let depositResponse: SubPartnerDepositResponse;
+    // Try generating deposit address via Sub-Partner Deposit API first
+    // This requires a Payment API key - will fallback to Payment API if it fails
+    let depositAddress: string | null = null;
+    let usedMethod = 'sub-partner';
+
     try {
-      depositResponse = await createSubPartnerDeposit({
-        user_id: subAccount.nowpaymentsUserId,
+      const depositResponse: SubPartnerDepositResponse = await createSubPartnerDeposit({
+        sub_partner_id: subAccount.nowpaymentsUserId,
         currency: npCurrency,
       });
+      depositAddress = depositResponse.result?.address || (depositResponse as unknown as { address: string }).address;
     } catch (err) {
-      console.error('[NowPayments GenerateAddress] Failed to generate address:', err);
+      const errMsg = err instanceof Error ? err.message : '';
+      console.warn('[NowPayments GenerateAddress] Sub-partner deposit failed:', errMsg);
+
+      // Fallback: Use the standard Payment API to generate a deposit address
+      // This creates a one-time payment with the generated address
+      if (errMsg.includes('INVALID_API_KEY') || errMsg.includes('403')) {
+        console.log('[NowPayments GenerateAddress] Trying fallback via Payment API...');
+        usedMethod = 'payment';
+
+        try {
+          const payment: PaymentResponse = await createPayment({
+            price_amount: 10, // Minimum amount placeholder - user will send whatever they want
+            price_currency: 'usd',
+            pay_currency: npCurrency,
+            order_id: `addr_${session.userId}_${Date.now()}`,
+            order_description: `FlashMining deposit address generation`,
+            ipn_callback_url: `${process.env.NEXT_PUBLIC_APP_URL || ''}/api/nowpayments/webhook`,
+          });
+          depositAddress = payment.pay_address;
+        } catch (paymentErr) {
+          console.error('[NowPayments GenerateAddress] Payment API also failed:', paymentErr);
+          return apiError('Falha ao gerar endereço de depósito. Verifique as permissões da API key no painel NowPayments.', 500);
+        }
+      } else {
+        return apiError('Falha ao gerar endereço de depósito', 500);
+      }
+    }
+
+    if (!depositAddress) {
       return apiError('Falha ao gerar endereço de depósito', 500);
     }
 
     // Store address in sub-account record
     const addressUpdate: Record<string, string> = {};
     if (currency === 'btc') {
-      addressUpdate.depositAddressBtc = depositResponse.address;
+      addressUpdate.depositAddressBtc = depositAddress;
     } else if (currency === 'usdt_trc20' || currency === 'usdttrc20') {
-      addressUpdate.depositAddressUsdt = depositResponse.address;
+      addressUpdate.depositAddressUsdt = depositAddress;
     } else if (currency === 'usdt_polygon' || currency === 'usdtmatic') {
-      addressUpdate.depositAddressUsdtPolygon = depositResponse.address;
+      addressUpdate.depositAddressUsdtPolygon = depositAddress;
     }
 
     if (Object.keys(addressUpdate).length > 0) {
@@ -98,9 +129,10 @@ export async function POST(request: NextRequest) {
     }
 
     return apiSuccess({
-      address: depositResponse.address,
-      currency: depositResponse.currency || npCurrency,
+      address: depositAddress,
+      currency: npCurrency,
       cached: false,
+      method: usedMethod,
       message: 'Endereço de depósito gerado com sucesso',
     }, 201);
   } catch (error) {

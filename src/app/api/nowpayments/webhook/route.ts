@@ -175,7 +175,7 @@ async function processPaymentWebhook(
           });
           if (subAccount) {
             await writeOffFromSubPartner({
-              user_id: subAccount.nowpaymentsUserId,
+              sub_partner_id: subAccount.nowpaymentsUserId,
               currency: deposit.payCurrency || 'usdttrc20',
               amount: splitAmount,
             });

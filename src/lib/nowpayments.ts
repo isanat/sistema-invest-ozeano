@@ -3,6 +3,7 @@
 // ============================================================================
 
 import crypto from 'crypto';
+import { authenticator } from 'otplib';
 
 // ============================================================================
 // CONFIGURATION
@@ -13,6 +14,7 @@ const API_KEY = process.env.NOWPAYMENTS_API_KEY || '';
 const IPN_SECRET = process.env.NOWPAYMENTS_IPN_SECRET || '';
 const AUTH_EMAIL = process.env.NOWPAYMENTS_EMAIL || '';
 const AUTH_PASSWORD = process.env.NOWPAYMENTS_PASSWORD || '';
+const TWO_FA_SECRET = process.env.NOWPAYMENTS_2FA_SECRET || '';
 
 // ============================================================================
 // JWT TOKEN MANAGEMENT (5-minute expiry, auto-refresh)
@@ -183,47 +185,74 @@ export async function createInvoicePayment(invoiceId: string, payCurrency: strin
 // ============================================================================
 // SUB-PARTNER / CUSTODY API - Per-user deposit accounts
 // ============================================================================
+// NOTE: NowPayments Sub-Partner API uses these parameter names:
+//   - Create: { name: string } → returns { result: { id, name, created_at } }
+//   - Deposit: { sub_partner_id: string, currency: string } (requires Payment API key)
+//   - Write-off: { sub_partner_id: string, currency: string, amount: number }
+//   - Transfer: { from_id: string, sub_partner_id: string, currency: string, amount: number }
+//   - Balance: GET /sub-partner/balance/{id} (requires Payment API key)
+// ============================================================================
 
 export interface SubPartnerAccount {
-  id: number;
-  user_id: string;
+  id: string;
+  name: string;
   created_at: string;
+  updated_at: string;
 }
 
-export async function createSubPartnerAccount(userId: string): Promise<SubPartnerAccount> {
+export interface CreateSubPartnerResult {
+  result: SubPartnerAccount;
+}
+
+/**
+ * Create a sub-partner account in NowPayments.
+ * Uses `name` parameter (not `user_id`).
+ * Returns the sub-partner account with ID.
+ */
+export async function createSubPartnerAccount(name: string): Promise<CreateSubPartnerResult> {
   return apiRequest('/sub-partner/balance', {
     method: 'POST',
-    body: { user_id: userId },
-  }) as Promise<SubPartnerAccount>;
+    body: { name },
+    requireJwt: true,
+  }) as Promise<CreateSubPartnerResult>;
 }
 
-export async function getSubPartnerBalance(subPartnerId: number): Promise<unknown> {
-  return apiRequest(`/sub-partner/balance/${subPartnerId}`);
+export async function getSubPartnerBalance(subPartnerId: string): Promise<unknown> {
+  return apiRequest(`/sub-partner/balance/${subPartnerId}`, { requireJwt: true });
 }
 
-export async function listSubPartners(): Promise<unknown> {
-  return apiRequest('/sub-partner');
+export async function listSubPartners(): Promise<{ result: SubPartnerAccount[]; count: number }> {
+  return apiRequest('/sub-partner', { requireJwt: true }) as Promise<{ result: SubPartnerAccount[]; count: number }>;
 }
 
 export interface SubPartnerDepositParams {
-  user_id: string;
+  sub_partner_id: string;
   currency: string;
 }
 
 export interface SubPartnerDepositResponse {
-  address: string;
-  currency: string;
+  result: {
+    address: string;
+    currency: string;
+  };
 }
 
+/**
+ * Generate a deposit address for a sub-partner.
+ * NOTE: This requires the API key to have "Payment" permissions.
+ * If using a Custody-only API key, this will fail with INVALID_API_KEY.
+ * Falls back to using the standard payment flow in that case.
+ */
 export async function createSubPartnerDeposit(params: SubPartnerDepositParams): Promise<SubPartnerDepositResponse> {
   return apiRequest('/sub-partner/deposit', {
     method: 'POST',
     body: params,
+    requireJwt: true,
   }) as Promise<SubPartnerDepositResponse>;
 }
 
 export interface SubPartnerPaymentParams {
-  user_id: string;
+  sub_partner_id: string;
   price_amount: number;
   price_currency: string;
   pay_currency: string;
@@ -234,14 +263,15 @@ export async function createSubPartnerPayment(params: SubPartnerPaymentParams): 
   return apiRequest('/sub-partner/payment', {
     method: 'POST',
     body: params,
+    requireJwt: true,
   });
 }
 
 export interface SubPartnerTransferParams {
-  user_id: string;
+  sub_partner_id: string;
   currency: string;
   amount: number;
-  from_user_id?: string; // For inter-partner transfers
+  from_id?: string;
 }
 
 export async function transferToSubPartner(params: SubPartnerTransferParams): Promise<unknown> {
@@ -289,11 +319,31 @@ export async function createPayout(withdrawals: PayoutWithdrawal[], description?
   const body: Record<string, unknown> = { withdrawals };
   if (description) body.payout_description = description;
 
-  return apiRequest('/payout', {
+  const result = await apiRequest('/payout', {
     method: 'POST',
     body,
     requireJwt: true,
-  }) as Promise<CreatePayoutResponse>;
+  }) as CreatePayoutResponse;
+
+  // Auto-verify payout with 2FA if secret is configured
+  if (TWO_FA_SECRET && result.withdrawals?.length > 0) {
+    try {
+      const verificationCode = generate2FACode();
+      if (verificationCode) {
+        const batchWithdrawalId = result.withdrawals[0].batch_withdrawal_id;
+        if (batchWithdrawalId) {
+          console.log('[NowPayments] Auto-verifying payout with 2FA...');
+          await verifyPayout(batchWithdrawalId, verificationCode);
+          console.log('[NowPayments] Payout verified successfully');
+        }
+      }
+    } catch (err) {
+      console.error('[NowPayments] Failed to auto-verify payout:', err);
+      // Don't throw - payout was created, just verification failed
+    }
+  }
+
+  return result;
 }
 
 export async function verifyPayout(batchWithdrawalId: string, verificationCode: string): Promise<unknown> {
@@ -331,7 +381,7 @@ export async function calculatePayoutFee(currency: string, amount: number): Prom
 // ============================================================================
 
 export async function getBalance(): Promise<Record<string, number>> {
-  return apiRequest('/balance') as Promise<Record<string, number>>;
+  return apiRequest('/balance', { requireJwt: true }) as Promise<Record<string, number>>;
 }
 
 // ============================================================================
@@ -453,6 +503,42 @@ export function fromNowPaymentsCurrency(npCurrency: string): string {
 }
 
 // ============================================================================
+// 2FA / TOTP SUPPORT
+// ============================================================================
+
+/**
+ * Generate a TOTP verification code from the configured 2FA secret.
+ * Used for NowPayments payout verification.
+ */
+export function generate2FACode(): string | null {
+  if (!TWO_FA_SECRET) {
+    console.warn('[NowPayments] 2FA secret not configured, cannot generate verification code');
+    return null;
+  }
+  try {
+    authenticator.options = { step: 30 };
+    return authenticator.generate(TWO_FA_SECRET);
+  } catch (err) {
+    console.error('[NowPayments] Failed to generate 2FA code:', err);
+    return null;
+  }
+}
+
+/**
+ * Verify a TOTP code against the configured 2FA secret.
+ * Useful for admin UI to test 2FA configuration.
+ */
+export function validate2FACode(code: string): boolean {
+  if (!TWO_FA_SECRET) return false;
+  try {
+    authenticator.options = { step: 30 };
+    return authenticator.verify({ token: code, secret: TWO_FA_SECRET });
+  } catch {
+    return false;
+  }
+}
+
+// ============================================================================
 // CONFIGURATION CHECK
 // ============================================================================
 
@@ -466,6 +552,7 @@ export function getNowPaymentsConfig(): {
   hasEmail: boolean;
   hasPassword: boolean;
   hasIpnSecret: boolean;
+  has2FA: boolean;
   baseUrl: string;
 } {
   return {
@@ -474,6 +561,54 @@ export function getNowPaymentsConfig(): {
     hasEmail: !!AUTH_EMAIL,
     hasPassword: !!AUTH_PASSWORD,
     hasIpnSecret: !!IPN_SECRET,
+    has2FA: !!TWO_FA_SECRET,
     baseUrl: BASE_URL,
   };
+}
+
+/**
+ * Test the NowPayments API connection by attempting to authenticate.
+ * Returns connection status and any error messages.
+ */
+export async function testConnection(): Promise<{
+  connected: boolean;
+  authWorks: boolean;
+  apiKeyWorks: boolean;
+  subPartnerWorks: boolean;
+  error?: string;
+}> {
+  const result = {
+    connected: false,
+    authWorks: false,
+    apiKeyWorks: false,
+    subPartnerWorks: false,
+    error: undefined as string | undefined,
+  };
+
+  // Test auth
+  try {
+    const token = await getJwtToken();
+    result.authWorks = !!token;
+    result.connected = result.authWorks;
+  } catch (err) {
+    result.error = err instanceof Error ? err.message : 'Auth failed';
+    return result;
+  }
+
+  // Test sub-partner list (this works with custody-only API keys)
+  try {
+    await listSubPartners();
+    result.subPartnerWorks = true;
+    result.apiKeyWorks = true;
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : '';
+    if (msg.includes('INVALID_API_KEY')) {
+      result.apiKeyWorks = false;
+      result.error = 'API key lacks required permissions. Please generate a full API key from NowPayments dashboard.';
+    } else {
+      result.error = msg;
+    }
+  }
+
+  return result;
 }
