@@ -7,6 +7,11 @@ echo "============================================"
 echo "NODE_ENV: $NODE_ENV"
 echo "PORT: $PORT"
 echo "DATABASE_URL is set: $([ -n "$DATABASE_URL" ] && echo 'yes' || echo 'no')"
+echo "NOWPAYMENTS_API_KEY is set: $([ -n "$NOWPAYMENTS_API_KEY" ] && echo 'yes' || echo 'no')"
+echo "NOWPAYMENTS_EMAIL is set: $([ -n "$NOWPAYMENTS_EMAIL" ] && echo 'yes' || echo 'no')"
+echo "NOWPAYMENTS_PASSWORD is set: $([ -n "$NOWPAYMENTS_PASSWORD" ] && echo 'yes' || echo 'no')"
+echo "NOWPAYMENTS_2FA_SECRET is set: $([ -n "$NOWPAYMENTS_2FA_SECRET" ] && echo 'yes' || echo 'no')"
+echo "NOWPAYMENTS_IPN_SECRET is set: $([ -n "$NOWPAYMENTS_IPN_SECRET" ] && echo 'yes' || echo 'no')"
 
 # Run Prisma migrations
 echo "[1/2] Running database migrations..."
