@@ -53,7 +53,11 @@ WORKDIR /app
 # Set production environment
 ENV NODE_ENV=production
 
-# Don't run as root
+# Install Prisma CLI for runtime migrations
+RUN npm install -g prisma
+
+# Don't run as root initially - we need root for migrations
+# Create user but don't switch yet
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
@@ -66,16 +70,39 @@ COPY --from=builder /app/public ./public
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
+COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
+
+# Copy startup script
+COPY --chmod=755 <<'EOF' /app/start.sh
+#!/bin/sh
+set -e
+
+echo "============================================"
+echo "FlashMining - Starting Production Server"
+echo "============================================"
+
+# Run Prisma migrations (push schema to database)
+echo "[1/2] Running database migrations..."
+cd /app
+npx prisma db push --skip-generate --accept-data-loss 2>&1 || {
+    echo "WARNING: Database migration failed. Retrying in 5 seconds..."
+    sleep 5
+    npx prisma db push --skip-generate --accept-data-loss 2>&1 || {
+        echo "ERROR: Database migration failed after retry. Continuing anyway..."
+    }
+}
+
+echo "[2/2] Starting Next.js server..."
+exec node server.js
+EOF
 
 # Change ownership
 RUN chown -R nextjs:nodejs /app
-
-USER nextjs
 
 EXPOSE 3000
 
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-# Start the standalone server
-CMD ["node", "server.js"]
+# Start with migration script
+CMD ["/app/start.sh"]
