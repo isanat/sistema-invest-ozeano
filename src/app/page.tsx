@@ -4104,7 +4104,7 @@ export default function PlataformaROI() {
                             {affiliateData.commissionMode && (
                               <div className="mb-3 flex flex-wrap gap-2">
                                 <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30" variant="outline">
-                                  {t(`affiliates.mode${affiliateData.commissionMode === 'system_margin' ? 'SystemMargin' : affiliateData.commissionMode === 'roi_profit' ? 'MiningProfit' : 'RevenuePool'}`)}
+                                  {t(`affiliates.mode${affiliateData.commissionMode === 'system_margin' ? 'SystemMargin' : affiliateData.commissionMode === 'roi_profit' ? 'TradingProfit' : 'RevenuePool'}`)}
                                 </Badge>
                                 {affiliateData.commissionMode === 'roi_profit' && affiliateData.investmentBonusPct && affiliateData.investmentBonusPct > 0 && (
                                   <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30" variant="outline">
