@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
     // Get referrals by level (with error isolation)
     const referralTree: Record<number, Array<{ id: string; name: string; email: string; createdAt: Date; totalInvested: string }>> = {};
     try {
-      for (let level = 1; level <= 5; level++) {
+      for (let level = 1; level <= 11; level++) {
         const referrals = await getReferralsAtLevel(user.id, level);
         referralTree[level] = referrals;
       }
@@ -84,7 +84,7 @@ export async function GET(request: NextRequest) {
     const directReferrals = user.referrals.length;
 
     // Get affiliate mode config for frontend display
-    let modeInfo = { mode: 'mining_profit' as const, systemMarginPct: 30, poolRevenuePct: 5, rentalBonusPct: 2 };
+    let modeInfo = { mode: 'system_margin' as const, systemMarginPct: 30, poolRevenuePct: 5, investmentBonusPct: 2 };
     try {
       modeInfo = await getAffiliateModeInfo();
     } catch (e) {
@@ -380,7 +380,7 @@ export async function GET(request: NextRequest) {
         commissionMode: modeInfo.mode,
         systemMarginPct: modeInfo.systemMarginPct,
         poolRevenuePct: modeInfo.poolRevenuePct,
-        rentalBonusPct: modeInfo.rentalBonusPct,
+        investmentBonusPct: modeInfo.investmentBonusPct,
       },
       ranks,
       currentRank,

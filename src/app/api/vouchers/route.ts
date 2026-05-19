@@ -13,12 +13,12 @@ export async function GET(request: NextRequest) {
       include: {
         usages: {
           include: {
-            rental: {
+            investment: {
               select: {
                 id: true,
                 amount: true,
                 startDate: true,
-                miner: { select: { name: true } },
+                plan: { select: { name: true } },
               },
             },
           },

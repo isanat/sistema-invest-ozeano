@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
         select: {
           balance: true,
           totalInvested: true,
-          totalMined: true,
+          totalRoi: true,
           totalWithdrawn: true,
           totalAffiliateEarnings: true,
           affiliateBalance: true,
@@ -74,7 +74,7 @@ export async function GET(request: NextRequest) {
     for (const tx of transactions) {
       const isIncome = [
         'deposit',
-        'mining_profit',
+        'roi_profit',
         'affiliate_commission',
       ].includes(tx.type);
       entries.push({
@@ -171,7 +171,7 @@ export async function GET(request: NextRequest) {
       totalExpense,
       netBalance: totalIncome - totalExpense,
       totalInvested: d(user?.totalInvested || '0'),
-      totalMined: d(user?.totalMined || '0'),
+      totalRoi: d(user?.totalRoi || '0'),
       totalWithdrawn: d(user?.totalWithdrawn || '0'),
       totalAffiliateEarnings: d(user?.totalAffiliateEarnings || '0'),
     };

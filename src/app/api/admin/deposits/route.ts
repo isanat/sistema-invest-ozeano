@@ -29,8 +29,8 @@ export async function GET(request: NextRequest) {
       if (endDate) where.createdAt.lte = new Date(endDate);
     }
 
-    const [investments, total] = await Promise.all([
-      db.investment.findMany({
+    const [deposits, total] = await Promise.all([
+      db.deposit.findMany({
         where,
         skip,
         take: limit,
@@ -41,11 +41,11 @@ export async function GET(request: NextRequest) {
           },
         },
       }),
-      db.investment.count({ where }),
+      db.deposit.count({ where }),
     ]);
 
     return apiSuccess({
-      deposits: investments,
+      deposits: deposits,
       pagination: {
         page,
         limit,
@@ -73,12 +73,12 @@ export async function PUT(request: NextRequest) {
     if (data.action === 'approve') {
       // Use transaction for atomicity — status check inside to prevent race conditions
       const result = await db.$transaction(async (tx) => {
-        const investment = await tx.investment.findUnique({ where: { id } });
-        if (!investment) throw new Error('Depósito não encontrado');
-        if (investment.status !== 'pending') throw new Error('Depósito já foi processado');
+        const deposit = await tx.deposit.findUnique({ where: { id } });
+        if (!deposit) throw new Error('Depósito não encontrado');
+        if (deposit.status !== 'pending') throw new Error('Depósito já foi processado');
 
-        // Update investment status
-        const updated = await tx.investment.update({
+        // Update deposit status
+        const updated = await tx.deposit.update({
           where: { id },
           data: {
             status: 'confirmed',
@@ -89,10 +89,10 @@ export async function PUT(request: NextRequest) {
         });
 
         // Credit user balance atomically using raw SQL (PostgreSQL)
-        await tx.$executeRaw`UPDATE "User" SET balance = (CAST(balance AS NUMERIC) + ${d(investment.amount)})::text, "totalInvested" = (CAST("totalInvested" AS NUMERIC) + ${d(investment.amount)})::text WHERE id = ${investment.userId}`;
+        await tx.$executeRaw`UPDATE "User" SET balance = (CAST(balance AS NUMERIC) + ${d(deposit.amount)})::text, "totalInvested" = (CAST("totalInvested" AS NUMERIC) + ${d(deposit.amount)})::text WHERE id = ${deposit.userId}`;
 
         await tx.user.update({
-          where: { id: investment.userId },
+          where: { id: deposit.userId },
           data: {
             hasInvested: true,
           },
@@ -101,27 +101,27 @@ export async function PUT(request: NextRequest) {
         // Create transaction record
         await tx.transaction.create({
           data: {
-            userId: investment.userId,
+            userId: deposit.userId,
             type: 'deposit',
-            amount: investment.amount,
-            brlAmount: investment.brlAmount,
-            usdtRate: investment.usdtRate,
+            amount: deposit.amount,
+            brlAmount: deposit.brlAmount,
+            usdtRate: deposit.usdtRate,
             status: 'completed',
-            description: `Depósito confirmado - ${investment.method}${data.adminNotes ? ` (${data.adminNotes})` : ''}`,
-            referenceId: investment.id,
-            referenceType: 'Investment',
+            description: `Depósito confirmado - ${deposit.method}${data.adminNotes ? ` (${data.adminNotes})` : ''}`,
+            referenceId: deposit.id,
+            referenceType: 'Deposit',
           },
         });
 
         return updated;
       });
 
-      // Get investment data for logging (outside transaction)
-      const investment = await db.investment.findUnique({ where: { id } });
+      // Get deposit data for logging (outside transaction)
+      const depositRecord = await db.deposit.findUnique({ where: { id } });
 
       // Process affiliate commissions on deposit
       try {
-        if (investment) await processCommissions(investment.userId, d(investment.amount), 'deposit', investment.id);
+        if (depositRecord) await processCommissions(depositRecord.userId, d(depositRecord.amount), 'deposit', depositRecord.id);
       } catch (commErr) {
         console.error('Deposit commission error:', commErr);
       }
@@ -135,7 +135,7 @@ export async function PUT(request: NextRequest) {
           entityId: id,
           oldValue: JSON.stringify({ status: 'pending' }),
           newValue: JSON.stringify({ status: 'confirmed' }),
-          description: investment ? `Depósito aprovado: ${dusdt(investment.amount)} USDT para ${investment.userId}` : 'Depósito aprovado',
+          description: depositRecord ? `Depósito aprovado: ${dusdt(depositRecord.amount)} USDT para ${depositRecord.userId}` : 'Depósito aprovado',
         },
       });
 
@@ -144,11 +144,11 @@ export async function PUT(request: NextRequest) {
 
     if (data.action === 'reject') {
       const result = await db.$transaction(async (tx) => {
-        const investment = await tx.investment.findUnique({ where: { id } });
-        if (!investment) throw new Error('Depósito não encontrado');
-        if (investment.status !== 'pending') throw new Error('Depósito já foi processado');
+        const deposit = await tx.deposit.findUnique({ where: { id } });
+        if (!deposit) throw new Error('Depósito não encontrado');
+        if (deposit.status !== 'pending') throw new Error('Depósito já foi processado');
 
-        const updated = await tx.investment.update({
+        const updated = await tx.deposit.update({
           where: { id },
           data: {
             status: 'rejected',

@@ -1,9 +1,10 @@
 import { NextRequest } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAuth } from '@/lib/auth';
+import { d } from '@/lib/auth';
 import { apiError, apiSuccess, handleApiError } from '@/lib/api-utils';
 
-// GET /api/mining-history — Returns mining history for the authenticated user
+// GET /api/roi-history — Returns ROI history for the authenticated user
 export async function GET(request: NextRequest) {
   try {
     const session = await requireAuth();
@@ -11,24 +12,29 @@ export async function GET(request: NextRequest) {
 
     const url = new URL(request.url);
     const limit = parseInt(url.searchParams.get('limit') || '30');
-    const rentalId = url.searchParams.get('rentalId') || undefined;
+    const investmentId = url.searchParams.get('investmentId') || undefined;
 
     // Get today's date (start of day UTC)
     const today = new Date();
     today.setUTCHours(0, 0, 0, 0);
 
-    // Fetch mining history
+    // Fetch ROI history
     const whereClause: any = { userId };
-    if (rentalId) whereClause.rentalId = rentalId;
+    if (investmentId) whereClause.investmentId = investmentId;
 
-    const history = await db.miningHistory.findMany({
+    const history = await db.roiHistory.findMany({
       where: whereClause,
       orderBy: { date: 'desc' },
       take: limit,
+      include: {
+        investment: {
+          select: { id: true, amount: true, dailyRoiPct: true, plan: { select: { name: true } } },
+        },
+      },
     });
 
     // Calculate today's total earnings
-    const todayHistory = await db.miningHistory.findMany({
+    const todayHistory = await db.roiHistory.findMany({
       where: {
         userId,
         date: { gte: today },
@@ -36,7 +42,7 @@ export async function GET(request: NextRequest) {
     });
 
     const todayEarnings = todayHistory.reduce((sum, h) => {
-      const val = parseFloat(h.usdtValue || '0');
+      const val = parseFloat(h.totalRoi || '0');
       return sum + (isNaN(val) ? 0 : val);
     }, 0);
 
@@ -44,7 +50,7 @@ export async function GET(request: NextRequest) {
     const sevenDaysAgo = new Date(today);
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
-    const weeklyHistory = await db.miningHistory.findMany({
+    const weeklyHistory = await db.roiHistory.findMany({
       where: {
         userId,
         date: { gte: sevenDaysAgo },
@@ -56,13 +62,13 @@ export async function GET(request: NextRequest) {
     const weeklyEarnings: Record<string, number> = {};
     weeklyHistory.forEach(h => {
       const dayKey = new Date(h.date).toISOString().split('T')[0];
-      const val = parseFloat(h.usdtValue || '0');
+      const val = parseFloat(h.totalRoi || '0');
       weeklyEarnings[dayKey] = (weeklyEarnings[dayKey] || 0) + (isNaN(val) ? 0 : val);
     });
 
     return apiSuccess({
       history,
-      todayEarnings: todayEarnings.toFixed(8),
+      todayEarnings: todayEarnings.toFixed(2),
       weeklyEarnings,
       totalRecords: history.length,
     });

@@ -20,7 +20,7 @@ const PUBLIC_API_ROUTES = [
   '/api/crypto/prices',
   '/api/crypto/stats',
   '/api/exchange-rate',
-  '/api/miners',
+  '/api/plans',
   '/api/cron/', // Cron uses Bearer token auth, not session
   '/api/admin/setup', // Setup is public (creates first admin)
   '/api/landing', // Public landing page data

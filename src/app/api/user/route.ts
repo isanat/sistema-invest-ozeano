@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
         pixKey: true,
         balance: true,
         affiliateBalance: true,
-        totalMined: true,
+        totalRoi: true,
         totalInvested: true,
         totalWithdrawn: true,
         affiliateCode: true,
@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
         _count: {
           select: {
             referrals: true,
-            miningRentals: { where: { status: 'active' } },
+            investments: { where: { status: 'active' } },
           },
         },
       },
@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
 
     // Get referral count by level
     const referralCounts: Record<number, number> = {};
-    for (let level = 1; level <= 5; level++) {
+    for (let level = 1; level <= 11; level++) {
       const count = await getReferralCountAtLevel(session.userId, level);
       referralCounts[level] = count;
     }

@@ -2,45 +2,62 @@ import { db } from './db';
 import { d } from './auth';
 
 // ============================================================================
-// AFFILIATE SERVICE - Sustainable Commission Engine v2
+// AFFILIATE SERVICE - Sustainable Commission Engine v3
 // ============================================================================
 //
 // ECONOMIC PRINCIPLE:
-// The system receives rental payments as revenue. Mining profits are distributed
-// to users daily. The gap between (total rental revenue) and (total mining payouts)
-// determines the system's sustainability.
+// The platform receives investment amounts as capital. Daily ROI is distributed
+// to investors based on copy trading performance. The gap between
+// (total invested capital) and (total ROI payouts + withdrawals) determines
+// the system's sustainability.
 //
 // SUSTAINABILITY RULES:
 // 1. Commissions must NEVER cause the system to pay out more than it earns
 // 2. Commissions come from the SYSTEM's margin, not from user payouts
-// 3. A daily cap prevents runaway payouts when many rentals are active
+// 3. A daily cap prevents runaway payouts when many investments are active
 // 4. The system always retains a minimum reserve percentage
 //
 // THREE COMMISSION MODES:
 //
 // 1. SYSTEM_MARGIN (RECOMMENDED - most sustainable):
 //    Commission calculated on the system's profit margin only.
-//    When a rental earns $3.64/day and system margin is 30% ($1.09),
-//    affiliates get their % of $1.09, NOT of $3.64.
+//    When an investment generates ROI and system margin is 30%,
+//    affiliates get their % of the system margin, NOT of the full ROI.
 //    → Sustainable: commissions come from actual system profit.
 //
-// 2. MINING_PROFIT (attractive but higher risk):
-//    Commission on mining profits + small rental signup bonus.
-//    → CAUTION: This pays affiliates from user mining returns,
-//      adding to system outflow. Only sustainable if mining returns
-//      are less than rental revenue (system has margin).
+// 2. INVESTMENT_PROFIT (attractive but higher risk):
+//    Commission on investment profits + small investment signup bonus.
+//    → CAUTION: This pays affiliates from user trading returns,
+//      adding to system outflow. Only sustainable if trading returns
+//      are less than investment revenue (system has margin).
 //
 // 3. REVENUE_POOL (predictable, capped):
-//    Fixed % of rental revenue → affiliate pool, distributed by level.
+//    Fixed % of investment revenue → affiliate pool, distributed by level.
 //    → Sustainable because pool can NEVER exceed X% of revenue.
 // ============================================================================
 
-const MAX_DEPTH = 5;
+const MAX_DEPTH = 11;
+
+// Default level percentages for 11-level affiliate system
+// L1=10%, L2=4%, L3=3%, L4=2%, L5=1.5%, L6=1%, L7=0.8%, L8=0.5%, L9=0.4%, L10=0.3%, L11=0.5%
+const DEFAULT_LEVEL_PERCENTAGES: Record<number, number> = {
+  1: 10,
+  2: 4,
+  3: 3,
+  4: 2,
+  5: 1.5,
+  6: 1,
+  7: 0.8,
+  8: 0.5,
+  9: 0.4,
+  10: 0.3,
+  11: 0.5,
+};
 
 // Minimum system reserve: system must retain at least this % of daily revenue
 const MIN_SYSTEM_RESERVE_PCT = 15;
 
-export type CommissionMode = 'system_margin' | 'mining_profit' | 'revenue_pool';
+export type CommissionMode = 'system_margin' | 'investment_profit' | 'revenue_pool';
 
 interface CommissionResult {
   userId: string;
@@ -90,13 +107,7 @@ async function checkDailyCommissionCap(
 
   // Check sustainability: total affiliate payouts should not exceed (100% - MIN_SYSTEM_RESERVE) of deposits
   // This is a soft check - if system has ample reserves, allow through
-  const totalDeposits = await db.investment.aggregate({
-    _count: { id: true },
-    where: { type: 'deposit', status: 'confirmed' },
-  });
-
-  // Get total deposits amount manually (amount is String)
-  const depositRecords = await db.investment.findMany({
+  const depositRecords = await db.deposit.findMany({
     where: { type: 'deposit', status: 'confirmed' },
     select: { amount: true },
   });
@@ -131,7 +142,7 @@ async function getAffiliateConfig(): Promise<{
   mode: CommissionMode;
   systemMarginPct: number;
   poolRevenuePct: number;
-  rentalBonusPct: number;
+  investmentBonusPct: number;
   dailyCapUsd: number;
 }> {
   const configs = await db.systemConfig.findMany({
@@ -141,7 +152,7 @@ async function getAffiliateConfig(): Promise<{
           'affiliate_commission_mode',
           'affiliate_system_margin_pct',
           'affiliate_pool_revenue_pct',
-          'affiliate_rental_bonus_pct',
+          'affiliate_investment_bonus_pct',
           'affiliate_daily_cap_usd',
         ],
       },
@@ -151,13 +162,13 @@ async function getAffiliateConfig(): Promise<{
 
   // DEFAULT: system_margin (most sustainable mode)
   const mode = (configMap.affiliate_commission_mode || 'system_margin') as CommissionMode;
-  const validModes: CommissionMode[] = ['system_margin', 'mining_profit', 'revenue_pool'];
+  const validModes: CommissionMode[] = ['system_margin', 'investment_profit', 'revenue_pool'];
 
   return {
     mode: validModes.includes(mode) ? mode : 'system_margin',
     systemMarginPct: d(configMap.affiliate_system_margin_pct || '30'),
     poolRevenuePct: d(configMap.affiliate_pool_revenue_pct || '5'),
-    rentalBonusPct: d(configMap.affiliate_rental_bonus_pct || '2'),
+    investmentBonusPct: d(configMap.affiliate_investment_bonus_pct || '2'),
     dailyCapUsd: d(configMap.affiliate_daily_cap_usd || '0'),
   };
 }
@@ -201,12 +212,12 @@ async function getRankBoost(userId: string): Promise<number> {
 // ============================================================================
 
 function calculateSystemMarginCommission(
-  rentalAmount: number,
+  investmentAmount: number,
   systemMarginPct: number,
   levels: Array<{ level: number; percentage: string; isActive: boolean }>,
 ): CommissionResult[] {
-  // System profit = rental amount × margin %
-  const systemProfit = rentalAmount * (systemMarginPct / 100);
+  // System profit = investment amount × margin %
+  const systemProfit = investmentAmount * (systemMarginPct / 100);
 
   return levels
     .filter((l) => l.isActive)
@@ -226,38 +237,38 @@ function calculateSystemMarginCommission(
 }
 
 // ============================================================================
-// MODE 2: MINING PROFIT + RENTAL BONUS
+// MODE 2: INVESTMENT PROFIT + INVESTMENT BONUS
 // ⚠️ CAUTION: Higher risk - commissions add to system outflow
 // ============================================================================
 
-function calculateMiningProfitCommission(
-  miningProfit: number,
+function calculateInvestmentProfitCommission(
+  investmentProfit: number,
   levels: Array<{ level: number; percentage: string; isActive: boolean }>,
 ): CommissionResult[] {
   return levels
     .filter((l) => l.isActive)
     .map((levelConfig) => {
       const percentage = d(levelConfig.percentage);
-      const commissionAmount = miningProfit * (percentage / 100);
+      const commissionAmount = investmentProfit * (percentage / 100);
       return {
         userId: '',
         level: levelConfig.level,
-        baseAmount: miningProfit,
+        baseAmount: investmentProfit,
         percentage,
         commissionAmount,
-        mode: 'mining_profit' as CommissionMode,
+        mode: 'investment_profit' as CommissionMode,
         rankBoost: 0,
       };
     });
 }
 
-// Rental bonus: immediate commission on rental purchase (smaller %)
-function calculateRentalBonusCommission(
-  rentalAmount: number,
+// Investment bonus: immediate commission on investment purchase (smaller %)
+function calculateInvestmentBonusCommission(
+  investmentAmount: number,
   bonusPct: number,
   levels: Array<{ level: number; percentage: string; isActive: boolean }>,
 ): CommissionResult[] {
-  const bonusBase = rentalAmount * (bonusPct / 100);
+  const bonusBase = investmentAmount * (bonusPct / 100);
 
   return levels
     .filter((l) => l.isActive)
@@ -270,7 +281,7 @@ function calculateRentalBonusCommission(
         baseAmount: bonusBase,
         percentage,
         commissionAmount,
-        mode: 'mining_profit' as CommissionMode,
+        mode: 'investment_profit' as CommissionMode,
         rankBoost: 0,
       };
     });
@@ -278,16 +289,16 @@ function calculateRentalBonusCommission(
 
 // ============================================================================
 // MODE 3: REVENUE POOL
-// Fixed % of rental revenue → affiliate pool, distributed by level
+// Fixed % of investment revenue → affiliate pool, distributed by level
 // ============================================================================
 
 async function processRevenuePoolCommission(
   fromUserId: string,
-  rentalAmount: number,
+  investmentAmount: number,
   poolRevenuePct: number,
   sourceId: string,
 ): Promise<void> {
-  const poolContribution = rentalAmount * (poolRevenuePct / 100);
+  const poolContribution = investmentAmount * (poolRevenuePct / 100);
 
   // Sustainability check before distributing pool
   const sustainability = await checkDailyCommissionCap(poolContribution);
@@ -373,7 +384,7 @@ async function processRevenuePoolCommission(
           commissionAmount: commissionAmount.toFixed(8),
           status: 'paid',
           paidAt: new Date(),
-          rentalId: sourceId,
+          investmentId: sourceId,
         },
       });
 
@@ -387,7 +398,7 @@ async function processRevenuePoolCommission(
           status: 'completed',
           description: `Pool receita nível ${referrer.level} (${poolRevenuePct}% da receita)${rankBoost > 0 ? ` +${rankBoost}% rank` : ''}`,
           referenceId: sourceId,
-          referenceType: 'MiningRental',
+          referenceType: 'Investment',
         },
       });
     }
@@ -396,15 +407,15 @@ async function processRevenuePoolCommission(
 
 // ============================================================================
 // WALK UP REFERRAL CHAIN (shared by modes 1 & 2)
-// With sustainability cap
+// With sustainability cap - supports 11 levels
 // ============================================================================
 
 async function walkUpReferralChain(
   fromUserId: string,
   commissionTemplate: CommissionResult[],
-  sourceType: 'mining' | 'rental',
+  sourceType: 'trading' | 'subscription',
   sourceId: string,
-  isRentalBonus: boolean = false,
+  isInvestmentBonus: boolean = false,
 ): Promise<void> {
   if (commissionTemplate.length === 0) return;
 
@@ -508,19 +519,17 @@ async function walkUpReferralChain(
           commissionAmount: scaledCommission.toFixed(8),
           status: 'paid',
           paidAt: new Date(),
-          ...(sourceType === 'mining'
-            ? { miningHistoryId: sourceId }
-            : { rentalId: sourceId }),
+          investmentId: sourceId,
         },
       });
 
       await tx.$executeRaw`UPDATE "User" SET "affiliateBalance" = (CAST("affiliateBalance" AS NUMERIC) + ${scaledCommission})::text, "totalAffiliateEarnings" = (CAST("totalAffiliateEarnings" AS NUMERIC) + ${scaledCommission})::text WHERE id = ${ref.id}`;
 
-      const modeLabel = isRentalBonus
-        ? `Bônus locação (${ref.percentage}% do bônus)`
+      const modeLabel = isInvestmentBonus
+        ? `Bônus investimento (${ref.percentage}% do bônus)`
         : mode === 'system_margin'
           ? `Margem do sistema (${ref.percentage}% da margem)`
-          : `Lucro mineração (${ref.percentage}%)`;
+          : `Lucro investimento (${ref.percentage}%)`;
 
       const boostLabel = ref.rankBoost > 0 ? ` +${ref.rankBoost}% rank` : '';
       const capLabel = scaleFactor < 1 ? ' [ajustado]' : '';
@@ -533,7 +542,7 @@ async function walkUpReferralChain(
           status: 'completed',
           description: `Comissão nível ${ref.level} - ${modeLabel}${boostLabel}${capLabel}`,
           referenceId: sourceId,
-          referenceType: sourceType === 'mining' ? 'MiningHistory' : 'MiningRental',
+          referenceType: sourceType === 'trading' ? 'RoiHistory' : 'Investment',
         },
       });
     }
@@ -548,7 +557,7 @@ async function walkUpReferralChain(
 export async function processCommissions(
   fromUserId: string,
   earningsAmount: number,
-  sourceType: 'mining' | 'rental' | 'deposit',
+  sourceType: 'trading' | 'subscription' | 'deposit',
   sourceId: string,
 ): Promise<void> {
   // Skip zero or negative amounts
@@ -569,8 +578,8 @@ export async function processCommissions(
     // ====================================================================
     // MODE 1: SYSTEM_MARGIN (DEFAULT - MOST SUSTAINABLE)
     // Commissions come from the system's profit margin, not user payouts.
-    // Mining commissions: % of the system's share of mining revenue
-    // Rental commissions: % of the system's margin on the rental
+    // Trading commissions: % of the system's share of trading revenue
+    // Investment commissions: % of the system's margin on the investment
     // NO commission on deposit
     // ====================================================================
     case 'system_margin': {
@@ -578,60 +587,59 @@ export async function processCommissions(
         return;
       }
 
-      if (sourceType === 'rental') {
+      if (sourceType === 'subscription') {
         const template = calculateSystemMarginCommission(
           earningsAmount,
           config.systemMarginPct,
           levels,
         );
-        await walkUpReferralChain(fromUserId, template, 'rental', sourceId);
+        await walkUpReferralChain(fromUserId, template, 'subscription', sourceId);
       } else {
-        // Mining: commission on system's share (margin) of the mining profit
+        // Trading: commission on system's share (margin) of the ROI profit
         // This ensures affiliates earn from what the SYSTEM earns, not from user payouts
-        const systemShareOfMining = earningsAmount * (config.systemMarginPct / 100);
         const template = calculateSystemMarginCommission(
           earningsAmount, // base amount for record
           config.systemMarginPct,
           levels,
         );
-        await walkUpReferralChain(fromUserId, template, 'mining', sourceId);
+        await walkUpReferralChain(fromUserId, template, 'trading', sourceId);
       }
       break;
     }
 
     // ====================================================================
-    // MODE 2: MINING_PROFIT + RENTAL BONUS (higher risk)
+    // MODE 2: INVESTMENT_PROFIT + INVESTMENT BONUS (higher risk)
     // ⚠️ CAUTION: Commissions add to system outflow
-    // Mining commission: % of user's mining profit (ADDS to daily outflow)
-    // Rental bonus: % of rental amount (immediate, smaller)
+    // Investment commission: % of user's investment profit (ADDS to daily outflow)
+    // Investment bonus: % of investment amount (immediate, smaller)
     // ====================================================================
-    case 'mining_profit': {
+    case 'investment_profit': {
       if (sourceType === 'deposit') {
         return;
       }
 
-      if (sourceType === 'rental') {
-        if (config.rentalBonusPct > 0) {
-          const bonusTemplate = calculateRentalBonusCommission(
+      if (sourceType === 'subscription') {
+        if (config.investmentBonusPct > 0) {
+          const bonusTemplate = calculateInvestmentBonusCommission(
             earningsAmount,
-            config.rentalBonusPct,
+            config.investmentBonusPct,
             levels,
           );
-          await walkUpReferralChain(fromUserId, bonusTemplate, 'rental', sourceId, true);
+          await walkUpReferralChain(fromUserId, bonusTemplate, 'subscription', sourceId, true);
         }
-      } else if (sourceType === 'mining') {
-        const template = calculateMiningProfitCommission(earningsAmount, levels);
-        await walkUpReferralChain(fromUserId, template, 'mining', sourceId);
+      } else if (sourceType === 'trading') {
+        const template = calculateInvestmentProfitCommission(earningsAmount, levels);
+        await walkUpReferralChain(fromUserId, template, 'trading', sourceId);
       }
       break;
     }
 
     // ====================================================================
     // MODE 3: REVENUE_POOL (predictable, capped)
-    // Fixed % of rental revenue → affiliate pool, distributed by level
+    // Fixed % of investment revenue → affiliate pool, distributed by level
     // ====================================================================
     case 'revenue_pool': {
-      if (sourceType !== 'rental') {
+      if (sourceType !== 'subscription') {
         return;
       }
 
@@ -653,7 +661,7 @@ export async function processCommissions(
 export async function calculateCommissions(
   fromUserId: string,
   earningsAmount: number,
-  sourceType: 'mining' | 'rental' | 'deposit',
+  sourceType: 'trading' | 'subscription' | 'deposit',
   sourceId: string
 ): Promise<CommissionResult[]> {
   const config = await getAffiliateConfig();
@@ -693,13 +701,13 @@ export async function calculateCommissions(
       const percentage = d(levelConfig.percentage);
 
       let baseAmount = earningsAmount;
-      if (config.mode === 'system_margin' && sourceType === 'rental') {
+      if (config.mode === 'system_margin' && sourceType === 'subscription') {
         baseAmount = earningsAmount * (config.systemMarginPct / 100);
-      } else if (config.mode === 'revenue_pool' && sourceType === 'rental') {
+      } else if (config.mode === 'revenue_pool' && sourceType === 'subscription') {
         baseAmount = earningsAmount * (config.poolRevenuePct / 100);
-      } else if (config.mode === 'mining_profit' && sourceType === 'rental') {
-        baseAmount = earningsAmount * (config.rentalBonusPct / 100);
-      } else if (config.mode === 'mining_profit' && sourceType !== 'mining') {
+      } else if (config.mode === 'investment_profit' && sourceType === 'subscription') {
+        baseAmount = earningsAmount * (config.investmentBonusPct / 100);
+      } else if (config.mode === 'investment_profit' && sourceType !== 'trading') {
         currentUserId = referrer.id;
         continue;
       }
@@ -735,7 +743,7 @@ export async function getAffiliateModeInfo(): Promise<{
   mode: CommissionMode;
   systemMarginPct: number;
   poolRevenuePct: number;
-  rentalBonusPct: number;
+  investmentBonusPct: number;
 }> {
   return getAffiliateConfig();
 }
@@ -747,4 +755,28 @@ export function generateAffiliateCode(name: string): string {
   const base = name.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
   const random = Math.random().toString(36).substring(2, 6).toUpperCase();
   return `${base}${random}`;
+}
+
+/**
+ * Get default level percentages for the 11-level affiliate system.
+ * L1=10%, L2=4%, L3=3%, L4=2%, L5=1.5%, L6=1%, L7=0.8%, L8=0.5%, L9=0.4%, L10=0.3%, L11=0.5%
+ * Total = 23.5%
+ */
+export function getDefaultLevelPercentages(): Record<number, number> {
+  return { ...DEFAULT_LEVEL_PERCENTAGES };
+}
+
+/**
+ * Get the team bonus percentage for a user based on direct referrals with investments.
+ * Bronze (10+ referrals) = 1%, Prata (20+) = 2%, Ouro (30+) = 3%
+ */
+export async function getTeamBonusPct(userId: string): Promise<number> {
+  const directReferrals = await db.user.count({
+    where: { referredBy: userId, hasInvested: true },
+  });
+  
+  if (directReferrals >= 30) return 3; // Ouro
+  if (directReferrals >= 20) return 2; // Prata
+  if (directReferrals >= 10) return 1; // Bronze
+  return 0;
 }

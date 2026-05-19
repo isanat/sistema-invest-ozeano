@@ -9,21 +9,18 @@ export async function GET(request: NextRequest) {
     // Check if system is already set up
     const adminCount = await db.user.count({ where: { role: 'admin' } });
     const configCount = await db.systemConfig.count();
-    const minerCount = await db.miner.count();
-    const planCount = await db.miningPlan.count();
+    const planCount = await db.investmentPlan.count();
     const affiliateLevelCount = await db.affiliateLevel.count();
 
     return apiSuccess({
-      isSetup: adminCount > 0 && configCount > 0 && minerCount > 0,
+      isSetup: adminCount > 0 && configCount > 0 && planCount > 0,
       hasAdmin: adminCount > 0,
       hasConfigs: configCount > 0,
-      hasMiners: minerCount > 0,
       hasPlans: planCount > 0,
       hasAffiliateLevels: affiliateLevelCount > 0,
       counts: {
         admins: adminCount,
         configs: configCount,
-        miners: minerCount,
         plans: planCount,
         affiliateLevels: affiliateLevelCount,
       },
@@ -51,7 +48,7 @@ export async function POST(request: NextRequest) {
     const hashedPassword = await hashPassword(adminPassword);
     const admin = await db.user.create({
       data: {
-        email: body.adminEmail || 'admin@miningprotocol.com',
+        email: body.adminEmail || 'admin@ozeano.com',
         password: hashedPassword,
         name: body.adminName || 'Administrator',
         role: 'admin',
@@ -70,171 +67,225 @@ export async function POST(request: NextRequest) {
       { key: 'withdrawal_fee_pct', value: '0', type: 'number', description: 'Taxa de saque (%)', category: 'withdrawal' },
       { key: 'min_affiliate_withdrawal', value: '10', type: 'number', description: 'Saque mínimo afiliado USDT', category: 'affiliate' },
       { key: 'affiliate_withdrawal_fee_pct', value: '0', type: 'number', description: 'Taxa saque afiliado (%)', category: 'affiliate' },
-      { key: 'affiliate_commission_mode', value: 'mining_profit', type: 'string', description: 'Modo de comissão: system_margin, mining_profit, revenue_pool', category: 'affiliate' },
+      { key: 'affiliate_commission_mode', value: 'system_margin', type: 'string', description: 'Modo de comissão: system_margin, investment_profit, revenue_pool', category: 'affiliate' },
       { key: 'affiliate_system_margin_pct', value: '30', type: 'number', description: 'Margem do sistema (%) para modo system_margin', category: 'affiliate' },
       { key: 'affiliate_pool_revenue_pct', value: '5', type: 'number', description: '% da receita para pool de afiliados (modo revenue_pool)', category: 'affiliate' },
-      { key: 'affiliate_rental_bonus_pct', value: '2', type: 'number', description: 'Bônus de locação (%) para modo mining_profit', category: 'affiliate' },
-      { key: 'affiliate_daily_cap_usd', value: '0', type: 'number', description: 'Cap diário de comissões afiliado em USDT (0 = sem cap explícito, usa reserva)', category: 'affiliate' },
+      { key: 'affiliate_investment_bonus_pct', value: '2', type: 'number', description: 'Bônus de investimento (%) para modo investment_profit', category: 'affiliate' },
+      { key: 'affiliate_daily_cap_usd', value: '0', type: 'number', description: 'Cap diário de comissões afiliado em USDT (0 = sem cap explícito)', category: 'affiliate' },
       { key: 'pix_wallet_address', value: '', type: 'string', description: 'Endereço USDT para depósitos PIX', category: 'deposit' },
       { key: 'usdt_trc20_address', value: '', type: 'string', description: 'Endereço USDT TRC20 para depósitos', category: 'deposit' },
       { key: 'usdt_polygon_address', value: '', type: 'string', description: 'Endereço USDT Polygon para depósitos', category: 'deposit' },
       { key: 'pix_key', value: '', type: 'string', description: 'Chave PIX para recebimentos', category: 'deposit' },
-      { key: 'site_name', value: 'Mining Protocol', type: 'string', description: 'Nome do site', category: 'general' },
+      { key: 'site_name', value: 'Ozeano Invest', type: 'string', description: 'Nome do site', category: 'general' },
       { key: 'maintenance_mode', value: 'false', type: 'boolean', description: 'Modo manutenção', category: 'general' },
+      { key: 'daily_roi_pct', value: '2', type: 'number', description: 'ROI diário padrão (%)', category: 'trading' },
+      { key: 'min_investment_usdt', value: '10', type: 'number', description: 'Investimento mínimo USDT', category: 'trading' },
     ];
 
     await db.systemConfig.createMany({ data: configs });
 
-    // Create affiliate levels (designed: 8%, 3%, 1.5%, 0.5%, 0.25%)
+    // Create affiliate levels (11 levels)
+    // L1=10%, L2=4%, L3=3%, L4=2%, L5=1.5%, L6=1%, L7=0.8%, L8=0.5%, L9=0.4%, L10=0.3%, L11=0.5%
     const affiliateLevels = [
-      { level: 1, percentage: '8', description: 'Nível 1 - Indicação direta' },
-      { level: 2, percentage: '3', description: 'Nível 2' },
-      { level: 3, percentage: '1.5', description: 'Nível 3' },
-      { level: 4, percentage: '0.5', description: 'Nível 4' },
-      { level: 5, percentage: '0.25', description: 'Nível 5' },
+      { level: 1, percentage: '10', description: 'Nível 1 - Indicação direta' },
+      { level: 2, percentage: '4', description: 'Nível 2' },
+      { level: 3, percentage: '3', description: 'Nível 3' },
+      { level: 4, percentage: '2', description: 'Nível 4' },
+      { level: 5, percentage: '1.5', description: 'Nível 5' },
+      { level: 6, percentage: '1', description: 'Nível 6' },
+      { level: 7, percentage: '0.8', description: 'Nível 7' },
+      { level: 8, percentage: '0.5', description: 'Nível 8' },
+      { level: 9, percentage: '0.4', description: 'Nível 9' },
+      { level: 10, percentage: '0.3', description: 'Nível 10' },
+      { level: 11, percentage: '0.5', description: 'Nível 11' },
     ];
 
     await db.affiliateLevel.createMany({ data: affiliateLevels });
 
-    // Create default miners
-    const miners = [
+    // Create default investment plans
+    const plans = [
       {
-        name: 'Antminer S21 XP',
-        model: 'S21 XP',
-        hashRate: '270 TH/s',
-        powerConsumption: '3650',
-        coin: 'BTC',
-        pool: 'Binance Pool',
-        dailyRevenue: '5.20',
-        pricePerDay: '2.60',
-        minRentalDays: 7,
-        maxRentalDays: 365,
-        profitSharePct: '70',
-        efficiency: '13.5',
-        description: 'Mais eficiente mineradora BTC do mercado',
-        isFeatured: true,
-        sortOrder: 0,
-      },
-      {
-        name: 'Antminer L9',
-        model: 'L9',
-        hashRate: '16 GH/s',
-        powerConsumption: '3360',
-        coin: 'LTC',
-        pool: 'Binance Pool',
-        dailyRevenue: '5.50',
-        pricePerDay: '2.74',
-        minRentalDays: 7,
-        maxRentalDays: 365,
-        profitSharePct: '70',
-        efficiency: '210',
-        description: 'Mineradora Scrypt de alta performance',
-        isFeatured: true,
+        name: 'Starter',
+        description: 'Plano inicial para começar a investir',
+        minAmount: '10',
+        maxAmount: '49.99',
+        dailyRoiPct: '1.5',
+        durationDays: 40,
+        isActive: true,
+        isFeatured: false,
         sortOrder: 1,
       },
       {
-        name: 'IceRiver KS5L',
-        model: 'KS5L',
-        hashRate: '12 TH/s',
-        powerConsumption: '3400',
-        coin: 'KAS',
-        pool: 'Binance Pool',
-        dailyRevenue: '2.80',
-        pricePerDay: '2.80',
-        minRentalDays: 7,
-        maxRentalDays: 365,
-        profitSharePct: '70',
-        efficiency: '283',
-        description: 'Mineradora KHeavyHash especializada em KAS',
+        name: 'Silver',
+        description: 'Plano Silver com ROI incrementado',
+        minAmount: '50',
+        maxAmount: '99.99',
+        dailyRoiPct: '2',
+        durationDays: 40,
+        isActive: true,
         isFeatured: true,
         sortOrder: 2,
       },
       {
-        name: 'Antminer S21',
-        model: 'S21',
-        hashRate: '200 TH/s',
-        powerConsumption: '3500',
-        coin: 'BTC',
-        pool: 'Binance Pool',
-        dailyRevenue: '3.85',
-        pricePerDay: '2.10',
-        minRentalDays: 7,
-        maxRentalDays: 365,
-        profitSharePct: '70',
-        efficiency: '17.5',
-        description: 'Mineradora BTC intermediária',
-        isFeatured: false,
+        name: 'Gold',
+        description: 'Plano Gold para investidores intermediários',
+        minAmount: '100',
+        maxAmount: '499.99',
+        dailyRoiPct: '2.5',
+        durationDays: 40,
+        isActive: true,
+        isFeatured: true,
         sortOrder: 3,
+      },
+      {
+        name: 'Platinum',
+        description: 'Plano Platinum para investidores experientes',
+        minAmount: '500',
+        maxAmount: '1499.99',
+        dailyRoiPct: '3',
+        durationDays: 40,
+        isActive: true,
+        isFeatured: true,
+        sortOrder: 4,
+      },
+      {
+        name: 'Diamond',
+        description: 'Plano Diamond exclusivo para grandes investidores',
+        minAmount: '1500',
+        maxAmount: null,
+        dailyRoiPct: '5',
+        durationDays: 40,
+        isActive: true,
+        isFeatured: true,
+        sortOrder: 5,
       },
     ];
 
-    for (const miner of miners) {
-      const createdMiner = await db.miner.create({ data: miner });
+    await db.investmentPlan.createMany({ data: plans });
 
-      // Create plans for each miner
-      const plans = [
-        {
-          name: `${miner.name} - Starter`,
-          description: 'Plano inicial - 7 dias',
-          minerId: createdMiner.id,
-          days: 7,
-          discountPct: '0',
-          isActive: true,
-          isFeatured: false,
-          sortOrder: 0,
-        },
-        {
-          name: `${miner.name} - Pro`,
-          description: 'Plano profissional - 30 dias',
-          minerId: createdMiner.id,
-          days: 30,
-          discountPct: '5',
-          isActive: true,
-          isFeatured: true,
-          sortOrder: 1,
-        },
-        {
-          name: `${miner.name} - Elite`,
-          description: 'Plano elite - 90 dias',
-          minerId: createdMiner.id,
-          days: 90,
-          discountPct: '10',
-          isActive: true,
-          isFeatured: false,
-          sortOrder: 2,
-        },
-        {
-          name: `${miner.name} - Ultimate`,
-          description: 'Plano máximo - 365 dias',
-          minerId: createdMiner.id,
-          days: 365,
-          discountPct: '15',
-          isActive: true,
-          isFeatured: false,
-          sortOrder: 3,
-        },
-      ];
+    // Create default copy traders
+    const copyTraders = [
+      {
+        name: 'Alex Rivera',
+        avatar: null,
+        specialty: 'DeFi',
+        winRate: '91',
+        totalPnl: '285000',
+        monthlyRoi: '180',
+        riskLevel: 'medium',
+        isActive: true,
+        isFeatured: true,
+        sortOrder: 1,
+      },
+      {
+        name: 'Sofia Chen',
+        avatar: null,
+        specialty: 'Arbitrage',
+        winRate: '94',
+        totalPnl: '412000',
+        monthlyRoi: '150',
+        riskLevel: 'low',
+        isActive: true,
+        isFeatured: true,
+        sortOrder: 2,
+      },
+      {
+        name: 'Marcus Johnson',
+        avatar: null,
+        specialty: 'Momentum',
+        winRate: '87',
+        totalPnl: '195000',
+        monthlyRoi: '220',
+        riskLevel: 'high',
+        isActive: true,
+        isFeatured: true,
+        sortOrder: 3,
+      },
+      {
+        name: 'Elena Volkov',
+        avatar: null,
+        specialty: 'Swing Trading',
+        winRate: '89',
+        totalPnl: '320000',
+        monthlyRoi: '165',
+        riskLevel: 'medium',
+        isActive: true,
+        isFeatured: false,
+        sortOrder: 4,
+      },
+    ];
 
-      for (const plan of plans) {
-        const pricePerDay = d(miner.pricePerDay);
-        const dailyRevenue = d(miner.dailyRevenue);
-        const profitShare = d(miner.profitSharePct);
-        const discount = d(plan.discountPct);
+    await db.copyTrader.createMany({ data: copyTraders });
 
-        const totalPrice = pricePerDay * plan.days * (1 - discount / 100);
-        const dailyReturn = dailyRevenue * (profitShare / 100);
-        const totalReturn = dailyReturn * plan.days;
+    // Create default trading pools
+    const tradingPools = [
+      {
+        name: 'Ozeano Alpha Pool',
+        totalAum: '1500000',
+        dailyVolume: '85000',
+        strategy: 'arbitrage',
+        status: 'active',
+      },
+      {
+        name: 'Ozeano Growth Pool',
+        totalAum: '750000',
+        dailyVolume: '42000',
+        strategy: 'momentum',
+        status: 'active',
+      },
+      {
+        name: 'Ozeano Stable Pool',
+        totalAum: '2200000',
+        dailyVolume: '95000',
+        strategy: 'market_making',
+        status: 'active',
+      },
+    ];
 
-        await db.miningPlan.create({
-          data: {
-            ...plan,
-            totalPrice: ds(totalPrice),
-            dailyReturn: ds(dailyReturn),
-            totalReturn: ds(totalReturn),
-          },
-        });
-      }
-    }
+    await db.tradingPool.createMany({ data: tradingPools });
+
+    // Create affiliate ranks (Team Bonus system)
+    // Bronze (+1% ROI), Prata (+2% ROI), Ouro (+3% ROI)
+    const affiliateRanks = [
+      {
+        name: 'Bronze',
+        icon: '🥉',
+        color: '#CD7F32',
+        minReferrals: 10,
+        minEarnings: '0',
+        bonusAmount: '0',
+        commissionBoost: '1',
+        perks: JSON.stringify(['+1% ROI diário em todos os investimentos']),
+        sortOrder: 1,
+        isActive: true,
+      },
+      {
+        name: 'Prata',
+        icon: '🥈',
+        color: '#C0C0C0',
+        minReferrals: 20,
+        minEarnings: '0',
+        bonusAmount: '0',
+        commissionBoost: '2',
+        perks: JSON.stringify(['+2% ROI diário em todos os investimentos']),
+        sortOrder: 2,
+        isActive: true,
+      },
+      {
+        name: 'Ouro',
+        icon: '🥇',
+        color: '#FFD700',
+        minReferrals: 30,
+        minEarnings: '0',
+        bonusAmount: '0',
+        commissionBoost: '3',
+        perks: JSON.stringify(['+3% ROI diário em todos os investimentos']),
+        sortOrder: 3,
+        isActive: true,
+      },
+    ];
+
+    await db.affiliateRank.createMany({ data: affiliateRanks });
 
     // Log setup
     await db.adminLog.create({
@@ -243,7 +294,15 @@ export async function POST(request: NextRequest) {
         action: 'create',
         entity: 'system',
         description: 'Sistema inicializado com sucesso',
-        newValue: JSON.stringify({ admin: admin.email, configs: configs.length, miners: miners.length }),
+        newValue: JSON.stringify({
+          admin: admin.email,
+          configs: configs.length,
+          plans: plans.length,
+          affiliateLevels: affiliateLevels.length,
+          copyTraders: copyTraders.length,
+          tradingPools: tradingPools.length,
+          affiliateRanks: affiliateRanks.length,
+        }),
       },
     });
 

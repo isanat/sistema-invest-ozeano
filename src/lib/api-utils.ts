@@ -1,5 +1,6 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { ZodError } from 'zod/v4';
+import { verifyToken } from './auth';
 
 export function apiError(message: string, status: number = 400) {
   return NextResponse.json({ error: message }, { status });
@@ -44,4 +45,28 @@ export function handleApiError(error: unknown) {
   }
 
   return apiError('Erro desconhecido', 500);
+}
+
+/**
+ * Extract user ID from the request's session cookie.
+ * Returns userId string if authenticated, or null if not.
+ */
+export async function requireAuth(request: NextRequest): Promise<string | null> {
+  const token = request.cookies.get('mp_session')?.value;
+  if (!token) return null;
+  const payload = await verifyToken(token);
+  if (!payload) return null;
+  return payload.userId;
+}
+
+/**
+ * Extract admin user ID from the request's session cookie.
+ * Returns adminId string if authenticated and admin, or null if not.
+ */
+export async function requireAdmin(request: NextRequest): Promise<string | null> {
+  const token = request.cookies.get('mp_session')?.value;
+  if (!token) return null;
+  const payload = await verifyToken(token);
+  if (!payload || payload.role !== 'admin') return null;
+  return payload.userId;
 }

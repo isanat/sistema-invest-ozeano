@@ -35,41 +35,22 @@ export const withdrawalSchema = z.object({
   destination: z.string().min(1, 'Destino é obrigatório'),
 });
 
-// ============ Rental Schemas ============
+// ============ Investment Schemas ============
 
-export const rentalSchema = z.object({
-  minerId: z.string().min(1, 'Mineradora é obrigatória'),
-  days: z.number().int().min(1, 'Mínimo 1 dia').max(365, 'Máximo 365 dias'),
-  planId: z.string().optional(),
+export const investmentSchema = z.object({
+  planId: z.string().min(1, 'Plano de investimento é obrigatório'),
+  amount: z.number().min(10, 'Investimento mínimo é $10 USDT'),
 });
 
 // ============ Admin Schemas ============
 
-export const adminMinerSchema = z.object({
-  name: z.string().min(1, 'Nome é obrigatório'),
-  model: z.string().min(1, 'Modelo é obrigatório'),
-  hashRate: z.string().min(1, 'Hashrate é obrigatório'),
-  powerConsumption: z.string().min(1, 'Consumo é obrigatório'),
-  coin: z.enum(['BTC', 'KAS', 'LTC', 'DOGE']),
-  pool: z.string().min(1, 'Pool é obrigatória'),
-  dailyRevenue: z.string().min(1, 'Receita diária é obrigatória'),
-  pricePerDay: z.string().min(1, 'Preço por dia é obrigatório'),
-  minRentalDays: z.number().int().min(1).default(7),
-  maxRentalDays: z.number().int().min(1).default(365),
-  profitSharePct: z.string().default('70'),
-  efficiency: z.string().default('0'),
-  description: z.string().optional(),
-  isActive: z.boolean().default(true),
-  isFeatured: z.boolean().default(false),
-  sortOrder: z.number().int().default(0),
-});
-
 export const adminPlanSchema = z.object({
   name: z.string().min(1, 'Nome é obrigatório'),
   description: z.string().optional(),
-  minerId: z.string().min(1, 'Mineradora é obrigatória'),
-  days: z.number().int().min(1).max(365),
-  discountPct: z.string().default('0'),
+  minAmount: z.string().min(1, 'Valor mínimo é obrigatório'),
+  maxAmount: z.string().optional(),
+  dailyRoiPct: z.string().min(1, 'ROI diário é obrigatório'),
+  durationDays: z.number().int().min(1, 'Duração mínima é 1 dia').max(365, 'Duração máxima é 365 dias'),
   isActive: z.boolean().default(true),
   isFeatured: z.boolean().default(false),
   sortOrder: z.number().int().default(0),
@@ -80,7 +61,7 @@ export const adminConfigSchema = z.object({
   value: z.string(),
   type: z.enum(['string', 'number', 'boolean', 'json']).default('string'),
   description: z.string().optional(),
-  category: z.enum(['general', 'affiliate', 'withdrawal', 'mining', 'deposit']).default('general'),
+  category: z.enum(['general', 'affiliate', 'withdrawal', 'trading', 'deposit']).default('general'),
 });
 
 export const adminUserUpdateSchema = z.object({
@@ -105,7 +86,7 @@ export const adminWithdrawalActionSchema = z.object({
 });
 
 export const adminAffiliateLevelSchema = z.object({
-  level: z.number().int().min(1).max(5),
+  level: z.number().int().min(1).max(11),
   percentage: z.coerce.string().min(1, 'Porcentagem é obrigatória'),
   description: z.string().optional().default(''),
   isActive: z.boolean().default(true),
@@ -123,8 +104,7 @@ export type LoginInput = z.infer<typeof loginSchema>;
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type DepositInput = z.infer<typeof depositSchema>;
 export type WithdrawalInput = z.infer<typeof withdrawalSchema>;
-export type RentalInput = z.infer<typeof rentalSchema>;
-export type AdminMinerInput = z.infer<typeof adminMinerSchema>;
+export type InvestmentInput = z.infer<typeof investmentSchema>;
 export type AdminPlanInput = z.infer<typeof adminPlanSchema>;
 export type AdminConfigInput = z.infer<typeof adminConfigSchema>;
 export type AdminUserUpdateInput = z.infer<typeof adminUserUpdateSchema>;

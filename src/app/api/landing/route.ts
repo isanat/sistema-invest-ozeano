@@ -7,18 +7,14 @@ import { getUSDTBRLRate } from '@/lib/market-data';
 // Public landing page data - no auth required
 export async function GET() {
   try {
-    // Get all active miners with active plans
-    const [miners, affiliateLevels, configs] = await Promise.all([
-      db.miner.findMany({
+    // Get all active investment plans with stats
+    const [plans, affiliateLevels, configs] = await Promise.all([
+      db.investmentPlan.findMany({
         where: { isActive: true },
         orderBy: [{ isFeatured: 'desc' }, { sortOrder: 'asc' }, { name: 'asc' }],
         include: {
-          plans: {
-            where: { isActive: true },
-            orderBy: [{ isFeatured: 'desc' }, { sortOrder: 'asc' }, { days: 'asc' }],
-          },
           _count: {
-            select: { rentals: true },
+            select: { investments: { where: { status: 'active' } } },
           },
         },
       }),
@@ -42,25 +38,24 @@ export async function GET() {
     ]);
 
     // Dynamic stats from real data
-    // Note: Can't use aggregate/_sum on String fields, so we fetch and sum manually
     const [
       totalUsers,
-      activeRentals,
+      activeInvestments,
       users,
     ] = await Promise.all([
       db.user.count({ where: { role: 'user', isActive: true } }),
-      db.miningRental.count({ where: { status: 'active' } }),
+      db.investment.count({ where: { status: 'active' } }),
       db.user.findMany({
         where: { role: 'user' },
-        select: { totalMined: true, totalInvested: true },
+        select: { totalRoi: true, totalInvested: true },
       }),
     ]);
 
     // Sum string fields manually
-    let totalMined = 0;
+    let totalRoi = 0;
     let totalInvested = 0;
     for (const u of users) {
-      totalMined += d(u.totalMined);
+      totalRoi += d(u.totalRoi);
       totalInvested += d(u.totalInvested);
     }
 
@@ -69,10 +64,10 @@ export async function GET() {
     const configMap = Object.fromEntries(configs.map(c => [c.key, c.value]));
 
     return apiSuccess({
-      miners,
+      plans,
       affiliateLevels,
       config: {
-        siteName: configMap.site_name || 'Mining Protocol',
+        siteName: configMap.site_name || 'Ozeano Invest',
         minDeposit: configMap.min_deposit_usdt || '10',
         minWithdrawal: configMap.min_withdrawal_usdt || '10',
         hasPix: !!configMap.pix_key,
@@ -80,8 +75,8 @@ export async function GET() {
       },
       stats: {
         totalUsers,
-        activeRentals,
-        totalMined,
+        activeInvestments,
+        totalRoi,
         totalInvested,
       },
       usdtBrlRate,

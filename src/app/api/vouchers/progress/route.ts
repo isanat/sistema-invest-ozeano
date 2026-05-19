@@ -120,7 +120,7 @@ export async function POST(request: NextRequest) {
         if (shouldDeductBalance) {
           const remainingBalance = voucherAmount - d(voucher.usedAmount);
           if (remainingBalance > 0) {
-            await tx.$executeRaw`UPDATE "User" SET "voucherBalance" = (CAST("voucherBalance" AS NUMERIC) - ${remainingBalance})::text WHERE id = ${userId}`;
+            await tx.$executeRaw`UPDATE "User" SET "teamBonusPct" = (CAST("teamBonusPct" AS NUMERIC) - ${remainingBalance})::text WHERE id = ${userId}`;
           }
         }
       });
@@ -131,12 +131,12 @@ export async function POST(request: NextRequest) {
         include: {
           usages: {
             include: {
-              rental: {
+              investment: {
                 select: {
                   id: true,
                   amount: true,
                   startDate: true,
-                  miner: { select: { name: true } },
+                  plan: { select: { name: true } },
                 },
               },
             },

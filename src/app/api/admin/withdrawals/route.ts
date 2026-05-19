@@ -28,8 +28,8 @@ export async function GET(request: NextRequest) {
       if (endDate) where.createdAt.lte = new Date(endDate);
     }
 
-    const [investments, total] = await Promise.all([
-      db.investment.findMany({
+    const [withdrawals, total] = await Promise.all([
+      db.deposit.findMany({
         where,
         skip,
         take: limit,
@@ -40,11 +40,11 @@ export async function GET(request: NextRequest) {
           },
         },
       }),
-      db.investment.count({ where }),
+      db.deposit.count({ where }),
     ]);
 
     return apiSuccess({
-      withdrawals: investments,
+      withdrawals,
       pagination: {
         page,
         limit,
@@ -72,11 +72,11 @@ export async function PUT(request: NextRequest) {
     if (data.action === 'approve') {
       // Status check inside transaction to prevent race conditions
       const result = await db.$transaction(async (tx) => {
-        const investment = await tx.investment.findUnique({ where: { id } });
-        if (!investment) throw new Error('Saque não encontrado');
-        if (investment.status !== 'pending') throw new Error('Saque já foi processado');
+        const deposit = await tx.deposit.findUnique({ where: { id } });
+        if (!deposit) throw new Error('Saque não encontrado');
+        if (deposit.status !== 'pending') throw new Error('Saque já foi processado');
 
-        const updated = await tx.investment.update({
+        const updated = await tx.deposit.update({
           where: { id },
           data: {
             status: 'confirmed',
@@ -87,12 +87,12 @@ export async function PUT(request: NextRequest) {
         });
 
         // Update user total withdrawn
-        const user = await tx.user.findUnique({ where: { id: investment.userId } });
+        const user = await tx.user.findUnique({ where: { id: deposit.userId } });
         if (!user) throw new Error('User not found');
 
-        const newTotalWithdrawn = d(user.totalWithdrawn) + d(investment.amount);
+        const newTotalWithdrawn = d(user.totalWithdrawn) + d(deposit.amount);
         await tx.user.update({
-          where: { id: investment.userId },
+          where: { id: deposit.userId },
           data: {
             totalWithdrawn: ds(newTotalWithdrawn),
           },
@@ -118,13 +118,13 @@ export async function PUT(request: NextRequest) {
     }
 
     if (data.action === 'complete') {
-      // Complete action: only accept 'confirmed' (approved) status — prevents bypassing approval step
+      // Complete action: only accept 'confirmed' (approved) status
       const result = await db.$transaction(async (tx) => {
-        const investment = await tx.investment.findUnique({ where: { id } });
-        if (!investment) throw new Error('Saque não encontrado');
-        if (investment.status !== 'confirmed') throw new Error('Withdrawal must be approved before completion');
+        const deposit = await tx.deposit.findUnique({ where: { id } });
+        if (!deposit) throw new Error('Saque não encontrado');
+        if (deposit.status !== 'confirmed') throw new Error('Withdrawal must be approved before completion');
 
-        const updated = await tx.investment.update({
+        const updated = await tx.deposit.update({
           where: { id },
           data: {
             status: 'completed',
@@ -154,18 +154,18 @@ export async function PUT(request: NextRequest) {
     if (data.action === 'reject') {
       // Status check inside transaction to prevent race conditions
       const result = await db.$transaction(async (tx) => {
-        const investment = await tx.investment.findUnique({ where: { id } });
-        if (!investment) throw new Error('Saque não encontrado');
-        if (investment.status === 'confirmed') throw new Error('Saque já foi confirmado');
-        if (investment.status === 'rejected') throw new Error('Saque já foi rejeitado');
+        const deposit = await tx.deposit.findUnique({ where: { id } });
+        if (!deposit) throw new Error('Saque não encontrado');
+        if (deposit.status === 'confirmed') throw new Error('Saque já foi confirmado');
+        if (deposit.status === 'rejected') throw new Error('Saque já foi rejeitado');
 
         // Refund user balance
-        const user = await tx.user.findUnique({ where: { id: investment.userId } });
+        const user = await tx.user.findUnique({ where: { id: deposit.userId } });
         if (!user) throw new Error('User not found');
 
-        const newBalance = d(user.balance) + d(investment.amount);
+        const newBalance = d(user.balance) + d(deposit.amount);
         await tx.user.update({
-          where: { id: investment.userId },
+          where: { id: deposit.userId },
           data: {
             balance: ds(newBalance),
           },
@@ -174,18 +174,18 @@ export async function PUT(request: NextRequest) {
         // Create refund transaction
         await tx.transaction.create({
           data: {
-            userId: investment.userId,
+            userId: deposit.userId,
             type: 'admin_adjust',
-            amount: investment.amount,
+            amount: deposit.amount,
             status: 'completed',
-            description: `Reembolso de saque rejeitado: ${dusdt(investment.amount)} USDT`,
-            referenceId: investment.id,
-            referenceType: 'Investment',
+            description: `Reembolso de saque rejeitado: ${dusdt(d(deposit.amount))} USDT`,
+            referenceId: deposit.id,
+            referenceType: 'Deposit',
           },
         });
 
-        // Update investment
-        const updated = await tx.investment.update({
+        // Update deposit
+        const updated = await tx.deposit.update({
           where: { id },
           data: {
             status: 'rejected',

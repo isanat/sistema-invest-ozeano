@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
           isActive: true,
           balance: true,
           affiliateBalance: true,
-          totalMined: true,
+          totalRoi: true,
           totalInvested: true,
           totalWithdrawn: true,
           affiliateCode: true,
@@ -62,7 +62,6 @@ export async function GET(request: NextRequest) {
             select: {
               referrals: true,
               investments: true,
-              miningRentals: true,
             },
           },
         },

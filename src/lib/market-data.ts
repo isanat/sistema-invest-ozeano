@@ -75,7 +75,7 @@ export async function getCryptoPrices(): Promise<Record<string, { usd: number; b
   }
 
   const data = await fetchWithCache(
-    'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,kaspa,litecoin,dogecoin,tether&vs_currencies=usd,brl&include_24hr_change=true'
+    'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,tether,usd-coin&vs_currencies=usd,brl&include_24hr_change=true'
   );
 
   if (data) {
@@ -85,84 +85,89 @@ export async function getCryptoPrices(): Promise<Record<string, { usd: number; b
 
   return cache[cacheKey]?.data ?? {
     bitcoin: { usd: 95000, brl: 540000, usd_24h_change: 0 },
-    kaspa: { usd: 0.12, brl: 0.68, usd_24h_change: 0 },
-    litecoin: { usd: 95, brl: 540, usd_24h_change: 0 },
-    dogecoin: { usd: 0.18, brl: 1.02, usd_24h_change: 0 },
+    ethereum: { usd: 3500, brl: 19950, usd_24h_change: 0 },
     tether: { usd: 1, brl: 5.70, usd_24h_change: 0 },
+    'usd-coin': { usd: 1, brl: 5.70, usd_24h_change: 0 },
   };
 }
 
-// ============ Mining Profitability ============
+// ============ Trading Stats ============
 
-export interface MiningProfitability {
-  coin: string;
-  algorithm: string;
-  hashRate: number;
-  dailyRevenue: number;
-  dailyCost: number;
-  dailyProfit: number;
-  monthlyProfit: number;
+export interface TradingStats {
+  totalUsers: string;
+  totalInvested: string;
+  totalRoiPaid: string;
+  activeInvestments: string;
+  avgDailyRoi: string;
 }
 
-export async function getMiningProfitability(coin: string = 'bitcoin'): Promise<MiningProfitability | null> {
-  const cacheKey = `profit_${coin}`;
+export async function getTradingStats(): Promise<TradingStats> {
+  const cacheKey = 'trading_stats';
   const cached = cache[cacheKey];
   if (cached && Date.now() - cached.timestamp < CACHE_TTL * 5) {
     return cached.data;
   }
 
-  // Realistic estimates based on current network data
-  const estimates: Record<string, MiningProfitability> = {
-    bitcoin: {
-      coin: 'BTC',
-      algorithm: 'SHA-256',
-      hashRate: 110,
-      dailyRevenue: 5.20,
-      dailyCost: 2.60,
-      dailyProfit: 2.60,
-      monthlyProfit: 78.00,
-    },
-    kaspa: {
-      coin: 'KAS',
-      algorithm: 'kHeavyHash',
-      hashRate: 9.4,
-      dailyRevenue: 2.80,
-      dailyCost: 2.80,
-      dailyProfit: 0.00,
-      monthlyProfit: 0.00,
-    },
-    litecoin: {
-      coin: 'LTC',
-      algorithm: 'Scrypt',
-      hashRate: 9.5,
-      dailyRevenue: 5.50,
-      dailyCost: 2.74,
-      dailyProfit: 2.76,
-      monthlyProfit: 82.80,
-    },
+  // Realistic-looking platform stats for a copy trading ROI platform
+  // These are mock values since we don't have a real trading API yet
+  const result: TradingStats = {
+    totalUsers: '12,847',
+    totalInvested: '$4,231,590',
+    totalRoiPaid: '$1,892,340',
+    activeInvestments: '8,421',
+    avgDailyRoi: '1.8%',
   };
 
-  const result = estimates[coin] ?? estimates.bitcoin;
   cache[cacheKey] = { data: result, timestamp: Date.now() };
   return result;
 }
 
-// ============ Network Stats ============
+// ============ Platform Stats ============
 
-export async function getNetworkStats(): Promise<{
-  btcDifficulty: number;
-  btcHashrate: string;
-  btcBlockReward: number;
-  ltcDifficulty: number;
-  kasDifficulty: number;
+export async function getPlatformStats(): Promise<{
+  btcPrice: number;
+  ethPrice: number;
+  fearGreedIndex: number;
+  fearGreedClassification: string;
+  totalMarketCap: string;
+  btcDominance: string;
 }> {
+  const [btcPrice, ethPrice, fng] = await Promise.all([
+    getBTCPrice(),
+    getETHPrice(),
+    getFearGreedIndex(),
+  ]);
+
   return {
-    btcDifficulty: 83.1e12,
-    btcHashrate: '650 EH/s',
-    btcBlockReward: 3.125,
-    ltcDifficulty: 28.5e6,
-    kasDifficulty: 1.2e15,
+    btcPrice,
+    ethPrice,
+    fearGreedIndex: fng.value,
+    fearGreedClassification: fng.classification,
+    totalMarketCap: '$3.2T',
+    btcDominance: '52.4%',
   };
+}
+
+// ============ ETH Price ============
+
+async function getETHPrice(): Promise<number> {
+  const cacheKey = 'eth_usdt';
+  const cached = cache[cacheKey];
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    return cached.data;
+  }
+
+  const data = await fetchWithCache(
+    'https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd'
+  );
+
+  if (data?.ethereum?.usd) {
+    const price = data.ethereum.usd;
+    cache[cacheKey] = { data: price, timestamp: Date.now() };
+    return price;
+  }
+
+  return cache[cacheKey]?.data ?? 3500;
 }
 
 // ============ Fear & Greed Index ============

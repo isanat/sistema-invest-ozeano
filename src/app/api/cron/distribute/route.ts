@@ -1,44 +1,20 @@
 import { NextRequest } from 'next/server';
 import { db } from '@/lib/db';
 import { d, ds, dusdt } from '@/lib/auth';
-import { getBTCPrice, getCryptoPrices } from '@/lib/market-data';
-import { processCommissions } from '@/lib/affiliate';
+import { processCommissions, getTeamBonusPct } from '@/lib/affiliate';
 import { apiError, apiSuccess, handleApiError } from '@/lib/api-utils';
 
 // ============================================================================
-// Cryptographically secure random number generation
-// Replaces Math.random() for financial calculations
-// ============================================================================
-
-/**
- * Returns a cryptographically secure random float between 0 (inclusive) and 1 (exclusive).
- * Uses crypto.getRandomValues() for unpredictability in financial contexts.
- */
-function secureRandom(): number {
-  const array = new Uint32Array(1);
-  crypto.getRandomValues(array);
-  return array[0] / (0x100000000); // Divide by 2^32 for [0, 1)
-}
-
-/**
- * Returns a cryptographically secure random integer between min (inclusive) and max (exclusive).
- */
-function secureRandomInt(min: number, max: number): number {
-  const range = max - min;
-  const array = new Uint32Array(1);
-  crypto.getRandomValues(array);
-  return min + Math.floor((array[0] / 0x100000000) * range);
-}
-
-// ============================================================================
-// CRON: Daily Mining Profit Distribution
+// CRON: Daily ROI Distribution
 // ============================================================================
 // Called by Vercel Cron (daily at midnight UTC) or manually with Bearer token.
-// Sustainable design:
-//   - Mining profits are distributed from the system's operational margin
-//   - Affiliate commissions are a small % of the user's mining profit
-//   - Total affiliate outflow is capped by the commission level structure
-//   - System retains its margin regardless of affiliate payouts
+// For each active Investment:
+//   1. Calculate daily ROI = investment.amount × (investment.dailyRoiPct / 100)
+//   2. Add team bonus = dailyROI × (teamBonusPct / 100)
+//   3. Create RoiHistory record
+//   4. Credit user's balance and totalRoi
+//   5. Create Transaction (type='roi_profit')
+//   6. Auto-complete expired investments
 // ============================================================================
 
 const CRON_SECRET = process.env.CRON_SECRET || '';
@@ -58,17 +34,6 @@ function isCronAuthorized(request: NextRequest): boolean {
   return false;
 }
 
-// Default BTC price if API fails (conservative estimate)
-const DEFAULT_BTC_PRICE = 95000;
-
-// Default crypto prices fallback
-const DEFAULT_CRYPTO_PRICES: Record<string, { usd: number; usd_24h_change: number }> = {
-  bitcoin: { usd: DEFAULT_BTC_PRICE, usd_24h_change: 0 },
-  kaspa: { usd: 0.12, usd_24h_change: 0 },
-  litecoin: { usd: 95, usd_24h_change: 0 },
-  dogecoin: { usd: 0.18, usd_24h_change: 0 },
-};
-
 export async function POST(request: NextRequest) {
   try {
     // Verify cron authorization
@@ -76,7 +41,7 @@ export async function POST(request: NextRequest) {
       return apiError('Não autorizado', 401);
     }
 
-    console.log('[CRON] Starting daily mining profit distribution...', new Date().toISOString());
+    console.log('[CRON] Starting daily ROI distribution...', new Date().toISOString());
 
     // PostgreSQL: acquire advisory lock to prevent concurrent cron execution
     let lockReleased = false;
@@ -86,61 +51,20 @@ export async function POST(request: NextRequest) {
       console.warn('[CRON] Could not acquire advisory lock, proceeding with caution:', lockErr);
     }
 
-    // Get all active rentals
-    const activeRentals = await db.miningRental.findMany({
+    // Get all active investments
+    const activeInvestments = await db.investment.findMany({
       where: { status: 'active' },
       include: {
-        miner: true,
         plan: true,
       },
     });
 
-    if (activeRentals.length === 0) {
-      console.log('[CRON] No active rentals found');
-      return apiSuccess({ message: 'Nenhuma locação ativa', processed: 0 });
+    if (activeInvestments.length === 0) {
+      console.log('[CRON] No active investments found');
+      return apiSuccess({ message: 'Nenhum investimento ativo', processed: 0 });
     }
 
-    console.log(`[CRON] Found ${activeRentals.length} active rentals`);
-
-    // Get current crypto prices for realistic calculations (with robust fallback)
-    let cryptoPrices: Record<string, { usd: number; brl?: number; usd_24h_change: number }> = DEFAULT_CRYPTO_PRICES;
-    try {
-      const prices = await getCryptoPrices();
-      if (prices && Object.keys(prices).length > 0) {
-        cryptoPrices = prices;
-      }
-    } catch (e) {
-      console.error('[CRON] Crypto prices API failed, using defaults:', e);
-    }
-
-    // Get BTC price (with fallback)
-    let btcPrice = DEFAULT_BTC_PRICE;
-    try {
-      const fetched = await getBTCPrice();
-      if (fetched && fetched > 0) {
-        btcPrice = fetched;
-      }
-    } catch (e) {
-      console.error('[CRON] BTC price API failed, using default:', e);
-    }
-
-    console.log(`[CRON] BTC Price: $${btcPrice.toLocaleString()}`);
-
-    // Price multipliers based on real market data (10% of daily change affects mining revenue)
-    const priceMultipliers: Record<string, number> = {
-      BTC: cryptoPrices.bitcoin?.usd_24h_change
-        ? 1 + (cryptoPrices.bitcoin.usd_24h_change / 100) * 0.1
-        : 1,
-      KAS: cryptoPrices.kaspa?.usd_24h_change
-        ? 1 + (cryptoPrices.kaspa.usd_24h_change / 100) * 0.1
-        : 1,
-      LTC: cryptoPrices.litecoin?.usd_24h_change
-        ? 1 + (cryptoPrices.litecoin.usd_24h_change / 100) * 0.1
-        : 1,
-      DOGE: cryptoPrices.dogecoin?.usd_24h_change
-        ? 1 + (cryptoPrices.dogecoin.usd_24h_change / 100) * 0.1
-        : 1,
-    };
+    console.log(`[CRON] Found ${activeInvestments.length} active investments`);
 
     let processed = 0;
     let skipped = 0;
@@ -151,28 +75,28 @@ export async function POST(request: NextRequest) {
     const today = new Date();
     today.setUTCHours(0, 0, 0, 0);
 
-    for (const rental of activeRentals) {
+    for (const investment of activeInvestments) {
       try {
-        // Check if rental has ended
-        if (new Date(rental.endDate) <= today) {
-          await db.miningRental.update({
-            where: { id: rental.id },
+        // Check if investment has ended - auto-complete expired investments
+        if (new Date(investment.endDate) <= today) {
+          await db.investment.update({
+            where: { id: investment.id },
             data: { status: 'completed' },
           });
           completed++;
           continue;
         }
 
-        // Check if rental hasn't started yet
-        if (new Date(rental.startDate) > today) {
+        // Check if investment hasn't started yet
+        if (new Date(investment.startDate) > today) {
           skipped++;
           continue;
         }
 
-        // Check if we already distributed for today
-        const existingHistory = await db.miningHistory.findFirst({
+        // Check if we already distributed ROI for today
+        const existingHistory = await db.roiHistory.findFirst({
           where: {
-            rentalId: rental.id,
+            investmentId: investment.id,
             date: { gte: today },
           },
         });
@@ -182,90 +106,101 @@ export async function POST(request: NextRequest) {
           continue;
         }
 
-        // Calculate daily return with small variance based on market conditions
-        const baseDailyReturn = d(rental.dailyReturn);
-        const marketMultiplier = priceMultipliers[rental.miner.coin] || 1;
+        // Calculate daily ROI
+        const amount = d(investment.amount);
+        const dailyRoiPct = d(investment.dailyRoiPct);
+        const dailyROI = amount * (dailyRoiPct / 100);
 
-        // Small daily variance (simulating real mining fluctuations) ±5%
-        // Using secure random for financial integrity
-        const variance = 1 + (secureRandom() * 0.1 - 0.05);
-        const actualReturn = baseDailyReturn * marketMultiplier * variance;
+        // Calculate team bonus
+        const teamBonusPct = d(investment.teamBonusPct);
+        const teamBonus = dailyROI * (teamBonusPct / 100);
+        const totalRoiForToday = dailyROI + teamBonus;
 
-        // Ensure non-negative (sustainability: never pay more than expected)
-        const dailyProfit = Math.max(0, actualReturn);
-
-        // Skip if zero profit (edge case)
-        if (dailyProfit <= 0) {
+        // Skip if zero ROI (edge case)
+        if (totalRoiForToday <= 0) {
           skipped++;
           continue;
         }
 
-        // Calculate BTC equivalent
-        const coinToBtc: Record<string, number> = {
-          BTC: 1,
-          KAS: (cryptoPrices.kaspa?.usd || 0.12) / btcPrice,
-          LTC: (cryptoPrices.litecoin?.usd || 95) / btcPrice,
-          DOGE: (cryptoPrices.dogecoin?.usd || 0.18) / btcPrice,
-        };
-        const btcMined = dailyProfit / btcPrice * (coinToBtc[rental.miner.coin] || 1);
-
         // Use transaction for atomicity
-        const miningHistoryId = await db.$transaction(async (tx) => {
-          // Create mining history record
-          const miningHistory = await tx.miningHistory.create({
+        const roiHistoryId = await db.$transaction(async (tx) => {
+          // Create ROI history record
+          const roiHistory = await tx.roiHistory.create({
             data: {
-              userId: rental.userId,
-              rentalId: rental.id,
-              minerId: rental.minerId,
+              userId: investment.userId,
+              investmentId: investment.id,
               date: today,
-              hashRate: rental.miner.hashRate,
-              btcMined: ds(btcMined),
-              usdtValue: ds(dailyProfit),
-              pool: rental.miner.pool,
-              sharesValid: secureRandomInt(500, 1500),
-              sharesInvalid: secureRandomInt(0, 10),
+              roiAmount: ds(dailyROI),
+              roiPct: ds(dailyRoiPct),
+              teamBonus: ds(teamBonus),
+              totalRoi: ds(totalRoiForToday),
             },
           });
 
           // Credit user balance atomically using raw SQL (PostgreSQL)
-          await tx.$executeRaw`UPDATE "User" SET balance = (CAST(balance AS NUMERIC) + ${dailyProfit})::text, "totalMined" = (CAST("totalMined" AS NUMERIC) + ${dailyProfit})::text WHERE id = ${rental.userId}`;
+          await tx.$executeRaw`UPDATE "User" SET balance = (CAST(balance AS NUMERIC) + ${totalRoiForToday})::text, "totalRoi" = (CAST("totalRoi" AS NUMERIC) + ${totalRoiForToday})::text WHERE id = ${investment.userId}`;
 
           // Create transaction record
+          const planName = investment.plan?.name || 'Plano';
           await tx.transaction.create({
             data: {
-              userId: rental.userId,
-              type: 'mining_profit',
-              amount: ds(dailyProfit),
+              userId: investment.userId,
+              type: 'roi_profit',
+              amount: ds(totalRoiForToday),
               status: 'completed',
-              description: `Lucro mineração ${rental.miner.coin} - ${rental.miner.name}`,
-              referenceId: rental.id,
-              referenceType: 'MiningRental',
+              description: `ROI diário ${planName}${teamBonusPct > 0 ? ` (+${teamBonusPct}% Team Bonus)` : ''}`,
+              referenceId: investment.id,
+              referenceType: 'Investment',
             },
           });
 
-          return miningHistory.id;
+          return roiHistory.id;
         });
 
         // Process affiliate commissions (outside main transaction to avoid long locks)
-        // This is SUSTAINABLE because commissions are % of user's mining profit,
-        // not of total revenue. The system margin is untouched.
         try {
-          await processCommissions(rental.userId, dailyProfit, 'mining', miningHistoryId);
+          await processCommissions(investment.userId, totalRoiForToday, 'trading', roiHistoryId);
         } catch (commErr) {
-          console.error('[CRON] Commission error for rental', rental.id, commErr);
-          errors.push(`Commission error: rental ${rental.id}`);
+          console.error('[CRON] Commission error for investment', investment.id, commErr);
+          errors.push(`Commission error: investment ${investment.id}`);
         }
 
-        totalDistributed += dailyProfit;
+        totalDistributed += totalRoiForToday;
         processed++;
-      } catch (rentalErr: any) {
-        console.error('[CRON] Distribution error for rental', rental.id, rentalErr);
-        errors.push(`Rental ${rental.id}: ${rentalErr.message}`);
+      } catch (investmentErr: any) {
+        console.error('[CRON] Distribution error for investment', investment.id, investmentErr);
+        errors.push(`Investment ${investment.id}: ${investmentErr.message}`);
       }
     }
 
     const summary = `Processed: ${processed}, Skipped: ${skipped}, Completed: ${completed}, Total: $${totalDistributed.toFixed(2)}`;
     console.log(`[CRON] Distribution complete: ${summary}`);
+
+    // Recalculate team bonus for all users with active investments
+    try {
+      const usersWithInvestments = await db.user.findMany({
+        where: { investments: { some: { status: 'active' } } },
+        select: { id: true },
+      });
+
+      for (const u of usersWithInvestments) {
+        const teamBonusPct = await getTeamBonusPct(u.id);
+        await db.user.update({
+          where: { id: u.id },
+          data: { teamBonusPct: teamBonusPct.toString() },
+        });
+        
+        // Update all active investments' teamBonusPct for this user
+        await db.investment.updateMany({
+          where: { userId: u.id, status: 'active' },
+          data: { teamBonusPct: teamBonusPct.toString() },
+        });
+      }
+      console.log(`[CRON] Updated team bonus for ${usersWithInvestments.length} users`);
+    } catch (teamBonusErr) {
+      console.error('[CRON] Team bonus update error:', teamBonusErr);
+      errors.push('Team bonus update error');
+    }
 
     // Release PostgreSQL advisory lock
     if (!lockReleased) {
@@ -278,7 +213,7 @@ export async function POST(request: NextRequest) {
     }
 
     return apiSuccess({
-      message: `Distribuição concluída: ${processed} locações processadas`,
+      message: `Distribuição concluída: ${processed} investimentos processados`,
       processed,
       skipped,
       completed: completed > 0 ? completed : undefined,

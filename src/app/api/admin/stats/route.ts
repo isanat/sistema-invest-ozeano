@@ -17,36 +17,36 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    // Deposits - fetch and sum manually since financial values are stored as Strings
-    const allDeposits = await db.investment.findMany({
+    // Deposits - using Deposit model
+    const allDeposits = await db.deposit.findMany({
       where: { type: 'deposit' },
       select: { amount: true, status: true },
     });
     const depositTotal = allDeposits.reduce((sum, item) => sum + parseNum(item.amount), 0);
-    const depositConfirmed = allDeposits.filter(i => i.status === 'confirmed').reduce((sum, i) => sum + parseNum(i.amount), 0);
-    const depositPending = allDeposits.filter(i => i.status === 'pending');
-    const depositPendingAmount = depositPending.reduce((sum, i) => sum + parseNum(i.amount), 0);
+    const depositConfirmed = allDeposits.filter(d => d.status === 'confirmed').reduce((sum, d) => sum + parseNum(d.amount), 0);
+    const depositPending = allDeposits.filter(d => d.status === 'pending');
+    const depositPendingAmount = depositPending.reduce((sum, d) => sum + parseNum(d.amount), 0);
 
     // Withdrawals
-    const allWithdrawals = await db.investment.findMany({
+    const allWithdrawals = await db.deposit.findMany({
       where: { type: 'withdrawal' },
       select: { amount: true, status: true },
     });
     const withdrawalTotal = allWithdrawals.reduce((sum, item) => sum + parseNum(item.amount), 0);
-    const withdrawalConfirmed = allWithdrawals.filter(i => i.status === 'confirmed').reduce((sum, i) => sum + parseNum(i.amount), 0);
-    const withdrawalPending = allWithdrawals.filter(i => i.status === 'pending');
-    const withdrawalPendingAmount = withdrawalPending.reduce((sum, i) => sum + parseNum(i.amount), 0);
+    const withdrawalConfirmed = allWithdrawals.filter(d => d.status === 'confirmed').reduce((sum, d) => sum + parseNum(d.amount), 0);
+    const withdrawalPending = allWithdrawals.filter(d => d.status === 'pending');
+    const withdrawalPendingAmount = withdrawalPending.reduce((sum, d) => sum + parseNum(d.amount), 0);
 
-    // Active rentals
-    const activeRentals = await db.miningRental.count({ where: { status: 'active' } });
-    const totalRentals = await db.miningRental.count();
+    // Active investments
+    const activeInvestments = await db.investment.count({ where: { status: 'active' } });
+    const totalInvestments = await db.investment.count();
 
-    // Total mined/invested - sum String fields manually
+    // Total ROI/invested - sum String fields manually
     const users = await db.user.findMany({
       where: { role: 'user' },
-      select: { totalMined: true, totalInvested: true },
+      select: { totalRoi: true, totalInvested: true },
     });
-    const totalMined = users.reduce((sum, u) => sum + parseNum(u.totalMined), 0);
+    const totalRoi = users.reduce((sum, u) => sum + parseNum(u.totalRoi), 0);
     const totalInvested = users.reduce((sum, u) => sum + parseNum(u.totalInvested), 0);
 
     // Affiliate commissions
@@ -55,15 +55,19 @@ export async function GET(request: NextRequest) {
     });
     const totalCommissionAmount = allCommissions.reduce((sum, c) => sum + parseNum(c.commissionAmount), 0);
 
-    // Rental revenue
-    const activeRentalRecords = await db.miningRental.findMany({
+    // Investment revenue
+    const activeInvestmentRecords = await db.investment.findMany({
       where: { status: 'active' },
       select: { amount: true },
     });
-    const rentalRevenue = activeRentalRecords.reduce((sum, r) => sum + parseNum(r.amount), 0);
+    const investmentRevenue = activeInvestmentRecords.reduce((sum, i) => sum + parseNum(i.amount), 0);
+
+    // Copy trading stats
+    const activeCopyTraders = await db.copyTrader.count({ where: { isActive: true } });
+    const activeTradingPools = await db.tradingPool.count({ where: { status: 'active' } });
 
     // Recent activity
-    const recentDeposits = await db.investment.findMany({
+    const recentDeposits = await db.deposit.findMany({
       where: { type: 'deposit' },
       take: 5,
       orderBy: { createdAt: 'desc' },
@@ -72,7 +76,7 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    const recentWithdrawals = await db.investment.findMany({
+    const recentWithdrawals = await db.deposit.findMany({
       where: { type: 'withdrawal' },
       take: 5,
       orderBy: { createdAt: 'desc' },
@@ -81,12 +85,12 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    const recentRentals = await db.miningRental.findMany({
+    const recentInvestments = await db.investment.findMany({
       take: 5,
       orderBy: { createdAt: 'desc' },
       include: {
         user: { select: { name: true, email: true } },
-        miner: { select: { name: true, coin: true } },
+        plan: { select: { name: true } },
       },
     });
 
@@ -124,14 +128,16 @@ export async function GET(request: NextRequest) {
           pendingCount: withdrawalPending.length,
           pendingAmount: withdrawalPendingAmount,
         },
-        rentals: {
-          active: activeRentals,
-          total: totalRentals,
-          revenue: rentalRevenue,
+        investments: {
+          active: activeInvestments,
+          total: totalInvestments,
+          revenue: investmentRevenue,
         },
-        mining: {
-          totalMined,
+        trading: {
+          totalRoi,
           totalInvested,
+          activeCopyTraders,
+          activeTradingPools,
         },
         affiliates: {
           totalCommissions: allCommissions.length,
@@ -141,7 +147,7 @@ export async function GET(request: NextRequest) {
       recentActivity: {
         deposits: recentDeposits,
         withdrawals: recentWithdrawals,
-        rentals: recentRentals,
+        investments: recentInvestments,
         users: recentUsers,
       },
     });

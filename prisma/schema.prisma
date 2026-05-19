@@ -1,5 +1,5 @@
 // ============================================================================
-// MINING PROTOCOL - PRODUCTION SCHEMA (PostgreSQL)
+// PLATAFORMA ROI - COPY TRADING ROI PLATFORM (PostgreSQL)
 // ============================================================================
 // USDT primary currency. All financial values as String (precision-safe).
 // ============================================================================
@@ -26,10 +26,10 @@ model User {
   // Balances (stored as string for precision, parsed as Decimal in app)
   balance            String   @default("0")       // USDT main balance
   affiliateBalance   String   @default("0")       // USDT affiliate commissions
-  totalMined         String   @default("0")       // USDT total mined
+  totalRoi           String   @default("0")       // USDT total ROI earned
   totalInvested      String   @default("0")       // USDT total invested
   totalWithdrawn     String   @default("0")       // USDT total withdrawn
-  voucherBalance     String   @default("0")       // USDT voucher balance (from active vouchers)
+  teamBonusPct       String   @default("0")       // Team bonus % (0, 1, 2, or 3) based on affiliate rank
 
   // Affiliate fields
   affiliateCode          String?  @unique
@@ -43,9 +43,9 @@ model User {
   updatedAt DateTime @updatedAt
 
   investments          Investment[]
+  deposits             Deposit[]
   transactions         Transaction[]
-  miningRentals        MiningRental[]
-  miningHistory        MiningHistory[]
+  roiHistory           RoiHistory[]
   referredByUser       User?          @relation("Referrals", fields: [referredBy], references: [id])
   referrals            User[]         @relation("Referrals")
   affiliateCommissions AffiliateCommission[]
@@ -64,53 +64,15 @@ model User {
   @@index([role])
 }
 
-model Miner {
-  id          String  @id @default(cuid())
-  name        String  @unique
-  model       String
-  hashRate    String  // TH/s or GH/s
-  powerConsumption String // Watts
-  coin        String  @default("BTC") // BTC, KAS, LTC, DOGE
-  pool        String  @default("Binance Pool")
-  status      String  @default("online") // online, offline, maintenance
-
-  // Pricing (all in USDT, stored as string for precision)
-  dailyRevenue   String  // Estimated daily revenue in USDT
-  pricePerDay    String  // Rental price per day in USDT
-  minRentalDays  Int     @default(7)
-  maxRentalDays  Int     @default(365)
-  profitSharePct String  @default("70") // User profit share percentage
-
-  efficiency     String  // J/TH
-  image          String?
-  description    String?
-  isFeatured     Boolean @default(false)
-  sortOrder      Int     @default(0)
-  isActive       Boolean @default(true)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-
-  rentals       MiningRental[]
-  miningHistory MiningHistory[]
-  plans         MiningPlan[]
-
-  @@index([coin])
-  @@index([isActive])
-  @@index([status])
-}
-
-model MiningPlan {
-  id          String  @id @default(cuid())
-  name        String  @unique // e.g. "Starter", "Pro", "Elite"
+model InvestmentPlan {
+  id          String   @id @default(cuid())
+  name        String   @unique
   description String?
-  minerId     String
-  days        Int     // Rental duration in days
-  discountPct String  @default("0") // Discount percentage
 
-  // Calculated pricing (in USDT)
-  totalPrice     String  // Total price for the plan
-  dailyReturn    String  // Estimated daily return
-  totalReturn    String  // Estimated total return
+  minAmount    String   // Minimum investment in USDT, e.g. "10"
+  maxAmount    String?  // Maximum investment in USDT, null = unlimited
+  dailyRoiPct  String   // Daily ROI percentage, e.g. "5"
+  durationDays Int      // Investment duration in days, e.g. 40 for doubling
 
   isActive    Boolean  @default(true)
   isFeatured  Boolean  @default(false)
@@ -118,74 +80,64 @@ model MiningPlan {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  miner Miner @relation(fields: [minerId], references: [id], onDelete: Cascade)
-  rentals MiningRental[]
+  investments Investment[]
 
   @@index([isActive])
-  @@index([minerId])
 }
 
-model MiningRental {
-  id        String  @id @default(cuid())
-  userId    String
-  minerId   String
-  planId    String?
+model Investment {
+  id       String  @id @default(cuid())
+  userId   String
+  planId   String?
+
+  amount      String  // Invested amount in USDT
+  dailyRoi    String  // Daily ROI amount in USDT
+  dailyRoiPct String  // ROI percentage
+  totalRoi    String  // Total expected ROI
+
   startDate DateTime
   endDate   DateTime
+  status    String  @default("active") // active, completed, cancelled
 
-  // Values in USDT
-  amount      String  // Amount paid in USDT
-  hashShare   String  // % of hashrate
-  dailyReturn String  // Daily return in USDT
-  totalReturn String  // Total expected return
-  profitShare String  // Profit share % at time of rental
-
-  status String @default("active") // active, completed, cancelled
+  teamBonusPct String @default("0") // Team bonus % from affiliate rank
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user          User           @relation(fields: [userId], references: [id], onDelete: Restrict)
-  miner         Miner          @relation(fields: [minerId], references: [id], onDelete: Restrict)
-  plan          MiningPlan?    @relation(fields: [planId], references: [id], onDelete: SetNull)
-  miningHistory MiningHistory[]
-  voucherUsages VoucherUsage[]
+  user           User            @relation(fields: [userId], references: [id], onDelete: Restrict)
+  plan           InvestmentPlan? @relation(fields: [planId], references: [id], onDelete: SetNull)
+  roiHistory     RoiHistory[]
+  voucherUsages  VoucherUsage[]
 
   @@index([userId])
   @@index([status])
-  @@index([minerId])
   @@index([userId, status])
 }
 
-model MiningHistory {
-  id        String  @id @default(cuid())
-  userId    String
-  rentalId  String
-  minerId   String
-  date      DateTime
+model RoiHistory {
+  id            String   @id @default(cuid())
+  userId        String
+  investmentId  String
+  date          DateTime
 
-  hashRate      String  // Hashrate for the day
-  btcMined      String  // BTC mined (or coin)
-  usdtValue     String  // Value in USDT (primary)
+  roiAmount String  // ROI paid in USDT
+  roiPct    String  // Percentage applied
+  teamBonus String  @default("0") // Team bonus from rank
+  totalRoi  String  // Total paid that day including bonus
 
-  pool        String
-  blockFound  Boolean  @default(false)
-  sharesValid Int      @default(0)
-  sharesInvalid Int    @default(0)
-  createdAt   DateTime @default(now())
+  createdAt DateTime @default(now())
 
-  user   User          @relation(fields: [userId], references: [id], onDelete: Restrict)
-  rental MiningRental  @relation(fields: [rentalId], references: [id], onDelete: Cascade)
-  miner  Miner         @relation(fields: [minerId], references: [id], onDelete: Restrict)
+  user       User       @relation(fields: [userId], references: [id], onDelete: Restrict)
+  investment Investment @relation(fields: [investmentId], references: [id], onDelete: Cascade)
 
-  @@unique([rentalId, date])
+  @@unique([investmentId, date])
   @@index([userId])
   @@index([date])
-  @@index([rentalId])
-  @@index([rentalId, date])
+  @@index([investmentId])
+  @@index([investmentId, date])
 }
 
-model Investment {
+model Deposit {
   id      String  @id @default(cuid())
   userId  String
 
@@ -221,14 +173,14 @@ model Investment {
 model Transaction {
   id       String  @id @default(cuid())
   userId   String
-  type     String  // deposit, withdrawal, mining_profit, rental_payment, affiliate_commission, admin_adjust
+  type     String  // deposit, withdrawal, roi_profit, investment, affiliate_commission, admin_adjust
   amount   String  // USDT amount
   brlAmount String? // BRL equivalent
   usdtRate  String? // Rate used
   status   String  @default("completed") // pending, completed, failed
   description String
   referenceId  String? // Related entity ID
-  referenceType String? // Investment, MiningRental, etc.
+  referenceType String? // Investment, Deposit, etc.
   createdAt DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Restrict)
@@ -243,9 +195,8 @@ model AffiliateCommission {
   id          String  @id @default(cuid())
   userId      String  // Who receives
   fromUserId  String  // Who generated
-  level       Int     // 1-5
-  rentalId    String?
-  miningHistoryId String?
+  level       Int     // 1-11
+  investmentId String?
 
   baseAmount       String // Base value in USDT
   percentage       String // Commission %
@@ -286,9 +237,10 @@ model AffiliateWithdrawal {
   @@index([status])
 }
 
+// Default 11-level Unilevel: L1=10%, L2=4%, L3=3%, L4=2%, L5=1.5%, L6=1%, L7=0.8%, L8=0.5%, L9=0.4%, L10=0.3%, L11=0.5%
 model AffiliateLevel {
   id          String  @id @default(cuid())
-  level       Int     @unique // 1 to 5
+  level       Int     @unique // 1 to 11
   percentage  String  // Commission %
   description String?
   isActive    Boolean @default(true)
@@ -302,7 +254,7 @@ model SystemConfig {
   value       String
   type        String  @default("string") // string, number, boolean, json
   description String?
-  category    String  @default("general") // general, affiliate, withdrawal, mining, deposit
+  category    String  @default("general") // general, affiliate, withdrawal, trading, deposit
   isActive    Boolean @default(true)
   updatedAt   DateTime @updatedAt
 
@@ -314,7 +266,7 @@ model AdminLog {
   id          String  @id @default(cuid())
   adminId     String?
   action      String  // create, update, delete, approve, reject
-  entity      String  // user, miner, plan, config, deposit, withdrawal
+  entity      String  // user, plan, investment, config, deposit, withdrawal
   entityId    String?
   oldValue    String? // JSON
   newValue    String? // JSON
@@ -329,15 +281,16 @@ model AdminLog {
   @@index([createdAt])
 }
 
+// Team Bonus ranks: Bronze(+1% ROI), Prata(+2% ROI), Ouro(+3% ROI)
 model AffiliateRank {
   id           String  @id @default(cuid())
-  name         String  @unique // Bronze, Silver, Gold, Platinum, Diamond
+  name         String  @unique // Bronze, Prata, Ouro
   icon         String  @default("🥉") // Emoji icon
   color        String  @default("#CD7F32") // Hex color
   minReferrals Int     @default(0) // Minimum direct referrals to qualify
   minEarnings  String  @default("0") // Minimum total affiliate earnings in USDT
   bonusAmount  String  @default("0") // One-time bonus when reaching this rank
-  commissionBoost String @default("0") // Extra % commission boost at this rank
+  commissionBoost String @default("0") // Team bonus % daily ROI boost at this rank (1, 2, or 3)
   perks        String? // JSON array of perk descriptions
   sortOrder    Int     @default(0)
   isActive     Boolean @default(true)
@@ -433,18 +386,6 @@ model AffiliateBadgeAward {
   @@index([badgeId])
 }
 
-model PoolStatus {
-  id         String  @id @default(cuid())
-  name       String  @unique
-  hashrate   String
-  miners     Int
-  blocks24h  Int
-  lastBlock  DateTime?
-  btcPrice   String
-  difficulty String
-  updatedAt  DateTime @updatedAt
-}
-
 // ============================================================================
 // NOWPAYMENTS INTEGRATION MODELS
 // ============================================================================
@@ -478,15 +419,15 @@ model NowPaymentsDeposit {
   paymentStatus     String  @default("waiting") // waiting, confirming, confirmed, sending, partially_paid, finished, failed, refunded, expired
   actuallyPaid      String? // Actual amount paid
   outcomeAmount     String? // Amount received after fees
-  outcomeCurrency   String? // Currency received
+  outcomeCurrency   String?
   
   // Split tracking
   splitProcessed    Boolean @default(false) // Whether the split was processed
   splitAmount       String  @default("0") // Amount sent to platform wallet
   splitPct          String  @default("0") // Split percentage used
   
-  // Investment relation
-  investmentId      String? // Link to our Investment record
+  // Deposit relation
+  depositId         String? // Link to our Deposit record
   
   purchaseId        String? // NowPayments purchase_id
   expiresAt         DateTime?
@@ -518,8 +459,8 @@ model NowPaymentsPayout {
   netAmount             String  @default("0") // Amount after fee
   txHash                String? // Blockchain tx hash
   
-  // Investment relation
-  investmentId          String? // Link to our Investment record
+  // Deposit relation
+  depositId             String? // Link to our Deposit record
   
   processedAt           DateTime?
   completedAt           DateTime?
@@ -605,16 +546,49 @@ model Voucher {
 }
 
 model VoucherUsage {
-  id          String   @id @default(cuid())
-  voucherId   String
-  rentalId    String
-  amount      String   // Amount used from voucher for this rental
+  id            String   @id @default(cuid())
+  voucherId     String
+  investmentId  String
+  amount        String   // Amount used from voucher for this investment
   
-  createdAt   DateTime @default(now())
+  createdAt     DateTime @default(now())
   
-  voucher     Voucher      @relation(fields: [voucherId], references: [id], onDelete: Cascade)
-  rental      MiningRental @relation(fields: [rentalId], references: [id], onDelete: Cascade)
+  voucher       Voucher      @relation(fields: [voucherId], references: [id], onDelete: Cascade)
+  investment    Investment   @relation(fields: [investmentId], references: [id], onDelete: Cascade)
   
   @@index([voucherId])
-  @@index([rentalId])
+  @@index([investmentId])
+}
+
+// ============================================================================
+// COPY TRADING MODELS
+// ============================================================================
+
+model CopyTrader {
+  id          String   @id @default(cuid())
+  name        String
+  avatar      String?
+  specialty   String   @default("DeFi")
+  winRate     String   @default("87")
+  totalPnl    String   @default("0")
+  monthlyRoi  String   @default("150")
+  riskLevel   String   @default("medium")
+  isActive    Boolean  @default(true)
+  isFeatured  Boolean  @default(false)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([isActive])
+}
+
+model TradingPool {
+  id          String   @id @default(cuid())
+  name        String
+  totalAum    String   @default("0")
+  dailyVolume String   @default("0")
+  strategy    String   @default("arbitrage")
+  status      String   @default("active")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }

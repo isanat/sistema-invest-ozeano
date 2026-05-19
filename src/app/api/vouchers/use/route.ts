@@ -7,10 +7,10 @@ export async function POST(request: NextRequest) {
   try {
     const session = await requireAuth();
     const body = await request.json();
-    const { rentalId, voucherId, amount: rawAmount } = body;
+    const { investmentId, voucherId, amount: rawAmount } = body;
 
-    if (!rentalId || !voucherId || !rawAmount) {
-      return apiError('rentalId, voucherId e amount são obrigatórios');
+    if (!investmentId || !voucherId || !rawAmount) {
+      return apiError('investmentId, voucherId e amount são obrigatórios');
     }
 
     const amount = d(rawAmount);
@@ -44,31 +44,31 @@ export async function POST(request: NextRequest) {
       return apiError(`Saldo insuficiente no voucher. Disponível: ${dusdt(remainingBalance)} USDT, Solicitado: ${dusdt(amount)} USDT`);
     }
 
-    // Validate rental belongs to user
-    const rental = await db.miningRental.findUnique({
-      where: { id: rentalId },
+    // Validate investment belongs to user
+    const investment = await db.investment.findUnique({
+      where: { id: investmentId },
     });
 
-    if (!rental) {
-      return apiError('Locação não encontrada', 404);
+    if (!investment) {
+      return apiError('Investimento não encontrado', 404);
     }
 
-    if (rental.userId !== session.userId) {
-      return apiError('Esta locação não pertence ao seu usuário', 403);
+    if (investment.userId !== session.userId) {
+      return apiError('Este investimento não pertence ao seu usuário', 403);
     }
 
-    // Verify amount matches rental price
-    const rentalAmount = d(rental.amount);
-    if (amount !== rentalAmount) {
-      return apiError(`Valor não corresponde ao preço da locação. Locação: ${dusdt(rentalAmount)} USDT, Informado: ${dusdt(amount)} USDT`);
+    // Verify amount matches investment price
+    const investmentAmount = d(investment.amount);
+    if (amount !== investmentAmount) {
+      return apiError(`Valor não corresponde ao preço do investimento. Investimento: ${dusdt(investmentAmount)} USDT, Informado: ${dusdt(amount)} USDT`);
     }
 
-    // Check if this rental already has a voucher usage
+    // Check if this investment already has a voucher usage
     const existingUsage = await db.voucherUsage.findFirst({
-      where: { rentalId },
+      where: { investmentId },
     });
     if (existingUsage) {
-      return apiError('Esta locação já foi paga com um voucher');
+      return apiError('Este investimento já foi pago com um voucher');
     }
 
     // Execute in a transaction for atomicity
@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
       await tx.voucherUsage.create({
         data: {
           voucherId,
-          rentalId,
+          investmentId,
           amount: dusdt(amount),
         },
       });
@@ -108,11 +108,11 @@ export async function POST(request: NextRequest) {
     await db.transaction.create({
       data: {
         userId: session.userId,
-        type: 'rental_payment',
+        type: 'investment',
         amount: dusdt(amount),
         status: 'completed',
-        description: `Pagamento de locação com voucher #${voucherId.slice(-8)}`,
-        referenceId: rentalId,
+        description: `Pagamento de investimento com voucher #${voucherId.slice(-8)}`,
+        referenceId: investmentId,
         referenceType: 'VoucherUsage',
       },
     });
