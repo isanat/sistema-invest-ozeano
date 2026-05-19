@@ -29,6 +29,7 @@ model User {
   totalMined         String   @default("0")       // USDT total mined
   totalInvested      String   @default("0")       // USDT total invested
   totalWithdrawn     String   @default("0")       // USDT total withdrawn
+  voucherBalance     String   @default("0")       // USDT voucher balance (from active vouchers)
 
   // Affiliate fields
   affiliateCode          String?  @unique
@@ -55,6 +56,7 @@ model User {
   nowpaymentsSubAccount NowPaymentsSubAccount?
   nowpaymentsDeposits   NowPaymentsDeposit[]
   nowpaymentsPayouts    NowPaymentsPayout[]
+  vouchers             Voucher[]
 
   @@index([email])
   @@index([affiliateCode])
@@ -147,6 +149,7 @@ model MiningRental {
   miner         Miner          @relation(fields: [minerId], references: [id], onDelete: Restrict)
   plan          MiningPlan?    @relation(fields: [planId], references: [id], onDelete: SetNull)
   miningHistory MiningHistory[]
+  voucherUsages VoucherUsage[]
 
   @@index([userId])
   @@index([status])
@@ -546,4 +549,72 @@ model NowPaymentsWebhookLog {
   @@index([paymentId])
   @@index([processed])
   @@index([createdAt])
+}
+
+// ============================================================================
+// VOUCHER SYSTEM MODELS
+// ============================================================================
+
+model Voucher {
+  id          String   @id @default(cuid())
+  userId      String   // Leader who receives the voucher
+  
+  // Voucher details
+  amount      String   // Total voucher amount in USDT
+  usedAmount  String   @default("0") // Amount already used in rentals/purchases
+  type        String   @default("custom") // basic, premium, custom
+  
+  // Status
+  status      String   @default("active") // active, expired, revoked, completed
+  
+  // Goals (defaults for Basic=500, Premium=2000, but admin can customize)
+  goalDirectReferrals   Int      @default(5)    // Min direct referrals needed
+  goalMinReferralInvest String   @default("100") // Each referral must invest at least this USDT
+  goalNetworkMultiple   String   @default("3")   // Total network investment must be this × voucher amount
+  goalDays              Int      @default(30)     // Days to complete goals
+  
+  // Progress tracking (updated by cron/API)
+  currentDirectReferrals   Int      @default(0)
+  currentNetworkInvestment String   @default("0")  // Total network investment by referrals
+  qualifyingReferrals      Int      @default(0)    // Referrals that meet min investment
+  
+  // Gradual withdrawal unlock (percentage 0-100)
+  withdrawalUnlockPct String   @default("0") // How much of regular balance is unlocked for withdrawal
+  
+  // Dates
+  deadline      DateTime  // When the voucher expires if goals not met
+  completedAt   DateTime? // When all goals were met
+  lastProgressUpdate DateTime? // Last time progress was recalculated
+  
+  // Admin tracking
+  createdBy     String?   // Admin user ID who created
+  revokedBy     String?   // Admin user ID who revoked
+  revokeReason  String?   // Reason for revocation
+  extendedDays  Int       @default(0) // Extra days added by admin
+  adminNotes    String?
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  usages        VoucherUsage[]
+  
+  @@index([userId])
+  @@index([status])
+  @@index([userId, status])
+}
+
+model VoucherUsage {
+  id          String   @id @default(cuid())
+  voucherId   String
+  rentalId    String
+  amount      String   // Amount used from voucher for this rental
+  
+  createdAt   DateTime @default(now())
+  
+  voucher     Voucher      @relation(fields: [voucherId], references: [id], onDelete: Cascade)
+  rental      MiningRental @relation(fields: [rentalId], references: [id], onDelete: Cascade)
+  
+  @@index([voucherId])
+  @@index([rentalId])
 }

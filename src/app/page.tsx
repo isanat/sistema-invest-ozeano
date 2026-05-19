@@ -31,7 +31,7 @@ import {
   XCircle, Clock4, Server, Database, Globe, Percent, Gift,
   LayoutDashboard, UserCog, Banknote, HandCoins, Link2, ChevronLeft,
   Trophy, Target, Crown, Star, Share2, Medal, Award,
-  Info, MessageSquare,
+  Info, MessageSquare, Ticket,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -470,16 +470,43 @@ export default function MiningProtocol() {
   const [contestDialog, setContestDialog] = useState<{ open: boolean; contest?: AffiliateContest | null }>({ open: false });
   const [badgeDialog, setBadgeDialog] = useState<{ open: boolean; badge?: any | null }>({ open: false });
 
+  // User Voucher state (leader view)
+  const [userVouchers, setUserVouchers] = useState<any[]>([]);
+  const [voucherProgressLoading, setVoucherProgressLoading] = useState(false);
+
+  const recalculateVoucherProgress = async () => {
+    setVoucherProgressLoading(true);
+    try {
+      const data = await api<{ success: boolean; vouchers: any[] }>('/api/vouchers/progress', { method: 'POST' });
+      setUserVouchers(data.vouchers || []);
+      toast.success('Progresso dos vouchers atualizado!');
+    } catch (e: any) {
+      toast.error(e.message || 'Erro ao atualizar progresso');
+    } finally {
+      setVoucherProgressLoading(false);
+    }
+  };
+
+  // Admin Voucher state
+  const [adminVouchers, setAdminVouchers] = useState<any[]>([]);
+  const [voucherDialog, setVoucherDialog] = useState<{ open: boolean; voucher?: any | null }>({ open: false });
+  const [voucherActionDialog, setVoucherActionDialog] = useState<{ open: boolean; action: 'revoke' | 'extend' | 'complete'; voucher?: any | null }>({ open: false, action: 'revoke', voucher: null });
+  const [voucherFilter, setVoucherFilter] = useState<string>('all');
+  const [voucherLoading, setVoucherLoading] = useState(false);
+
   // Dialog State
   const [loginLoading, setLoginLoading] = useState(false);
   const [rentDialogMiner, setRentDialogMiner] = useState<Miner | null>(null);
   const [rentalDays, setRentalDays] = useState(7);
   const [rentalPlanId, setRentalPlanId] = useState<string | undefined>(undefined);
   const [rentLoading, setRentLoading] = useState(false);
+  const [useVoucherForRent, setUseVoucherForRent] = useState(false);
+  const [selectedVoucherId, setSelectedVoucherId] = useState<string>('');
   const [depositDialog, setDepositDialog] = useState(false);
   const [withdrawDialog, setWithdrawDialog] = useState(false);
   const [depositLoading, setDepositLoading] = useState(false);
   const [withdrawLoading, setWithdrawLoading] = useState(false);
+  const [withdrawVoucherInfo, setWithdrawVoucherInfo] = useState<{ hasActiveVouchers: boolean; unlockPct: number; maxWithdrawable: number } | null>(null);
 
   // NowPayments deposit state
   const [npDepositAddress, setNpDepositAddress] = useState<string | null>(null);
@@ -620,7 +647,7 @@ export default function MiningProtocol() {
   const fetchAdminData = async () => {
     setAdminLoading(true);
     try {
-      const [statsRes, minersRes, plansRes, usersRes, depsRes, wdsRes, configsRes, logsRes, affRes, affWdRes, ranksRes, milestonesRes, contestsRes, badgesRes] = await Promise.allSettled([
+      const [statsRes, minersRes, plansRes, usersRes, depsRes, wdsRes, configsRes, logsRes, affRes, affWdRes, ranksRes, milestonesRes, contestsRes, badgesRes, vouchersRes] = await Promise.allSettled([
         api<{ success: boolean; stats: AdminStats }>('/api/admin/stats'),
         api<{ success: boolean; miners: Miner[] }>('/api/admin/miners'),
         api<{ success: boolean; plans: MiningPlan[] }>('/api/admin/plans'),
@@ -635,6 +662,7 @@ export default function MiningProtocol() {
         api<{ success: boolean; milestones: AffiliateMilestone[] }>('/api/admin/affiliate-milestones'),
         api<{ success: boolean; contests: AffiliateContest[] }>('/api/admin/affiliate-contests'),
         api<{ success: boolean; badges: any[] }>('/api/admin/affiliate-badges'),
+        api<{ success: boolean; vouchers: any[] }>('/api/admin/vouchers'),
       ]);
       if (statsRes.status === 'fulfilled') setAdminStats(statsRes.value.stats);
       if (minersRes.status === 'fulfilled') setAdminMiners(minersRes.value.miners || []);
@@ -653,6 +681,7 @@ export default function MiningProtocol() {
       if (milestonesRes.status === 'fulfilled') setAdminMilestones(milestonesRes.value.milestones || []);
       if (contestsRes.status === 'fulfilled') setAdminContests(contestsRes.value.contests || []);
       if (badgesRes.status === 'fulfilled') setAdminBadges(badgesRes.value.badges || []);
+      if (vouchersRes.status === 'fulfilled') setAdminVouchers(vouchersRes.value.vouchers || []);
     } catch (e) {
       console.error('Admin data error:', e);
     } finally {
@@ -723,7 +752,13 @@ export default function MiningProtocol() {
 
   // Load affiliate data when tab is selected
   useEffect(() => {
-    if (activeTab === 'afiliados' && user) fetchAffiliateData();
+    if (activeTab === 'afiliados' && user) {
+      fetchAffiliateData();
+      // Fetch user vouchers
+      api<{ success: boolean; vouchers: any[] }>('/api/vouchers').then(data => {
+        setUserVouchers(data.vouchers || []);
+      }).catch(() => {});
+    }
   }, [activeTab, user]);
 
   // Load deposits/payouts/statement when tabs are selected
@@ -1020,13 +1055,23 @@ export default function MiningProtocol() {
           minerId: rentDialogMiner.id,
           days: rentalDays,
           planId: rentalPlanId || undefined,
+          useVoucher: useVoucherForRent,
+          voucherId: useVoucherForRent ? selectedVoucherId : undefined,
         }),
       });
-      toast.success(t('toast.rentSuccess'));
+      toast.success(useVoucherForRent ? 'Locação criada com saldo de voucher!' : t('toast.rentSuccess'));
       setRentDialogMiner(null);
       setRentalPlanId(undefined);
+      setUseVoucherForRent(false);
+      setSelectedVoucherId('');
       fetchDashboardData();
       checkAuth();
+      // Refresh voucher data if on affiliates tab
+      if (activeTab === 'afiliados') {
+        api<{ success: boolean; vouchers: any[] }>('/api/vouchers').then(data => {
+          setUserVouchers(data.vouchers || []);
+        }).catch(() => {});
+      }
     } catch (err: any) {
       toast.error(err.message || t('toast.rentError'));
     } finally {
@@ -2164,6 +2209,7 @@ export default function MiningProtocol() {
     { id: 'affiliateMilestones', label: t('admin.affiliateMilestones'), icon: Target },
     { id: 'affiliateContests', label: t('admin.affiliateContests'), icon: Trophy },
     { id: 'affiliateBadges', label: t('admin.affiliateBadges') || 'Badges', icon: Award },
+    { id: 'vouchers', label: 'Vouchers', icon: Ticket },
     { id: 'config', label: t('adminSidebar.config'), icon: Settings },
     { id: 'marketing', label: 'Marketing', icon: Share2 },
     { id: 'logs', label: t('adminSidebar.logs'), icon: FileText },
@@ -3635,6 +3681,146 @@ export default function MiningProtocol() {
                   <div className="space-y-6">
                     <h2 className="text-xl sm:text-2xl font-bold">{t('affiliates.title')}</h2>
 
+                            {/* Voucher Dashboard for Leaders */}
+                            {userVouchers.length > 0 && (
+                              <div className="space-y-4 mb-6">
+                                <div className="flex items-center justify-between">
+                                  <div>
+                                    <h3 className="text-lg font-semibold flex items-center gap-2"><Ticket className="h-5 w-5 text-purple-400" /> Meus Vouchers</h3>
+                                    <p className="text-sm text-zinc-500 mt-1">Saldo de voucher só pode ser usado para alugar mineradoras. Saques desbloqueiam conforme você cumpre as metas.</p>
+                                  </div>
+                                  <Button variant="outline" className="border-zinc-700 text-purple-400 hover:bg-purple-500/10" onClick={recalculateVoucherProgress} disabled={voucherProgressLoading}>
+                                    <RefreshCw className={`mr-2 h-4 w-4 ${voucherProgressLoading ? 'animate-spin' : ''}`} /> Atualizar
+                                  </Button>
+                                </div>
+
+                                {userVouchers.map((v: any) => {
+                                  const available = d(v.amount) - d(v.usedAmount);
+                                  const goalTarget = d(v.goalNetworkMultiple) * d(v.amount);
+                                  const referralPct = v.goalDirectReferrals > 0 ? Math.round((v.qualifyingReferrals / v.goalDirectReferrals) * 100) : 0;
+                                  const networkPct = goalTarget > 0 ? Math.round((d(v.currentNetworkInvestment) / goalTarget) * 100) : 0;
+                                  const unlockPct = d(v.withdrawalUnlockPct);
+                                  const daysLeft = v.status === 'active' ? Math.max(0, Math.ceil((new Date(v.deadline).getTime() - Date.now()) / 86400000)) : 0;
+
+                                  return (
+                                    <Card key={v.id} className={`border-2 ${v.status === 'active' ? 'border-purple-500/40 bg-purple-500/5' : v.status === 'completed' ? 'border-emerald-500/40 bg-emerald-500/5' : 'border-zinc-700 bg-zinc-900'}`}>
+                                      <CardContent className="p-5">
+                                        <div className="flex items-center justify-between mb-3">
+                                          <div className="flex items-center gap-2">
+                                            <Badge className={v.status === 'active' ? 'bg-purple-500/20 text-purple-400 border-purple-500/30' : v.status === 'completed' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' : 'bg-red-500/20 text-red-400 border-red-500/30'} variant="outline">
+                                              {v.status === 'active' ? '🟢 Ativo' : v.status === 'completed' ? '✅ Completo' : v.status === 'expired' ? '⏰ Expirado' : '🚫 Revogado'}
+                                            </Badge>
+                                            <Badge className="bg-zinc-700 text-zinc-300" variant="outline">
+                                              {v.type === 'basic' ? 'Básico' : v.type === 'premium' ? 'Premium' : 'Personalizado'}
+                                            </Badge>
+                                          </div>
+                                          {v.status === 'active' && (
+                                            <div className={`text-sm font-medium ${daysLeft <= 7 ? 'text-red-400' : 'text-zinc-400'}`}>
+                                              ⏰ {daysLeft} dias restantes
+                                            </div>
+                                          )}
+                                        </div>
+
+                                        {/* Balance Section */}
+                                        <div className="grid grid-cols-3 gap-4 mb-4">
+                                          <div className="text-center p-3 rounded-lg bg-zinc-800/50">
+                                            <div className="text-xs text-zinc-500 mb-1">Total do Voucher</div>
+                                            <div className="text-lg font-bold text-white">{fmtUSDT(v.amount)} USDT</div>
+                                          </div>
+                                          <div className="text-center p-3 rounded-lg bg-zinc-800/50">
+                                            <div className="text-xs text-zinc-500 mb-1">Disponível para Usar</div>
+                                            <div className="text-lg font-bold text-emerald-400">{fmtUSDT(available)} USDT</div>
+                                          </div>
+                                          <div className="text-center p-3 rounded-lg bg-zinc-800/50">
+                                            <div className="text-xs text-zinc-500 mb-1">Desbloqueio de Saque</div>
+                                            <div className={`text-lg font-bold ${unlockPct >= 100 ? 'text-emerald-400' : unlockPct > 0 ? 'text-amber-400' : 'text-red-400'}`}>{unlockPct}%</div>
+                                          </div>
+                                        </div>
+
+                                        {/* Goals Progress */}
+                                        {v.status === 'active' && (
+                                          <div className="space-y-3">
+                                            <div className="text-sm font-medium text-zinc-300 mb-2">📊 Progresso das Metas</div>
+                                            <div>
+                                              <div className="flex justify-between text-xs mb-1">
+                                                <span className="text-zinc-400">🤝 Indicações qualificadas (que investiram ≥ {fmtUSDT(v.goalMinReferralInvest)} USDT)</span>
+                                                <span className="font-medium">{v.qualifyingReferrals}/{v.goalDirectReferrals}</span>
+                                              </div>
+                                              <Progress value={Math.min(100, referralPct)} className="h-3 bg-zinc-800 [&>[data-slot=indicator]]:bg-emerald-500" />
+                                            </div>
+                                            <div>
+                                              <div className="flex justify-between text-xs mb-1">
+                                                <span className="text-zinc-400">💰 Investimento total da rede</span>
+                                                <span className="font-medium">{fmtUSDT(v.currentNetworkInvestment)}/{fmtUSDT(goalTarget)} USDT</span>
+                                              </div>
+                                              <Progress value={Math.min(100, networkPct)} className="h-3 bg-zinc-800 [&>[data-slot=indicator]]:bg-blue-500" />
+                                            </div>
+
+                                            {/* Gradual Unlock Timeline */}
+                                            <div className="mt-4 p-3 rounded-lg bg-zinc-800/50">
+                                              <div className="text-xs font-medium text-zinc-300 mb-2">🔓 Desbloqueio Gradual de Saque</div>
+                                              <div className="flex items-center gap-1">
+                                                <div className={`flex-1 h-3 rounded-l-full ${unlockPct >= 25 ? 'bg-emerald-500' : 'bg-zinc-700'}`} />
+                                                <div className={`flex-1 h-3 ${unlockPct >= 50 ? 'bg-emerald-500' : 'bg-zinc-700'}`} />
+                                                <div className={`flex-1 h-3 ${unlockPct >= 75 ? 'bg-emerald-500' : 'bg-zinc-700'}`} />
+                                                <div className={`flex-1 h-3 rounded-r-full ${unlockPct >= 100 ? 'bg-emerald-500' : 'bg-zinc-700'}`} />
+                                              </div>
+                                              <div className="flex justify-between text-[10px] mt-1 text-zinc-500">
+                                                <span className={unlockPct >= 25 ? 'text-emerald-400' : ''}>25%</span>
+                                                <span className={unlockPct >= 50 ? 'text-emerald-400' : ''}>50%</span>
+                                                <span className={unlockPct >= 75 ? 'text-emerald-400' : ''}>75%</span>
+                                                <span className={unlockPct >= 100 ? 'text-emerald-400' : ''}>100%</span>
+                                              </div>
+                                              <div className="mt-2 space-y-1 text-[10px] text-zinc-500">
+                                                <div className={unlockPct >= 25 ? 'text-emerald-400' : ''}>✓ 25% — Trazer 50% das indicações necessárias</div>
+                                                <div className={unlockPct >= 50 ? 'text-emerald-400' : ''}>✓ 50% — 75% das indicações + 50% do investimento da rede</div>
+                                                <div className={unlockPct >= 75 ? 'text-emerald-400' : ''}>✓ 75% — 100% das indicações + 75% do investimento</div>
+                                                <div className={unlockPct >= 100 ? 'text-emerald-400' : ''}>✓ 100% — Todas as metas completas</div>
+                                              </div>
+                                            </div>
+
+                                            {unlockPct === 0 && (
+                                              <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20">
+                                                <div className="text-sm text-red-400 font-medium">⛔ Saques bloqueados</div>
+                                                <div className="text-xs text-zinc-400 mt-1">Cumpra as metas para desbloquear gradualmente seus saques.</div>
+                                              </div>
+                                            )}
+                                            {unlockPct > 0 && unlockPct < 100 && (
+                                              <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                                                <div className="text-sm text-amber-400 font-medium">⚠️ Saques parcialmente desbloqueados ({unlockPct}%)</div>
+                                                <div className="text-xs text-zinc-400 mt-1">Você pode sacar até {unlockPct}% do seu saldo normal. Continue cumprindo as metas para desbloquear mais.</div>
+                                              </div>
+                                            )}
+                                            {unlockPct >= 100 && (
+                                              <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                                                <div className="text-sm text-emerald-400 font-medium">✅ Saques totalmente desbloqueados!</div>
+                                                <div className="text-xs text-zinc-400 mt-1">Parabéns! Todas as metas foram cumpridas. Você pode sacar normalmente.</div>
+                                              </div>
+                                            )}
+                                          </div>
+                                        )}
+
+                                        {/* Usage History */}
+                                        {v.usages && v.usages.length > 0 && (
+                                          <div className="mt-4">
+                                            <div className="text-sm font-medium text-zinc-300 mb-2">📝 Histórico de Uso</div>
+                                            <div className="space-y-1">
+                                              {v.usages.map((u: any) => (
+                                                <div key={u.id} className="flex justify-between text-xs bg-zinc-800/50 rounded p-2">
+                                                  <span className="text-zinc-400">{u.rental?.miner?.name || 'Mineradora'} — {fmtDate(u.createdAt)}</span>
+                                                  <span className="text-amber-400">-{fmtUSDT(u.amount)} USDT</span>
+                                                </div>
+                                              ))}
+                                            </div>
+                                          </div>
+                                        )}
+                                      </CardContent>
+                                    </Card>
+                                  );
+                                })}
+                              </div>
+                            )}
+
                     {/* Affiliate Link & Share Tools */}
                     <Card className="bg-zinc-900 border-zinc-800">
                       <CardContent className="p-4 sm:p-6">
@@ -4910,6 +5096,194 @@ export default function MiningProtocol() {
                       </div>
                     )}
 
+                    {/* Admin Vouchers */}
+                    {adminTab === 'vouchers' && (
+                      <div className="space-y-6">
+                        <div className="flex items-center justify-between flex-wrap gap-3">
+                          <div>
+                            <h3 className="text-lg font-semibold">Vouchers para Líderes</h3>
+                            <p className="text-sm text-zinc-500 mt-1">Dê crédito para líderes trazerem redes. Eles só podem usar para alugar mineradoras. Saques são desbloqueados gradualmente conforme cumprem metas.</p>
+                          </div>
+                          <div className="flex gap-2">
+                            <Select value={voucherFilter} onValueChange={setVoucherFilter}>
+                              <SelectTrigger className="w-36 bg-zinc-800 border-zinc-700">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="all">Todos</SelectItem>
+                                <SelectItem value="active">Ativos</SelectItem>
+                                <SelectItem value="completed">Completos</SelectItem>
+                                <SelectItem value="expired">Expirados</SelectItem>
+                                <SelectItem value="revoked">Revogados</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <Button className="bg-emerald-600 hover:bg-emerald-700 min-h-[44px]" onClick={() => setVoucherDialog({ open: true, voucher: null })}><Plus className="mr-2 h-4 w-4" />Novo Voucher</Button>
+                          </div>
+                        </div>
+
+                        {/* Stats Cards */}
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                          <Card className="bg-zinc-900 border-zinc-800">
+                            <CardContent className="p-4">
+                              <div className="text-sm text-zinc-500">Vouchers Ativos</div>
+                              <div className="text-2xl font-bold text-emerald-400">{adminVouchers.filter(v => v.status === 'active').length}</div>
+                            </CardContent>
+                          </Card>
+                          <Card className="bg-zinc-900 border-zinc-800">
+                            <CardContent className="p-4">
+                              <div className="text-sm text-zinc-500">Total em Vouchers</div>
+                              <div className="text-2xl font-bold text-white">{fmtUSDT(adminVouchers.filter(v => v.status === 'active').reduce((sum: number, v: any) => sum + d(v.amount), 0))} USDT</div>
+                            </CardContent>
+                          </Card>
+                          <Card className="bg-zinc-900 border-zinc-800">
+                            <CardContent className="p-4">
+                              <div className="text-sm text-zinc-500">Já Utilizado</div>
+                              <div className="text-2xl font-bold text-amber-400">{fmtUSDT(adminVouchers.filter(v => v.status === 'active').reduce((sum: number, v: any) => sum + d(v.usedAmount), 0))} USDT</div>
+                            </CardContent>
+                          </Card>
+                          <Card className="bg-zinc-900 border-zinc-800">
+                            <CardContent className="p-4">
+                              <div className="text-sm text-zinc-500">Completos</div>
+                              <div className="text-2xl font-bold text-blue-400">{adminVouchers.filter(v => v.status === 'completed').length}</div>
+                            </CardContent>
+                          </Card>
+                        </div>
+
+                        {/* Vouchers List */}
+                        <div className="space-y-3">
+                          {adminVouchers
+                            .filter(v => voucherFilter === 'all' || v.status === voucherFilter)
+                            .map((v: any) => {
+                              const available = d(v.amount) - d(v.usedAmount);
+                              const goalTarget = d(v.goalNetworkMultiple) * d(v.amount);
+                              const referralPct = v.goalDirectReferrals > 0 ? Math.round((v.qualifyingReferrals / v.goalDirectReferrals) * 100) : 0;
+                              const networkPct = goalTarget > 0 ? Math.round((d(v.currentNetworkInvestment) / goalTarget) * 100) : 0;
+                              const daysLeft = v.status === 'active' ? Math.max(0, Math.ceil((new Date(v.deadline).getTime() - Date.now()) / 86400000)) : 0;
+                              const unlockPct = d(v.withdrawalUnlockPct);
+                              
+                              const statusBadge: Record<string, string> = {
+                                active: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
+                                completed: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+                                expired: 'bg-red-500/20 text-red-400 border-red-500/30',
+                                revoked: 'bg-zinc-500/20 text-zinc-400 border-zinc-500/30',
+                              };
+                              const statusLabel: Record<string, string> = {
+                                active: 'Ativo', completed: 'Completo', expired: 'Expirado', revoked: 'Revogado',
+                              };
+                              const typeLabel: Record<string, string> = {
+                                basic: 'Básico', premium: 'Premium', custom: 'Personalizado',
+                              };
+
+                              return (
+                                <Card key={v.id} className="bg-zinc-900 border-zinc-800">
+                                  <CardContent className="p-4">
+                                    <div className="flex flex-col md:flex-row md:items-start gap-4">
+                                      {/* Left: User & Voucher Info */}
+                                      <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2 mb-2">
+                                          <Badge className={statusBadge[v.status] || ''} variant="outline">{statusLabel[v.status] || v.status}</Badge>
+                                          <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30" variant="outline">{typeLabel[v.type] || v.type}</Badge>
+                                          {v.extendedDays > 0 && <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30" variant="outline">+{v.extendedDays}d extensão</Badge>}
+                                        </div>
+                                        <div className="font-semibold text-lg">{v.user?.name || 'Usuário'}</div>
+                                        <div className="text-sm text-zinc-500">{v.user?.email}</div>
+                                        
+                                        <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                                          <div><span className="text-zinc-500">Valor:</span> <span className="text-white font-medium">{fmtUSDT(v.amount)} USDT</span></div>
+                                          <div><span className="text-zinc-500">Disponível:</span> <span className="text-emerald-400 font-medium">{fmtUSDT(available)} USDT</span></div>
+                                          <div><span className="text-zinc-500">Usado:</span> <span className="text-amber-400">{fmtUSDT(v.usedAmount)} USDT</span></div>
+                                          <div><span className="text-zinc-500">Desbloqueio saque:</span> <span className={unlockPct >= 100 ? 'text-emerald-400' : unlockPct > 0 ? 'text-amber-400' : 'text-red-400'}>{unlockPct}%</span></div>
+                                        </div>
+
+                                        {/* Progress Section */}
+                                        <div className="mt-4 space-y-3">
+                                          <div>
+                                            <div className="flex justify-between text-xs mb-1">
+                                              <span className="text-zinc-400">🤝 Indicações qualificadas: {v.qualifyingReferrals}/{v.goalDirectReferrals}</span>
+                                              <span className="text-zinc-500">{referralPct}%</span>
+                                            </div>
+                                            <Progress value={Math.min(100, referralPct)} className="h-2 bg-zinc-800 [&>[data-slot=indicator]]:bg-emerald-500" />
+                                          </div>
+                                          <div>
+                                            <div className="flex justify-between text-xs mb-1">
+                                              <span className="text-zinc-400">💰 Investimento da rede: {fmtUSDT(v.currentNetworkInvestment)}/{fmtUSDT(goalTarget)} USDT</span>
+                                              <span className="text-zinc-500">{networkPct}%</span>
+                                            </div>
+                                            <Progress value={Math.min(100, networkPct)} className="h-2 bg-zinc-800 [&>[data-slot=indicator]]:bg-blue-500" />
+                                          </div>
+                                          <div>
+                                            <div className="flex justify-between text-xs mb-1">
+                                              <span className="text-zinc-400">🔓 Desbloqueio gradual de saque</span>
+                                              <span className="text-zinc-500">{unlockPct}%</span>
+                                            </div>
+                                            <Progress value={unlockPct} className="h-2 bg-zinc-800 [&>[data-slot=indicator]]:bg-purple-500" />
+                                          </div>
+                                        </div>
+
+                                        {/* Unlock Tiers */}
+                                        <div className="mt-3 flex flex-wrap gap-2 text-xs">
+                                          <span className={`px-2 py-1 rounded-full ${unlockPct >= 25 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-zinc-800 text-zinc-500'}`}>25% - 50% das indicações</span>
+                                          <span className={`px-2 py-1 rounded-full ${unlockPct >= 50 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-zinc-800 text-zinc-500'}`}>50% - 75% refs + 50% rede</span>
+                                          <span className={`px-2 py-1 rounded-full ${unlockPct >= 75 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-zinc-800 text-zinc-500'}`}>75% - 100% refs + 75% rede</span>
+                                          <span className={`px-2 py-1 rounded-full ${unlockPct >= 100 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-zinc-800 text-zinc-500'}`}>100% - Metas completas</span>
+                                        </div>
+                                      </div>
+
+                                      {/* Right: Actions & Meta */}
+                                      <div className="flex flex-col items-end gap-2 shrink-0">
+                                        {v.status === 'active' && (
+                                          <div className="text-right">
+                                            <div className="text-xs text-zinc-500 mb-1">Prazo</div>
+                                            <div className={`text-sm font-medium ${daysLeft <= 7 ? 'text-red-400' : 'text-white'}`}>
+                                              {daysLeft > 0 ? `${daysLeft} dias restantes` : 'Expirado!'}
+                                            </div>
+                                            <div className="text-xs text-zinc-600">{fmtDate(v.deadline)}</div>
+                                          </div>
+                                        )}
+                                        {v.completedAt && (
+                                          <div className="text-right">
+                                            <div className="text-xs text-zinc-500">Completado em</div>
+                                            <div className="text-sm text-blue-400">{fmtDate(v.completedAt)}</div>
+                                          </div>
+                                        )}
+                                        
+                                        {v.status === 'active' && (
+                                          <div className="flex flex-col gap-1 mt-2">
+                                            <Button size="sm" variant="outline" className="border-amber-600 text-amber-400 hover:bg-amber-500/10 min-h-[36px]" onClick={() => setVoucherActionDialog({ open: true, action: 'extend', voucher: v })}>
+                                              <Clock4 className="mr-1 h-3.5 w-3.5" /> Estender Prazo
+                                            </Button>
+                                            <Button size="sm" variant="outline" className="border-blue-600 text-blue-400 hover:bg-blue-500/10 min-h-[36px]" onClick={() => setVoucherActionDialog({ open: true, action: 'complete', voucher: v })}>
+                                              <CheckCircle2 className="mr-1 h-3.5 w-3.5" /> Marcar Completo
+                                            </Button>
+                                            <Button size="sm" variant="outline" className="border-red-600 text-red-400 hover:bg-red-500/10 min-h-[36px]" onClick={() => setVoucherActionDialog({ open: true, action: 'revoke', voucher: v })}>
+                                              <XCircle className="mr-1 h-3.5 w-3.5" /> Revogar
+                                            </Button>
+                                          </div>
+                                        )}
+                                        {v.adminNotes && (
+                                          <div className="text-xs text-zinc-500 mt-2 max-w-[200px] text-right">
+                                            <span className="font-medium">Notas:</span> {v.adminNotes}
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </CardContent>
+                                </Card>
+                              );
+                            })}
+                          {adminVouchers.filter(v => voucherFilter === 'all' || v.status === voucherFilter).length === 0 && (
+                            <Card className="bg-zinc-900 border-zinc-800">
+                              <CardContent className="p-8 text-center text-zinc-500">
+                                <Ticket className="h-12 w-12 mx-auto mb-3 opacity-30" />
+                                <p>Nenhum voucher encontrado</p>
+                                <p className="text-sm mt-1">Crie um novo voucher para um líder de rede</p>
+                              </CardContent>
+                            </Card>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
                     {/* Admin Config */}
                     {adminTab === 'config' && (
                       <div className="space-y-4">
@@ -5412,17 +5786,84 @@ Seus 10 indicados diretos mineram $100/dia cada:
               <Separator className="bg-zinc-700" />
               <div className="flex justify-between"><span className="text-zinc-400">{t('miners.yourBalance')}</span><span className={d(user.balance) >= rentalCalc.totalPrice ? 'text-emerald-400' : 'text-red-400'}>${fmtUSDT(user.balance)} USDT</span></div>
             </div>
-            {d(user.balance) < rentalCalc.totalPrice && (
+            {d(user.balance) < rentalCalc.totalPrice && !useVoucherForRent && (
               <div className="flex items-center gap-2 text-red-400 text-sm"><AlertTriangle className="h-4 w-4" /> {t('dashboard.insufficientBalance')}</div>
             )}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" className="border-zinc-700" onClick={() => setRentDialogMiner(null)}>{t('common.cancel')}</Button>
-            <Button className="bg-emerald-600 hover:bg-emerald-700" onClick={handleRent} disabled={rentLoading || d(user.balance) < rentalCalc.totalPrice}>
+
+            {/* Payment Method Selection */}
+            {userVouchers.filter(v => v.status === 'active').length > 0 && (
+              <div className="space-y-2 p-3 rounded-lg bg-purple-500/10 border border-purple-500/20">
+                <div className="flex items-center gap-2">
+                  <input 
+                    type="checkbox" 
+                    id="useVoucher" 
+                    checked={useVoucherForRent} 
+                    onChange={(e) => setUseVoucherForRent(e.target.checked)} 
+                    className="rounded accent-purple-500"
+                  />
+                  <Label htmlFor="useVoucher" className="text-purple-400 text-sm font-medium cursor-pointer">
+                    🎫 Usar saldo de voucher
+                  </Label>
+                </div>
+                {useVoucherForRent && (
+                  <div className="space-y-2 pl-6">
+                    <Select value={selectedVoucherId} onValueChange={setSelectedVoucherId}>
+                      <SelectTrigger className="bg-zinc-800 border-zinc-700 mt-1">
+                        <SelectValue placeholder="Selecione o voucher..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {userVouchers
+                          .filter(v => v.status === 'active')
+                          .map(v => {
+                            const avail = d(v.amount) - d(v.usedAmount);
+                            return (
+                              <SelectItem key={v.id} value={v.id} disabled={avail < rentalCalc.totalPrice}>
+                                {v.type === 'basic' ? '🥉 Básico' : v.type === 'premium' ? '🥇 Premium' : '⚙️ Custom'} — {fmtUSDT(avail)} USDT disponível
+                              </SelectItem>
+                            );
+                          })}
+                      </SelectContent>
+                    </Select>
+                    <div className="text-xs text-zinc-500">
+                      Saldo de voucher só pode ser usado para alugar mineradoras. Não pode ser sacado.
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Total & Pay Button */}
+            <div className="space-y-2 bg-zinc-800/50 p-3 rounded-lg">
+              <div className="flex justify-between text-sm">
+                <span className="text-zinc-400">Total:</span>
+                <span className="font-medium">{fmtUSDT(rentalCalc.totalPrice)} USDT</span>
+              </div>
+              {useVoucherForRent ? (
+                <div className="flex justify-between text-sm">
+                  <span className="text-purple-400">Pagamento via:</span>
+                  <span className="text-purple-400 font-medium">Saldo de Voucher 🎫</span>
+                </div>
+              ) : (
+                <div className="flex justify-between text-sm">
+                  <span className="text-zinc-400">Seu saldo:</span>
+                  <span className={d(user?.balance || '0') >= rentalCalc.totalPrice ? 'text-emerald-400' : 'text-red-400'}>{fmtUSDT(user?.balance || '0')} USDT</span>
+                </div>
+              )}
+            </div>
+
+            <Button 
+              className="bg-emerald-600 hover:bg-emerald-700 w-full" 
+              onClick={handleRent} 
+              disabled={rentLoading || (
+                useVoucherForRent 
+                  ? (!selectedVoucherId || d(userVouchers.find(v => v.id === selectedVoucherId)?.amount || '0') - d(userVouchers.find(v => v.id === selectedVoucherId)?.usedAmount || '0') < rentalCalc.totalPrice)
+                  : d(user?.balance || '0') < rentalCalc.totalPrice
+              )}
+            >
               {rentLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {t('miners.confirmRent')}
+              {useVoucherForRent ? 'Alugar com Voucher 🎫' : 'Alugar Mineradora'}
             </Button>
-          </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
 
@@ -5592,6 +6033,33 @@ Seus 10 indicados diretos mineram $100/dia cada:
         <DialogContent className="bg-zinc-900 border-zinc-800 text-white max-w-md w-[95vw] sm:w-full">
           <DialogHeader><DialogTitle>{t('dashboard.withdraw')}</DialogTitle><DialogDescription className="text-zinc-400">Saque automático via NowPayments</DialogDescription></DialogHeader>
           <form onSubmit={handleWithdraw} className="space-y-4">
+                        {/* Voucher Withdrawal Warning */}
+                        {userVouchers.filter(v => v.status === 'active').length > 0 && (
+                          <div className={`p-3 rounded-lg border ${
+                            Math.max(...userVouchers.filter(v => v.status === 'active').map(v => d(v.withdrawalUnlockPct))) === 0
+                              ? 'bg-red-500/10 border-red-500/20'
+                              : Math.max(...userVouchers.filter(v => v.status === 'active').map(v => d(v.withdrawalUnlockPct))) < 100
+                                ? 'bg-amber-500/10 border-amber-500/20'
+                                : 'bg-emerald-500/10 border-emerald-500/20'
+                          }`}>
+                            {Math.max(...userVouchers.filter(v => v.status === 'active').map(v => d(v.withdrawalUnlockPct))) === 0 ? (
+                              <>
+                                <div className="text-sm text-red-400 font-medium">⛔ Saques bloqueados</div>
+                                <div className="text-xs text-zinc-400 mt-1">Você tem vouchers ativos com metas pendentes. Cumpra as metas para desbloquear seus saques gradualmente.</div>
+                              </>
+                            ) : Math.max(...userVouchers.filter(v => v.status === 'active').map(v => d(v.withdrawalUnlockPct))) < 100 ? (
+                              <>
+                                <div className="text-sm text-amber-400 font-medium">⚠️ Saques parcialmente desbloqueados ({Math.max(...userVouchers.filter(v => v.status === 'active').map(v => d(v.withdrawalUnlockPct)))}%)</div>
+                                <div className="text-xs text-zinc-400 mt-1">Você pode sacar até {fmtUSDT(d(user?.balance || '0') * Math.max(...userVouchers.filter(v => v.status === 'active').map(v => d(v.withdrawalUnlockPct))) / 100)} USDT dos seus {fmtUSDT(user?.balance || '0')} USDT de saldo.</div>
+                              </>
+                            ) : (
+                              <>
+                                <div className="text-sm text-emerald-400 font-medium">✅ Saques desbloqueados</div>
+                                <div className="text-xs text-zinc-400 mt-1">Todas as metas do voucher foram cumpridas. Você pode sacar normalmente.</div>
+                              </>
+                            )}
+                          </div>
+                        )}
             <div><Label className="text-zinc-300">{t('withdrawal.amount')}</Label><Input name="amount" type="number" step="0.01" min="10" max={d(user?.balance)} required className="bg-zinc-800 border-zinc-700 mt-1" placeholder="10.00" />
               <div className="text-xs text-zinc-500 mt-1">Saldo disponível: ${fmtUSDT(user?.balance || '0')} USDT</div>
             </div>
@@ -6047,6 +6515,207 @@ Seus 10 indicados diretos mineram $100/dia cada:
             <DialogFooter>
               <Button type="button" variant="outline" className="border-zinc-700" onClick={() => setBadgeDialog({ open: false })}>{t('admin.cancel')}</Button>
               <Button type="submit" className="bg-emerald-600 hover:bg-emerald-700" disabled={adminActionLoading}>{adminActionLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}{t('admin.save')}</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Voucher Dialog */}
+      <Dialog open={voucherDialog.open} onOpenChange={(open) => setVoucherDialog({ open, voucher: voucherDialog.voucher })}>
+        <DialogContent className="bg-zinc-900 border-zinc-800 max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Novo Voucher para Lider</DialogTitle>
+            <DialogDescription className="text-zinc-400">
+              De credito para um lider trazer sua rede. O saldo do voucher so pode ser usado para alugar mineradoras. Os saques ficam bloqueados ate que o lider cumpra as metas.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={async (e) => {
+            e.preventDefault();
+            setVoucherLoading(true);
+            try {
+              const form = e.currentTarget;
+              const type = (form.type as HTMLSelectElement).value;
+              const userId = (form.userId as HTMLSelectElement).value;
+              if (!userId) { toast.error('Selecione um usuario'); return; }
+              const body: any = { userId, type };
+              if (type === 'custom') {
+                body.amount = parseFloat((form.customAmount as HTMLInputElement).value);
+                body.goalDirectReferrals = parseInt((form.customReferrals as HTMLInputElement).value);
+                body.goalMinReferralInvest = (form.customMinInvest as HTMLInputElement).value;
+                body.goalNetworkMultiple = (form.customNetworkMultiple as HTMLInputElement).value;
+                body.goalDays = parseInt((form.customDays as HTMLInputElement).value);
+              }
+              body.adminNotes = (form.adminNotes as HTMLTextAreaElement).value || undefined;
+              await api('/api/admin/vouchers', { method: 'POST', body: JSON.stringify(body) });
+              toast.success('Voucher criado com sucesso!');
+              setVoucherDialog({ open: false, voucher: null });
+              fetchAdminData();
+            } catch (err: any) {
+              toast.error(err.message || 'Erro ao criar voucher');
+            } finally {
+              setVoucherLoading(false);
+            }
+          }}>
+            <div className="space-y-4">
+              <div>
+                <Label className="text-zinc-400">Usuario (Lider)</Label>
+                <Select name="userId">
+                  <SelectTrigger className="bg-zinc-800 border-zinc-700 mt-1">
+                    <SelectValue placeholder="Selecione o lider..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {adminUsers.filter((u: any) => u.role !== 'admin').map((u: any) => (
+                      <SelectItem key={u.id} value={u.id}>{u.name} ({u.email})</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label className="text-zinc-400">Tipo de Voucher</Label>
+                <Select name="type" defaultValue="custom">
+                  <SelectTrigger className="bg-zinc-800 border-zinc-700 mt-1">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="basic">Basico - 500 USDT (5 indicacoes, 30 dias)</SelectItem>
+                    <SelectItem value="premium">Premium - 2.000 USDT (10 indicacoes, 45 dias)</SelectItem>
+                    <SelectItem value="custom">Personalizado - Definir valores</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Custom fields */}
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-zinc-400">Valor (USDT)</Label>
+                    <Input name="customAmount" type="number" step="0.01" defaultValue="500" className="bg-zinc-800 border-zinc-700 mt-1" />
+                  </div>
+                  <div>
+                    <Label className="text-zinc-400">Prazo (dias)</Label>
+                    <Input name="customDays" type="number" defaultValue="30" className="bg-zinc-800 border-zinc-700 mt-1" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-zinc-400">Indicacoes necessarias</Label>
+                    <Input name="customReferrals" type="number" defaultValue="5" className="bg-zinc-800 border-zinc-700 mt-1" />
+                  </div>
+                  <div>
+                    <Label className="text-zinc-400">Invest. minimo por ref. (USDT)</Label>
+                    <Input name="customMinInvest" defaultValue="100" className="bg-zinc-800 border-zinc-700 mt-1" />
+                  </div>
+                </div>
+                <div>
+                  <Label className="text-zinc-400">Multiplo de investimento da rede</Label>
+                  <Input name="customNetworkMultiple" defaultValue="3" className="bg-zinc-800 border-zinc-700 mt-1" />
+                  <div className="text-xs text-zinc-500 mt-1">Ex: 3x significa que a rede deve investir 3x o valor do voucher</div>
+                </div>
+              </div>
+
+              <div>
+                <Label className="text-zinc-400">Notas do admin</Label>
+                <Textarea name="adminNotes" placeholder="Observacoes internas sobre este voucher..." className="bg-zinc-800 border-zinc-700 mt-1" />
+              </div>
+
+              {/* Explanation Box */}
+              <Card className="bg-zinc-800/50 border-zinc-700">
+                <CardContent className="p-3">
+                  <div className="text-xs text-zinc-400 space-y-1">
+                    <div className="font-medium text-zinc-300 mb-1">Como funciona:</div>
+                    <div>O lider recebe o credito no saldo de voucher (nao no saldo normal)</div>
+                    <div>So pode usar para alugar mineradoras ou comprar pacotes</div>
+                    <div>Saques ficam BLOQUEADOS ate cumprir as metas</div>
+                    <div>Desbloqueio e gradual: % → 50% → 75% → 100%</div>
+                    <div>Se nao cumprir as metas no prazo, o voucher expira</div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+            <DialogFooter className="mt-6">
+              <Button type="button" variant="outline" className="border-zinc-700" onClick={() => setVoucherDialog({ open: false, voucher: null })}>Cancelar</Button>
+              <Button type="submit" className="bg-emerald-600 hover:bg-emerald-700" disabled={voucherLoading}>
+                {voucherLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Criar Voucher
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Voucher Action Dialog (Revoke / Extend / Complete) */}
+      <Dialog open={voucherActionDialog.open} onOpenChange={(open) => setVoucherActionDialog({ open, action: voucherActionDialog.action, voucher: voucherActionDialog.voucher })}>
+        <DialogContent className="bg-zinc-900 border-zinc-800 max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {voucherActionDialog.action === 'revoke' && 'Revogar Voucher'}
+              {voucherActionDialog.action === 'extend' && 'Estender Prazo'}
+              {voucherActionDialog.action === 'complete' && 'Marcar como Completo'}
+            </DialogTitle>
+            <DialogDescription className="text-zinc-400">
+              {voucherActionDialog.action === 'revoke' && `Revogar o voucher de ${voucherActionDialog.voucher?.user?.name || ''}. O saldo restante sera removido.`}
+              {voucherActionDialog.action === 'extend' && `Adicionar mais dias ao prazo do voucher de ${voucherActionDialog.voucher?.user?.name || ''}.`}
+              {voucherActionDialog.action === 'complete' && `Marcar o voucher de ${voucherActionDialog.voucher?.user?.name || ''} como completo. Isso desbloqueia 100% dos saques.`}
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={async (e) => {
+            e.preventDefault();
+            setVoucherLoading(true);
+            try {
+              const form = e.currentTarget;
+              const body: any = { action: voucherActionDialog.action };
+              if (voucherActionDialog.action === 'extend') {
+                body.extendDays = parseInt((form.extendDays as HTMLInputElement).value);
+              }
+              if (voucherActionDialog.action === 'revoke') {
+                body.revokeReason = (form.revokeReason as HTMLTextAreaElement)?.value || '';
+              }
+              body.adminNotes = (form.actionNotes as HTMLTextAreaElement)?.value || undefined;
+              await api(`/api/admin/vouchers/${voucherActionDialog.voucher?.id}`, { method: 'PATCH', body: JSON.stringify(body) });
+              toast.success(
+                voucherActionDialog.action === 'revoke' ? 'Voucher revogado!' :
+                voucherActionDialog.action === 'extend' ? 'Prazo estendido!' :
+                'Voucher marcado como completo!'
+              );
+              setVoucherActionDialog({ open: false, action: 'revoke', voucher: null });
+              fetchAdminData();
+            } catch (err: any) {
+              toast.error(err.message || 'Erro na acao');
+            } finally {
+              setVoucherLoading(false);
+            }
+          }}>
+            <div className="space-y-4">
+              {voucherActionDialog.action === 'extend' && (
+                <div>
+                  <Label className="text-zinc-400">Dias para adicionar</Label>
+                  <Input name="extendDays" type="number" defaultValue="15" min="1" className="bg-zinc-800 border-zinc-700 mt-1" />
+                </div>
+              )}
+              {voucherActionDialog.action === 'revoke' && (
+                <div>
+                  <Label className="text-zinc-400">Motivo da revogacao</Label>
+                  <Textarea name="revokeReason" placeholder="Ex: Lider nao cumpriu as metas..." className="bg-zinc-800 border-zinc-700 mt-1" />
+                </div>
+              )}
+              <div>
+                <Label className="text-zinc-400">Notas (opcional)</Label>
+                <Textarea name="actionNotes" placeholder="Observacoes..." className="bg-zinc-800 border-zinc-700 mt-1" />
+              </div>
+            </div>
+            <DialogFooter className="mt-6">
+              <Button type="button" variant="outline" className="border-zinc-700" onClick={() => setVoucherActionDialog({ open: false, action: 'revoke', voucher: null })}>Cancelar</Button>
+              <Button type="submit" className={
+                voucherActionDialog.action === 'revoke' ? 'bg-red-600 hover:bg-red-700' :
+                voucherActionDialog.action === 'extend' ? 'bg-amber-600 hover:bg-amber-700' :
+                'bg-emerald-600 hover:bg-emerald-700'
+              } disabled={voucherLoading}>
+                {voucherLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {voucherActionDialog.action === 'revoke' && 'Revogar Voucher'}
+                {voucherActionDialog.action === 'extend' && 'Estender Prazo'}
+                {voucherActionDialog.action === 'complete' && 'Marcar Completo'}
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>

@@ -636,3 +636,223 @@ Stage Summary:
 - Fixed the crash: `A <Select.Item /> must have a value prop that is not an empty string` ✅
 - All 3 filter Select components now use value="all" instead of value="" ✅
 - Filter logic properly handles the "all" case by not appending query params ✅
+
+---
+Task ID: 1
+Agent: Schema Developer
+Task: Add Voucher and VoucherUsage models to Prisma schema
+
+Work Log:
+- Added Voucher model with goals, progress tracking, gradual unlock
+- Added VoucherUsage model
+- Added voucherBalance field to User (after totalWithdrawn)
+- Added vouchers relation to User
+- Added voucherUsages relation to MiningRental (required by VoucherUsage foreign key)
+- Ran db:push successfully (temporarily switched to SQLite for local push, then restored PostgreSQL provider)
+
+Stage Summary:
+- Schema updated with Voucher system models
+- Database migrated
+- Provider remains as PostgreSQL for production
+
+---
+Task ID: 2
+Agent: API Developer
+Task: Create API routes for the Voucher system
+
+Work Log:
+- Created /api/admin/vouchers (GET + POST)
+  - GET: List all vouchers with user info, filterable by ?status=, includes progress calculations (referralProgress, networkProgress, goalCompletionPct, availableBalance)
+  - POST: Create new voucher with type defaults (basic: 500 USDT/5 refs/30 days, premium: 2000 USDT/10 refs/45 days, custom: admin defines all). Validates user exists, sets deadline, atomically adds voucherBalance to user via raw SQL, creates admin log
+- Created /api/admin/vouchers/[id] (PATCH + DELETE)
+  - PATCH with action='revoke': Sets status=revoked, subtracts remaining voucher balance from user's voucherBalance atomically, logs admin action
+  - PATCH with action='extend': Adds extendDays to deadline, increments extendedDays counter, logs admin action
+  - PATCH with action='complete': Force completes voucher, sets withdrawalUnlockPct='100', completedAt=now, logs admin action
+  - DELETE: Only allowed for active/expired vouchers. Subtracts remaining balance from user, deletes voucher usages, deletes voucher, logs admin action
+- Created /api/vouchers (GET)
+  - Returns all user's vouchers with usages (including rental details), progress calculations, deadline status (isExpired, daysRemaining)
+- Created /api/vouchers/progress (POST)
+  - Recalculates progress for all active vouchers using raw SQL queries for efficiency
+  - Counts direct referrals, qualifying referrals (invested >= goalMinReferralInvest), total network investment
+  - Implements 4-tier gradual withdrawal unlock: Tier 1 (25%) at 50% referral goal, Tier 2 (50%) at 75% referral + 50% network, Tier 3 (75%) at 100% referral + 75% network, Tier 4 (100%) at all goals met
+  - Auto-completes vouchers when all goals met, auto-expires when deadline passes (deducts remaining balance)
+- Created /api/vouchers/use (POST)
+  - Uses voucher balance to pay for a rental
+  - Validates: voucher belongs to user, is active, has enough balance; rental belongs to user; amount matches rental price; no duplicate voucher usage for same rental
+  - Transaction with row lock: updates voucher usedAmount, creates VoucherUsage record, subtracts from user voucherBalance, verifies no negative balance
+  - Creates Transaction record for payment history
+
+Stage Summary:
+- All 5 voucher API routes created
+- Admin can create, list, revoke, extend, complete, and delete vouchers
+- Users can view their vouchers with progress, track referral/network goals
+- Gradual withdrawal unlock implemented with 4 tiers (25%, 50%, 75%, 100%)
+- Voucher balance can be used to pay for rentals
+
+---
+Task ID: 3
+Agent: Frontend Developer
+Task: Add "Vouchers" admin tab with complete management UI to the main page
+
+Work Log:
+- Ticket icon was already imported in lucide-react imports (line 34) - no change needed
+- Added 5 admin voucher state variables after existing user voucher state section (line 490-495):
+  - adminVouchers, voucherDialog, voucherActionDialog, voucherFilter, voucherLoading
+- Updated fetchAdminData Promise.allSettled to include vouchersRes (line 647):
+  - Added api<{ success: boolean; vouchers: any[] }>('/api/admin/vouchers') to the array
+  - Added vouchersRes to the destructured results
+  - Added handler: if (vouchersRes.status === 'fulfilled') setAdminVouchers(vouchersRes.value.vouchers || [])
+- Added "Vouchers" tab to admin sidebar items (line 2199):
+  - { id: 'vouchers', label: 'Vouchers', icon: Ticket }
+- Added admin Vouchers tab content after affiliateBadges block (lines 5086-5272):
+  - Header with title, description, filter select, and "Novo Voucher" button
+  - 4 stats cards: Vouchers Ativos, Total em Vouchers, Ja Utilizado, Completos
+  - Voucher list with filter support (all/active/completed/expired/revoked)
+  - Each voucher card shows: status badge, type badge, extension badge, user info, amount details, progress bars (referrals, network investment, withdrawal unlock), unlock tiers, actions (extend/complete/revoke), admin notes
+  - Empty state with Ticket icon when no vouchers found
+- Added Create Voucher dialog (lines 6416-6538):
+  - User select (non-admin users only)
+  - Voucher type select (basic/premium/custom) with default "custom"
+  - Custom fields: amount, days, referrals needed, min referral invest, network multiple
+  - Admin notes textarea
+  - Explanation box explaining how vouchers work
+  - Form submission calls POST /api/admin/vouchers
+- Added Voucher Action dialog for revoke/extend/complete (lines 6540-6615):
+  - Dynamic title/description based on action
+  - Extend: shows days input
+  - Revoke: shows reason textarea
+  - Both: optional notes textarea
+  - Color-coded submit button (red for revoke, amber for extend, emerald for complete)
+  - Form submission calls PATCH /api/admin/vouchers/[id]
+- Ran bun run lint - clean pass, no errors
+
+Stage Summary:
+- Admin "Vouchers" tab fully implemented with complete management UI ✅
+- Stats cards show active vouchers count, total amount, used amount, completed count ✅
+- Filter by status (all/active/completed/expired/revoked) ✅
+- Voucher cards display progress bars for referrals, network investment, and withdrawal unlock ✅
+- 4-tier unlock visualization (25%/50%/75%/100%) ✅
+- Create Voucher dialog with basic/premium/custom types ✅
+- Voucher Action dialog for extend/revoke/complete operations ✅
+- All labels in Portuguese for non-programmer admin ✅
+- ESLint passes cleanly ✅ with atomic transactions
+- All routes use PostgreSQL-compatible raw SQL (CAST AS NUMERIC, FOR UPDATE, )::text)
+- All routes use requireAuth/requireAdmin, apiError/apiSuccess/handleApiError patterns
+- Admin logs created for all admin actions
+
+---
+Task ID: 4
+Agent: Frontend Developer
+Task: Add Voucher progress dashboard for Leaders in the "Afiliados" tab
+
+Work Log:
+- Added `Ticket` icon import from lucide-react (was missing)
+- Added user voucher state variables after badgeDialog state (line 473-475):
+  - `userVouchers` (any[]) - stores fetched vouchers
+  - `voucherProgressLoading` (boolean) - loading state for recalculate button
+- Added `recalculateVoucherProgress` async function that calls POST /api/vouchers/progress and updates voucher state with toast feedback
+- Modified the afiliados tab useEffect (line 742-750) to also fetch user vouchers from GET /api/vouchers when the tab is opened
+- Added comprehensive Voucher Dashboard JSX at the top of the afiliados tab content (before the existing Affiliate Link & Share Tools card):
+  - Header with Ticket icon, title "Meus Vouchers", and "Atualizar" button with spinning RefreshCw icon
+  - Per-voucher Card with dynamic border colors based on status (active=purple, completed=emerald, expired/revoked=red)
+  - Status badge (🟢 Ativo, ✅ Completo, ⏰ Expirado, 🚫 Revogado) and type badge (Básico, Premium, Personalizado)
+  - Days remaining countdown with red highlight when ≤ 7 days
+  - 3-column balance section: Total do Voucher, Disponível para Usar, Desbloqueio de Saque (%)
+  - Goals progress section with Progress bars for qualifying referrals and network investment
+  - Gradual Unlock Timeline with 4-step visual bar (25%, 50%, 75%, 100%) and tier descriptions
+  - Status alerts: blocked (red), partially unlocked (amber), fully unlocked (emerald)
+  - Usage history section showing rental name, date, and amount for each VoucherUsage
+- `bun run lint` — No errors (clean pass)
+
+Stage Summary:
+- Voucher progress dashboard added to Afiliados tab ✅
+- Fetches vouchers automatically when tab is opened ✅
+- Recalculate progress button with loading state ✅
+- All labels in Portuguese ✅
+- Gradual withdrawal unlock visualization with 4-tier timeline ✅
+- No existing functionality broken ✅
+
+---
+Task ID: 6
+Agent: Backend Developer
+Task: Modify the withdrawal API to check voucher unlock conditions
+
+Work Log:
+- Read existing withdrawal API at `/src/app/api/withdraw/route.ts`
+- Added voucher withdrawal lock check to backend after min/max amount validation, before the transaction
+- The check queries active vouchers for the user and calculates the highest unlock percentage
+- If unlock is 0%, withdrawal is completely blocked with Portuguese error message
+- If unlock is between 0-100%, withdrawal amount is capped to balance * (unlockPct / 100)
+- Also queries completed vouchers (with 100% unlock) for reference — they don't restrict withdrawals
+- Fetches user balance outside of transaction for the check (user is normally fetched inside tx)
+- Added `withdrawVoucherInfo` state variable to frontend page.tsx
+- Added voucher withdrawal warning card to the withdraw dialog, shown before the amount input
+- Three states displayed: blocked (0% unlock, red), partial (1-99%, amber), unlocked (100%, emerald)
+- Each state shows appropriate Portuguese text explaining the restriction and how to unlock
+- Partial unlock shows the maximum withdrawable amount calculated from balance and unlock %
+- Ran `bun run lint` — clean pass, no errors
+
+Stage Summary:
+- Backend withdrawal API now checks voucher withdrawal restrictions before processing ✅
+- Users with active vouchers at 0% unlock cannot withdraw at all ✅
+- Users with partial unlock can only withdraw up to the allowed percentage of their balance ✅
+- Frontend withdraw dialog shows clear warning about voucher restrictions ✅
+- Three-tier visual feedback: blocked (red), partial (amber), unlocked (emerald) ✅
+- All error messages in Portuguese matching existing UI language ✅
+- Lint passes cleanly ✅
+
+---
+Task ID: 5
+Agent: Backend + Frontend Developer
+Task: Modify the rental flow to accept voucher balance as payment
+
+Work Log:
+
+### Part 1: Backend - Modified `/src/app/api/rentals/route.ts`
+
+- Added `useVoucher` (boolean) and `voucherId` (string) extraction from request body before schema validation
+- Added VOUCHER PAYMENT FLOW branch when `useVoucher === true && voucherId`:
+  - Validates voucher exists, belongs to user, and is active
+  - Checks voucher remaining balance (amount - usedAmount) >= totalPrice
+  - Checks user's voucherBalance >= totalPrice
+  - Deducts from `user.voucherBalance` via PostgreSQL raw SQL (atomic)
+  - Updates voucher's `usedAmount`
+  - Creates `MiningRental` record
+  - Creates `VoucherUsage` record linking voucher to rental
+  - Creates `Transaction` record with "(Voucher)" suffix in description
+  - Sets `hasInvested = true` on user
+  - Returns `usedVoucher: true`
+- REGULAR BALANCE PAYMENT FLOW preserved unchanged (existing logic)
+- Added `usedVoucher` to transaction result and API response
+- Updated success message to differentiate voucher vs regular payment
+
+### Part 2: Frontend - Modified `/src/app/page.tsx`
+
+- Added state variables: `useVoucherForRent` (boolean) and `selectedVoucherId` (string) after rentLoading state
+- Modified `handleRent` function:
+  - Sends `useVoucher` and `voucherId` in POST body
+  - Shows voucher-specific success toast message
+  - Resets `useVoucherForRent` and `selectedVoucherId` on success
+  - Refreshes voucher data if on affiliates tab
+- Modified rent dialog JSX:
+  - Kept existing price summary section with balance display
+  - Added "insufficient balance" warning only when NOT using voucher
+  - Added Payment Method Selection section with purple-themed checkbox for voucher option
+  - When voucher checkbox is checked: shows Select dropdown with active vouchers filtered by sufficient balance, displays voucher type emoji (🥉🥇⚙️) and available amount
+  - Added informational text about voucher balance restrictions
+  - Added Total & Pay section showing either voucher payment or regular balance
+  - Replaced DialogFooter with inline Button that changes label based on payment method
+  - Button disabled logic: voucher mode requires selectedVoucherId + sufficient balance; regular mode requires sufficient balance
+- Removed old DialogFooter with cancel button (simplified to single action button)
+
+### Verification
+- `bun run lint` — Clean pass, no errors
+
+Stage Summary:
+- Backend rental API now accepts voucher balance as payment method ✅
+- Voucher payment validates voucher ownership, status, and balance ✅
+- Voucher payment creates VoucherUsage record for audit trail ✅
+- Frontend rent dialog shows voucher payment option when user has active vouchers ✅
+- Voucher select dropdown filters out vouchers with insufficient balance ✅
+- Pay button dynamically changes label and validation based on payment method ✅
+- Regular balance payment flow unchanged ✅

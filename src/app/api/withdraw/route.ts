@@ -30,6 +30,45 @@ export async function POST(request: NextRequest) {
       return apiError(`Saque máximo: ${dusdt(maxWithdrawal)} USDT`);
     }
 
+    // ========== VOUCHER WITHDRAWAL LOCK CHECK ==========
+    // Check if user has active vouchers with withdrawal restrictions
+    const activeVouchers = await db.voucher.findMany({
+      where: { userId: session.userId, status: 'active' },
+    });
+
+    if (activeVouchers.length > 0) {
+      // Calculate the maximum withdrawal unlock percentage from all active vouchers
+      // Use the HIGHEST unlock percentage (most permissive)
+      let maxUnlockPct = 0;
+      for (const v of activeVouchers) {
+        const unlockPct = d(v.withdrawalUnlockPct);
+        if (unlockPct > maxUnlockPct) maxUnlockPct = unlockPct;
+      }
+
+      // If unlock is 0%, user cannot withdraw at all
+      if (maxUnlockPct === 0) {
+        return apiError('Seus saques estão bloqueados. Você tem vouchers ativos com metas pendentes. Cumpra as metas para desbloquear gradualmente seus saques.');
+      }
+
+      // If unlock is less than 100%, limit the withdrawal amount
+      if (maxUnlockPct < 100) {
+        // Fetch user balance for the check
+        const userForCheck = await db.user.findUnique({ where: { id: session.userId } });
+        if (userForCheck) {
+          const maxWithdrawable = d(userForCheck.balance) * (maxUnlockPct / 100);
+          if (data.amount > maxWithdrawable) {
+            return apiError(`Com base no desbloqueio gradual (${maxUnlockPct}%), você pode sacar no máximo ${dusdt(maxWithdrawable)} USDT dos seus ${dusdt(d(userForCheck.balance))} USDT de saldo. Continue cumprindo as metas para desbloquear mais.`);
+          }
+        }
+      }
+    }
+
+    // Also check if user has a completed voucher but their unlock hasn't been processed yet
+    const completedVouchers = await db.voucher.findMany({
+      where: { userId: session.userId, status: 'completed', withdrawalUnlockPct: '100' },
+    });
+    // Completed vouchers with 100% unlock don't restrict withdrawals
+
     // Use transaction for atomicity - deduct balance immediately with row lock
     const result = await db.$transaction(async (tx) => {
       // PostgreSQL: acquire row-level lock to prevent concurrent balance modifications

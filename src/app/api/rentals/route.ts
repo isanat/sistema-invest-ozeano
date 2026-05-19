@@ -33,6 +33,8 @@ export async function POST(request: NextRequest) {
     const session = await requireAuth();
     const body = await request.json();
     const data = rentalSchema.parse(body);
+    const useVoucher = body.useVoucher === true;
+    const voucherId = body.voucherId as string | undefined;
 
     // Use transaction for atomicity with row lock
     const result = await db.$transaction(async (tx) => {
@@ -83,70 +85,147 @@ export async function POST(request: NextRequest) {
 
       profitShare = d(miner.profitSharePct);
 
-      // Validate balance
-      const currentBalance = d(user.balance);
-      if (currentBalance < totalPrice) {
-        throw new Error(`Saldo insuficiente. Necessário: ${dusdt(totalPrice)} USDT, Disponível: ${dusdt(currentBalance)} USDT`);
-      }
+      if (useVoucher && voucherId) {
+        // ========== VOUCHER PAYMENT FLOW ==========
+        const voucher = await tx.voucher.findUnique({ where: { id: voucherId } });
+        if (!voucher) throw new Error('Voucher não encontrado');
+        if (voucher.userId !== session.userId) throw new Error('Este voucher não pertence ao seu usuário');
+        if (voucher.status !== 'active') throw new Error(`Voucher não está ativo (status: ${voucher.status})`);
 
-      // Deduct balance atomically (PostgreSQL)
-      await tx.$executeRaw`UPDATE "User" SET balance = (CAST(balance AS NUMERIC) - ${totalPrice})::text, "totalInvested" = (CAST("totalInvested" AS NUMERIC) + ${totalPrice})::text, "hasInvested" = true WHERE id = ${session.userId} AND CAST(balance AS NUMERIC) >= ${totalPrice}`;
-      // Verify the deduction actually happened
-      const updatedUser = await tx.user.findUnique({ where: { id: session.userId } });
-      if (d(updatedUser!.balance) === currentBalance) {
-        throw new Error(`Saldo insuficiente. Necessário: ${dusdt(totalPrice)} USDT`);
-      }
+        const voucherAmount = d(voucher.amount);
+        const usedAmount = d(voucher.usedAmount);
+        const remainingBalance = voucherAmount - usedAmount;
 
-      // Create rental
-      const startDate = new Date();
-      const endDate = new Date();
-      endDate.setDate(endDate.getDate() + data.days);
+        if (remainingBalance < totalPrice) {
+          throw new Error(`Saldo insuficiente no voucher. Disponível: ${dusdt(remainingBalance)} USDT, Necessário: ${dusdt(totalPrice)} USDT`);
+        }
 
-      const rental = await tx.miningRental.create({
-        data: {
-          userId: session.userId,
-          minerId: data.minerId,
-          planId: data.planId || null,
-          startDate,
-          endDate,
-          amount: ds(totalPrice),
-          hashShare: '100',
-          dailyReturn: ds(dailyReturn),
-          totalReturn: ds(totalReturn),
-          profitShare: ds(profitShare),
-          status: 'active',
-        },
-        include: {
-          miner: {
-            select: { id: true, name: true, model: true, coin: true },
+        // Check user voucher balance matches
+        const userVoucherBalance = d(user.voucherBalance);
+        if (userVoucherBalance < totalPrice) {
+          throw new Error(`Saldo de voucher insuficiente. Disponível: ${dusdt(userVoucherBalance)} USDT`);
+        }
+
+        // Deduct from user's voucherBalance (PostgreSQL)
+        await tx.$executeRaw`UPDATE "User" SET "voucherBalance" = (CAST("voucherBalance" AS NUMERIC) - ${totalPrice})::text, "totalInvested" = (CAST("totalInvested" AS NUMERIC) + ${totalPrice})::text, "hasInvested" = true WHERE id = ${session.userId}`;
+
+        // Update voucher usedAmount
+        const newUsedAmount = usedAmount + totalPrice;
+        await tx.voucher.update({
+          where: { id: voucherId },
+          data: { usedAmount: dusdt(newUsedAmount) },
+        });
+
+        // Create rental
+        const startDate = new Date();
+        const endDate = new Date();
+        endDate.setDate(endDate.getDate() + data.days);
+
+        const rental = await tx.miningRental.create({
+          data: {
+            userId: session.userId,
+            minerId: data.minerId,
+            planId: data.planId || null,
+            startDate,
+            endDate,
+            amount: ds(totalPrice),
+            hashShare: '100',
+            dailyReturn: ds(dailyReturn),
+            totalReturn: ds(totalReturn),
+            profitShare: ds(profitShare),
+            status: 'active',
           },
-          plan: {
-            select: { id: true, name: true, days: true },
+          include: {
+            miner: { select: { id: true, name: true, model: true, coin: true } },
+            plan: { select: { id: true, name: true, days: true } },
           },
-        },
-      });
+        });
 
-      // Create transaction record
-      await tx.transaction.create({
-        data: {
-          userId: session.userId,
-          type: 'rental_payment',
-          amount: ds(totalPrice),
-          status: 'completed',
-          description: `Locação ${rental.miner.name} - ${data.days} dias${discount > 0 ? ` (${discount}% desconto)` : ''}`,
-          referenceId: rental.id,
-          referenceType: 'MiningRental',
-        },
-      });
+        // Create VoucherUsage record
+        await tx.voucherUsage.create({
+          data: {
+            voucherId,
+            rentalId: rental.id,
+            amount: dusdt(totalPrice),
+          },
+        });
 
-      return { rental, totalPrice, dailyReturn, totalReturn };
+        // Create transaction record
+        await tx.transaction.create({
+          data: {
+            userId: session.userId,
+            type: 'rental_payment',
+            amount: ds(totalPrice),
+            status: 'completed',
+            description: `Locação ${rental.miner.name} - ${data.days} dias (Voucher)${discount > 0 ? ` (${discount}% desconto)` : ''}`,
+            referenceId: rental.id,
+            referenceType: 'MiningRental',
+          },
+        });
+
+        return { rental, totalPrice, dailyReturn, totalReturn, usedVoucher: true };
+
+      } else {
+        // ========== REGULAR BALANCE PAYMENT FLOW (existing) ==========
+        const currentBalance = d(user.balance);
+        if (currentBalance < totalPrice) {
+          throw new Error(`Saldo insuficiente. Necessário: ${dusdt(totalPrice)} USDT, Disponível: ${dusdt(currentBalance)} USDT`);
+        }
+
+        // Deduct balance atomically (PostgreSQL)
+        await tx.$executeRaw`UPDATE "User" SET balance = (CAST(balance AS NUMERIC) - ${totalPrice})::text, "totalInvested" = (CAST("totalInvested" AS NUMERIC) + ${totalPrice})::text, "hasInvested" = true WHERE id = ${session.userId} AND CAST(balance AS NUMERIC) >= ${totalPrice}`;
+        // Verify the deduction actually happened
+        const updatedUser = await tx.user.findUnique({ where: { id: session.userId } });
+        if (d(updatedUser!.balance) === currentBalance) {
+          throw new Error(`Saldo insuficiente. Necessário: ${dusdt(totalPrice)} USDT`);
+        }
+
+        // Create rental
+        const startDate = new Date();
+        const endDate = new Date();
+        endDate.setDate(endDate.getDate() + data.days);
+
+        const rental = await tx.miningRental.create({
+          data: {
+            userId: session.userId,
+            minerId: data.minerId,
+            planId: data.planId || null,
+            startDate,
+            endDate,
+            amount: ds(totalPrice),
+            hashShare: '100',
+            dailyReturn: ds(dailyReturn),
+            totalReturn: ds(totalReturn),
+            profitShare: ds(profitShare),
+            status: 'active',
+          },
+          include: {
+            miner: { select: { id: true, name: true, model: true, coin: true } },
+            plan: { select: { id: true, name: true, days: true } },
+          },
+        });
+
+        // Create transaction record
+        await tx.transaction.create({
+          data: {
+            userId: session.userId,
+            type: 'rental_payment',
+            amount: ds(totalPrice),
+            status: 'completed',
+            description: `Locação ${rental.miner.name} - ${data.days} dias${discount > 0 ? ` (${discount}% desconto)` : ''}`,
+            referenceId: rental.id,
+            referenceType: 'MiningRental',
+          },
+        });
+
+        return { rental, totalPrice, dailyReturn, totalReturn, usedVoucher: false };
+      }
     });
 
     // Process affiliate commissions (outside transaction to avoid long locks)
     try {
       await processCommissions(session.userId, result.totalPrice, 'rental', result.rental.id);
     } catch (commError) {
-      // Don't fail the rental if commission processing fails
       console.error('Affiliate commission error:', commError);
     }
 
@@ -157,7 +236,8 @@ export async function POST(request: NextRequest) {
         dailyReturn: dusdt(result.dailyReturn),
         totalReturn: dusdt(result.totalReturn),
       },
-      message: 'Locação criada com sucesso!',
+      usedVoucher: result.usedVoucher,
+      message: result.usedVoucher ? 'Locação criada com saldo de voucher!' : 'Locação criada com sucesso!',
     }, 201);
   } catch (error) {
     return handleApiError(error);
