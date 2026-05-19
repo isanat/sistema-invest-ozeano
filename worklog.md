@@ -856,3 +856,37 @@ Stage Summary:
 - Voucher select dropdown filters out vouchers with insufficient balance ✅
 - Pay button dynamically changes label and validation based on payment method ✅
 - Regular balance payment flow unchanged ✅
+
+---
+Task ID: 3-6
+Agent: Main Agent
+Task: Frontend implementation - Admin Vouchers tab, Leader Dashboard, Rental + Withdrawal voucher integration
+
+Work Log:
+- Added Ticket icon import from lucide-react
+- Added admin voucher state variables (adminVouchers, voucherDialog, voucherActionDialog, voucherFilter, voucherLoading)
+- Added user voucher state variables (userVouchers, voucherProgressLoading)
+- Added useVoucherForRent, selectedVoucherId states for rental flow
+- Added withdrawVoucherInfo state for withdrawal flow
+- Added recalculateVoucherProgress function
+- Modified fetchAdminData to include voucher API fetch
+- Modified afiliados tab useEffect to also fetch user vouchers
+- Added "Vouchers" tab to admin sidebar (Ticket icon)
+- Built complete Admin Vouchers tab with: stats cards, filter dropdown, voucher cards with progress bars, action buttons (extend/complete/revoke), empty state
+- Built Create Voucher dialog with: user selector, type selector (basic/premium/custom), custom fields, admin notes, explanation box
+- Built Voucher Action dialog (revoke/extend/complete) with conditional fields
+- Built Leader Voucher Dashboard in Afiliados tab: per-voucher cards with progress bars, gradual unlock timeline, status alerts, usage history
+- Modified rental flow: added voucher payment checkbox, voucher selector, dynamic payment method display
+- Modified rental API (POST /api/rentals): added useVoucher/voucherId support, voucher balance deduction, VoucherUsage creation
+- Modified withdrawal flow: added voucher lock warning in dialog (blocked/partial/unlocked states)
+- Modified withdrawal API (POST /api/withdraw): added voucher unlock check, max withdrawable calculation
+- All labels in Portuguese, non-technical for admin
+
+Stage Summary:
+- Complete Voucher System implemented end-to-end ✅
+- Admin can create/manage vouchers with clear Portuguese UI ✅
+- Leaders see their voucher progress with gradual unlock visualization ✅
+- Rental flow supports voucher balance payment ✅
+- Withdrawal flow respects voucher unlock tiers ✅
+- Deployed to Coolify, API verified working ✅
+- Production site: https://flashminings.com
