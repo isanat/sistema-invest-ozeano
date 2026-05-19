@@ -15,10 +15,10 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Mining Protocol - Plataforma de Hashpower",
-  description: "Plataforma de alquiler de hashpower con retornos reales en USDT. Alquila mineros profesionales y recibe ganancias diarias.",
-  keywords: ["mining", "crypto", "hashpower", "USDT", "bitcoin", "minería", "criptomonedas"],
-  authors: [{ name: "Mining Protocol" }],
+  title: "PLATAFORMA ROI - Ozeano Invest",
+  description: "Plataforma de Copy Trading con retornos reales en USDT. Copia traders profesionales y recibe ganancias diarias.",
+  keywords: ["copy trading", "crypto", "ROI", "USDT", "bitcoin", "inversiones", "criptomonedas"],
+  authors: [{ name: "Ozeano Invest" }],
   icons: {
     icon: [
       { url: "/favicon.ico", sizes: "32x32" },
@@ -30,8 +30,8 @@ export const metadata: Metadata = {
   },
   manifest: "/site.webmanifest",
   openGraph: {
-    title: "Mining Protocol",
-    description: "Plataforma de alquiler de hashpower con retornos reales en USDT",
+    title: "PLATAFORMA ROI",
+    description: "Plataforma de Copy Trading con retornos reales en USDT",
     type: "website",
   },
 };

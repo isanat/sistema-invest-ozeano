@@ -890,3 +890,143 @@ Stage Summary:
 - Withdrawal flow respects voucher unlock tiers ✅
 - Deployed to Coolify, API verified working ✅
 - Production site: https://flashminings.com
+
+---
+Task ID: 3
+Agent: Bug Fix Agent
+Task: Fix deposit/withdraw API routes using wrong Investment model fields
+
+Work Log:
+- Identified critical bug: NowPayments deposit and withdraw routes were creating `Investment` records with fields that only exist on the `Deposit` model (type, method, network, txHash, destination, description, adminNotes, brlAmount, usdtRate, processedAt)
+- Confirmed from Prisma schema that `Investment` model has: id, userId, planId, amount, dailyRoi, dailyRoiPct, totalRoi, startDate, endDate, status, teamBonusPct
+- Confirmed from Prisma schema that `Deposit` model has: id, userId, amount, brlAmount, usdtRate, type, method, network, status, txHash, pixTxId, destination, description, adminNotes, processedBy, processedAt
+- Confirmed from Prisma schema that `NowPaymentsDeposit.depositId` (not investmentId) links to Deposit
+- Confirmed from Prisma schema that `NowPaymentsPayout.depositId` (not investmentId) links to Deposit
+
+Files Modified:
+
+1. `src/app/api/nowpayments/deposit/route.ts`
+   - Changed `db.investment.create()` → `db.deposit.create()` (line ~150)
+   - Changed variable name `investment` → `deposit`
+   - Changed link field from `investmentId: investment.id` → `depositId: deposit.id` (line ~166)
+   - Updated comment from "Create Investment record" → "Create Deposit record"
+   - Updated comment from "Link deposit to investment" → "Link NowPaymentsDeposit to Deposit"
+   - Updated response field from `investment` → `deposit`
+
+2. `src/app/api/nowpayments/withdraw/route.ts`
+   - Changed `tx.investment.create()` → `tx.deposit.create()` (line ~96)
+   - Changed variable name `investment` → `depositRecord`
+   - Changed `referenceType: 'Investment'` → `referenceType: 'Deposit'` (line ~123)
+   - Changed `investmentId: investment.id` → `depositId: depositRecord.id` in NowPaymentsPayout create (line ~138)
+   - Updated return variable from `investment` → `depositRecord`
+   - Updated response field from `result.investment` → `result.depositRecord`
+
+3. `src/app/api/nowpayments/webhook/route.ts`
+   - Payment confirmed section (lines ~197-207): Changed `deposit.investmentId` → `deposit.depositId`, `tx.investment.update()` → `tx.deposit.update()`
+   - Payment failed/expired section (lines ~242-251): Changed `deposit.investmentId` → `deposit.depositId`, `db.investment.update()` → `db.deposit.update()`
+   - Payout finished section (lines ~302-327): Changed `payout.investmentId` → `payout.depositId`, `db.investment.update()` → `db.deposit.update()`, `linkedInvestment` → `linkedDeposit`, `referenceType: 'Investment'` → `referenceType: 'Deposit'`
+   - Payout failed/rejected section (lines ~341-350): Changed `payout.investmentId` → `payout.depositId`, `tx.investment.update()` → `tx.deposit.update()`
+
+4. `src/app/api/nowpayments/user-deposits/route.ts`
+   - Changed `db.investment.findMany()` → `db.deposit.findMany()` (2 occurrences)
+   - Changed `db.investment.count()` → `db.deposit.count()`
+   - Changed `investmentId: { in: investmentIds }` → `depositId: { in: depositIds }`
+   - Changed `np.investmentId` → `np.depositId` in map construction
+   - Changed variable names from `investments` → `depositsData`, `investmentIds` → `depositIds`
+   - Changed `...inv` → `...dep` in spread
+
+5. `src/app/api/nowpayments/user-payouts/route.ts`
+   - Changed `db.investment.findMany()` → `db.deposit.findMany()` (2 occurrences)
+   - Changed `db.investment.count()` → `db.deposit.count()`
+   - Changed `investmentId: { in: investmentIds }` → `depositId: { in: depositIds }`
+   - Changed `np.investmentId` → `np.depositId` in map construction
+   - Changed variable names from `investments` → `depositsData`, `investmentIds` → `depositIds`
+   - Changed `...inv` → `...dep` in spread
+
+6. `src/app/api/nowpayments/statement/route.ts`
+   - Changed `db.investment.findMany()` → `db.deposit.findMany()`
+   - Changed variable names from `investments` → `deposits`, `invWhere` → `depWhere`
+   - Changed `inv.type` → `dep.type`, `inv.description` → `dep.description`, etc.
+   - Changed `referenceType: 'Investment'` → `referenceType: 'Deposit'`
+   - Changed entry ID prefix from `inv_` → `dep_`
+
+7. `src/app/api/nowpayments/status/route.ts`
+   - Changed `deposit.investmentId` → `deposit.depositId` in response (line ~100)
+   - Changed `payout.investmentId` → `payout.depositId` in response (line ~161)
+
+Verification:
+- Grep confirmed zero remaining `investmentId` or `db.investment` references in src/app/api/nowpayments/
+- TypeScript check passed (no type errors in changed files)
+- All 7 files now correctly use the `Deposit` model and `depositId` foreign key
+
+Stage Summary:
+- All NowPayments API routes now use the correct `Deposit` model instead of `Investment` ✅
+- All foreign key references changed from `investmentId` to `depositId` ✅
+- All `db.investment` queries changed to `db.deposit` ✅
+- All `referenceType: 'Investment'` changed to `referenceType: 'Deposit'` ✅
+- Webhook handler correctly updates `Deposit` records on payment/payout status changes ✅
+
+---
+Task ID: 2
+Agent: Branding Fix Agent
+Task: Fix Mining Protocol references - Replace all mining-specific terminology with copy trading/ROI terminology
+
+Work Log:
+- Fixed layout.tsx metadata:
+  - title: "Mining Protocol - Plataforma de Hashpower" → "PLATAFORMA ROI - Ozeano Invest"
+  - description: "Plataforma de alquiler de hashpower..." → "Plataforma de Copy Trading..."
+  - keywords: "mining, crypto, hashpower..." → "copy trading, crypto, ROI..."
+  - authors: "Mining Protocol" → "Ozeano Invest"
+  - OpenGraph title/description updated
+
+- Fixed API route files:
+  - deposit/route.ts: "FlashMining Deposit" → "Ozeano Invest Deposit"
+  - withdraw/route.ts: "Mining Protocol Withdrawal" → "Ozeano Invest Withdrawal" (2 instances)
+  - generate-address/route.ts: "FlashMining deposit address generation" → "Ozeano Invest deposit address generation"
+
+- Fixed page.tsx (6773 lines) - extensive replacements:
+  - 7 instances of "Mining Protocol" in branding (navbar, footer, headings, sidebar) → "PLATAFORMA ROI"
+  - Email: suporte@miningprotocol.com → suporte@ozeanoinvest.com
+  - Alt texts: "Mining Protocol - Banner/Rede" → "PLATAFORMA ROI - Banner/Rede"
+  - Placeholder: "ex: Mining Protocol" → "ex: PLATAFORMA ROI"
+  - 3 instances of "mineradoras" voucher text → "planos de copy trading"
+  - "Notificações de mineração" → "Notificações de ROI"
+  - "Faça seu primeiro depósito para começar a minerar" → "...começar a investir"
+  - "Comissão sobre lucro de mineração" → "Comissão sobre lucro de ROI"
+  - "Variação diária de mineração" → "Variação diária de ROI"
+  - "Alugar Mineradora" → "Investir em Plano"
+  - "Alugar com Voucher" → "Investir com Voucher"
+  - "Lucro Mineração" → "Lucro ROI"
+  - "🏭 Mineradoras Configuradas" → "📊 Traders Configurados"
+  - TH/s references (2 instances) → ROI%
+  - "Mineradora" table header → "Trader"
+  - "HashRate" table header → "Win Rate"
+  - "⛏️ Locação ativada" notification → "📈 Investimento ativado"
+  - "mining_profit" display text → "roi_profit"
+  - Multiple code comments: mining → trading/ROI
+  - WhatsApp share text: "🚀 Minere cripto com Mining Protocol" → "🚀 Invista com PLATAFORMA ROI"
+
+- Completely rewrote WhatsApp sharing text (3 versions - template literal, encodeURIComponent, JSX display):
+  - Platform: MINING PROTOCOL → PLATAFORMA ROI
+  - Focus: Mining/cloud mining → Copy trading/ROI
+  - Mineradoras ASIC (Antminer S21 XP, L9, etc.) → Planos de Investimento (Trader Iniciante, Intermediário, Avançado, Elite)
+  - "70% do lucro da mineração" → "Até 70% do lucro das operações"
+  - "Mineração 24/7" → "Copy trading 24/7"
+  - Affiliate program: 5 níveis → 11 níveis (with levels 6-11 at 0.1% each)
+  - Team bonuses: Ranks/Badges → Bronze/Silver/Gold team volume bonuses
+  - "mineram $100/dia" → "investem $100/dia"
+  - "comece a minerar cripto" → "comece a investir em copy trading"
+  - Tagline: "Minere o futuro ⛏️💎" → "Invista no futuro 💎"
+
+- Final verification:
+  - Zero instances of "Mining Protocol", "FlashMining", "mineradora", "hashpower", "ASIC", "TH/s", "GH/s", "mineração" in src/ (excluding .backup)
+  - All i18n translation keys remain functional (key names like 'mining.xxx' still work, translations already updated to copy trading terminology)
+
+Stage Summary:
+- All branding references updated from Mining Protocol → PLATAFORMA ROI ✅
+- All API descriptions updated from FlashMining → Ozeano Invest ✅
+- All mining-specific Portuguese/Spanish text replaced with copy trading terminology ✅
+- WhatsApp sharing text completely rewritten for copy trading/ROI focus with 11-level unilevel program ✅
+- Metadata (title, description, keywords, OpenGraph) updated ✅
+- page.tsx.backup file left untouched as requested ✅
+- No remaining "Mining Protocol", "FlashMining", "mineradora", "hashpower" references in active source code ✅

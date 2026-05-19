@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
             price_currency: 'usd',
             pay_currency: npCurrency,
             order_id: `addr_${session.userId}_${Date.now()}`,
-            order_description: `FlashMining deposit address generation`,
+            order_description: `Ozeano Invest deposit address generation`,
             ipn_callback_url: `${process.env.NEXT_PUBLIC_APP_URL || ''}/api/nowpayments/webhook`,
           });
           depositAddress = payment.pay_address;

@@ -12,36 +12,36 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '50');
     const skip = (page - 1) * limit;
 
-    // Get all withdrawal investments for the user
+    // Get all withdrawals for the user
     const where: any = { userId: session.userId, type: 'withdrawal' };
     if (status) where.status = status;
 
-    const [investments, total] = await Promise.all([
-      db.investment.findMany({
+    const [depositsData, total] = await Promise.all([
+      db.deposit.findMany({
         where,
         skip,
         take: limit,
         orderBy: { createdAt: 'desc' },
       }),
-      db.investment.count({ where }),
+      db.deposit.count({ where }),
     ]);
 
-    // Get NowPayments payout details for these investments
-    const investmentIds = investments.map((i) => i.id);
+    // Get NowPayments payout details for these withdrawals
+    const depositIds = depositsData.map((d) => d.id);
     const npPayouts = await db.nowPaymentsPayout.findMany({
       where: {
-        investmentId: { in: investmentIds },
+        depositId: { in: depositIds },
       },
     });
 
-    // Create a map of investmentId -> NowPaymentsPayout
-    const npPayoutMap = new Map(npPayouts.map((np) => [np.investmentId, np]));
+    // Create a map of depositId -> NowPaymentsPayout
+    const npPayoutMap = new Map(npPayouts.map((np) => [np.depositId, np]));
 
     // Combine data
-    const withdrawals = investments.map((inv) => {
-      const npPayout = npPayoutMap.get(inv.id) || null;
+    const withdrawals = depositsData.map((dep) => {
+      const npPayout = npPayoutMap.get(dep.id) || null;
       return {
-        ...inv,
+        ...dep,
         nowpayments: npPayout
           ? {
               id: npPayout.id,
@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
     });
 
     // Calculate summary stats
-    const allWithdrawals = await db.investment.findMany({
+    const allWithdrawals = await db.deposit.findMany({
       where: { userId: session.userId, type: 'withdrawal' },
       select: { amount: true, status: true },
     });

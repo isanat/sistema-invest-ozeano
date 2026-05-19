@@ -12,36 +12,36 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '50');
     const skip = (page - 1) * limit;
 
-    // Get all deposit investments for the user
+    // Get all deposits for the user
     const where: any = { userId: session.userId, type: 'deposit' };
     if (status) where.status = status;
 
-    const [investments, total] = await Promise.all([
-      db.investment.findMany({
+    const [depositsData, total] = await Promise.all([
+      db.deposit.findMany({
         where,
         skip,
         take: limit,
         orderBy: { createdAt: 'desc' },
       }),
-      db.investment.count({ where }),
+      db.deposit.count({ where }),
     ]);
 
-    // Get NowPayments deposit details for these investments
-    const investmentIds = investments.map((i) => i.id);
+    // Get NowPayments deposit details for these deposits
+    const depositIds = depositsData.map((d) => d.id);
     const npDeposits = await db.nowPaymentsDeposit.findMany({
       where: {
-        investmentId: { in: investmentIds },
+        depositId: { in: depositIds },
       },
     });
 
-    // Create a map of investmentId -> NowPaymentsDeposit
-    const npDepositMap = new Map(npDeposits.map((np) => [np.investmentId, np]));
+    // Create a map of depositId -> NowPaymentsDeposit
+    const npDepositMap = new Map(npDeposits.map((np) => [np.depositId, np]));
 
     // Combine data
-    const deposits = investments.map((inv) => {
-      const npDeposit = npDepositMap.get(inv.id) || null;
+    const deposits = depositsData.map((dep) => {
+      const npDeposit = npDepositMap.get(dep.id) || null;
       return {
-        ...inv,
+        ...dep,
         nowpayments: npDeposit
           ? {
               id: npDeposit.id,
@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
     });
 
     // Calculate summary stats
-    const allDeposits = await db.investment.findMany({
+    const allDeposits = await db.deposit.findMany({
       where: { userId: session.userId, type: 'deposit' },
       select: { amount: true, status: true },
     });

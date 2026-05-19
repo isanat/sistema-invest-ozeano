@@ -99,7 +99,7 @@ export async function POST(request: NextRequest) {
         price_currency: 'usd',
         pay_currency: npCurrency,
         order_id: orderId,
-        order_description: `FlashMining Deposit - ${amount} USDT`,
+        order_description: `Ozeano Invest Deposit - ${amount} USDT`,
         ipn_callback_url: `${process.env.NEXT_PUBLIC_APP_URL || ''}/api/nowpayments/webhook`,
       });
       depositAddress = payment.pay_address;
@@ -146,8 +146,8 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Create Investment record (pending)
-    const investment = await db.investment.create({
+    // Create Deposit record (pending)
+    const deposit = await db.deposit.create({
       data: {
         userId: session.userId,
         amount: ds(amount),
@@ -160,10 +160,10 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Link deposit to investment
+    // Link NowPaymentsDeposit to Deposit
     await db.nowPaymentsDeposit.update({
       where: { id: depositRecord.id },
-      data: { investmentId: investment.id },
+      data: { depositId: deposit.id },
     });
 
     // Calculate estimated fee
@@ -176,7 +176,7 @@ export async function POST(request: NextRequest) {
     return apiSuccess({
       depositId: depositRecord.id,
       deposit: depositRecord,
-      investment,
+      deposit,
       paymentInfo: {
         depositAddress,
         payCurrency: npCurrency,

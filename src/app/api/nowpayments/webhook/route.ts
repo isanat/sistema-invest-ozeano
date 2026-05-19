@@ -194,10 +194,10 @@ async function processPaymentWebhook(
       // Add to user balance
       await tx.$executeRaw`UPDATE "User" SET balance = (CAST(balance AS NUMERIC) + ${userAmount})::text, "totalInvested" = (CAST("totalInvested" AS NUMERIC) + ${userAmount})::text, "hasInvested" = true WHERE id = ${deposit.userId}`;
 
-      // Update investment status if linked
-      if (deposit.investmentId) {
-        await tx.investment.update({
-          where: { id: deposit.investmentId },
+      // Update deposit status if linked
+      if (deposit.depositId) {
+        await tx.deposit.update({
+          where: { id: deposit.depositId },
           data: {
             status: 'confirmed',
             txHash: `nowpayments_${paymentId}`,
@@ -238,10 +238,10 @@ async function processPaymentWebhook(
     // Mark deposit as failed
     updateData.paymentStatus = paymentStatus;
 
-    // Update investment status if linked
-    if (deposit.investmentId) {
-      await db.investment.update({
-        where: { id: deposit.investmentId },
+    // Update deposit status if linked
+    if (deposit.depositId) {
+      await db.deposit.update({
+        where: { id: deposit.depositId },
         data: {
           status: paymentStatus === 'expired' ? 'cancelled' : 'rejected',
           adminNotes: `NowPayments: pagamento ${paymentStatus}`,
@@ -299,10 +299,10 @@ async function processPayoutWebhook(
       ? JSON.stringify(body.withdrawals)
       : payout.txHash;
 
-    // Update linked investment
-    if (payout.investmentId) {
-      await db.investment.update({
-        where: { id: payout.investmentId },
+    // Update linked deposit
+    if (payout.depositId) {
+      await db.deposit.update({
+        where: { id: payout.depositId },
         data: {
           status: 'confirmed',
           processedAt: new Date(),
@@ -311,15 +311,15 @@ async function processPayoutWebhook(
     }
 
     // Update linked transaction
-    const linkedInvestment = payout.investmentId
-      ? await db.investment.findUnique({ where: { id: payout.investmentId } })
+    const linkedDeposit = payout.depositId
+      ? await db.deposit.findUnique({ where: { id: payout.depositId } })
       : null;
 
-    if (linkedInvestment) {
+    if (linkedDeposit) {
       await db.transaction.updateMany({
         where: {
-          referenceId: linkedInvestment.id,
-          referenceType: 'Investment',
+          referenceId: linkedDeposit.id,
+          referenceType: 'Deposit',
           type: 'withdrawal',
         },
         data: { status: 'completed' },
@@ -337,10 +337,10 @@ async function processPayoutWebhook(
       // Refund balance
       await tx.$executeRaw`UPDATE "User" SET balance = (CAST(balance AS NUMERIC) + ${refundAmount})::text, "totalWithdrawn" = (CAST("totalWithdrawn" AS NUMERIC) - ${d(payout.amount)})::text WHERE id = ${payout.userId}`;
 
-      // Update investment
-      if (payout.investmentId) {
-        await tx.investment.update({
-          where: { id: payout.investmentId },
+      // Update deposit
+      if (payout.depositId) {
+        await tx.deposit.update({
+          where: { id: payout.depositId },
           data: {
             status: 'rejected',
             adminNotes: `NowPayments: saque ${payoutStatus}`,

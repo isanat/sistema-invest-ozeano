@@ -92,8 +92,8 @@ export async function POST(request: NextRequest) {
       const usdtBrlRate = await getUSDTBRLRate();
       const brlAmount = amount * usdtBrlRate;
 
-      // Create Investment record (withdrawal)
-      const investment = await tx.investment.create({
+      // Create Deposit record (withdrawal)
+      const depositRecord = await tx.deposit.create({
         data: {
           userId: session.userId,
           amount: ds(amount),
@@ -119,8 +119,8 @@ export async function POST(request: NextRequest) {
           usdtRate: ds(usdtBrlRate),
           status: 'pending',
           description: `Saque solicitado - NowPayments ${currency.toUpperCase()}${fee > 0 ? ` (taxa: ${dusdt(fee)} USDT)` : ''}`,
-          referenceId: investment.id,
-          referenceType: 'Investment',
+          referenceId: depositRecord.id,
+          referenceType: 'Deposit',
         },
       });
 
@@ -134,12 +134,12 @@ export async function POST(request: NextRequest) {
           payoutStatus: 'CREATED',
           fee: ds(fee + npFee),
           netAmount: ds(netAmount - npFee),
-          payoutDescription: `Mining Protocol Withdrawal - ${amount} USDT`,
-          investmentId: investment.id,
+          payoutDescription: `Ozeano Invest Withdrawal - ${amount} USDT`,
+          depositId: depositRecord.id,
         },
       });
 
-      return { investment, payoutRecord, fee, netAmount, npFee };
+      return { depositRecord, payoutRecord, fee, netAmount, npFee };
     });
 
     // Attempt to create NowPayments payout (outside transaction to avoid blocking)
@@ -153,7 +153,7 @@ export async function POST(request: NextRequest) {
             currency: npCurrency,
             amount: Math.max(0.01, cryptoAmount), // Ensure minimum amount
             ipn_callback_url: `${process.env.NEXT_PUBLIC_APP_URL || ''}/api/nowpayments/webhook`,
-            payout_description: `Mining Protocol Withdrawal - ${amount} USDT`,
+            payout_description: `Ozeano Invest Withdrawal - ${amount} USDT`,
           }],
           `Withdrawal for user ${session.userId}`
         );
@@ -177,7 +177,7 @@ export async function POST(request: NextRequest) {
     }
 
     return apiSuccess({
-      withdrawal: result.investment,
+      withdrawal: result.depositRecord,
       payout: result.payoutRecord,
       fee: dusdt(result.fee),
       netAmount: dusdt(result.netAmount),

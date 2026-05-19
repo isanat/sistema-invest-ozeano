@@ -843,14 +843,14 @@ export default function PlataformaROI() {
           addNotification({ type: 'withdrawal', title: '📤 Saque processado', message: tx.description || `-$${d(tx.amount).toFixed(2)} USDT`, amount: tx.amount });
         }
       } else if (tx.type === 'investment') {
-        addNotification({ type: 'investment', title: '⛏️ Locação ativada', message: tx.description || `$${d(tx.amount).toFixed(2)} USDT`, amount: tx.amount });
+        addNotification({ type: 'investment', title: '📈 Investimento ativado', message: tx.description || `$${d(tx.amount).toFixed(2)} USDT`, amount: tx.amount });
       }
     }
   }, [transactions, user, addNotification]);
 
   // ==========================================
   // REAL-TIME POLLING: Auto-refresh user data every 30 seconds
-  // Detects new mining earnings and shows flash animation + notification
+  // Detects new ROI earnings and shows flash animation + notification
   // ==========================================
   useEffect(() => {
     if (!user) return;
@@ -870,13 +870,13 @@ export default function PlataformaROI() {
             const oldTotalMined = d(user.totalRoi);
             const newTotalMined = d(data.user.totalRoi);
 
-            // Detect new earnings (balance increased from mining)
+            // Detect new earnings (balance increased from ROI)
             if (newBalance > oldBalance && oldTotalMined < newTotalMined) {
               const earningsDiff = newBalance - oldBalance;
               setRoiFlash(earningsDiff);
               // Auto-dismiss flash after 5 seconds
               setTimeout(() => setRoiFlash(null), 5000);
-              // Push notification for mining earnings
+              // Push notification for ROI earnings
               addNotification({ type: 'roi', title: '💰 ROI Diário', message: `+$${earningsDiff.toFixed(4)} USDT creditado`, amount: earningsDiff.toFixed(8) });
             }
 
@@ -893,7 +893,7 @@ export default function PlataformaROI() {
           }
         }
 
-        // Also refresh transactions to show new mining_profit entries
+        // Also refresh transactions to show new roi_profit entries
         const txRes = await fetch('/api/transactions?limit=10');
         if (txRes.ok) {
           const txData = await txRes.json();
@@ -943,7 +943,7 @@ export default function PlataformaROI() {
   }, [user, hasActiveRentals]);
 
   // ==========================================
-  // TODAY'S EARNINGS: Fetch from mining history
+  // TODAY'S EARNINGS: Fetch from ROI history
   // ==========================================
   useEffect(() => {
     if (!user) return;
@@ -1709,7 +1709,7 @@ export default function PlataformaROI() {
 
   // ==========================================
   // LIVE MINING OPERATION SIMULATION
-  // Simulates real-time mining activity visuals
+  // Simulates real-time trading activity visuals
   // Updates every second for immersive experience
   // Must be placed AFTER activeInvestments useMemo to avoid TDZ error
   // The base earnings come from accumulatedEarnings (calculated, never resets)
@@ -1737,7 +1737,7 @@ export default function PlataformaROI() {
     let feedIdCounter = 0;
     let blockCounter = 0;
 
-    // Main 1-second tick for the live mining simulation
+    // Main 1-second tick for the live trading simulation
     const liveInterval = setInterval(() => {
       // Update cumulative earnings (daily rate / 86400 seconds)
       const totalDailyRate = activeInvestments.reduce((sum, r) => sum + d(r.dailyReturn), 0);
@@ -1893,7 +1893,7 @@ export default function PlataformaROI() {
           <nav className="relative z-10 flex items-center justify-between px-4 sm:px-6 py-4 max-w-7xl mx-auto gap-2">
             <div className="flex items-center gap-2">
               <Bot className="h-7 w-7 text-cyan-400" />
-              <span className="text-xl font-bold">Mining Protocol</span>
+              <span className="text-xl font-bold">PLATAFORMA ROI</span>
             </div>
             <div className="flex items-center gap-3">
               <DropdownMenu>
@@ -1927,7 +1927,7 @@ export default function PlataformaROI() {
           <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 pt-16 sm:pt-20 pb-24 sm:pb-32 text-center">
             <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
               <h1 className="text-4xl sm:text-5xl md:text-7xl font-extrabold mb-6">
-                <span className="bg-gradient-to-r from-emerald-400 via-emerald-300 to-green-400 bg-clip-text text-transparent">Mining Protocol</span>
+                <span className="bg-gradient-to-r from-emerald-400 via-emerald-300 to-green-400 bg-clip-text text-transparent">PLATAFORMA ROI</span>
               </h1>
               <p className="text-lg sm:text-xl md:text-2xl text-zinc-300 mb-8 sm:mb-10 max-w-2xl mx-auto">
                 {t('landing.hero.subtitle')}
@@ -1989,7 +1989,7 @@ export default function PlataformaROI() {
           </div>
         </section>
 
-        {/* MINERS PREVIEW */}
+        {/* TRADERS PREVIEW */}
         {landingTraders.length > 0 && (
           <section className="py-12 sm:py-24 bg-zinc-900/50">
             <div className="max-w-7xl mx-auto px-4 sm:px-6">
@@ -2137,7 +2137,7 @@ export default function PlataformaROI() {
               <div>
                 <div className="flex items-center gap-2 mb-4">
                   <Bot className="h-6 w-6 text-cyan-400" />
-                  <span className="text-lg font-bold">Mining Protocol</span>
+                  <span className="text-lg font-bold">PLATAFORMA ROI</span>
                 </div>
                 <p className="text-sm text-zinc-400">{t('landing.hero.subtitle')}</p>
               </div>
@@ -2156,13 +2156,13 @@ export default function PlataformaROI() {
               <div>
                 <h4 className="font-semibold mb-3">Suporte</h4>
                 <ul className="space-y-2 text-sm text-zinc-400">
-                  <li>suporte@miningprotocol.com</li><li>Telegram</li><li>Discord</li>
+                  <li>suporte@ozeanoinvest.com</li><li>Telegram</li><li>Discord</li>
                 </ul>
               </div>
             </div>
             <Separator className="bg-zinc-800 mb-8" />
             <div className="flex flex-col md:flex-row justify-between items-center text-sm text-zinc-500">
-              <p>&copy; {new Date().getFullYear()} Mining Protocol. {t('landing.footer.rights')}</p>
+              <p>&copy; {new Date().getFullYear()} PLATAFORMA ROI. {t('landing.footer.rights')}</p>
               <p>Feito com 💚 no Brasil</p>
             </div>
           </div>
@@ -2218,7 +2218,7 @@ export default function PlataformaROI() {
             </Button>
             <div className="flex items-center gap-2">
               <Bot className="h-6 w-6 text-cyan-400" />
-              <span className="font-bold text-lg hidden sm:inline">Mining Protocol</span>
+              <span className="font-bold text-lg hidden sm:inline">PLATAFORMA ROI</span>
             </div>
           </div>
           <div className="flex items-center gap-2 sm:gap-3">
@@ -2272,7 +2272,7 @@ export default function PlataformaROI() {
                     <div className="flex flex-col items-center justify-center py-8 text-zinc-500">
                       <Bell className="h-8 w-8 mb-2 opacity-30" />
                       <p className="text-sm">Nenhuma notificação</p>
-                      <p className="text-xs mt-1">Notificações de mineração, depósitos e comissões aparecerão aqui</p>
+                      <p className="text-xs mt-1">Notificações de ROI, depósitos e comissões aparecerão aqui</p>
                     </div>
                   ) : (
                     <div className="divide-y divide-zinc-800/50">
@@ -2381,7 +2381,7 @@ export default function PlataformaROI() {
                 <div className="p-4 flex items-center justify-between border-b border-zinc-800">
                   <div className="flex items-center gap-2">
                     <Bot className="h-6 w-6 text-cyan-400" />
-                    <span className="font-bold">Mining Protocol</span>
+                    <span className="font-bold">PLATAFORMA ROI</span>
                   </div>
                   <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(false)}><X className="h-5 w-5" /></Button>
                 </div>
@@ -2492,7 +2492,7 @@ export default function PlataformaROI() {
                       </Card>
                     </div>
 
-                    {/* Mining Status Bar: Today's Earnings + Countdown */}
+                    {/* ROI Status Bar: Today's Earnings + Countdown */}
                     {mounted && activeInvestments.length > 0 && (
                       <Card className="bg-gradient-to-r from-zinc-900 to-zinc-900/80 border-zinc-800">
                         <CardContent className="p-4">
@@ -2550,7 +2550,7 @@ export default function PlataformaROI() {
                         <Bot className="mr-2 h-4 w-4" /> {t('dashboard.rentMiner')}
                       </Button>
                     </div>
-                    {/* Live Mining Operation Dashboard */}
+                    {/* Live Trading Operation Dashboard */}
                     {mounted && activeInvestments.length > 0 ? (
                       <div className="space-y-4">
                         {/* Live Operation Header */}
@@ -2600,7 +2600,7 @@ export default function PlataformaROI() {
                               <div className="bg-zinc-800/50 rounded-lg p-2.5 text-center">
                                 <div className="text-[10px] sm:text-xs text-zinc-500">{t('mining.totalHashrate')}</div>
                                 <div className="text-sm font-semibold text-white font-mono">
-                                  {activeInvestments.reduce((sum, r, i) => sum + (liveHashrates[i] || parseFloat(r.plan?.winRate || '0')), 0).toFixed(1)} TH/s
+                                  {activeInvestments.reduce((sum, r, i) => sum + (liveHashrates[i] || parseFloat(r.plan?.winRate || '0')), 0).toFixed(1)} ROI%
                                 </div>
                               </div>
                               <div className="bg-zinc-800/50 rounded-lg p-2.5 text-center">
@@ -2648,7 +2648,7 @@ export default function PlataformaROI() {
                           </CardContent>
                         </Card>
 
-                        {/* Individual Mining Rigs */}
+                        {/* Individual Trading Rigs */}
                         <div className="space-y-3">
                           {activeInvestments.map((r, idx) => {
                             const baseHashrate = parseFloat(r.plan?.winRate || '0');
@@ -2661,13 +2661,13 @@ export default function PlataformaROI() {
                             return (
                               <Card key={r.id} className="bg-zinc-900 border-zinc-800 hover:border-zinc-700 transition-colors relative overflow-hidden">
                                 <CardContent className="p-4">
-                                  {/* Animated mining indicator bar */}
+                                  {/* Animated trading indicator bar */}
                                   <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-emerald-500/50 to-transparent animate-pulse" />
 
                                   <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                                    {/* Mining Rig Visual */}
+                                    {/* Trading Rig Visual */}
                                     <div className="flex items-center gap-3 flex-1 min-w-0">
-                                      {/* Animated mining rig icon */}
+                                      {/* Animated trading icon */}
                                       <div className="relative w-12 h-12 flex-shrink-0">
                                         <div className="w-12 h-12 bg-zinc-800 rounded-xl flex items-center justify-center border border-zinc-700">
                                           <div className="text-lg font-bold text-cyan-400">{coinIcon(r.plan.coin)}</div>
@@ -2693,11 +2693,11 @@ export default function PlataformaROI() {
 
                                     {/* Live Metrics Grid */}
                                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
-                                      {/* Hashrate */}
+                                      {/* Win Rate */}
                                       <div className="bg-zinc-800/60 rounded-lg p-2 text-center">
                                         <div className="text-[10px] text-zinc-500 uppercase tracking-wider">{t('mining.hashrate')}</div>
                                         <div className="text-sm font-semibold font-mono text-white">{currentHR.toFixed(1)}</div>
-                                        <div className="text-[10px] text-zinc-500">TH/s</div>
+                                        <div className="text-[10px] text-zinc-500">ROI%</div>
                                         <div className="w-full bg-zinc-700 rounded-full h-1 mt-1">
                                           <div className={`h-1 rounded-full transition-all duration-500 ${hrPercent > 97 ? 'bg-cyan-500' : hrPercent > 93 ? 'bg-amber-500' : 'bg-red-500'}`} style={{ width: `${Math.min(100, hrPercent)}%` }} />
                                         </div>
@@ -2871,7 +2871,7 @@ export default function PlataformaROI() {
                       ))}
                     </div>
 
-                    {/* Miners with integrated plans */}
+                    {/* Copy Traders with integrated plans */}
                     {copyTraders
                       .filter(m => m.isActive && (plansFilter === 'ALL' || m.riskLevel === plansFilter))
                       .length === 0 && !dataLoading && (
@@ -3150,7 +3150,7 @@ export default function PlataformaROI() {
                           <div className="text-center py-12">
                             <Banknote className="h-12 w-12 text-zinc-600 mx-auto mb-3" />
                             <p className="text-zinc-400">Nenhuma fatura encontrada</p>
-                            <p className="text-zinc-500 text-sm mt-1">Faça seu primeiro depósito para começar a minerar</p>
+                            <p className="text-zinc-500 text-sm mt-1">Faça seu primeiro depósito para começar a investir</p>
                           </div>
                         ) : (
                           <div className="divide-y divide-zinc-800 max-h-[600px] overflow-y-auto">
@@ -3587,7 +3587,7 @@ export default function PlataformaROI() {
                                           'bg-zinc-500/10 text-zinc-400'
                                         }`}>
                                           {entry.type === 'deposit' ? 'Depósito' :
-                                           entry.type === 'roi_profit' ? 'Lucro Mineração' :
+                                           entry.type === 'roi_profit' ? 'Lucro ROI' :
                                            entry.type === 'affiliate_commission' ? 'Comissão' :
                                            entry.type === 'withdrawal' ? 'Saque' :
                                            entry.type === 'investment' ? 'Aluguel' :
@@ -3679,7 +3679,7 @@ export default function PlataformaROI() {
                                 <div className="flex items-center justify-between">
                                   <div>
                                     <h3 className="text-lg font-semibold flex items-center gap-2"><Ticket className="h-5 w-5 text-purple-400" /> Meus Vouchers</h3>
-                                    <p className="text-sm text-zinc-500 mt-1">Saldo de voucher só pode ser usado para alugar mineradoras. Saques desbloqueiam conforme você cumpre as metas.</p>
+                                    <p className="text-sm text-zinc-500 mt-1">Saldo de voucher só pode ser usado para investir em planos de copy trading. Saques desbloqueiam conforme você cumpre as metas.</p>
                                   </div>
                                   <Button variant="outline" className="border-zinc-700 text-purple-400 hover:bg-purple-500/10" onClick={recalculateVoucherProgress} disabled={voucherProgressLoading}>
                                     <RefreshCw className={`mr-2 h-4 w-4 ${voucherProgressLoading ? 'animate-spin' : ''}`} /> Atualizar
@@ -3850,7 +3850,7 @@ export default function PlataformaROI() {
                               <div className="flex flex-wrap gap-2">
                                 {typeof window !== 'undefined' && (() => {
                                   const link = `${window.location.origin}?ref=${affiliateData?.code || user.affiliateCode}`;
-                                  const text = encodeURIComponent('🚀 Minere cripto com Mining Protocol! Use meu link e comece a ganhar:');
+                                  const text = encodeURIComponent('🚀 Invista com PLATAFORMA ROI! Use meu link e comece a ganhar:');
                                   return (
                                     <>
                                       <a href={`https://wa.me/?text=${text}%20${encodeURIComponent(link)}`} target="_blank" rel="noopener noreferrer">
@@ -4240,7 +4240,7 @@ export default function PlataformaROI() {
                       </div>
                     )}
 
-                    {/* Admin Miners */}
+                    {/* Admin Copy Traders */}
                     {adminTab === 'copyTraders' && (
                       <div className="space-y-4">
                         <div className="flex justify-end gap-2">
@@ -4754,7 +4754,7 @@ export default function PlataformaROI() {
                                           <SelectItem value="roi_profit">
                                             <div className="flex flex-col items-start">
                                               <span className="font-medium">{t('admin.modeMiningProfit')}</span>
-                                              <span className="text-xs text-zinc-400">Commission on mining profits only</span>
+                                              <span className="text-xs text-zinc-400">Commission on ROI profits only</span>
                                             </div>
                                           </SelectItem>
                                           <SelectItem value="revenue_pool">
@@ -4832,10 +4832,10 @@ export default function PlataformaROI() {
                                           const bonusVal = configEdits['affiliate_investment_bonus_pct'] ?? (adminConfigs.find(c => c.key === 'affiliate_investment_bonus_pct')?.value ?? '2');
                                           try {
                                             const configsToSave = [
-                                              { key: 'affiliate_commission_mode', value: modeVal, type: 'string', description: 'Modo de comissão: system_margin, mining_profit, revenue_pool', category: 'affiliate' },
+                                              { key: 'affiliate_commission_mode', value: modeVal, type: 'string', description: 'Modo de comissão: system_margin, roi_profit, revenue_pool', category: 'affiliate' },
                                               { key: 'affiliate_system_margin_pct', value: marginVal, type: 'number', description: 'Margem do sistema (%) para modo system_margin', category: 'affiliate' },
                                               { key: 'affiliate_pool_revenue_pct', value: poolVal, type: 'number', description: '% da receita para pool de afiliados (modo revenue_pool)', category: 'affiliate' },
-                                              { key: 'affiliate_investment_bonus_pct', value: bonusVal, type: 'number', description: 'Bônus de locação (%) - comissão imediata quando referido aluga (modo mining_profit)', category: 'affiliate' },
+                                              { key: 'affiliate_investment_bonus_pct', value: bonusVal, type: 'number', description: 'Bônus de investimento (%) - comissão imediata quando referido investe (modo roi_profit)', category: 'affiliate' },
                                             ];
                                             await api('/api/admin/config', {
                                               method: 'PUT',
@@ -5094,7 +5094,7 @@ export default function PlataformaROI() {
                         <div className="flex items-center justify-between flex-wrap gap-3">
                           <div>
                             <h3 className="text-lg font-semibold">Vouchers para Líderes</h3>
-                            <p className="text-sm text-zinc-500 mt-1">Dê crédito para líderes trazerem redes. Eles só podem usar para alugar mineradoras. Saques são desbloqueados gradualmente conforme cumprem metas.</p>
+                            <p className="text-sm text-zinc-500 mt-1">Dê crédito para líderes trazerem redes. Eles só podem usar para investir em planos de copy trading. Saques são desbloqueados gradualmente conforme cumprem metas.</p>
                           </div>
                           <div className="flex gap-2">
                             <Select value={voucherFilter} onValueChange={setVoucherFilter}>
@@ -5391,7 +5391,7 @@ export default function PlataformaROI() {
                             <div className="relative">
                               <img
                                 src="/whatsapp-creative.png"
-                                alt="Mining Protocol - Banner Promocional"
+                                alt="PLATAFORMA ROI - Banner Promocional"
                                 className="w-full h-auto object-cover"
                               />
                               <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-zinc-900 to-transparent h-20" />
@@ -5406,7 +5406,7 @@ export default function PlataformaROI() {
                             <div className="relative">
                               <img
                                 src="/whatsapp-affiliate.png"
-                                alt="Mining Protocol - Rede de Afiliados"
+                                alt="PLATAFORMA ROI - Rede de Afiliados"
                                 className="w-full h-auto object-cover"
                               />
                               <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-zinc-900 to-transparent h-20" />
@@ -5428,31 +5428,31 @@ export default function PlataformaROI() {
                                   variant="outline"
                                   className="border-zinc-700 text-zinc-300 hover:text-white gap-1"
                                   onClick={() => {
-                                    const text = `⚡ *MINING PROTOCOL* ⚡
-*A Plataforma #1 de Mineração de Cripto em Nuvem*
+                                    const text = `⚡ *PLATAFORMA ROI* ⚡
+*A Plataforma #1 de Copy Trading e Investimentos em Cripto*
 
-⛏️ O que é o Mining Protocol?
+📈 O que é a PLATAFORMA ROI?
 
-É a plataforma de aluguel de hashpower mais avançada do mercado. Nossas mineradoras ASIC profissionais estão instaladas no país com a energia mais barata do mundo, garantindo máxima lucratividade para você!
+É a plataforma de copy trading mais avançada do mercado. Nossos traders profissionais operam 24/7 com estratégias validadas, garantindo máxima lucratividade para você!
 
 💰 Como funciona?
 
 1️⃣ Cadastre-se e deposite USDT (via PIX ou cripto)
-2️⃣ Escolha sua mineradora ASIC profissional
+2️⃣ Escolha seu plano de copy trading
 3️⃣ Receba lucros diários direto na sua carteira!
 
-🏭 Nossas Mineradoras:
-• Antminer S21 XP — 270 TH/s (BTC)
-• Antminer L9 — 16 GH/s (LTC)
-• IceRiver KS5L — 12 TH/s (KAS)
-• Antminer S21 — 200 TH/s (BTC)
+📊 Nossos Planos de Investimento:
+• Trader Iniciante — A partir de $50
+• Trader Intermediário — A partir de $200
+• Trader Avançado — A partir de $500
+• Trader Elite — A partir de $2000
 
-✅ Lucro diário garantido em USDT
-✅ 70% do lucro da mineração é seu
+✅ ROI diário garantido em USDT
+✅ Até 70% do lucro das operações é seu
 ✅ Pagamento via PIX ou USDT (TRC20/Polygon)
-✅ Mineração 24/7 sem preocupação
+✅ Copy trading 24/7 sem preocupação
 
-🔥 *PROGRAMA DE AFILIADOS — 5 NÍVEIS!*
+🔥 *PROGRAMA DE AFILIADOS — 11 NÍVEIS!*
 
 Ganhe comissões sobre TUDO que sua rede ganha:
 
@@ -5461,25 +5461,26 @@ Ganhe comissões sobre TUDO que sua rede ganha:
 🥉 Nível 3: 1.5%
 4️⃣ Nível 4: 0.5%
 5️⃣ Nível 5: 0.25%
+6️⃣ Nível 6 ao 11: 0.1% cada
 
 💡 Isso significa: Convide 10 pessoas, cada uma convida mais 10... Sua rede cresce exponencialmente e você ganha em TODOS os níveis!
 
+🏆 Bônus de Equipe!
+• Bronze: Volume de equipe $10.000+
+• Prata: Volume de equipe $50.000+
+• Ouro: Volume de equipe $200.000+
+
 📊 *Exemplo prático:*
-Seus 10 indicados diretos mineram $100/dia cada:
+Seus 10 indicados diretos investem $100/dia cada:
 → Você ganha 8% = $80/dia só no Nível 1!
 → Se cada um indicar 10 pessoas (Nível 2 = 100 pessoas):
 → Você ganha 3% dos lucros delas também!
-→ E assim por diante até o Nível 5...
-
-🏆 Sistema de Ranks e Badges!
-• Conquiste medalhas e bônus exclusivos
-• Suba de rank: Bronze → Prata → Ouro → Platina → Diamante
-• Participe de concursos com prêmios em dinheiro
+→ E assim por diante até o Nível 11...
 
 🚀 Comece agora mesmo!
-👉 Cadastre-se e comece a minerar cripto hoje!
+👉 Cadastre-se e comece a investir em copy trading hoje!
 
-*Mining Protocol — Minere o futuro.* ⛏️💎`;
+*PLATAFORMA ROI — Invista no futuro.* 💎`;
                                     navigator.clipboard.writeText(text);
                                     toast.success('Texto copiado! Cole no WhatsApp');
                                   }}
@@ -5490,7 +5491,7 @@ Seus 10 indicados diretos mineram $100/dia cada:
                                   size="sm"
                                   className="bg-green-600 hover:bg-green-700 text-white gap-1"
                                   onClick={() => {
-                                    const text = encodeURIComponent(`⚡ *MINING PROTOCOL* ⚡\n*A Plataforma #1 de Mineração de Cripto em Nuvem*\n\n⛏️ O que é o Mining Protocol?\n\nÉ a plataforma de aluguel de hashpower mais avançada do mercado. Nossas mineradoras ASIC profissionais estão instaladas no país com a energia mais barata do mundo, garantindo máxima lucratividade para você!\n\n💰 Como funciona?\n\n1️⃣ Cadastre-se e deposite USDT (via PIX ou cripto)\n2️⃣ Escolha sua mineradora ASIC profissional\n3️⃣ Receba lucros diários direto na sua carteira!\n\n🏭 Nossas Mineradoras:\n• Antminer S21 XP — 270 TH/s (BTC)\n• Antminer L9 — 16 GH/s (LTC)\n• IceRiver KS5L — 12 TH/s (KAS)\n• Antminer S21 — 200 TH/s (BTC)\n\n✅ Lucro diário garantido em USDT\n✅ 70% do lucro da mineração é seu\n✅ Pagamento via PIX ou USDT (TRC20/Polygon)\n✅ Mineração 24/7 sem preocupação\n\n🔥 *PROGRAMA DE AFILIADOS — 5 NÍVEIS!*\n\nGanhe comissões sobre TUDO que sua rede ganha:\n\n🥇 Nível 1 (Indicação direta): 8%\n🥈 Nível 2: 3%\n🥉 Nível 3: 1.5%\n4️⃣ Nível 4: 0.5%\n5️⃣ Nível 5: 0.25%\n\n💡 Isso significa: Convide 10 pessoas, cada uma convida mais 10... Sua rede cresce exponencialmente e você ganha em TODOS os níveis!\n\n📊 *Exemplo prático:*\nSeus 10 indicados diretos mineram $100/dia cada:\n→ Você ganha 8% = $80/dia só no Nível 1!\n→ Se cada um indicar 10 pessoas (Nível 2 = 100 pessoas):\n→ Você ganha 3% dos lucros delas também!\n→ E assim por diante até o Nível 5...\n\n🏆 Sistema de Ranks e Badges!\n• Conquiste medalhas e bônus exclusivos\n• Suba de rank: Bronze → Prata → Ouro → Platina → Diamante\n• Participe de concursos com prêmios em dinheiro\n\n🚀 Comece agora mesmo!\n👉 Cadastre-se e comece a minerar cripto hoje!\n\n*Mining Protocol — Minere o futuro.* ⛏️💎`);
+                                    const text = encodeURIComponent(`⚡ *PLATAFORMA ROI* ⚡\n*A Plataforma #1 de Copy Trading e Investimentos em Cripto*\n\n📈 O que é a PLATAFORMA ROI?\n\nÉ a plataforma de copy trading mais avançada do mercado. Nossos traders profissionais operam 24/7 com estratégias validadas, garantindo máxima lucratividade para você!\n\n💰 Como funciona?\n\n1️⃣ Cadastre-se e deposite USDT (via PIX ou cripto)\n2️⃣ Escolha seu plano de copy trading\n3️⃣ Receba lucros diários direto na sua carteira!\n\n📊 Nossos Planos de Investimento:\n• Trader Iniciante — A partir de $50\n• Trader Intermediário — A partir de $200\n• Trader Avançado — A partir de $500\n• Trader Elite — A partir de $2000\n\n✅ ROI diário garantido em USDT\n✅ Até 70% do lucro das operações é seu\n✅ Pagamento via PIX ou USDT (TRC20/Polygon)\n✅ Copy trading 24/7 sem preocupação\n\n🔥 *PROGRAMA DE AFILIADOS — 11 NÍVEIS!*\n\nGanhe comissões sobre TUDO que sua rede ganha:\n\n🥇 Nível 1 (Indicação direta): 8%\n🥈 Nível 2: 3%\n🥉 Nível 3: 1.5%\n4️⃣ Nível 4: 0.5%\n5️⃣ Nível 5: 0.25%\n6️⃣ Nível 6 ao 11: 0.1% cada\n\n💡 Isso significa: Convide 10 pessoas, cada uma convida mais 10... Sua rede cresce exponencialmente e você ganha em TODOS os níveis!\n\n🏆 Bônus de Equipe!\n• Bronze: Volume de equipe $10.000+\n• Prata: Volume de equipe $50.000+\n• Ouro: Volume de equipe $200.000+\n\n📊 *Exemplo prático:*\nSeus 10 indicados diretos investem $100/dia cada:\n→ Você ganha 8% = $80/dia só no Nível 1!\n→ Se cada um indicar 10 pessoas (Nível 2 = 100 pessoas):\n→ Você ganha 3% dos lucros delas também!\n→ E assim por diante até o Nível 11...\n\n🚀 Comece agora mesmo!\n👉 Cadastre-se e comece a investir em copy trading hoje!\n\n*PLATAFORMA ROI — Invista no futuro.* 💎`);
                                     window.open(`https://wa.me/?text=${text}`, '_blank');
                                   }}
                                 >
@@ -5501,31 +5502,31 @@ Seus 10 indicados diretos mineram $100/dia cada:
                           </CardHeader>
                           <CardContent>
                             <div className="bg-green-900/20 border border-green-500/20 rounded-xl p-4 sm:p-6 font-whatsapp text-sm sm:text-base leading-relaxed whitespace-pre-wrap text-zinc-200 max-h-[600px] overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
-{`⚡ *MINING PROTOCOL* ⚡
-*A Plataforma #1 de Mineração de Cripto em Nuvem*
+{`⚡ *PLATAFORMA ROI* ⚡
+*A Plataforma #1 de Copy Trading e Investimentos em Cripto*
 
-⛏️ O que é o Mining Protocol?
+📈 O que é a PLATAFORMA ROI?
 
-É a plataforma de aluguel de hashpower mais avançada do mercado. Nossas mineradoras ASIC profissionais estão instaladas no país com a energia mais barata do mundo, garantindo máxima lucratividade para você!
+É a plataforma de copy trading mais avançada do mercado. Nossos traders profissionais operam 24/7 com estratégias validadas, garantindo máxima lucratividade para você!
 
 💰 Como funciona?
 
 1️⃣ Cadastre-se e deposite USDT (via PIX ou cripto)
-2️⃣ Escolha sua mineradora ASIC profissional
+2️⃣ Escolha seu plano de copy trading
 3️⃣ Receba lucros diários direto na sua carteira!
 
-🏭 Nossas Mineradoras:
-• Antminer S21 XP — 270 TH/s (BTC)
-• Antminer L9 — 16 GH/s (LTC)
-• IceRiver KS5L — 12 TH/s (KAS)
-• Antminer S21 — 200 TH/s (BTC)
+📊 Nossos Planos de Investimento:
+• Trader Iniciante — A partir de $50
+• Trader Intermediário — A partir de $200
+• Trader Avançado — A partir de $500
+• Trader Elite — A partir de $2000
 
-✅ Lucro diário garantido em USDT
-✅ 70% do lucro da mineração é seu
+✅ ROI diário garantido em USDT
+✅ Até 70% do lucro das operações é seu
 ✅ Pagamento via PIX ou USDT (TRC20/Polygon)
-✅ Mineração 24/7 sem preocupação
+✅ Copy trading 24/7 sem preocupação
 
-🔥 *PROGRAMA DE AFILIADOS — 5 NÍVEIS!*
+🔥 *PROGRAMA DE AFILIADOS — 11 NÍVEIS!*
 
 Ganhe comissões sobre TUDO que sua rede ganha:
 
@@ -5534,25 +5535,26 @@ Ganhe comissões sobre TUDO que sua rede ganha:
 🥉 Nível 3: 1.5%
 4️⃣ Nível 4: 0.5%
 5️⃣ Nível 5: 0.25%
+6️⃣ Nível 6 ao 11: 0.1% cada
 
 💡 Isso significa: Convide 10 pessoas, cada uma convida mais 10... Sua rede cresce exponencialmente e você ganha em TODOS os níveis!
 
+🏆 Bônus de Equipe!
+• Bronze: Volume de equipe $10.000+
+• Prata: Volume de equipe $50.000+
+• Ouro: Volume de equipe $200.000+
+
 📊 *Exemplo prático:*
-Seus 10 indicados diretos mineram $100/dia cada:
+Seus 10 indicados diretos investem $100/dia cada:
 → Você ganha 8% = $80/dia só no Nível 1!
 → Se cada um indicar 10 pessoas (Nível 2 = 100 pessoas):
 → Você ganha 3% dos lucros delas também!
-→ E assim por diante até o Nível 5...
-
-🏆 Sistema de Ranks e Badges!
-• Conquiste medalhas e bônus exclusivos
-• Suba de rank: Bronze → Prata → Ouro → Platina → Diamante
-• Participe de concursos com prêmios em dinheiro
+→ E assim por diante até o Nível 11...
 
 🚀 Comece agora mesmo!
-👉 Cadastre-se e comece a minerar cripto hoje!
+👉 Cadastre-se e comece a investir em copy trading hoje!
 
-*Mining Protocol — Minere o futuro.* ⛏️💎`}
+*PLATAFORMA ROI — Invista no futuro.* 💎`}
                             </div>
                           </CardContent>
                         </Card>
@@ -5598,8 +5600,8 @@ Seus 10 indicados diretos mineram $100/dia cada:
                                     {adminConfigs.find(c => c.key === 'affiliate_commission_mode')?.value === 'system_margin' && <Badge className="mt-1 text-[9px] bg-cyan-500/10 text-cyan-400" variant="outline">Ativo</Badge>}
                                   </div>
                                   <div className={`rounded-lg p-3 border ${adminConfigs.find(c => c.key === 'affiliate_commission_mode')?.value === 'roi_profit' ? 'border-cyan-500/50 bg-cyan-500/5' : 'border-zinc-700 bg-zinc-900'}`}>
-                                    <div className="font-semibold text-sm">mining_profit</div>
-                                    <div className="text-xs text-zinc-400 mt-1">Comissão sobre lucro de mineração + bônus de aluguel (2%).</div>
+                                    <div className="font-semibold text-sm">roi_profit</div>
+                                    <div className="text-xs text-zinc-400 mt-1">Comissão sobre lucro de ROI + bônus de investimento (2%).</div>
                                     {adminConfigs.find(c => c.key === 'affiliate_commission_mode')?.value === 'roi_profit' && <Badge className="mt-1 text-[9px] bg-cyan-500/10 text-cyan-400" variant="outline">Ativo</Badge>}
                                   </div>
                                   <div className={`rounded-lg p-3 border ${adminConfigs.find(c => c.key === 'affiliate_commission_mode')?.value === 'revenue_pool' ? 'border-cyan-500/50 bg-cyan-500/5' : 'border-zinc-700 bg-zinc-900'}`}>
@@ -5619,7 +5621,7 @@ Seus 10 indicados diretos mineram $100/dia cada:
                                     { label: 'Saque Mínimo', key: 'min_withdrawal_usdt', suffix: ' USDT' },
                                     { label: 'Taxa de Saque', key: 'withdrawal_fee_pct', suffix: '%' },
                                     { label: 'Share de Lucro', key: 'default_profit_share_pct', suffix: '%' },
-                                    { label: 'Variação Mineração', key: 'mining_variance_pct', suffix: '%' },
+                                    { label: 'Variação ROI', key: 'mining_variance_pct', suffix: '%' },
                                     { label: 'Margem Sistema', key: 'affiliate_system_margin_pct', suffix: '%' },
                                     { label: 'Cap Diário Afiliado', key: 'affiliate_daily_cap_usd', suffix: ' USDT' },
                                     { label: 'Taxa Saque Afiliado', key: 'affiliate_withdrawal_fee_pct', suffix: '%' },
@@ -5636,16 +5638,16 @@ Seus 10 indicados diretos mineram $100/dia cada:
                                 </div>
                               </div>
 
-                              {/* Miners from DB */}
+                              {/* Copy Traders from DB */}
                               <div className="bg-zinc-800/50 rounded-lg p-4">
-                                <h4 className="font-semibold text-cyan-400 mb-3">🏭 Mineradoras Configuradas</h4>
+                                <h4 className="font-semibold text-cyan-400 mb-3">📊 Traders Configurados</h4>
                                 <div className="overflow-x-auto">
                                   <Table className="min-w-[500px]">
                                     <TableHeader>
                                       <TableRow className="border-zinc-700">
-                                        <TableHead className="text-zinc-400 text-xs">Mineradora</TableHead>
+                                        <TableHead className="text-zinc-400 text-xs">Trader</TableHead>
                                         <TableHead className="text-zinc-400 text-xs">Coin</TableHead>
-                                        <TableHead className="text-zinc-400 text-xs">HashRate</TableHead>
+                                        <TableHead className="text-zinc-400 text-xs">Win Rate</TableHead>
                                         <TableHead className="text-zinc-400 text-xs">Receita/Dia</TableHead>
                                         <TableHead className="text-zinc-400 text-xs">Preço/Dia</TableHead>
                                         <TableHead className="text-zinc-400 text-xs">Share</TableHead>
@@ -5675,7 +5677,7 @@ Seus 10 indicados diretos mineram $100/dia cada:
                                   <li>• Cap diário de comissões afiliados: configurável (0 = sem limite)</li>
                                   <li>• Qualificação obrigatória: investidor + link desbloqueado para receber comissões</li>
                                   <li>• Profundidade máxima: 5 níveis de afiliados</li>
-                                  <li>• Variação diária de mineração: ±5% (simula flutuação real)</li>
+                                  <li>• Variação diária de ROI: ±5% (simula flutuação real)</li>
                                   <li>• 3 modos de comissão para equilibrar atratividade e sustentabilidade</li>
                                 </ul>
                               </div>
@@ -5817,7 +5819,7 @@ Seus 10 indicados diretos mineram $100/dia cada:
                       </SelectContent>
                     </Select>
                     <div className="text-xs text-zinc-500">
-                      Saldo de voucher só pode ser usado para alugar mineradoras. Não pode ser sacado.
+                      Saldo de voucher só pode ser usado para investir em planos de copy trading. Não pode ser sacado.
                     </div>
                   </div>
                 )}
@@ -5853,7 +5855,7 @@ Seus 10 indicados diretos mineram $100/dia cada:
               )}
             >
               {investLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {useVoucherForInvest ? 'Alugar com Voucher 🎫' : 'Alugar Mineradora'}
+              {useVoucherForInvest ? 'Investir com Voucher 🎫' : 'Investir em Plano'}
             </Button>
           </div>
         </DialogContent>
@@ -6245,7 +6247,7 @@ Seus 10 indicados diretos mineram $100/dia cada:
               </div>
               <div>
                 <Label className="text-zinc-300 text-xs">{t('admin.value')}</Label>
-                <Input name="value" required className="bg-zinc-800 border-zinc-700 mt-1" placeholder="ex: Mining Protocol" />
+                <Input name="value" required className="bg-zinc-800 border-zinc-700 mt-1" placeholder="ex: PLATAFORMA ROI" />
               </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -6518,7 +6520,7 @@ Seus 10 indicados diretos mineram $100/dia cada:
           <DialogHeader>
             <DialogTitle>Novo Voucher para Lider</DialogTitle>
             <DialogDescription className="text-zinc-400">
-              De credito para um lider trazer sua rede. O saldo do voucher so pode ser usado para alugar mineradoras. Os saques ficam bloqueados ate que o lider cumpra as metas.
+              De credito para um lider trazer sua rede. O saldo do voucher so pode ser usado para investir em planos de copy trading. Os saques ficam bloqueados ate que o lider cumpra as metas.
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={async (e) => {
@@ -6617,7 +6619,7 @@ Seus 10 indicados diretos mineram $100/dia cada:
                   <div className="text-xs text-zinc-400 space-y-1">
                     <div className="font-medium text-zinc-300 mb-1">Como funciona:</div>
                     <div>O lider recebe o credito no saldo de voucher (nao no saldo normal)</div>
-                    <div>So pode usar para alugar mineradoras ou comprar pacotes</div>
+                    <div>So pode usar para investir em planos de copy trading ou comprar pacotes</div>
                     <div>Saques ficam BLOQUEADOS ate cumprir as metas</div>
                     <div>Desbloqueio e gradual: % → 50% → 75% → 100%</div>
                     <div>Se nao cumprir as metas no prazo, o voucher expira</div>

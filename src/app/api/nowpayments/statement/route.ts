@@ -23,21 +23,21 @@ export async function GET(request: NextRequest) {
       if (endDate) txWhere.createdAt.lte = new Date(endDate);
     }
 
-    // Build investment filter (deposits & withdrawals that may not have transactions yet)
-    const invWhere: any = { userId: session.userId };
+    // Build deposit filter (deposits & withdrawals that may not have transactions yet)
+    const depWhere: any = { userId: session.userId };
     if (startDate || endDate) {
-      invWhere.createdAt = {};
-      if (startDate) invWhere.createdAt.gte = new Date(startDate);
-      if (endDate) invWhere.createdAt.lte = new Date(endDate);
+      depWhere.createdAt = {};
+      if (startDate) depWhere.createdAt.gte = new Date(startDate);
+      if (endDate) depWhere.createdAt.lte = new Date(endDate);
     }
 
-    const [transactions, investments, user] = await Promise.all([
+    const [transactions, deposits, user] = await Promise.all([
       db.transaction.findMany({
         where: txWhere,
         orderBy: { createdAt: 'desc' },
       }),
-      db.investment.findMany({
-        where: invWhere,
+      db.deposit.findMany({
+        where: depWhere,
         orderBy: { createdAt: 'desc' },
       }),
       db.user.findUnique({
@@ -90,28 +90,28 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Add investment entries that don't have corresponding transactions yet
+    // Add deposit entries that don't have corresponding transactions yet
     // (pending deposits/withdrawals that haven't been confirmed)
     const txRefIds = new Set(
       transactions.filter((t) => t.referenceId).map((t) => t.referenceId)
     );
-    for (const inv of investments) {
-      if (txRefIds.has(inv.id)) continue; // Skip if already in transactions
-      const isIncome = inv.type === 'deposit';
+    for (const dep of deposits) {
+      if (txRefIds.has(dep.id)) continue; // Skip if already in transactions
+      const isIncome = dep.type === 'deposit';
       entries.push({
-        id: `inv_${inv.id}`,
-        date: inv.createdAt instanceof Date ? inv.createdAt.toISOString() : String(inv.createdAt),
+        id: `dep_${dep.id}`,
+        date: dep.createdAt instanceof Date ? dep.createdAt.toISOString() : String(dep.createdAt),
         type: isIncome ? 'deposit' : 'withdrawal',
         category: isIncome ? 'income' : 'expense',
         description:
-          inv.description ||
-          `${isIncome ? 'Depósito' : 'Saque'} - ${inv.method}${inv.network ? ` (${inv.network})` : ''}`,
-        amount: d(inv.amount),
-        status: inv.status,
-        method: inv.method,
-        network: inv.network || undefined,
-        referenceId: inv.id,
-        referenceType: 'Investment',
+          dep.description ||
+          `${isIncome ? 'Depósito' : 'Saque'} - ${dep.method}${dep.network ? ` (${dep.network})` : ''}`,
+        amount: d(dep.amount),
+        status: dep.status,
+        method: dep.method,
+        network: dep.network || undefined,
+        referenceId: dep.id,
+        referenceType: 'Deposit',
       });
     }
 
