@@ -19,6 +19,7 @@ export async function GET(request: NextRequest) {
         pixKey: true,
         balance: true,
         affiliateBalance: true,
+        voucherBalance: true,
         totalMined: true,
         totalInvested: true,
         totalWithdrawn: true,

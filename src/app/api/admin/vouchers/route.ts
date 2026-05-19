@@ -101,7 +101,7 @@ export async function POST(request: NextRequest) {
     } = body;
 
     if (!userId) {
-      return apiError('ID do usuário é obrigatório');
+      return apiError('Selecione um usuário (líder)');
     }
 
     // Verify user exists
@@ -110,28 +110,28 @@ export async function POST(request: NextRequest) {
       return apiError('Usuário não encontrado', 404);
     }
 
-    // Apply type defaults, allow overrides
+    // Apply type defaults, allow overrides - coerce all values to proper types
     const defaults = VOUCHER_DEFAULTS[type];
-    const amount = rawAmount ?? defaults?.amount;
-    const goalDirectReferrals = rawGoalDirectReferrals ?? defaults?.goalDirectReferrals;
-    const goalMinReferralInvest = rawGoalMinReferralInvest ?? defaults?.goalMinReferralInvest;
-    const goalNetworkMultiple = rawGoalNetworkMultiple ?? defaults?.goalNetworkMultiple;
-    const goalDays = rawGoalDays ?? defaults?.goalDays;
+    const amount = rawAmount != null && rawAmount !== '' ? String(rawAmount) : defaults?.amount;
+    const goalDirectReferrals = rawGoalDirectReferrals != null && rawGoalDirectReferrals !== '' ? Number(rawGoalDirectReferrals) : defaults?.goalDirectReferrals;
+    const goalMinReferralInvest = rawGoalMinReferralInvest != null && rawGoalMinReferralInvest !== '' ? String(rawGoalMinReferralInvest) : defaults?.goalMinReferralInvest;
+    const goalNetworkMultiple = rawGoalNetworkMultiple != null && rawGoalNetworkMultiple !== '' ? String(rawGoalNetworkMultiple) : defaults?.goalNetworkMultiple;
+    const goalDays = rawGoalDays != null && rawGoalDays !== '' ? Number(rawGoalDays) : defaults?.goalDays;
 
     if (!amount || d(amount) <= 0) {
-      return apiError('Valor do voucher deve ser maior que zero');
+      return apiError('Valor do voucher deve ser maior que zero. Preencha o campo "Valor (USDT)".');
     }
-    if (!goalDirectReferrals || goalDirectReferrals <= 0) {
-      return apiError('Meta de referências diretas deve ser maior que zero');
+    if (!goalDirectReferrals || isNaN(goalDirectReferrals) || goalDirectReferrals <= 0) {
+      return apiError('Quantidade de indicações necessárias deve ser maior que zero. Preencha o campo "Indicações necessárias".');
     }
-    if (!goalDays || goalDays <= 0) {
-      return apiError('Prazo em dias deve ser maior que zero');
+    if (!goalDays || isNaN(goalDays) || goalDays <= 0) {
+      return apiError('Prazo em dias deve ser maior que zero. Preencha o campo "Prazo (dias)".');
     }
     if (!goalMinReferralInvest || d(goalMinReferralInvest) <= 0) {
-      return apiError('Investimento mínimo por referência deve ser maior que zero');
+      return apiError('Investimento mínimo por indicação deve ser maior que zero. Preencha o campo "Invest. mínimo por ref.".');
     }
     if (!goalNetworkMultiple || d(goalNetworkMultiple) <= 0) {
-      return apiError('Múltiplo de rede deve ser maior que zero');
+      return apiError('Múltiplo de investimento da rede deve ser maior que zero. Preencha o campo "Múltiplo de investimento da rede".');
     }
 
     // Calculate deadline
