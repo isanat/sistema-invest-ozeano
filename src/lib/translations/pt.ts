@@ -1,9 +1,10 @@
 export const pt = {
+  // === LANDING PAGE ===
   landing: {
     hero: {
-      title: 'Plataforma ROI - Copy Trading Automatizado',
-      subtitle: 'ROI diário de até 5% com copy trading profissional e automatizado',
-      cta: 'Começar Agora',
+      title: 'PLATAFORMA ROI',
+      subtitle: 'Especialistas em Copy Trading Automatizado - Ganhe até 5% ao dia com traders profissionais',
+      cta: 'Começar a Investir',
       login: 'Entrar',
       register: 'Criar Conta',
     },
@@ -16,19 +17,85 @@ export const pt = {
     steps: {
       title: 'Como Funciona',
       step1: { title: 'Escolha seu Plano', desc: 'Navegue pelos planos de investimento disponíveis e escolha o que melhor se adapta ao seu perfil.' },
-      step2: { title: 'Invista com USDT', desc: 'Selecione o plano desejado, realize o investimento em USDT e ative seu plano instantaneamente.' },
-      step3: { title: 'Receba ROI Diário', desc: 'Receba seus ganhos com ROI diariamente diretamente no seu saldo USDT.' },
+      step2: { title: 'Invista com USDT', desc: 'Selecione o plano desejado, realize o pagamento em USDT e ative seu investimento instantaneamente.' },
+      step3: { title: 'Receba ROI Diário', desc: 'Receba seus ganhos de ROI diariamente diretamente no seu saldo USDT.' },
     },
+    // Vantagem DeFi (renamed from energy)
+    advantage: {
+      tag: '🚀 RENDIMENTO DIÁRIO',
+      title: '5% de ROI Diário, Todos os Dias',
+      subtitle: 'Dobre seu capital em 40 dias com Copy Trading automatizado',
+      desc1: 'Nossos traders especialistas operam por você 24/7. Apenas invista e receba rendimentos diários automáticos diretos em USDT.',
+      desc2: 'Com aportes a partir de $10 USDT, qualquer pessoa pode acessar rendimentos profissionais. Sem conhecimento técnico necessário.',
+      stat1: { value: '5%', label: 'ROI Diário' },
+      stat2: { value: '40', label: 'Dias para Dobrar' },
+      stat3: { value: '$0', label: 'Taxa de Saque' },
+      cta: 'Investir Agora',
+    },
+    // Backward compat: energy → advantage
+    energy: {
+      tag: '🚀 RENDIMENTO DIÁRIO',
+      title: '5% de ROI Diário, Todos os Dias',
+      subtitle: 'Dobre seu capital em 40 dias com Copy Trading automatizado',
+      desc1: 'Nossos traders especialistas operam por você 24/7. Apenas invista e receba rendimentos diários automáticos diretos em USDT.',
+      desc2: 'Com aportes a partir de $10 USDT, qualquer pessoa pode acessar rendimentos profissionais. Sem conhecimento técnico necessário.',
+      stat1: { value: '5%', label: 'ROI Diário' },
+      stat2: { value: '40', label: 'Dias para Dobrar' },
+      stat3: { value: '$0', label: 'Taxa de Saque' },
+      cta: 'Investir Agora',
+    },
+    // Legacy trading section (kept for compat)
     trading: {
-      tag: 'Tecnologia DeFi',
-      title: 'Copy Trading Inteligente',
-      subtitle: 'Nossos traders utilizam estratégias avançadas de DeFi e trading algorítmico para maximizar seus rendimentos',
-      desc1: 'A plataforma ROI conecta você aos melhores traders do mercado, que operam de forma automatizada 24/7 para gerar lucro consistente.',
-      desc2: 'Com ROI diário de até 5% e Team Bonus de até +3%, seu dinheiro trabalha para você mesmo enquanto dorme.',
-      stat1: { value: '5%', label: 'ROI diário' },
-      stat2: { value: '89%', label: 'taxa de acerto' },
-      stat3: { value: '24/7', label: 'trading automático' },
-      cta: 'Comece a Investir',
+      tag: '🚀 RENDIMENTO DIÁRIO',
+      title: '5% de ROI Diário, Todos os Dias',
+      subtitle: 'Dobre seu capital em 40 dias com Copy Trading automatizado',
+      desc1: 'Nossos traders especialistas operam por você 24/7. Apenas invista e receba rendimentos diários automáticos diretos em USDT.',
+      desc2: 'Com aportes a partir de $10 USDT, qualquer pessoa pode acessar rendimentos profissionais. Sem conhecimento técnico necessário.',
+      stat1: { value: '5%', label: 'ROI Diário' },
+      stat2: { value: '40', label: 'Dias para Dobrar' },
+      stat3: { value: '$0', label: 'Taxa de Saque' },
+      cta: 'Investir Agora',
+    },
+    // Investment tiers
+    tiers: {
+      investLabel: 'Investimento',
+      title: 'Potencial de Ganho Individual',
+      subtitle: 'Invista hoje e veja seu dinheiro crescer a cada 24 horas',
+      items: [
+        { amount: '$10', dailyRoi: '$0.50', doubles: '$20' },
+        { amount: '$50', dailyRoi: '$2.50', doubles: '$100' },
+        { amount: '$100', dailyRoi: '$5.00', doubles: '$200' },
+        { amount: '$500', dailyRoi: '$25.00', doubles: '$1.000' },
+        { amount: '$1.500', dailyRoi: '$75.00', doubles: '$3.000' },
+      ],
+    },
+    // Team bonuses
+    bonuses: {
+      extraDaily: 'diário extra',
+      title: 'Bonificação de Equipe',
+      subtitle: 'Suba de patente e turbine seus rendimentos diários',
+      bronze: '+1% diário extra (10 Diretos)',
+      silver: '+2% diário extra (20 Diretos)',
+      gold: '+3% diário extra (30 Diretos)',
+    },
+    // Unilevel career plan
+    unilevel: {
+      title: 'Plano de Carreira Unilevel',
+      subtitle: 'Ganhe comissões em até 11 níveis de profundidade',
+      levels: [
+        { level: 'N1', pct: '10%' },
+        { level: 'N2', pct: '4%' },
+        { level: 'N3', pct: '3%' },
+        { level: 'N4', pct: '2%' },
+        { level: 'N5', pct: '1.5%' },
+        { level: 'N6', pct: '1.5%' },
+        { level: 'N7', pct: '1%' },
+        { level: 'N8', pct: '1%' },
+        { level: 'N9', pct: '0.5%' },
+        { level: 'N10', pct: '0.5%' },
+        { level: 'N11', pct: '1%' },
+      ],
+      total: 'Total: até 28% em 11 níveis',
     },
     featured: {
       title: 'Planos de Investimento',
@@ -41,7 +108,7 @@ export const pt = {
       hashRate: 'Taxa de Acerto',
       power: 'Capital Alocado',
       coin: 'Ativo',
-      pool: 'Exchange / Corretora',
+      pool: 'Exchange',
       efficiency: 'Rendimento',
     },
     plans: {
@@ -67,11 +134,11 @@ export const pt = {
     },
     faq: {
       title: 'Perguntas Frequentes',
-      q1: { q: 'Como funciona o copy trading?', a: 'Você investe em planos de copy trading profissional. Nossos traders operam de forma automatizada e você recebe o ROI diário diretamente no seu saldo USDT.' },
-      q2: { q: 'Quais são os métodos de pagamento?', a: 'Aceitamos depósitos{pix} USDT (TRC20 e Polygon). Saques podem ser feitos{pixWithdraw} USDT TRC20.' },
-      q3: { q: 'Quanto posso ganhar?', a: 'Os ganhos dependem do plano de investimento escolhido. O ROI diário pode chegar a até 5%, com Team Bonus adicional de até +3%.' },
-      q4: { q: 'É seguro?', a: 'Utilizamos autenticação JWT, validação de wallet TRC20 e todas as operações financeiras são processadas no servidor com proteção contra condições de corrida.' },
-      q5: { q: 'Como funciona o programa de afiliados?', a: 'Compartilhe seu link único e ganhe comissões de até 11 níveis de profundidade. O nível 1 ganha 8%, nível 2 ganha 3%, e assim por diante.' },
+      q1: { q: 'Como funciona o Copy Trading?', a: 'Você investe em planos de Copy Trading profissional. Nossos traders especialistas operam de forma automatizada 24/7 e você recebe o ROI diário diretamente no seu saldo USDT. Dobre seu capital em 40 dias.' },
+      q2: { q: 'Quais são os métodos de pagamento?', a: 'Aceitamos depósitos em USDT (TRC20 e Polygon) via NowPayments. Os saques são realizados em USDT TRC20 com zero taxas.' },
+      q3: { q: 'Quanto posso ganhar?', a: 'O ROI diário é de até 5%. Com o Team Bonus você pode somar até +3% adicional: Bronze (+1%), Prata (+2%), Ouro (+3%). Além disso, ganhe comissões de até 11 níveis com o plano Unilevel.' },
+      q4: { q: 'É seguro?', a: 'Utilizamos autenticação JWT, validação de wallet TRC20 e todas as operações financeiras são processadas no servidor com proteção contra condições de corrida. Pagamentos processados via NowPayments.' },
+      q5: { q: 'Como funciona o programa de afiliados?', a: 'Compartilhe seu link único e ganhe comissões de até 11 níveis de profundidade. Nível 1: 10%, Nível 2: 4%, Nível 3: 3% e assim por diante até 28% total em comissões.' },
     },
     footer: {
       rights: 'Todos os direitos reservados.',
@@ -80,7 +147,7 @@ export const pt = {
     auth: {
       loginTitle: 'Entrar na sua Conta',
       registerTitle: 'Criar Conta',
-      loginDesc: 'Acesse sua conta ROI Platform',
+      loginDesc: 'Acesse a PLATAFORMA ROI',
       registerDesc: 'Cadastre-se e comece a investir',
       name: 'Nome',
       email: 'Email',
@@ -98,6 +165,8 @@ export const pt = {
       emailPlaceholder: 'seu@email.com',
     },
   },
+
+  // === DASHBOARD ===
   dashboard: {
     title: 'Painel',
     welcome: 'Bem-vindo',
@@ -113,11 +182,13 @@ export const pt = {
     activeInvestments: 'Investimentos Ativos',
     yourBalance: 'Seu Saldo',
     insufficientBalance: 'Saldo insuficiente',
-    viewMiners: 'Ver Copy Traders',
+    viewMiners: 'Ver Traders',
     recentActivity: 'Atividade Recente',
-    noRentals: 'Você não tem investimentos ativos',
+    noRentals: 'Sem Investimentos',
     noTransactions: 'Não há transações recentes',
   },
+
+  // === SIDEBAR ===
   sidebar: {
     home: 'Início',
     miners: 'Investir',
@@ -127,6 +198,8 @@ export const pt = {
     profile: 'Perfil',
     admin: 'Administração',
   },
+
+  // === ADMIN SIDEBAR ===
   adminSidebar: {
     overview: 'Visão Geral',
     miners: 'Copy Traders',
@@ -140,6 +213,8 @@ export const pt = {
     logs: 'Registros',
     nowpayments: 'NowPayments',
   },
+
+  // === COPY TRADERS TAB (legacy miners section) ===
   miners: {
     title: 'Copy Traders',
     availablePlans: 'Planos disponíveis:',
@@ -152,7 +227,7 @@ export const pt = {
     customPlan: 'Personalizado',
     days: 'dias',
     off: 'desconto',
-    totalCost: 'Custo Total',
+    totalCost: 'Investimento Total',
     estimatedReturn: 'Retorno Estimado',
     period: 'Período (dias)',
     minMax: 'Mín: {min} • Máx: {max}',
@@ -161,8 +236,35 @@ export const pt = {
     totalProfit: 'Lucro Total',
     yourBalance: 'Seu Saldo',
     confirmRent: 'Confirmar Investimento',
-    noMiners: 'Nenhum copy trader disponível',
+    noMiners: 'Sem Traders disponíveis',
   },
+
+  // === COPY TRADERS (new section with proper naming) ===
+  copyTraders: {
+    title: 'Copy Traders',
+    availablePlans: 'Planos disponíveis:',
+    status: 'Status',
+    dailyReturn: 'Retorno Diário',
+    price: 'Preço',
+    efficiency: 'Rendimento',
+    invest: 'Investir',
+    selectPlan: 'Selecionar Plano',
+    customPlan: 'Personalizado',
+    days: 'dias',
+    off: 'desconto',
+    totalInvestment: 'Investimento Total',
+    estimatedReturn: 'Retorno Estimado',
+    period: 'Período (dias)',
+    minMax: 'Mín: {min} • Máx: {max}',
+    summary: 'Resumo',
+    dailyProfit: 'Lucro Diário',
+    totalProfit: 'Lucro Total',
+    yourBalance: 'Seu Saldo',
+    confirmInvest: 'Confirmar Investimento',
+    noTraders: 'Sem Traders disponíveis',
+  },
+
+  // === PLANS TAB ===
   plans: {
     title: 'Planos de Investimento',
     subtitle: 'Escolha o plano ideal para sua estratégia',
@@ -176,11 +278,13 @@ export const pt = {
     rent: 'Investir',
     featured: 'Destacado',
   },
+
+  // === LIVE TRADING (legacy mining section with Copy Trading values) ===
   mining: {
     live: 'Ao Vivo',
-    newEarnings: 'Novos ganhos de ROI recebidos!',
+    newEarnings: '¡Novos ganhos de ROI recebidos!',
     todayEarnings: 'Ganhos de Hoje',
-    dailyEstimate: 'Estimativa Diária',
+    dailyEstimate: 'Estimado Diário',
     nextDistribution: 'Próxima Distribuição',
     operationLive: 'Operação ao Vivo',
     hashrate: 'Taxa de Acerto',
@@ -189,13 +293,14 @@ export const pt = {
     shares: 'Trades',
     valid: 'Válidos',
     invalid: 'Inválidos',
-    pool: 'Exchange / Corretora',
+    pool: 'Exchange',
     connected: 'Conectado',
     earningsRate: 'Taxa de Ganho',
     perSecond: '/seg',
     perHour: '/hora',
     perDay: '/dia',
-    rigOnline: 'Trader Online',
+      doublesTo: 'Dobra para', '/dia',
+    rigOnline: 'Bot Online',
     totalHashrate: 'Taxa de Acerto Total',
     totalPower: 'Capital Total',
     miningNow: 'Operando Agora',
@@ -203,13 +308,52 @@ export const pt = {
     sharesAccepted: 'Trades Aceitos',
     earningsStream: 'Fluxo de Ganhos',
     miningActive: 'Copy Trading Ativo',
-    noActiveRigs: 'Nenhum copy trader ativo',
+    noActiveRigs: 'Não há bots ativos',
     startMining: 'Comece a investir escolhendo um plano',
     uptime: 'Tempo Ativo',
     efficiency: 'Rendimento',
     earned: 'Ganho Acumulado',
     totalAccumulated: 'Total Acumulado',
   },
+
+  // === LIVE TRADING (new section with proper naming) ===
+  trading: {
+    live: 'Ao Vivo',
+    newEarnings: 'Novos ganhos de ROI recebidos!',
+    todayEarnings: 'Ganhos de Hoje',
+    dailyEstimate: 'Estimado Diário',
+    nextDistribution: 'Próxima Distribuição',
+    operationLive: 'Operação ao Vivo',
+    winRate: 'Taxa de Acerto',
+    power: 'Capital Alocado',
+    volatility: 'Volatilidade',
+    shares: 'Trades',
+    valid: 'Válidos',
+    invalid: 'Inválidos',
+    pool: 'Exchange',
+    connected: 'Conectado',
+    earningsRate: 'Taxa de Ganho',
+    perSecond: '/seg',
+    perHour: '/hora',
+    perDay: '/dia',
+      doublesTo: 'Dobra para', '/dia',
+    botOnline: 'Bot Online',
+    totalWinRate: 'Taxa de Acerto Total',
+    totalCapital: 'Capital Total',
+    operatingNow: 'Operando Agora',
+    tradeClosed: 'Trade Fechado!',
+    tradesAccepted: 'Trades Aceitos',
+    earningsStream: 'Fluxo de Ganhos',
+    active: 'Copy Trading Ativo',
+    noActiveBots: 'Não há bots ativos',
+    startInvesting: 'Comece a investir escolhendo um plano',
+    uptime: 'Tempo Ativo',
+    efficiency: 'Rendimento',
+    earned: 'Ganho Acumulado',
+    totalAccumulated: 'Total Acumulado',
+  },
+
+  // === HISTORY TAB ===
   history: {
     title: 'Histórico de Transações',
     noTransactions: 'Não há transações',
@@ -220,6 +364,8 @@ export const pt = {
     rentals: 'Investimentos',
     affiliate: 'Afiliado',
   },
+
+  // === AFFILIATES TAB ===
   affiliates: {
     title: 'Programa de Afiliados',
     yourCode: 'Seu Código de Afiliado',
@@ -239,7 +385,7 @@ export const pt = {
     date: 'Data',
     withdraw: 'Sacar Comissões',
     availableBalance: 'Saldo Disponível',
-    destination: 'Destino (wallet ou chave PIX)',
+    destination: 'Destino (wallet USDT TRC20)',
     commissionMode: 'Modo de Comissão',
     modeSystemMargin: 'Margem do Sistema',
     modeMiningProfit: 'Lucro de ROI',
@@ -282,11 +428,12 @@ export const pt = {
     activeInNetwork: 'Ativos na Rede',
     totalNetworkEarnings: 'Ganhos Totais da Rede',
     commissionStructure: 'Estrutura de Comissões',
-    level: 'Nível',
     badges: 'Conquistas',
     maxRank: 'Rank Máximo!',
     miningProfitExplanation: 'Você ganha comissões sobre o ROI diário dos seus referidos + um bônus imediato quando eles investem. Quanto mais eles ganham, mais você ganha!',
   },
+
+  // === PROFILE ===
   profile: {
     title: 'Meu Perfil',
     name: 'Nome',
@@ -301,6 +448,8 @@ export const pt = {
     newPassword: 'Nova Senha',
     confirmPassword: 'Confirmar Nova Senha',
   },
+
+  // === DEPOSIT DIALOG ===
   deposit: {
     title: 'Realizar Depósito',
     amount: 'Valor (USDT)',
@@ -314,7 +463,7 @@ export const pt = {
     copyAddress: 'Copiar Endereço',
     submit: 'Solicitar Depósito',
     minMax: 'Mínimo: ${min} USDT • Máximo: ${max} USDT',
-    instructions: 'Envie USDT para a wallet acima e cole o hash da transação abaixo. Para PIX, o admin fornecerá detalhes após a aprovação.',
+    instructions: 'Envie USDT para a wallet acima e cole o hash da transação abaixo. Depósito mínimo: $10 USDT via NowPayments.',
     nowpaymentsTitle: 'Depósito via NowPayments',
     generateAddress: 'Gerar Endereço',
     generatingAddress: 'Gerando endereço...',
@@ -331,12 +480,14 @@ export const pt = {
     orManualDeposit: 'ou depósito manual',
     manualDeposit: 'Depósito Manual',
   },
+
+  // === WITHDRAW DIALOG ===
   withdrawal: {
     title: 'Solicitar Saque',
     amount: 'Valor (USDT)',
     method: 'Método',
     destination: 'Destino',
-    destinationPlaceholder: 'Wallet TRC20 ou chave PIX',
+    destinationPlaceholder: 'Wallet TRC20',
     fee: 'Taxa',
     netAmount: 'Valor Líquido',
     submit: 'Solicitar Saque',
@@ -345,6 +496,8 @@ export const pt = {
     autoWithdraw: 'Saque automático via NowPayments',
     toWallet: 'O saque será enviado automaticamente para sua carteira',
   },
+
+  // === ADMIN ===
   admin: {
     overview: 'Visão Geral',
     users: 'Usuários',
@@ -357,7 +510,7 @@ export const pt = {
     activeUsers: 'Usuários Ativos',
     newToday: 'Novos Hoje',
     regeneratePlans: 'Regenerar Planos Padrão',
-    newMiner: 'Novo Copy Trader',
+    newMiner: 'Novo Trader Especialista',
     newPlan: 'Novo Plano',
     miners: 'Copy Traders',
     plans: 'Planos',
@@ -375,8 +528,8 @@ export const pt = {
     hashRate: 'Taxa de Acerto',
     power: 'Capital Alocado (USDT)',
     coin: 'Ativo',
-    pool: 'Exchange / Corretora',
-    dailyRevenue: 'Receita Diária (USDT)',
+    pool: 'Exchange',
+    dailyRevenue: 'Ganho Diário (USDT)',
     pricePerDay: 'Preço por Dia (USDT)',
     minDays: 'Dias Mínimos',
     maxDays: 'Dias Máximos',
@@ -388,7 +541,7 @@ export const pt = {
     sortOrder: 'Ordem',
     days: 'Dias',
     discountPct: 'Desconto (%)',
-    minerId: 'Copy Trader',
+    minerId: 'Trader Especialista',
     role: 'Função',
     balance: 'Saldo',
     walletAddress: 'Wallet',
@@ -423,6 +576,7 @@ export const pt = {
     addConfig: 'Adicionar Configuração',
     key: 'Chave',
     passwordChange: 'Alterar Senha',
+    // Table headers
     id: 'ID',
     email: 'Email',
     amount: 'Valor',
@@ -454,7 +608,7 @@ export const pt = {
     rankColor: 'Cor',
     minReferrals: 'Mín. Referidos',
     minEarnings: 'Mín. Ganhos (USDT)',
-    bonusAmount: 'Bônus (USDT)',
+    bonusAmount: 'Bonificação (USDT)',
     commissionBoost: 'Incremento Comissão (%)',
     perks: 'Benefícios',
     milestoneName: 'Nome do Marco',
@@ -476,28 +630,60 @@ export const pt = {
     splitWallet: 'Carteira do Split',
     testConnection: 'Testar Conexão',
   },
+
+  // === STATUS LABELS ===
   status: {
-    active: 'Ativo', completed: 'Concluído', cancelled: 'Cancelado',
-    pending: 'Pendente', confirmed: 'Confirmado', rejected: 'Rejeitado',
-    failed: 'Falhou', online: 'Online', offline: 'Offline',
-    maintenance: 'Manutenção', paid: 'Pago', approved: 'Aprovado',
+    active: 'Ativo',
+    completed: 'Concluído',
+    cancelled: 'Cancelado',
+    pending: 'Pendente',
+    confirmed: 'Confirmado',
+    rejected: 'Rejeitado',
+    failed: 'Falhou',
+    online: 'Online',
+    offline: 'Offline',
+    maintenance: 'Manutenção',
+    paid: 'Pago',
+    approved: 'Aprovado',
     processing: 'Processando',
   },
+
+  // === TRANSACTION TYPE LABELS ===
   txType: {
-    deposit: 'Depósito', withdrawal: 'Saque',
-    roi_profit: 'ROI Diário', investment: 'Investimento',
-    affiliate_commission: 'Comissão Afiliado', admin_adjust: 'Ajuste Admin',
+    deposit: 'Depósito',
+    withdrawal: 'Saque',
+    roi_profit: 'ROI Diário',
+    investment: 'Investimento',
+    affiliate_commission: 'Comissão Afiliado',
+    admin_adjust: 'Ajuste Admin',
   },
+
+  // === METHOD LABELS ===
   method: {
-    pix: 'PIX', usdt_trc20: 'USDT TRC20', usdt_polygon: 'USDT Polygon',
+    pix: 'PIX',
+    usdt_trc20: 'USDT TRC20',
+    usdt_polygon: 'USDT Polygon',
   },
+
+  // === CATEGORY LABELS ===
   category: {
-    general: 'Geral', deposit: 'Depósito', withdrawal: 'Saque',
-    mining: 'Trading', affiliate: 'Afiliado',
+    general: 'Geral',
+    deposit: 'Depósito',
+    withdrawal: 'Saque',
+    mining: 'Trading',
+    affiliate: 'Afiliado',
   },
+
+  // === COIN LABELS ===
   coin: {
-    BTC: 'Bitcoin', KAS: 'Kaspa', LTC: 'Litecoin', DOGE: 'Dogecoin', KDA: 'Kadena',
+    BTC: 'Bitcoin',
+    KAS: 'Kaspa',
+    LTC: 'Litecoin',
+    DOGE: 'Dogecoin',
+    KDA: 'Kadena',
   },
+
+  // === TOAST MESSAGES ===
   toast: {
     loginSuccess: 'Login realizado com sucesso!',
     registerSuccess: 'Conta criada com sucesso!',
@@ -516,9 +702,9 @@ export const pt = {
     affiliateUnlockError: 'Erro ao desbloquear link',
     affiliateWithdrawSuccess: 'Saque de afiliado solicitado!',
     affiliateWithdrawError: 'Erro ao solicitar saque de afiliado',
-    adminMinerCreateSuccess: 'Copy Trader criado!',
-    adminMinerUpdateSuccess: 'Copy Trader atualizado!',
-    adminMinerDeactivateSuccess: 'Copy Trader desativado!',
+    adminMinerCreateSuccess: 'Trader Especialista criado!',
+    adminMinerUpdateSuccess: 'Trader Especialista atualizado!',
+    adminMinerDeactivateSuccess: 'Trader Especialista desativado!',
     adminPlanCreateSuccess: 'Plano criado!',
     adminPlanUpdateSuccess: 'Plano atualizado!',
     adminPlanDeactivateSuccess: 'Plano desativado!',
@@ -531,7 +717,7 @@ export const pt = {
     adminConfigSaveSuccess: 'Configuração atualizada!',
     adminConfigBatchSuccess: '{count} configuração(ões) salva(s)!',
     adminConfigNoChanges: 'Nenhuma alteração para salvar',
-    adminRegenerateSuccess: '{count} planos criados para {copyTraders} copy trader(s)!',
+    adminRegenerateSuccess: '{count} planos criados para {copyTraders} trader(s) especialista(s)!',
     adminAffiliateLevelSuccess: 'Níveis de afiliado atualizados!',
     passwordChangeSuccess: 'Senha alterada com sucesso!',
     passwordChangeError: 'Erro ao alterar senha',
@@ -545,14 +731,25 @@ export const pt = {
     npConnectionSuccess: 'Conexão com NowPayments OK!',
     npConnectionFailed: 'Falha na conexão com NowPayments',
   },
+
+  // === COMMON ===
   common: {
     loading: 'Carregando...',
-    save: 'Salvar', cancel: 'Cancelar', delete: 'Excluir',
-    edit: 'Editar', close: 'Fechar', confirm: 'Confirmar',
-    back: 'Voltar', next: 'Próximo', search: 'Buscar',
-    filter: 'Filtrar', refresh: 'Atualizar', export: 'Exportar',
+    save: 'Salvar',
+    cancel: 'Cancelar',
+    delete: 'Excluir',
+    edit: 'Editar',
+    close: 'Fechar',
+    confirm: 'Confirmar',
+    back: 'Voltar',
+    next: 'Próximo',
+    search: 'Buscar',
+    filter: 'Filtrar',
+    refresh: 'Atualizar',
+    export: 'Exportar',
     language: 'Idioma',
     perDay: '/dia',
+      doublesTo: 'Dobra para', '/dia',
     paid: 'pago',
     earned: 'ganho',
     referrals: 'indicações',
@@ -565,18 +762,20 @@ export const pt = {
     brl: 'R$',
     noData: 'Nenhum dado disponível',
   },
+
   teamBonus: {
     title: 'Team Bonus',
-    description: 'Ganhe bônus de ROI diário com suas indicações',
-    none: 'Sem bônus',
+    description: 'Ganhe bonificação de ROI diário com suas indicações',
+    none: 'Sem bonificação',
     bronze: 'Bronze (+1% ROI)',
     silver: 'Prata (+2% ROI)',
     gold: 'Ouro (+3% ROI)',
     progress: 'Progresso do Team Bonus',
     directReferrals: 'Indicações Diretas',
     nextTier: 'Para o próximo nível',
-    earnedBonus: 'Bônus Ganho',
+    earnedBonus: 'Bonificação Ganha',
   },
+
   copyTrading: {
     title: 'Copy Trading',
     description: 'Nossos traders profissionais operam para você',

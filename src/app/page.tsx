@@ -185,7 +185,7 @@ interface AdminStats {
   deposits: { total: number; totalAmount: number; confirmedAmount: number; pendingCount: number; pendingAmount: number };
   withdrawals: { total: number; totalAmount: number; confirmedAmount: number; pendingCount: number; pendingAmount: number };
   investment: { active: number; total: number; totalAmount: number };
-  mining: { totalRoi: number; totalInvested: number };
+  trading: { totalRoi: number; totalInvested: number };
   affiliates: { totalCommissions: number; totalAmount: number };
 }
 
@@ -193,7 +193,7 @@ interface AdminStats {
 // NOTIFICATION SYSTEM
 // ============================================================================
 
-type NotificationType = 'roi' | 'deposit' | 'withdrawal' | 'affiliate' | 'investment' | 'system';
+type NotificationType = 'roi' | 'trading' | 'deposit' | 'withdrawal' | 'affiliate' | 'investment' | 'system';
 
 interface AppNotification {
   id: string;
@@ -1442,7 +1442,7 @@ export default function PlataformaROI() {
     try {
       if (deleteConfirm.type === 'trader') {
         await api(`/api/admin/copy-traders?id=${deleteConfirm.id}`, { method: 'DELETE' });
-        toast.success(t('toast.adminMinerDeactivateSuccess'));
+        toast.success(t('toast.adminTraderDeactivateSuccess'));
       } else if (deleteConfirm.type === 'plan') {
         await api(`/api/admin/plans?id=${deleteConfirm.id}`, { method: 'DELETE' });
         toast.success(t('toast.adminPlanDeactivateSuccess'));
@@ -1935,7 +1935,7 @@ export default function PlataformaROI() {
                   {t('landing.hero.cta')} <ChevronRight className="ml-2 h-5 w-5" />
                 </Button>
                 <Button size="lg" variant="outline" className="border-zinc-700 text-zinc-300 hover:text-white text-lg px-8 py-6" onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })}>
-                  Saiba Mais
+                  Saber Más
                 </Button>
               </div>
             </motion.div>
@@ -1976,7 +1976,7 @@ export default function PlataformaROI() {
                       <div className="w-16 h-16 bg-cyan-500/10 rounded-2xl flex items-center justify-center mx-auto mb-6">
                         <s.icon className="h-8 w-8 text-cyan-400" />
                       </div>
-                      <div className="text-cyan-400 font-mono text-sm mb-2">PASSO {s.step}</div>
+                      <div className="text-cyan-400 font-mono text-sm mb-2">PASO {s.step}</div>
                       <h3 className="text-xl font-semibold mb-3">{s.title}</h3>
                       <p className="text-zinc-400">{s.desc}</p>
                     </CardContent>
@@ -2012,9 +2012,9 @@ export default function PlataformaROI() {
                         </div>
                       </div>
                       <div className="grid grid-cols-2 gap-2 sm:gap-4 text-sm">
-                        <div><span className="text-zinc-400">{t('landing.featured.hashRate')}</span><p className="font-medium">{trader.winRate}%</p></div>
-                        <div><span className="text-zinc-400">{t('landing.featured.coin')}</span><p className={`font-medium ${assetColor(trader.riskLevel || '')}`}>{trader.riskLevel || ''}</p></div>
-                        <div><span className="text-zinc-400">{t('landing.featured.dailyRevenue')}</span><p className="font-medium text-cyan-400">${fmtUSDT(trader.monthlyRoi)}</p></div>
+                        <div><span className="text-zinc-400">{t('landing.featured.winRate')}</span><p className="font-medium">{trader.winRate}%</p></div>
+                        <div><span className="text-zinc-400">{t('landing.featured.asset')}</span><p className={`font-medium ${assetColor(trader.riskLevel || '')}`}>{trader.riskLevel || ''}</p></div>
+                        <div><span className="text-zinc-400">{t('landing.featured.dailyRoi')}</span><p className="font-medium text-cyan-400">${fmtUSDT(trader.monthlyRoi)}</p></div>
                         <div><span className="text-zinc-400">{t('landing.featured.priceDay')}</span><p className="font-medium">${fmtUSDT(trader.monthlyRoi)}{t('common.perDay')}</p></div>
                       </div>
                     </CardContent>
@@ -2025,7 +2025,7 @@ export default function PlataformaROI() {
           </section>
         )}
 
-        {/* PARAGUAY ENERGY ADVANTAGE */}
+        {/* DEFI ADVANTAGE - 5% DAILY ROI */}
         <section className="py-12 sm:py-24 relative overflow-hidden">
           {/* Background decorations */}
           <div className="absolute inset-0 pointer-events-none">
@@ -2037,44 +2037,44 @@ export default function PlataformaROI() {
             <motion.div initial={{ opacity: 0, y: 10 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="flex justify-center mb-4">
               <span className="inline-flex items-center gap-2 bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 text-sm font-medium px-4 py-1.5 rounded-full">
                 <Zap className="h-4 w-4" />
-                {t('landing.energy.tag')}
+                {t('landing.advantage.tag')}
               </span>
             </motion.div>
             {/* Title */}
             <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} viewport={{ once: true }} className="text-center mb-8 sm:mb-12">
               <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-3">
-                <span className="bg-gradient-to-r from-emerald-400 to-green-300 bg-clip-text text-transparent">{t('landing.energy.title')}</span>
+                <span className="bg-gradient-to-r from-emerald-400 to-green-300 bg-clip-text text-transparent">{t('landing.advantage.title')}</span>
               </h2>
-              <p className="text-zinc-400 text-lg max-w-2xl mx-auto">{t('landing.energy.subtitle')}</p>
+              <p className="text-zinc-400 text-lg max-w-2xl mx-auto">{t('landing.advantage.subtitle')}</p>
             </motion.div>
             {/* Main content grid */}
             <div className="grid lg:grid-cols-2 gap-8 sm:gap-12 items-center mb-12">
               {/* Left: Text content */}
               <motion.div initial={{ opacity: 0, x: -30 }} whileInView={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }} viewport={{ once: true }} className="space-y-5">
-                <p className="text-zinc-300 text-base sm:text-lg leading-relaxed">{t('landing.energy.desc1')}</p>
-                <p className="text-zinc-400 text-base leading-relaxed">{t('landing.energy.desc2')}</p>
+                <p className="text-zinc-300 text-base sm:text-lg leading-relaxed">{t('landing.advantage.desc1')}</p>
+                <p className="text-zinc-400 text-base leading-relaxed">{t('landing.advantage.desc2')}</p>
                 <Button size="lg" className="bg-emerald-600 hover:bg-cyan-700 text-white mt-4" onClick={() => { setAuthMode('register'); setShowAuth(true); }}>
-                  {t('landing.energy.cta')} <ChevronRight className="ml-2 h-5 w-5" />
+                  {t('landing.advantage.cta')} <ChevronRight className="ml-2 h-5 w-5" />
                 </Button>
               </motion.div>
               {/* Right: Stats cards */}
               <motion.div initial={{ opacity: 0, x: 30 }} whileInView={{ opacity: 1, x: 0 }} transition={{ delay: 0.3 }} viewport={{ once: true }} className="grid grid-cols-3 gap-3 sm:gap-4">
                 <Card className="bg-zinc-900 border-zinc-800 hover:border-cyan-500/30 transition-all text-center">
                   <CardContent className="p-4 sm:p-6 flex flex-col items-center justify-center">
-                    <div className="text-3xl sm:text-4xl font-bold text-cyan-400 mb-1">{t('landing.energy.stat1.value')}</div>
-                    <p className="text-xs sm:text-sm text-zinc-400">{t('landing.energy.stat1.label')}</p>
+                    <div className="text-3xl sm:text-4xl font-bold text-cyan-400 mb-1">{t('landing.advantage.stat1.value')}</div>
+                    <p className="text-xs sm:text-sm text-zinc-400">{t('landing.advantage.stat1.label')}</p>
                   </CardContent>
                 </Card>
                 <Card className="bg-zinc-900 border-zinc-800 hover:border-cyan-500/30 transition-all text-center">
                   <CardContent className="p-4 sm:p-6 flex flex-col items-center justify-center">
-                    <div className="text-3xl sm:text-4xl font-bold text-cyan-400 mb-1">{t('landing.energy.stat2.value')}</div>
-                    <p className="text-xs sm:text-sm text-zinc-400">{t('landing.energy.stat2.label')}</p>
+                    <div className="text-3xl sm:text-4xl font-bold text-cyan-400 mb-1">{t('landing.advantage.stat2.value')}</div>
+                    <p className="text-xs sm:text-sm text-zinc-400">{t('landing.advantage.stat2.label')}</p>
                   </CardContent>
                 </Card>
                 <Card className="bg-zinc-900 border-zinc-800 hover:border-cyan-500/30 transition-all text-center">
                   <CardContent className="p-4 sm:p-6 flex flex-col items-center justify-center">
-                    <div className="text-3xl sm:text-4xl font-bold text-cyan-400 mb-1">{t('landing.energy.stat3.value')}</div>
-                    <p className="text-xs sm:text-sm text-zinc-400">{t('landing.energy.stat3.label')}</p>
+                    <div className="text-3xl sm:text-4xl font-bold text-cyan-400 mb-1">{t('landing.advantage.stat3.value')}</div>
+                    <p className="text-xs sm:text-sm text-zinc-400">{t('landing.advantage.stat3.label')}</p>
                   </CardContent>
                 </Card>
               </motion.div>
@@ -2082,18 +2082,146 @@ export default function PlataformaROI() {
           </div>
         </section>
 
+        {/* INVESTMENT TIERS - POTENTIAL EARNINGS */}
+        <section className="py-12 sm:py-24 bg-zinc-900/50 relative overflow-hidden">
+          <div className="absolute inset-0 pointer-events-none">
+            <div className="absolute -top-20 -right-20 w-72 h-72 bg-emerald-500/5 rounded-full blur-3xl" />
+            <div className="absolute -bottom-20 -left-20 w-72 h-72 bg-cyan-500/5 rounded-full blur-3xl" />
+          </div>
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 relative z-10">
+            <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-8 sm:mb-12">
+              <span className="inline-flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm font-medium px-4 py-1.5 rounded-full mb-4">
+                <DollarSign className="h-4 w-4" /> ROI DIARIO GARANTIZADO
+              </span>
+              <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-3">
+                <span className="bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">📊 {t('landing.tiers.title')}</span>
+              </h2>
+              <p className="text-zinc-400 text-lg max-w-2xl mx-auto">{t('landing.tiers.subtitle')}</p>
+            </motion.div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+              {[
+                { amount: 10, daily: 0.50, doubles: 20, color: 'from-zinc-600 to-zinc-500', border: 'border-zinc-700' },
+                { amount: 50, daily: 2.50, doubles: 100, color: 'from-amber-600 to-amber-500', border: 'border-amber-700/50' },
+                { amount: 100, daily: 5.00, doubles: 200, color: 'from-cyan-600 to-cyan-500', border: 'border-cyan-700/50' },
+                { amount: 500, daily: 25.00, doubles: 1000, color: 'from-emerald-600 to-emerald-500', border: 'border-emerald-700/50' },
+                { amount: 1500, daily: 75.00, doubles: 3000, color: 'from-purple-600 to-purple-500', border: 'border-purple-700/50' },
+              ].map((tier, i) => (
+                <motion.div key={tier.amount} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }} viewport={{ once: true }}>
+                  <Card className={\`bg-zinc-900 \${tier.border} hover:border-cyan-500/50 transition-all h-full\`}>
+                    <CardContent className="p-5 text-center">
+                      <div className={\`text-3xl font-bold bg-gradient-to-r \${tier.color} bg-clip-text text-transparent mb-2\`}>\${tier.amount}</div>
+                      <div className="text-sm text-zinc-400 mb-3">{t('landing.tiers.investLabel')}</div>
+                      <div className="bg-zinc-800/80 rounded-lg p-3 mb-3">
+                        <div className="text-lg font-semibold text-cyan-400">+\${tier.daily.toFixed(2)}</div>
+                        <div className="text-xs text-zinc-500">{t('landing.tiers.perDay')}</div>
+                      </div>
+                      <div className="flex items-center justify-center gap-1 text-emerald-400 text-sm font-medium">
+                        <TrendingUp className="h-4 w-4" />
+                        {t('landing.tiers.doublesTo')} \${tier.doubles.toLocaleString()}!
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* UNILEVEL CAREER PLAN - 11 LEVELS */}
+        <section className="py-12 sm:py-24 relative overflow-hidden">
+          <div className="absolute inset-0 pointer-events-none">
+            <div className="absolute -top-20 -left-20 w-72 h-72 bg-cyan-500/5 rounded-full blur-3xl" />
+          </div>
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 relative z-10">
+            <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-8 sm:mb-12">
+              <span className="inline-flex items-center gap-2 bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 text-sm font-medium px-4 py-1.5 rounded-full mb-4">
+                <Users className="h-4 w-4" /> {t('landing.unilevel.title')}
+              </span>
+              <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-3">
+                <span className="bg-gradient-to-r from-cyan-400 to-emerald-400 bg-clip-text text-transparent">👥 {t('landing.unilevel.title')}</span>
+              </h2>
+              <p className="text-zinc-400 text-lg max-w-2xl mx-auto">{t('landing.unilevel.subtitle')}</p>
+            </motion.div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 max-w-4xl mx-auto">
+              {[
+                { level: 1, pct: 10, highlight: true },
+                { level: 2, pct: 4, highlight: false },
+                { level: 3, pct: 3, highlight: false },
+                { level: 4, pct: 2, highlight: false },
+                { level: 5, pct: 1.5, highlight: false },
+                { level: 6, pct: 1.5, highlight: false },
+                { level: 7, pct: 1, highlight: false },
+                { level: 8, pct: 1, highlight: false },
+                { level: 9, pct: 0.5, highlight: false },
+                { level: 10, pct: 0.5, highlight: false },
+                { level: 11, pct: 1, highlight: false },
+              ].map((lvl) => (
+                <motion.div key={lvl.level} initial={{ opacity: 0, scale: 0.9 }} whileInView={{ opacity: 1, scale: 1 }} transition={{ delay: lvl.level * 0.05 }} viewport={{ once: true }}>
+                  <div className={\`rounded-xl p-4 text-center border transition-all \${lvl.highlight ? 'bg-emerald-500/10 border-emerald-500/30 ring-1 ring-emerald-500/20' : 'bg-zinc-800 border-zinc-700 hover:border-cyan-500/30'}\`}>
+                    <div className={\`text-2xl font-bold \${lvl.highlight ? 'text-emerald-400' : 'text-cyan-400'}\`}>{lvl.pct}%</div>
+                    <div className="text-xs text-zinc-400 mt-1">{lvl.level === 1 ? '🥇 Directo' : \`${t('landing.unilevel.level')} \${lvl.level}\`}</div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+            <div className="mt-6 text-center">
+              <div className="inline-flex items-center gap-2 bg-zinc-800 border border-zinc-700 rounded-full px-6 py-2">
+                <Zap className="h-4 w-4 text-cyan-400" />
+                <span className="text-sm text-zinc-300">{t('landing.unilevel.total')}: <span className="font-bold text-cyan-400">28%</span></span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* TEAM BONUSES - BRONZE / SILVER / GOLD */}
+        <section className="py-12 sm:py-24 bg-zinc-900/50 relative overflow-hidden">
+          <div className="absolute inset-0 pointer-events-none">
+            <div className="absolute -bottom-20 -right-20 w-72 h-72 bg-amber-500/5 rounded-full blur-3xl" />
+          </div>
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 relative z-10">
+            <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-8 sm:mb-12">
+              <span className="inline-flex items-center gap-2 bg-amber-500/10 border border-amber-500/20 text-amber-400 text-sm font-medium px-4 py-1.5 rounded-full mb-4">
+                <Trophy className="h-4 w-4" /> BONIFICACIÓN DE EQUIPO
+              </span>
+              <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-3">
+                <span className="bg-gradient-to-r from-amber-400 to-orange-400 bg-clip-text text-transparent">🏆 {t('landing.bonuses.title')}</span>
+              </h2>
+              <p className="text-zinc-400 text-lg max-w-2xl mx-auto">{t('landing.bonuses.subtitle')}</p>
+            </motion.div>
+            <div className="grid sm:grid-cols-3 gap-6 max-w-4xl mx-auto">
+              {[
+                { emoji: '🥉', name: t('landing.bonuses.bronze.name'), bonus: '+1%', desc: t('landing.bonuses.bronze.requirement'), color: 'from-amber-700 to-amber-600', border: 'border-amber-700/50', bg: 'bg-amber-500/5' },
+                { emoji: '🥈', name: t('landing.bonuses.silver.name'), bonus: '+2%', desc: t('landing.bonuses.silver.requirement'), color: 'from-gray-400 to-gray-300', border: 'border-gray-500/50', bg: 'bg-gray-500/5' },
+                { emoji: '🥇', name: t('landing.bonuses.gold.name'), bonus: '+3%', desc: t('landing.bonuses.gold.requirement'), color: 'from-yellow-500 to-yellow-400', border: 'border-yellow-600/50', bg: 'bg-yellow-500/5' },
+              ].map((b, i) => (
+                <motion.div key={b.name} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.15 }} viewport={{ once: true }}>
+                  <Card className={\`bg-zinc-900 \${b.border} hover:border-cyan-500/30 transition-all\`}>
+                    <CardContent className="p-6 text-center">
+                      <div className="text-5xl mb-3">{b.emoji}</div>
+                      <h3 className={\`text-xl font-bold bg-gradient-to-r \${b.color} bg-clip-text text-transparent mb-2\`}>{b.name}</h3>
+                      <div className="text-3xl font-bold text-cyan-400 mb-2">{b.bonus}</div>
+                      <div className="text-sm text-zinc-400">{t('landing.bonuses.extraDaily')}</div>
+                      <div className="mt-3 text-xs text-zinc-500 bg-zinc-800 rounded-full px-3 py-1 inline-block">{b.desc}</div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </section>
+
         {/* AFFILIATE PROGRAM */}
-        <section className="py-12 sm:py-24 bg-zinc-900/50">
+        <section className="py-12 sm:py-24 relative overflow-hidden">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 text-center">
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-4">{t('landing.affiliate.title')}</h2>
             <p className="text-zinc-400 mb-8 sm:mb-16 max-w-2xl mx-auto">{t('landing.affiliate.description')}</p>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 sm:gap-4 mb-8 sm:mb-12 max-w-3xl mx-auto">
               {(landingAffiliateLevels.length > 0 ? landingAffiliateLevels : [
-                { level: 1, percentage: '8' },
-                { level: 2, percentage: '3' },
-                { level: 3, percentage: '1' },
-                { level: 4, percentage: '0.5' },
-                { level: 5, percentage: '0.5' },
+                { level: 1, percentage: '10' },
+                { level: 2, percentage: '4' },
+                { level: 3, percentage: '3' },
+                { level: 4, percentage: '2' },
+                { level: 5, percentage: '1.5' },
               ] as { level: number; percentage: string }[]).map((lvl) => (
                 <div key={lvl.level} className="bg-zinc-800 rounded-xl p-4 border border-zinc-700">
                   <div className="text-2xl font-bold text-cyan-400">{lvl.percentage}%</div>
@@ -2276,7 +2404,7 @@ export default function PlataformaROI() {
                     <div className="divide-y divide-zinc-800/50">
                       {notifications.slice(0, 20).map(notif => {
                         const iconMap: Record<NotificationType, React.ReactNode> = {
-                          mining: <Bot className="h-4 w-4 text-cyan-400" />,
+                          trading: <Bot className="h-4 w-4 text-cyan-400" />,
                           deposit: <ArrowDownLeft className="h-4 w-4 text-blue-400" />,
                           withdrawal: <ArrowUpRight className="h-4 w-4 text-amber-400" />,
                           affiliate: <Users className="h-4 w-4 text-purple-400" />,
@@ -2284,7 +2412,7 @@ export default function PlataformaROI() {
                           system: <Info className="h-4 w-4 text-zinc-400" />,
                         };
                         const bgMap: Record<NotificationType, string> = {
-                          mining: 'bg-cyan-500/10',
+                          trading: 'bg-cyan-500/10',
                           deposit: 'bg-blue-500/10',
                           withdrawal: 'bg-amber-500/10',
                           affiliate: 'bg-purple-500/10',
@@ -2414,7 +2542,7 @@ export default function PlataformaROI() {
                               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                               <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-500"></span>
                             </span>
-                            {t('mining.live')}
+                            {t('trading.live')}
                           </div>
                         )}
                       </div>
@@ -2434,7 +2562,7 @@ export default function PlataformaROI() {
                           </div>
                           <div>
                             <div className="font-semibold text-cyan-400">+${roiFlash.toFixed(2)} USDT</div>
-                            <div className="text-sm text-zinc-400">{t('mining.newEarnings')}</div>
+                            <div className="text-sm text-zinc-400">{t('trading.newEarnings')}</div>
                           </div>
                         </motion.div>
                       )}
@@ -2476,15 +2604,15 @@ export default function PlataformaROI() {
                         <CardContent className="p-4 sm:p-6">
                           <div className="text-sm text-zinc-400 mb-1 flex items-center gap-1.5">
                             <Activity className="h-3.5 w-3.5 text-cyan-400" />
-                            {t('mining.earned')}
+                            {t('trading.earned')}
                           </div>
                           <div className="text-2xl sm:text-3xl font-bold text-cyan-400 truncate">
                             ${accumulatedEarnings > 0 ? accumulatedEarnings.toFixed(2) : '0.00'}
                           </div>
                           <div className="text-sm text-zinc-400 mt-1">
                             {activeInvestments.length > 0
-                              ? `${activeInvestments.length} ${activeInvestments.length === 1 ? t('mining.rigOnline') : t('mining.rigOnline') + 's'}`
-                              : t('mining.noActiveRigs')}
+                              ? `${activeInvestments.length} ${activeInvestments.length === 1 ? t('trading.botOnline') : t('trading.botOnline') + 's'}`
+                              : t('trading.noActiveBots')}
                           </div>
                         </CardContent>
                       </Card>
@@ -2501,7 +2629,7 @@ export default function PlataformaROI() {
                                 <Coins className="h-5 w-5 text-cyan-400" />
                               </div>
                               <div>
-                                <div className="text-xs text-zinc-400 uppercase tracking-wider">{t('mining.todayEarnings')}</div>
+                                <div className="text-xs text-zinc-400 uppercase tracking-wider">{t('trading.todayEarnings')}</div>
                                 <div className="text-xl font-bold text-cyan-400">
                                   +${fmtUSDT(todayEarnings)} <span className="text-sm font-normal text-zinc-500">USDT</span>
                                 </div>
@@ -2511,7 +2639,7 @@ export default function PlataformaROI() {
                             {/* Daily Earnings Total */}
                             <div className="flex items-center gap-2 text-sm">
                               <Activity className="h-4 w-4 text-zinc-500" />
-                              <span className="text-zinc-400">{t('mining.dailyEstimate')}:</span>
+                              <span className="text-zinc-400">{t('trading.dailyEstimate')}:</span>
                               <span className="text-cyan-400 font-medium">
                                 +${fmtUSDT(activeInvestments.reduce((sum, r) => sum + d(r.dailyRoi), 0))} USDT
                               </span>
@@ -2521,7 +2649,7 @@ export default function PlataformaROI() {
                             {nextDistribution && (
                               <div className="flex items-center gap-2">
                                 <Clock4 className="h-4 w-4 text-zinc-500" />
-                                <span className="text-xs text-zinc-400">{t('mining.nextDistribution')}:</span>
+                                <span className="text-xs text-zinc-400">{t('trading.nextDistribution')}:</span>
                                 <div className="flex gap-1 font-mono text-sm">
                                   <span className="bg-zinc-800 px-1.5 py-0.5 rounded text-cyan-400">{String(nextDistribution.hours).padStart(2, '0')}</span>
                                   <span className="text-zinc-500">:</span>
@@ -2569,26 +2697,26 @@ export default function PlataformaROI() {
                                 </div>
                                 <div>
                                   <div className="text-lg font-bold flex items-center gap-2">
-                                    {t('mining.operationLive')}
+                                    {t('trading.operationLive')}
                                     <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30 animate-pulse" variant="outline">
-                                      {t('mining.live')}
+                                      {t('trading.live')}
                                     </Badge>
                                   </div>
                                   <div className="text-sm text-zinc-400">
-                                    {activeInvestments.length} {activeInvestments.length === 1 ? t('mining.rigOnline') : t('mining.rigOnline') + 's'} • {t('mining.miningNow')}
+                                    {activeInvestments.length} {activeInvestments.length === 1 ? t('trading.botOnline') : t('trading.botOnline') + 's'} • {t('trading.operatingNow')}
                                   </div>
                                 </div>
                               </div>
                               {/* Real-time earnings counter */}
                               <div className="bg-zinc-800/80 rounded-xl px-4 py-3 border border-cyan-500/10">
-                                <div className="text-xs text-zinc-400 uppercase tracking-wider">{t('mining.earningsRate')}</div>
+                                <div className="text-xs text-zinc-400 uppercase tracking-wider">{t('trading.earningsRate')}</div>
                                 <div className="text-2xl font-bold text-cyan-400 font-mono">
                                   +${(activeInvestments.reduce((sum, r) => sum + d(r.dailyRoi), 0) / 86400).toFixed(6)}
-                                  <span className="text-sm font-normal text-zinc-500">{t('mining.perSecond')}</span>
+                                  <span className="text-sm font-normal text-zinc-500">{t('trading.perSecond')}</span>
                                 </div>
                                 <div className="text-xs text-zinc-500 mt-0.5">
-                                  ${(activeInvestments.reduce((sum, r) => sum + d(r.dailyRoi), 0) / 3600).toFixed(4)}{t('mining.perHour')} •
-                                  ${fmtUSDT(activeInvestments.reduce((sum, r) => sum + d(r.dailyRoi), 0).toString())}{t('mining.perDay')}
+                                  ${(activeInvestments.reduce((sum, r) => sum + d(r.dailyRoi), 0) / 3600).toFixed(4)}{t('trading.perHour')} •
+                                  ${fmtUSDT(activeInvestments.reduce((sum, r) => sum + d(r.dailyRoi), 0).toString())}{t('trading.perDay')}
                                 </div>
                               </div>
                             </div>
@@ -2596,25 +2724,25 @@ export default function PlataformaROI() {
                             {/* Operation Stats Bar */}
                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
                               <div className="bg-zinc-800/50 rounded-lg p-2.5 text-center">
-                                <div className="text-[10px] sm:text-xs text-zinc-500">{t('mining.totalHashrate')}</div>
+                                <div className="text-[10px] sm:text-xs text-zinc-500">{t('trading.totalWinRate')}</div>
                                 <div className="text-sm font-semibold text-white font-mono">
                                   {activeInvestments.reduce((sum, r, i) => sum + (liveWinRates[i] || parseFloat(r.plan?.winRate || '0')), 0).toFixed(1)} ROI%
                                 </div>
                               </div>
                               <div className="bg-zinc-800/50 rounded-lg p-2.5 text-center">
-                                <div className="text-[10px] sm:text-xs text-zinc-500">{t('mining.totalPower')}</div>
+                                <div className="text-[10px] sm:text-xs text-zinc-500">{t('trading.totalCapital')}</div>
                                 <div className="text-sm font-semibold text-white font-mono">
                                   {activeInvestments.reduce((sum, r) => sum + d(r.amount), 0).toFixed(2)} USDT
                                 </div>
                               </div>
                               <div className="bg-zinc-800/50 rounded-lg p-2.5 text-center">
-                                <div className="text-[10px] sm:text-xs text-zinc-500">{t('mining.sharesAccepted')}</div>
+                                <div className="text-[10px] sm:text-xs text-zinc-500">{t('trading.tradesAccepted')}</div>
                                 <div className="text-sm font-semibold text-cyan-400 font-mono">
                                   {liveShares.reduce((sum, s) => sum + (s?.valid || 0), 0).toLocaleString()}
                                 </div>
                               </div>
                               <div className="bg-zinc-800/50 rounded-lg p-2.5 text-center">
-                                <div className="text-[10px] sm:text-xs text-zinc-500">{t('mining.blockFound')}</div>
+                                <div className="text-[10px] sm:text-xs text-zinc-500">{t('trading.tradeClosed')}</div>
                                 <div className="text-sm font-semibold text-amber-400 font-mono">
                                   {liveBlocks}
                                 </div>
@@ -2624,7 +2752,7 @@ export default function PlataformaROI() {
                             {/* Cumulative earnings since userInvestments started (persists across refreshes) */}
                             <div className="mt-3 bg-gradient-to-r from-emerald-900/30 to-transparent rounded-lg p-3 border border-cyan-500/10">
                               <div className="flex items-center justify-between">
-                                <span className="text-xs text-zinc-400">{t('mining.earningsStream')}</span>
+                                <span className="text-xs text-zinc-400">{t('trading.earningsStream')}</span>
                                 <span className="text-lg font-bold text-cyan-400 font-mono">+${liveEarnings.toFixed(6)} USDT</span>
                               </div>
                               <div className="w-full bg-zinc-800 rounded-full h-1.5 mt-2 overflow-hidden">
@@ -2635,7 +2763,7 @@ export default function PlataformaROI() {
                                 })()}
                               </div>
                               <div className="flex items-center justify-between mt-1">
-                                <span className="text-[10px] text-zinc-500">{t('mining.totalAccumulated')}</span>
+                                <span className="text-[10px] text-zinc-500">{t('trading.totalAccumulated')}</span>
                                 <span className="text-[10px] text-zinc-500">{(() => {
                                   const totalReturn = activeInvestments.reduce((sum, r) => sum + d(r.totalRoi), 0);
                                   const pct = totalReturn > 0 ? ((liveEarnings / totalReturn) * 100).toFixed(1) : '0';
@@ -2646,7 +2774,7 @@ export default function PlataformaROI() {
                           </CardContent>
                         </Card>
 
-                        {/* Individual Trading Rigs */}
+                        {/* Active Investments */}
                         <div className="space-y-3">
                           {activeInvestments.map((r, idx) => {
                             const baseWinRate = parseFloat(r.plan?.winRate || '0');
@@ -2693,7 +2821,7 @@ export default function PlataformaROI() {
                                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
                                       {/* Win Rate */}
                                       <div className="bg-zinc-800/60 rounded-lg p-2 text-center">
-                                        <div className="text-[10px] text-zinc-500 uppercase tracking-wider">{t('mining.hashrate')}</div>
+                                        <div className="text-[10px] text-zinc-500 uppercase tracking-wider">{t('trading.winRate')}</div>
                                         <div className="text-sm font-semibold font-mono text-white">{currentWR.toFixed(1)}</div>
                                         <div className="text-[10px] text-zinc-500">ROI%</div>
                                         <div className="w-full bg-zinc-700 rounded-full h-1 mt-1">
@@ -2702,7 +2830,7 @@ export default function PlataformaROI() {
                                       </div>
                                       {/* Volatility */}
                                       <div className="bg-zinc-800/60 rounded-lg p-2 text-center">
-                                        <div className="text-[10px] text-zinc-500 uppercase tracking-wider">{t('mining.temperature')}</div>
+                                        <div className="text-[10px] text-zinc-500 uppercase tracking-wider">{t('trading.volatility')}</div>
                                         <div className={`text-sm font-semibold font-mono ${volatilityColor}`}>{currentVolatility.toFixed(1)}%</div>
                                         <div className="text-[10px] text-zinc-500">{currentVolatility > 40 ? '⚠' : currentVolatility > 30 ? '⚡' : '✓'}</div>
                                         <div className="w-full bg-zinc-700 rounded-full h-1 mt-1">
@@ -2711,13 +2839,13 @@ export default function PlataformaROI() {
                                       </div>
                                       {/* Trades */}
                                       <div className="bg-zinc-800/60 rounded-lg p-2 text-center">
-                                        <div className="text-[10px] text-zinc-500 uppercase tracking-wider">{t('mining.shares')}</div>
+                                        <div className="text-[10px] text-zinc-500 uppercase tracking-wider">{t('trading.shares')}</div>
                                         <div className="text-sm font-semibold font-mono text-white">{(shares.valid / 1000).toFixed(1)}K</div>
-                                        <div className="text-[10px] text-emerald-500/70">{((shares.valid / (shares.valid + shares.invalid)) * 100).toFixed(2)}% {t('mining.valid')}</div>
+                                        <div className="text-[10px] text-emerald-500/70">{((shares.valid / (shares.valid + shares.invalid)) * 100).toFixed(2)}% {t('trading.valid')}</div>
                                       </div>
                                       {/* Earnings - shows accumulated since investment start */}
                                       <div className="bg-zinc-800/60 rounded-lg p-2 text-center">
-                                        <div className="text-[10px] text-zinc-500 uppercase tracking-wider">{t('mining.earned')}</div>
+                                        <div className="text-[10px] text-zinc-500 uppercase tracking-wider">{t('trading.earned')}</div>
                                         <div className="text-sm font-semibold font-mono text-cyan-400">+${(rentalAccumulatedEarnings[idx] || 0).toFixed(2)}</div>
                                         <div className="text-[10px] text-zinc-500">{d(r.dailyRoi).toFixed(2)}/dia</div>
                                       </div>
@@ -2751,7 +2879,7 @@ export default function PlataformaROI() {
                           <CardHeader className="pb-2">
                             <CardTitle className="text-sm flex items-center gap-2">
                               <Coins className="h-4 w-4 text-cyan-400" />
-                              {t('mining.earningsStream')}
+                              {t('trading.earningsStream')}
                               <span className="flex h-2 w-2">
                                 <span className="animate-ping absolute inline-flex h-2 w-2 rounded-full bg-emerald-400 opacity-75"></span>
                                 <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-500"></span>
@@ -2761,7 +2889,7 @@ export default function PlataformaROI() {
                           <CardContent>
                             <div className="max-h-48 overflow-y-auto space-y-1.5 custom-scrollbar">
                               {liveEarningsFeed.length === 0 ? (
-                                <div className="text-xs text-zinc-500 text-center py-4">{t('mining.miningNow')}...</div>
+                                <div className="text-xs text-zinc-500 text-center py-4">{t('trading.operatingNow')}...</div>
                               ) : (
                                 liveEarningsFeed.map(entry => (
                                   <motion.div
@@ -2786,7 +2914,7 @@ export default function PlataformaROI() {
                       <Card className="bg-zinc-900 border-zinc-800">
                         <CardHeader className="pb-3">
                           <CardTitle className="text-lg flex items-center gap-2">
-                            <Activity className="h-5 w-5 text-zinc-500" /> {t('mining.miningActive')}
+                            <Activity className="h-5 w-5 text-zinc-500" /> {t('trading.active')}
                           </CardTitle>
                         </CardHeader>
                         <CardContent>
@@ -2794,7 +2922,7 @@ export default function PlataformaROI() {
                             <div className="w-16 h-16 bg-zinc-800 rounded-2xl flex items-center justify-center mx-auto mb-4">
                               <Cpu className="h-8 w-8 text-zinc-600" />
                             </div>
-                            <p className="text-zinc-500 mb-4">{t('mining.noActiveRigs')}</p>
+                            <p className="text-zinc-500 mb-4">{t('trading.noActiveBots')}</p>
                             <Button className="bg-emerald-600 hover:bg-cyan-700" onClick={() => setActiveTab('investir')}>
                               <Bot className="mr-2 h-4 w-4" /> {t('dashboard.investNow')}
                             </Button>
@@ -2876,7 +3004,7 @@ export default function PlataformaROI() {
                         <Card className="bg-zinc-900 border-zinc-800">
                           <CardContent className="py-12 text-center">
                             <Bot className="h-12 w-12 text-zinc-600 mx-auto mb-4" />
-                            <p className="text-zinc-500">{t('miners.noMiners')}</p>
+                            <p className="text-zinc-500">{t('copyTraders.noTraders')}</p>
                           </CardContent>
                         </Card>
                       )}
@@ -2903,9 +3031,9 @@ export default function PlataformaROI() {
                                 </div>
                               </div>
                               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs sm:text-sm">
-                                <div className="bg-zinc-800/50 rounded-lg p-3"><span className="text-zinc-400 block text-xs">{t('miners.dailyReturn')}</span><span className="font-medium text-cyan-400 text-lg truncate">${fmtUSDT(trader.monthlyRoi)}</span></div>
-                                <div className="bg-zinc-800/50 rounded-lg p-3"><span className="text-zinc-400 block text-xs">{t('miners.price')}</span><span className="font-medium text-lg truncate">${fmtUSDT(trader.monthlyRoi)}{t('common.perDay')}</span></div>
-                                <div className="bg-zinc-800/50 rounded-lg p-3"><span className="text-zinc-400 block text-xs">{t('miners.efficiency')}</span><span className="font-medium">{trader.winRate}% win</span></div>
+                                <div className="bg-zinc-800/50 rounded-lg p-3"><span className="text-zinc-400 block text-xs">{t('copyTraders.dailyReturn')}</span><span className="font-medium text-cyan-400 text-lg truncate">${fmtUSDT(trader.monthlyRoi)}</span></div>
+                                <div className="bg-zinc-800/50 rounded-lg p-3"><span className="text-zinc-400 block text-xs">{t('copyTraders.price')}</span><span className="font-medium text-lg truncate">${fmtUSDT(trader.monthlyRoi)}{t('common.perDay')}</span></div>
+                                <div className="bg-zinc-800/50 rounded-lg p-3"><span className="text-zinc-400 block text-xs">{t('copyTraders.performance')}</span><span className="font-medium">{trader.winRate}% win</span></div>
                                 <div className="bg-zinc-800/50 rounded-lg p-3"><span className="text-zinc-400 block text-xs">{t('admin.profitShare')}</span><span className="font-medium">${fmtUSDT(trader.totalPnl)}</span></div>
                               </div>
                             </CardContent>
@@ -2982,7 +3110,7 @@ export default function PlataformaROI() {
                                   setSelectedPlanId(undefined);
                                 }}
                               >
-                                {t('miners.customPlan')} • {t('miners.price')}: ${fmtUSDT(trader.winRate)}{t('common.perDay')}
+                                {t('copyTraders.customPlan')} • {t('copyTraders.price')}: ${fmtUSDT(trader.winRate)}{t('common.perDay')}
                               </Button>
                             </div>
                           )}
@@ -2997,7 +3125,7 @@ export default function PlataformaROI() {
                                   setSelectedPlanId(undefined);
                                 }}
                               >
-                                <Zap className="mr-2 h-4 w-4" /> {t('miners.rent')} - ${fmtUSDT(trader.winRate)}{t('common.perDay')}
+                                <Zap className="mr-2 h-4 w-4" /> {t('copyTraders.invest')} - ${fmtUSDT(trader.winRate)}{t('common.perDay')}
                               </Button>
                             </div>
                           )}
@@ -3017,7 +3145,7 @@ export default function PlataformaROI() {
                         <CardContent className="py-12 text-center">
                           <Bot className="h-12 w-12 text-zinc-600 mx-auto mb-4" />
                           <p className="text-zinc-500">{t('dashboard.noRentals')}</p>
-                          <Button className="mt-4 bg-emerald-600 hover:bg-cyan-700" onClick={() => setActiveTab('investir')}>{t('dashboard.viewMiners')}</Button>
+                          <Button className="mt-4 bg-emerald-600 hover:bg-cyan-700" onClick={() => setActiveTab('investir')}>{t('dashboard.viewTraders')}</Button>
                         </CardContent>
                       </Card>
                     ) : (
@@ -3038,7 +3166,7 @@ export default function PlataformaROI() {
                               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs sm:text-sm">
                                     <div><span className="text-zinc-400 block text-xs">Início</span>{fmtDate(r.startDate)}</div>
                                     <div><span className="text-zinc-400 block text-xs">Fim</span>{fmtDate(r.endDate)}</div>
-                                    <div><span className="text-zinc-400 block text-xs">{t('miners.dailyReturn')}</span><span className="text-cyan-400">${fmtUSDT(r.dailyRoi)}</span></div>
+                                    <div><span className="text-zinc-400 block text-xs">{t('copyTraders.dailyReturn')}</span><span className="text-cyan-400">${fmtUSDT(r.dailyRoi)}</span></div>
                                     <div><span className="text-zinc-400 block text-xs">{t('plans.totalPrice')}</span><span className="text-cyan-400">${fmtUSDT(r.totalRoi)}</span></div>
                                   </div>
                                   <Badge className={statusColor(r.status)} variant="outline">{statusLabel(r.status)}</Badge>
@@ -3701,7 +3829,7 @@ export default function PlataformaROI() {
                                               {v.status === 'active' ? '🟢 Ativo' : v.status === 'completed' ? '✅ Completo' : v.status === 'expired' ? '⏰ Expirado' : '🚫 Revogado'}
                                             </Badge>
                                             <Badge className="bg-zinc-700 text-zinc-300" variant="outline">
-                                              {v.type === 'basic' ? 'Básico' : v.type === 'premium' ? 'Premium' : 'Personalizado'}
+                                              {v.type === 'basic' ? t('copyTraders.planBasic') : v.type === 'premium' ? t('copyTraders.planPremium') : t('copyTraders.planCustom')}
                                             </Badge>
                                           </div>
                                           {v.status === 'active' && (
@@ -4006,7 +4134,7 @@ export default function PlataformaROI() {
                               <div className="mt-3 p-3 bg-zinc-800/30 rounded-lg border border-zinc-700/50">
                                 <div className="text-xs text-zinc-400">
                                   <span className="text-cyan-400 font-medium">💡 {t('affiliates.howItWorks')}:</span>{' '}
-                                  {t('affiliates.miningProfitExplanation')}
+                                  {t('affiliates.tradingProfitExplanation')}
                                 </div>
                               </div>
                             )}
@@ -4223,8 +4351,8 @@ export default function PlataformaROI() {
                           <Card className="bg-zinc-900 border-zinc-800">
                             <CardContent className="p-5">
                               <span className="text-sm text-zinc-400">{t('dashboard.totalRoi')}</span>
-                              <div className="text-2xl font-bold text-cyan-400">${fmtUSDT(adminStats.mining.totalRoi)}</div>
-                              <div className="text-xs text-zinc-500 mt-1">{t('dashboard.totalInvested')}: ${fmtUSDT(adminStats.mining.totalInvested)}</div>
+                              <div className="text-2xl font-bold text-cyan-400">${fmtUSDT(adminStats.trading?.totalRoi || 0)}</div>
+                              <div className="text-xs text-zinc-500 mt-1">{t('dashboard.totalInvested')}: ${fmtUSDT(adminStats.trading?.totalInvested || 0)}</div>
                             </CardContent>
                           </Card>
                           <Card className="bg-zinc-900 border-zinc-800">
@@ -4751,7 +4879,7 @@ export default function PlataformaROI() {
                                           </SelectItem>
                                           <SelectItem value="roi_profit">
                                             <div className="flex flex-col items-start">
-                                              <span className="font-medium">{t('admin.modeMiningProfit')}</span>
+                                              <span className="font-medium">{t('admin.modeTradingProfit')}</span>
                                               <span className="text-xs text-zinc-400">Commission on ROI profits only</span>
                                             </div>
                                           </SelectItem>
@@ -4787,7 +4915,7 @@ export default function PlataformaROI() {
                                         <>
                                           <div className="flex items-start gap-2">
                                             <Bot className="h-4 w-4 text-cyan-400 mt-0.5 shrink-0" />
-                                            <div className="text-sm text-zinc-300">{t('affiliates.modeDescriptionMiningProfit')}</div>
+                                            <div className="text-sm text-zinc-300">{t('affiliates.modeDescriptionTradingProfit')}</div>
                                           </div>
                                           <div>
                                             <Label className="text-zinc-400 text-xs">Bônus de Locação (%) - comissão imediata</Label>
@@ -5656,7 +5784,7 @@ Seus 10 indicados diretos investem $100/dia cada:
                                         <TableRow key={m.id} className="border-zinc-700">
                                           <TableCell className="text-xs font-medium">{m.name}</TableCell>
                                           <TableCell className="text-xs"><Badge className={`${assetColor(m.coin)} bg-zinc-800 border-zinc-700 text-[10px]`} variant="outline">{m.coin}</Badge></TableCell>
-                                          <TableCell className="text-xs">{m.hashRate}</TableCell>
+                                          <TableCell className="text-xs">{m.winRate}</TableCell>
                                           <TableCell className="text-xs text-cyan-400">${fmtUSDT(m.dailyRevenue)}</TableCell>
                                           <TableCell className="text-xs">${fmtUSDT(m.pricePerDay)}</TableCell>
                                           <TableCell className="text-xs">{m.profitSharePct}%</TableCell>
@@ -5673,7 +5801,7 @@ Seus 10 indicados diretos investem $100/dia cada:
                                 <ul className="text-xs text-zinc-400 space-y-1">
                                   <li>• Reserva mínima do sistema: 15% dos depósitos totais</li>
                                   <li>• Cap diário de comissões afiliados: configurável (0 = sem limite)</li>
-                                  <li>• Qualificação obrigatória: investidor + link desbloqueado para receber comissões</li>
+                                  <li>• Calificación obligatoria: inversor + enlace desbloqueado para recibir comisiones</li>
                                   <li>• Profundidade máxima: 5 níveis de afiliados</li>
                                   <li>• Variação diária de ROI: ±5% (simula flutuação real)</li>
                                   <li>• 3 modos de comissão para equilibrar atratividade e sustentabilidade</li>
@@ -5743,20 +5871,20 @@ Seus 10 indicados diretos investem $100/dia cada:
       <Dialog open={!!investDialogPlan} onOpenChange={() => setInvestDialogPlan(null)}>
         <DialogContent className="bg-zinc-900 border-zinc-800 text-white max-w-md w-[95vw] sm:w-full">
           <DialogHeader>
-            <DialogTitle>{t('miners.rent')} {investDialogPlan?.name}</DialogTitle>
-            <DialogDescription className="text-zinc-400">{investDialogPlan?.model} • {investDialogPlan?.hashRate} • {investDialogPlan?.coin}</DialogDescription>
+            <DialogTitle>{t('copyTraders.invest')} {investDialogPlan?.name}</DialogTitle>
+            <DialogDescription className="text-zinc-400">{investDialogPlan?.specialty || ''} • {investDialogPlan?.winRate || ''} • {investDialogPlan?.riskLevel || ''}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             {/* Plan selection */}
             {investDialogPlan && investDialogPlan.plans.length > 0 && (
               <div>
-                <Label className="text-zinc-300 text-sm">{t('miners.selectPlan')}</Label>
+                <Label className="text-zinc-300 text-sm">{t('copyTraders.selectPlan')}</Label>
                 <Select value={selectedPlanId || 'custom'} onValueChange={v => { if (v === 'custom') { setSelectedPlanId(undefined); } else { setSelectedPlanId(v); const p = investDialogPlan.plans.find(pp => pp.id === v); if (p) setInvestmentDuration(p.days); } }}>
-                  <SelectTrigger className="bg-zinc-800 border-zinc-700 mt-1"><SelectValue placeholder={t('miners.customPlan')} /></SelectTrigger>
+                  <SelectTrigger className="bg-zinc-800 border-zinc-700 mt-1"><SelectValue placeholder={t('copyTraders.customPlan')} /></SelectTrigger>
                   <SelectContent className="bg-zinc-800">
-                    <SelectItem value="custom">{t('miners.customPlan')}</SelectItem>
+                    <SelectItem value="custom">{t('copyTraders.customPlan')}</SelectItem>
                     {investDialogPlan.plans.map(p => (
-                      <SelectItem key={p.id} value={p.id}>{p.name} - {p.days} {t('miners.days')} ({p.discountPct}% {t('miners.off')})</SelectItem>
+                      <SelectItem key={p.id} value={p.id}>{p.name} - {p.days} {t('copyTraders.days')} ({p.discountPct}% {t('copyTraders.off')})</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -5765,18 +5893,18 @@ Seus 10 indicados diretos investem $100/dia cada:
             {/* Days */}
             {!selectedPlanId && (
               <div>
-                <Label className="text-zinc-300 text-sm">{t('miners.period')}</Label>
+                <Label className="text-zinc-300 text-sm">{t('copyTraders.period')}</Label>
                 <Input type="number" min={investDialogPlan?.minRentalDays || 7} max={investDialogPlan?.maxRentalDays || 365} value={investmentDuration} onChange={e => setInvestmentDuration(parseInt(e.target.value) || 7)} className="bg-zinc-800 border-zinc-700 mt-1" />
                 <div className="text-xs text-zinc-500 mt-1">{t('copyTraders.minMax', { min: String(investDialogPlan?.minRentalDays || 7), max: String(investDialogPlan?.maxRentalDays || 365) })}</div>
               </div>
             )}
             {/* Summary */}
             <div className="bg-zinc-800 rounded-lg p-4 space-y-2 text-sm">
-              <div className="flex justify-between"><span className="text-zinc-400">{t('miners.totalCost')}</span><span className="font-medium">${fmtUSDT(rentalCalc.totalPrice)} USDT</span></div>
-              <div className="flex justify-between"><span className="text-zinc-400">{t('miners.dailyProfit')}</span><span className="text-cyan-400 font-medium">${fmtUSDT(rentalCalc.dailyReturn)} USDT</span></div>
-              <div className="flex justify-between"><span className="text-zinc-400">{t('miners.totalProfit')}</span><span className="text-cyan-400 font-medium">${fmtUSDT(rentalCalc.totalReturn)} USDT</span></div>
+              <div className="flex justify-between"><span className="text-zinc-400">{t('copyTraders.totalInvestment')}</span><span className="font-medium">${fmtUSDT(rentalCalc.totalPrice)} USDT</span></div>
+              <div className="flex justify-between"><span className="text-zinc-400">{t('copyTraders.dailyProfit')}</span><span className="text-cyan-400 font-medium">${fmtUSDT(rentalCalc.dailyReturn)} USDT</span></div>
+              <div className="flex justify-between"><span className="text-zinc-400">{t('copyTraders.totalProfit')}</span><span className="text-cyan-400 font-medium">${fmtUSDT(rentalCalc.totalReturn)} USDT</span></div>
               <Separator className="bg-zinc-700" />
-              <div className="flex justify-between"><span className="text-zinc-400">{t('miners.yourBalance')}</span><span className={d(user.balance) >= rentalCalc.totalPrice ? 'text-cyan-400' : 'text-red-400'}>${fmtUSDT(user.balance)} USDT</span></div>
+              <div className="flex justify-between"><span className="text-zinc-400">{t('copyTraders.yourBalance')}</span><span className={d(user.balance) >= rentalCalc.totalPrice ? 'text-cyan-400' : 'text-red-400'}>${fmtUSDT(user.balance)} USDT</span></div>
             </div>
             {d(user.balance) < rentalCalc.totalPrice && !useVoucherForInvest && (
               <div className="flex items-center gap-2 text-red-400 text-sm"><AlertTriangle className="h-4 w-4" /> {t('dashboard.insufficientBalance')}</div>
@@ -5810,7 +5938,7 @@ Seus 10 indicados diretos investem $100/dia cada:
                             const avail = d(v.amount) - d(v.usedAmount);
                             return (
                               <SelectItem key={v.id} value={v.id} disabled={avail < rentalCalc.totalPrice}>
-                                {v.type === 'basic' ? '🥉 Básico' : v.type === 'premium' ? '🥇 Premium' : '⚙️ Custom'} — {fmtUSDT(avail)} USDT disponível
+                                {v.type === 'basic' ? t('copyTraders.planBasic') : v.type === 'premium' ? t('copyTraders.planPremium') : t('copyTraders.planCustom')} — {fmtUSDT(avail)} USDT disponível
                               </SelectItem>
                             );
                           })}
@@ -6258,7 +6386,7 @@ Seus 10 indicados diretos investem $100/dia cada:
                     <SelectItem value="general">{t('category.general')}</SelectItem>
                     <SelectItem value="deposit">{t('category.deposit')}</SelectItem>
                     <SelectItem value="withdrawal">{t('category.withdrawal')}</SelectItem>
-                    <SelectItem value="mining">{t('category.mining')}</SelectItem>
+                    <SelectItem value="mining">{t('category.trading')}</SelectItem>
                     <SelectItem value="affiliate">{t('category.affiliate')}</SelectItem>
                     <SelectItem value="nowpayments">NowPayments</SelectItem>
                   </SelectContent>
