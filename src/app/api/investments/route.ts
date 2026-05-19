@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
       orderBy: { createdAt: 'desc' },
       include: {
         plan: {
-          select: { id: true, name: true, dailyRoiPct: true, durationDays: true },
+          select: { id: true, name: true, dailyRoiPct: true, durationDays: true, minAmount: true, maxAmount: true, description: true, isActive: true, isFeatured: true, sortOrder: true },
         },
       },
     });

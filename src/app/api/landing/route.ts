@@ -7,8 +7,8 @@ import { getUSDTBRLRate } from '@/lib/market-data';
 // Public landing page data - no auth required
 export async function GET() {
   try {
-    // Get all active investment plans with stats
-    const [plans, affiliateLevels, configs] = await Promise.all([
+    // Get all active investment plans with stats and copy traders
+    const [plans, traders, affiliateLevels, configs] = await Promise.all([
       db.investmentPlan.findMany({
         where: { isActive: true },
         orderBy: [{ isFeatured: 'desc' }, { sortOrder: 'asc' }, { name: 'asc' }],
@@ -17,6 +17,10 @@ export async function GET() {
             select: { investments: { where: { status: 'active' } } },
           },
         },
+      }),
+      db.copyTrader.findMany({
+        where: { isActive: true },
+        orderBy: [{ isFeatured: 'desc' }, { sortOrder: 'asc' }],
       }),
       db.affiliateLevel.findMany({
         where: { isActive: true },
@@ -64,6 +68,7 @@ export async function GET() {
     const configMap = Object.fromEntries(configs.map(c => [c.key, c.value]));
 
     return apiSuccess({
+      traders,
       plans,
       affiliateLevels,
       config: {
