@@ -1,5 +1,5 @@
 # ============================================================================
-# Mining Protocol - Production Dockerfile (Simplified)
+# PLATAFORMA ROI - Copy Trading Platform Dockerfile (Simplified)
 # ============================================================================
 
 FROM node:22-alpine AS builder

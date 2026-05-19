@@ -1055,3 +1055,33 @@ Stage Summary:
 - All NowPayments credentials configured in Vercel for production, preview, and development
 - NOWPAYMENTS_PASSWORD was missing before, now added
 - Deployment https://sistema-invest-ozeano.vercel.app is live with all env vars
+
+---
+Task ID: 2
+Agent: Main Agent
+Task: Fix 'plan is not defined' ReferenceError and multiple runtime bugs
+
+Work Log:
+- Identified root cause: `plan` variable used in `.map(trader => ...)` callbacks where `trader` was the callback param
+- Fixed landingTraders.map: replaced all `plan.` references with `trader.`
+- Fixed copyTraders.map header: replaced all `plan.` references with `trader.`
+- Fixed inner .map variable shadowing: renamed inner `trader` param to `plan` for plans loop
+- Fixed delete handler: changed duplicate `=== 'plan'` to `=== 'trader'` for copy-traders
+- Fixed Admin CopyTrader Dialog: changed `planDialog.open`/`planDialog.trader` to `traderDialog.open`/`traderDialog.trader`
+- Fixed Admin Plan Dialog: added optional chaining to `planDialog.plan?.` references
+- Fixed investment display: `r.plan.coin`/`r.plan.model`/`r.plan.pool` → `r.plan?.name`
+- Fixed: `r.trader.name` → `r.plan?.name` (Investment has no trader relation)
+- Fixed: `r.dailyReturn` → `r.dailyRoi`, `r.totalReturn` → `r.totalRoi`
+- Fixed CopyTrader interface: removed duplicate fields, removed non-existent `model`
+- Fixed InvestmentPlan interface: removed duplicate `description`
+- Added dailyRoi/totalRoi to UserInvestment interface
+- Added CopyTraders to landing API for unauthenticated users
+- Expanded investments API plan select with more fields
+- Committed and pushed to GitHub (46523a9)
+- Vercel deployment successful (READY)
+
+Stage Summary:
+- All runtime bugs fixed and deployed
+- Error "plan is not defined" resolved
+- 500 error should be resolved as API now returns proper data
+- Deployment: https://sistema-invest-ozeano.vercel.app

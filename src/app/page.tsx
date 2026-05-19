@@ -266,12 +266,12 @@ const fmtDateTime = (dateStr: string): string => {
   return new Date(dateStr).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 };
 
-const coinIconBase = (coin: string): string => {
+const assetIconBase = (coin: string): string => {
   const icons: Record<string, string> = { BTC: '₿', KAS: 'K', LTC: 'Ł', DOGE: 'Ð', KDA: 'K' };
-  return icons[coin] || '⛏';
+  return icons[coin] || '📈';
 };
 
-const coinColor = (coin: string): string => {
+const assetColor = (coin: string): string => {
   const colors: Record<string, string> = { BTC: 'text-amber-400', KAS: 'text-cyan-400', LTC: 'text-gray-300', DOGE: 'text-yellow-400' };
   return colors[coin] || 'text-white';
 };
@@ -349,7 +349,7 @@ export default function PlataformaROI() {
   const { t, locale, setLocale, locales } = useI18n();
 
   // i18n-aware label functions
-  const coinIcon = coinIconBase;
+  const assetIcon = assetIconBase;
   const statusLabel = (status: string): string => {
     const labels: Record<string, string> = {
       active: t('status.active'), completed: t('status.completed'), cancelled: t('status.cancelled'),
@@ -430,8 +430,8 @@ export default function PlataformaROI() {
   // Live Trading state
   const [liveEarnings, setLiveEarnings] = useState(0); // cumulative per-second earnings
   const [liveShares, setLiveShares] = useState<{ valid: number; invalid: number }[]>([]); // per investment
-  const [liveTemps, setLiveTemps] = useState<number[]>([]); // per investment
-  const [liveHashrates, setLiveHashrates] = useState<number[]>([]); // per investment (fluctuating)
+  const [liveVolatility, setLiveVolatility] = useState<number[]>([]); // per investment
+  const [liveWinRates, setLiveWinRates] = useState<number[]>([]); // per investment (fluctuating)
   const [liveBlocks, setLiveBlocks] = useState(0); // total blocks found
   const [liveEarningsFeed, setLiveEarningsFeed] = useState<{ id: number; amount: number; time: string; coin: string }[]>([]); // recent micro-earnings
   const [liveEarningsCounter, setLiveEarningsCounter] = useState(0); // incrementing counter for feed IDs
@@ -1694,7 +1694,7 @@ export default function PlataformaROI() {
     }, 0);
   }, [activeInvestments]);
 
-  // Per-investment accumulated earnings (for individual rig cards)
+  // Per-investment accumulated earnings (for individual trading bot cards)
   const rentalAccumulatedEarnings = useMemo(() => {
     if (activeInvestments.length === 0) return [];
     const now = Date.now();
@@ -1706,7 +1706,7 @@ export default function PlataformaROI() {
   }, [activeInvestments]);
 
   // ==========================================
-  // LIVE MINING OPERATION SIMULATION
+  // LIVE TRADING OPERATION SIMULATION
   // Simulates real-time trading activity visuals
   // Updates every second for immersive experience
   // Must be placed AFTER activeInvestments useMemo to avoid TDZ error
@@ -1718,14 +1718,14 @@ export default function PlataformaROI() {
 
     // Initialize per-investment state
     const initShares = activeInvestments.map(() => ({ valid: Math.floor(Math.random() * 5000) + 2000, invalid: Math.floor(Math.random() * 50) + 10 }));
-    const initTemps = activeInvestments.map(() => 58 + Math.random() * 15); // 58-73°C
-    const initHashrates = activeInvestments.map(r => {
+    const initVolatility = activeInvestments.map(() => 15 + Math.random() * 30); // 15-45% volatility index
+    const initWinRates = activeInvestments.map(r => {
       const base = parseFloat(r.plan?.winRate || '0');
       return base * (0.97 + Math.random() * 0.06); // ±3% fluctuation
     });
     setLiveShares(initShares);
-    setLiveTemps(initTemps);
-    setLiveHashrates(initHashrates);
+    setLiveVolatility(initVolatility);
+    setLiveWinRates(initWinRates);
     // Start from accumulated earnings (calculated from investment start dates — never resets)
     setLiveEarnings(accumulatedEarnings);
     setLiveEarningsFeed([]);
@@ -1742,18 +1742,18 @@ export default function PlataformaROI() {
       const perSecond = totalDailyRate / 86400;
       setLiveEarnings(prev => prev + perSecond);
 
-      // Fluctuate hashrates slightly (±1%)
-      setLiveHashrates(prev => prev.map((hr, i) => {
+      // Fluctuate win rates slightly (±1%)
+      setLiveWinRates(prev => prev.map((hr, i) => {
         const base = parseFloat(activeInvestments[i]?.plan?.dailyRoiPct || '0');
         if (base === 0) return hr;
         const fluctuated = hr + (Math.random() - 0.5) * base * 0.02;
         return Math.max(base * 0.94, Math.min(base * 1.06, fluctuated));
       }));
 
-      // Fluctuate temperatures slightly
-      setLiveTemps(prev => prev.map(t => {
+      // Fluctuate volatility slightly
+      setLiveVolatility(prev => prev.map(t => {
         const delta = (Math.random() - 0.5) * 1.2;
-        return Math.max(52, Math.min(78, t + delta));
+        return Math.max(10, Math.min(50, t + delta));
       }));
 
       // Increment shares (each investment gets random shares per second)
@@ -1999,7 +1999,7 @@ export default function PlataformaROI() {
                       <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 bg-cyan-500/10 rounded-lg flex items-center justify-center text-lg font-bold text-cyan-400">
-                            {coinIcon(trader.riskLevel || '')}
+                            {assetIcon(trader.riskLevel || '')}
                           </div>
                           <div>
                             <h3 className="font-semibold">{trader.name}</h3>
@@ -2007,13 +2007,13 @@ export default function PlataformaROI() {
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
-                          <Badge className={`text-xs ${coinColor(trader.riskLevel || '')} bg-zinc-800 border-zinc-700`} variant="outline">{trader.riskLevel || ''}</Badge>
+                          <Badge className={`text-xs ${assetColor(trader.riskLevel || '')} bg-zinc-800 border-zinc-700`} variant="outline">{trader.riskLevel || ''}</Badge>
                           <Badge className={statusColor(trader.status)} variant="outline">{statusLabel(trader.status)}</Badge>
                         </div>
                       </div>
                       <div className="grid grid-cols-2 gap-2 sm:gap-4 text-sm">
                         <div><span className="text-zinc-400">{t('landing.featured.hashRate')}</span><p className="font-medium">{trader.winRate}%</p></div>
-                        <div><span className="text-zinc-400">{t('landing.featured.coin')}</span><p className={`font-medium ${coinColor(trader.riskLevel || '')}`}>{trader.riskLevel || ''}</p></div>
+                        <div><span className="text-zinc-400">{t('landing.featured.coin')}</span><p className={`font-medium ${assetColor(trader.riskLevel || '')}`}>{trader.riskLevel || ''}</p></div>
                         <div><span className="text-zinc-400">{t('landing.featured.dailyRevenue')}</span><p className="font-medium text-cyan-400">${fmtUSDT(trader.monthlyRoi)}</p></div>
                         <div><span className="text-zinc-400">{t('landing.featured.priceDay')}</span><p className="font-medium">${fmtUSDT(trader.monthlyRoi)}{t('common.perDay')}</p></div>
                       </div>
@@ -2483,7 +2483,7 @@ export default function PlataformaROI() {
                           </div>
                           <div className="text-sm text-zinc-400 mt-1">
                             {activeInvestments.length > 0
-                              ? `${activeInvestments.length} ${activeInvestments.length === 1 ? t('mining.rigOnline') : `${t('mining.rigOnline')}s`}`
+                              ? `${activeInvestments.length} ${activeInvestments.length === 1 ? t('mining.rigOnline') : t('mining.rigOnline') + 's'}`
                               : t('mining.noActiveRigs')}
                           </div>
                         </CardContent>
@@ -2545,7 +2545,7 @@ export default function PlataformaROI() {
                         <ArrowUpRight className="mr-2 h-4 w-4" /> {t('dashboard.withdraw')}
                       </Button>
                       <Button variant="outline" className="border-zinc-700" onClick={() => setActiveTab('investir')}>
-                        <Bot className="mr-2 h-4 w-4" /> {t('dashboard.rentMiner')}
+                        <Bot className="mr-2 h-4 w-4" /> {t('dashboard.investNow')}
                       </Button>
                     </div>
                     {/* Live Trading Operation Dashboard */}
@@ -2575,7 +2575,7 @@ export default function PlataformaROI() {
                                     </Badge>
                                   </div>
                                   <div className="text-sm text-zinc-400">
-                                    {activeInvestments.length} {activeInvestments.length === 1 ? t('mining.rigOnline') : `${t('mining.rigOnline')}s`} • {t('mining.miningNow')}
+                                    {activeInvestments.length} {activeInvestments.length === 1 ? t('mining.rigOnline') : t('mining.rigOnline') + 's'} • {t('mining.miningNow')}
                                   </div>
                                 </div>
                               </div>
@@ -2598,7 +2598,7 @@ export default function PlataformaROI() {
                               <div className="bg-zinc-800/50 rounded-lg p-2.5 text-center">
                                 <div className="text-[10px] sm:text-xs text-zinc-500">{t('mining.totalHashrate')}</div>
                                 <div className="text-sm font-semibold text-white font-mono">
-                                  {activeInvestments.reduce((sum, r, i) => sum + (liveHashrates[i] || parseFloat(r.plan?.winRate || '0')), 0).toFixed(1)} ROI%
+                                  {activeInvestments.reduce((sum, r, i) => sum + (liveWinRates[i] || parseFloat(r.plan?.winRate || '0')), 0).toFixed(1)} ROI%
                                 </div>
                               </div>
                               <div className="bg-zinc-800/50 rounded-lg p-2.5 text-center">
@@ -2649,12 +2649,12 @@ export default function PlataformaROI() {
                         {/* Individual Trading Rigs */}
                         <div className="space-y-3">
                           {activeInvestments.map((r, idx) => {
-                            const baseHashrate = parseFloat(r.plan?.winRate || '0');
-                            const currentHR = liveHashrates[idx] || baseHashrate;
-                            const currentTemp = liveTemps[idx] || 65;
+                            const baseWinRate = parseFloat(r.plan?.winRate || '0');
+                            const currentWR = liveWinRates[idx] || baseWinRate;
+                            const currentVolatility = liveVolatility[idx] || 65;
                             const shares = liveShares[idx] || { valid: 0, invalid: 0 };
-                            const tempColor = currentTemp > 72 ? 'text-red-400' : currentTemp > 65 ? 'text-amber-400' : 'text-cyan-400';
-                            const hrPercent = baseHashrate > 0 ? (currentHR / baseHashrate) * 100 : 100;
+                            const volatilityColor = currentVolatility > 40 ? 'text-red-400' : currentVolatility > 30 ? 'text-amber-400' : 'text-cyan-400';
+                            const hrPercent = baseWinRate > 0 ? (currentWR / baseWinRate) * 100 : 100;
 
                             return (
                               <Card key={r.id} className="bg-zinc-900 border-zinc-800 hover:border-zinc-700 transition-colors relative overflow-hidden">
@@ -2663,18 +2663,18 @@ export default function PlataformaROI() {
                                   <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-emerald-500/50 to-transparent animate-pulse" />
 
                                   <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                                    {/* Trading Rig Visual */}
+                                    {/* Trading Bot Visual */}
                                     <div className="flex items-center gap-3 flex-1 min-w-0">
-                                      {/* Animated trading icon */}
+                                      {/* Trading Bot Icon */}
                                       <div className="relative w-12 h-12 flex-shrink-0">
                                         <div className="w-12 h-12 bg-zinc-800 rounded-xl flex items-center justify-center border border-zinc-700">
-                                          <div className="text-lg font-bold text-cyan-400">{coinIcon(r.plan?.name || 'USDT')}</div>
+                                          <div className="text-lg font-bold text-cyan-400">{assetIcon(r.plan?.name || 'USDT')}</div>
                                         </div>
-                                        {/* Spinning fan indicator */}
+                                        {/* Signal indicator */}
                                         <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-zinc-900 rounded-full border border-zinc-700 flex items-center justify-center">
-                                          <div className="w-3 h-3 border-2 border-emerald-400/60 border-t-emerald-400 rounded-full animate-spin" style={{ animationDuration: '0.8s' }} />
+                                          <div className="w-3 h-3 bg-emerald-400 rounded-full animate-pulse" />
                                         </div>
-                                        {/* Green LED */}
+                                        {/* Status indicator */}
                                         <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-cyan-500 rounded-full animate-pulse shadow-lg shadow-emerald-500/50" />
                                       </div>
                                       <div className="min-w-0">
@@ -2694,22 +2694,22 @@ export default function PlataformaROI() {
                                       {/* Win Rate */}
                                       <div className="bg-zinc-800/60 rounded-lg p-2 text-center">
                                         <div className="text-[10px] text-zinc-500 uppercase tracking-wider">{t('mining.hashrate')}</div>
-                                        <div className="text-sm font-semibold font-mono text-white">{currentHR.toFixed(1)}</div>
+                                        <div className="text-sm font-semibold font-mono text-white">{currentWR.toFixed(1)}</div>
                                         <div className="text-[10px] text-zinc-500">ROI%</div>
                                         <div className="w-full bg-zinc-700 rounded-full h-1 mt-1">
                                           <div className={`h-1 rounded-full transition-all duration-500 ${hrPercent > 97 ? 'bg-cyan-500' : hrPercent > 93 ? 'bg-amber-500' : 'bg-red-500'}`} style={{ width: `${Math.min(100, hrPercent)}%` }} />
                                         </div>
                                       </div>
-                                      {/* Temperature */}
+                                      {/* Volatility */}
                                       <div className="bg-zinc-800/60 rounded-lg p-2 text-center">
                                         <div className="text-[10px] text-zinc-500 uppercase tracking-wider">{t('mining.temperature')}</div>
-                                        <div className={`text-sm font-semibold font-mono ${tempColor}`}>{currentTemp.toFixed(1)}°C</div>
-                                        <div className="text-[10px] text-zinc-500">{currentTemp > 72 ? '⚠' : currentTemp > 65 ? '⚡' : '✓'}</div>
+                                        <div className={`text-sm font-semibold font-mono ${volatilityColor}`}>{currentVolatility.toFixed(1)}%</div>
+                                        <div className="text-[10px] text-zinc-500">{currentVolatility > 40 ? '⚠' : currentVolatility > 30 ? '⚡' : '✓'}</div>
                                         <div className="w-full bg-zinc-700 rounded-full h-1 mt-1">
-                                          <div className={`h-1 rounded-full transition-all duration-500 ${currentTemp > 72 ? 'bg-red-500' : currentTemp > 65 ? 'bg-amber-500' : 'bg-cyan-500'}`} style={{ width: `${Math.min(100, (currentTemp / 85) * 100)}%` }} />
+                                          <div className={`h-1 rounded-full transition-all duration-500 ${currentVolatility > 40 ? 'bg-red-500' : currentVolatility > 30 ? 'bg-amber-500' : 'bg-cyan-500'}`} style={{ width: `${Math.min(100, (currentVolatility / 50) * 100)}%` }} />
                                         </div>
                                       </div>
-                                      {/* Shares */}
+                                      {/* Trades */}
                                       <div className="bg-zinc-800/60 rounded-lg p-2 text-center">
                                         <div className="text-[10px] text-zinc-500 uppercase tracking-wider">{t('mining.shares')}</div>
                                         <div className="text-sm font-semibold font-mono text-white">{(shares.valid / 1000).toFixed(1)}K</div>
@@ -2771,7 +2771,7 @@ export default function PlataformaROI() {
                                     className="flex items-center justify-between bg-zinc-800/40 rounded-lg px-3 py-2"
                                   >
                                     <div className="flex items-center gap-2">
-                                      <div className="w-6 h-6 bg-cyan-500/10 rounded flex items-center justify-center text-[10px] font-bold text-cyan-400">{coinIcon(entry.coin)}</div>
+                                      <div className="w-6 h-6 bg-cyan-500/10 rounded flex items-center justify-center text-[10px] font-bold text-cyan-400">{assetIcon(entry.coin)}</div>
                                       <span className="text-xs text-zinc-400 font-mono">{entry.time}</span>
                                     </div>
                                     <span className="text-sm font-medium text-cyan-400 font-mono">+${entry.amount.toFixed(6)}</span>
@@ -2796,7 +2796,7 @@ export default function PlataformaROI() {
                             </div>
                             <p className="text-zinc-500 mb-4">{t('mining.noActiveRigs')}</p>
                             <Button className="bg-emerald-600 hover:bg-cyan-700" onClick={() => setActiveTab('investir')}>
-                              <Bot className="mr-2 h-4 w-4" /> {t('dashboard.rentMiner')}
+                              <Bot className="mr-2 h-4 w-4" /> {t('dashboard.investNow')}
                             </Button>
                           </div>
                         </CardContent>
@@ -2844,7 +2844,7 @@ export default function PlataformaROI() {
                   </div>
                 )}
 
-                {/* ====== MINERADORAS TAB (UNIFIED WITH PLANS) ====== */}
+                {/* ====== COPY TRADERS TAB (UNIFIED WITH PLANS) ====== */}
                 {activeTab === 'investir' && (
                   <div className="space-y-6">
                     <div>
@@ -2876,7 +2876,7 @@ export default function PlataformaROI() {
                         <Card className="bg-zinc-900 border-zinc-800">
                           <CardContent className="py-12 text-center">
                             <Bot className="h-12 w-12 text-zinc-600 mx-auto mb-4" />
-                            <p className="text-zinc-500">{t('copyTraders.noMiners')}</p>
+                            <p className="text-zinc-500">{t('miners.noMiners')}</p>
                           </CardContent>
                         </Card>
                       )}
@@ -2890,7 +2890,7 @@ export default function PlataformaROI() {
                               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
                                 <div className="flex items-center gap-3">
                                   <div className="w-14 h-14 bg-cyan-500/10 rounded-xl flex items-center justify-center text-2xl font-bold text-cyan-400">
-                                    {coinIcon(trader.riskLevel || '')}
+                                    {assetIcon(trader.riskLevel || '')}
                                   </div>
                                   <div>
                                     <h3 className="font-semibold text-lg">{trader.name}</h3>
@@ -2898,14 +2898,14 @@ export default function PlataformaROI() {
                                   </div>
                                 </div>
                                 <div className="flex items-center gap-2 flex-wrap">
-                                  <Badge className={`bg-zinc-800 border-zinc-700 ${coinColor(trader.riskLevel || '')}`} variant="outline">{trader.riskLevel || ''}</Badge>
+                                  <Badge className={`bg-zinc-800 border-zinc-700 ${assetColor(trader.riskLevel || '')}`} variant="outline">{trader.riskLevel || ''}</Badge>
                                   <Badge className={statusColor(trader.status)} variant="outline">{statusLabel(trader.status)}</Badge>
                                 </div>
                               </div>
                               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs sm:text-sm">
-                                <div className="bg-zinc-800/50 rounded-lg p-3"><span className="text-zinc-400 block text-xs">{t('copyTraders.dailyReturn')}</span><span className="font-medium text-cyan-400 text-lg truncate">${fmtUSDT(trader.monthlyRoi)}</span></div>
-                                <div className="bg-zinc-800/50 rounded-lg p-3"><span className="text-zinc-400 block text-xs">{t('copyTraders.price')}</span><span className="font-medium text-lg truncate">${fmtUSDT(trader.monthlyRoi)}{t('common.perDay')}</span></div>
-                                <div className="bg-zinc-800/50 rounded-lg p-3"><span className="text-zinc-400 block text-xs">{t('copyTraders.efficiency')}</span><span className="font-medium">{trader.winRate}% win</span></div>
+                                <div className="bg-zinc-800/50 rounded-lg p-3"><span className="text-zinc-400 block text-xs">{t('miners.dailyReturn')}</span><span className="font-medium text-cyan-400 text-lg truncate">${fmtUSDT(trader.monthlyRoi)}</span></div>
+                                <div className="bg-zinc-800/50 rounded-lg p-3"><span className="text-zinc-400 block text-xs">{t('miners.price')}</span><span className="font-medium text-lg truncate">${fmtUSDT(trader.monthlyRoi)}{t('common.perDay')}</span></div>
+                                <div className="bg-zinc-800/50 rounded-lg p-3"><span className="text-zinc-400 block text-xs">{t('miners.efficiency')}</span><span className="font-medium">{trader.winRate}% win</span></div>
                                 <div className="bg-zinc-800/50 rounded-lg p-3"><span className="text-zinc-400 block text-xs">{t('admin.profitShare')}</span><span className="font-medium">${fmtUSDT(trader.totalPnl)}</span></div>
                               </div>
                             </CardContent>
@@ -2982,7 +2982,7 @@ export default function PlataformaROI() {
                                   setSelectedPlanId(undefined);
                                 }}
                               >
-                                {t('copyTraders.customPlan')} • {t('copyTraders.price')}: ${fmtUSDT(trader.winRate)}{t('common.perDay')}
+                                {t('miners.customPlan')} • {t('miners.price')}: ${fmtUSDT(trader.winRate)}{t('common.perDay')}
                               </Button>
                             </div>
                           )}
@@ -2997,7 +2997,7 @@ export default function PlataformaROI() {
                                   setSelectedPlanId(undefined);
                                 }}
                               >
-                                <Zap className="mr-2 h-4 w-4" /> {t('copyTraders.rent')} - ${fmtUSDT(trader.winRate)}{t('common.perDay')}
+                                <Zap className="mr-2 h-4 w-4" /> {t('miners.rent')} - ${fmtUSDT(trader.winRate)}{t('common.perDay')}
                               </Button>
                             </div>
                           )}
@@ -3029,7 +3029,7 @@ export default function PlataformaROI() {
                               <CardContent className="p-4">
                                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                                   <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 bg-cyan-500/10 rounded-lg flex items-center justify-center text-lg font-bold text-cyan-400">{coinIcon(r.plan?.name || 'USDT')}</div>
+                                    <div className="w-10 h-10 bg-cyan-500/10 rounded-lg flex items-center justify-center text-lg font-bold text-cyan-400">{assetIcon(r.plan?.name || 'USDT')}</div>
                                     <div>
                                       <div className="font-medium">{r.plan?.name || t('plans.plan')}</div>
                                       <div className="text-sm text-zinc-400">{r.plan?.name || '-'} • {r.plan?.name || 'USDT'}</div>
@@ -3038,7 +3038,7 @@ export default function PlataformaROI() {
                               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs sm:text-sm">
                                     <div><span className="text-zinc-400 block text-xs">Início</span>{fmtDate(r.startDate)}</div>
                                     <div><span className="text-zinc-400 block text-xs">Fim</span>{fmtDate(r.endDate)}</div>
-                                    <div><span className="text-zinc-400 block text-xs">{t('copyTraders.dailyReturn')}</span><span className="text-cyan-400">${fmtUSDT(r.dailyRoi)}</span></div>
+                                    <div><span className="text-zinc-400 block text-xs">{t('miners.dailyReturn')}</span><span className="text-cyan-400">${fmtUSDT(r.dailyRoi)}</span></div>
                                     <div><span className="text-zinc-400 block text-xs">{t('plans.totalPrice')}</span><span className="text-cyan-400">${fmtUSDT(r.totalRoi)}</span></div>
                                   </div>
                                   <Badge className={statusColor(r.status)} variant="outline">{statusLabel(r.status)}</Badge>
@@ -3056,7 +3056,7 @@ export default function PlataformaROI() {
                                   <CardContent className="p-4">
                                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                                       <div className="flex items-center gap-3 min-w-0">
-                                        <div className="w-10 h-10 bg-zinc-800 rounded-lg flex items-center justify-center text-lg font-bold text-zinc-500 flex-shrink-0">{coinIcon(r.plan?.name || 'USDT')}</div>
+                                        <div className="w-10 h-10 bg-zinc-800 rounded-lg flex items-center justify-center text-lg font-bold text-zinc-500 flex-shrink-0">{assetIcon(r.plan?.name || 'USDT')}</div>
                                         <div className="min-w-0">
                                           <div className="font-medium truncate">{r.plan?.name || t('plans.plan')}</div>
                                           <div className="text-sm text-zinc-400">{fmtDate(r.startDate)} - {fmtDate(r.endDate)}</div>
@@ -3821,7 +3821,7 @@ export default function PlataformaROI() {
                             {user.hasInvested ? (
                               <Button className="bg-emerald-600 hover:bg-cyan-700" onClick={handleUnlockAffiliate}>{t('affiliates.unlockBtn')}</Button>
                             ) : (
-                              <Button className="bg-emerald-600 hover:bg-cyan-700" onClick={() => setActiveTab('investir')}>{t('dashboard.rentMiner')}</Button>
+                              <Button className="bg-emerald-600 hover:bg-cyan-700" onClick={() => setActiveTab('investir')}>{t('dashboard.investNow')}</Button>
                             )}
                           </div>
                         ) : (
@@ -4262,7 +4262,7 @@ export default function PlataformaROI() {
                                   <TableRow key={m.id} className="border-zinc-800">
                                     <TableCell className="font-medium">{m.name}</TableCell>
                                     <TableCell>{m.model}</TableCell>
-                                    <TableCell><span className={coinColor(m.coin)}>{m.coin}</span></TableCell>
+                                    <TableCell><span className={assetColor(m.coin)}>{m.coin}</span></TableCell>
                                     <TableCell>${fmtUSDT(m.dailyRevenue)}</TableCell>
                                     <TableCell>${fmtUSDT(m.pricePerDay)}</TableCell>
                                     <TableCell>{m.profitSharePct}%</TableCell>
@@ -4758,7 +4758,7 @@ export default function PlataformaROI() {
                                           <SelectItem value="revenue_pool">
                                             <div className="flex flex-col items-start">
                                               <span className="font-medium">{t('admin.modeRevenuePool')}</span>
-                                              <span className="text-xs text-zinc-400">Fixed % of investment revenue to affiliate pool</span>
+                                              <span className="text-xs text-zinc-400">% fijo de ingresos de inversiones al pool de afiliados</span>
                                             </div>
                                           </SelectItem>
                                         </SelectContent>
@@ -5655,7 +5655,7 @@ Seus 10 indicados diretos investem $100/dia cada:
                                       {adminCopyTraders.map(m => (
                                         <TableRow key={m.id} className="border-zinc-700">
                                           <TableCell className="text-xs font-medium">{m.name}</TableCell>
-                                          <TableCell className="text-xs"><Badge className={`${coinColor(m.coin)} bg-zinc-800 border-zinc-700 text-[10px]`} variant="outline">{m.coin}</Badge></TableCell>
+                                          <TableCell className="text-xs"><Badge className={`${assetColor(m.coin)} bg-zinc-800 border-zinc-700 text-[10px]`} variant="outline">{m.coin}</Badge></TableCell>
                                           <TableCell className="text-xs">{m.hashRate}</TableCell>
                                           <TableCell className="text-xs text-cyan-400">${fmtUSDT(m.dailyRevenue)}</TableCell>
                                           <TableCell className="text-xs">${fmtUSDT(m.pricePerDay)}</TableCell>
@@ -5743,20 +5743,20 @@ Seus 10 indicados diretos investem $100/dia cada:
       <Dialog open={!!investDialogPlan} onOpenChange={() => setInvestDialogPlan(null)}>
         <DialogContent className="bg-zinc-900 border-zinc-800 text-white max-w-md w-[95vw] sm:w-full">
           <DialogHeader>
-            <DialogTitle>{t('copyTraders.rent')} {investDialogPlan?.name}</DialogTitle>
+            <DialogTitle>{t('miners.rent')} {investDialogPlan?.name}</DialogTitle>
             <DialogDescription className="text-zinc-400">{investDialogPlan?.model} • {investDialogPlan?.hashRate} • {investDialogPlan?.coin}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             {/* Plan selection */}
             {investDialogPlan && investDialogPlan.plans.length > 0 && (
               <div>
-                <Label className="text-zinc-300 text-sm">{t('copyTraders.selectPlan')}</Label>
+                <Label className="text-zinc-300 text-sm">{t('miners.selectPlan')}</Label>
                 <Select value={selectedPlanId || 'custom'} onValueChange={v => { if (v === 'custom') { setSelectedPlanId(undefined); } else { setSelectedPlanId(v); const p = investDialogPlan.plans.find(pp => pp.id === v); if (p) setInvestmentDuration(p.days); } }}>
-                  <SelectTrigger className="bg-zinc-800 border-zinc-700 mt-1"><SelectValue placeholder={t('copyTraders.customPlan')} /></SelectTrigger>
+                  <SelectTrigger className="bg-zinc-800 border-zinc-700 mt-1"><SelectValue placeholder={t('miners.customPlan')} /></SelectTrigger>
                   <SelectContent className="bg-zinc-800">
-                    <SelectItem value="custom">{t('copyTraders.customPlan')}</SelectItem>
+                    <SelectItem value="custom">{t('miners.customPlan')}</SelectItem>
                     {investDialogPlan.plans.map(p => (
-                      <SelectItem key={p.id} value={p.id}>{p.name} - {p.days} {t('copyTraders.days')} ({p.discountPct}% {t('copyTraders.off')})</SelectItem>
+                      <SelectItem key={p.id} value={p.id}>{p.name} - {p.days} {t('miners.days')} ({p.discountPct}% {t('miners.off')})</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -5765,18 +5765,18 @@ Seus 10 indicados diretos investem $100/dia cada:
             {/* Days */}
             {!selectedPlanId && (
               <div>
-                <Label className="text-zinc-300 text-sm">{t('copyTraders.period')}</Label>
+                <Label className="text-zinc-300 text-sm">{t('miners.period')}</Label>
                 <Input type="number" min={investDialogPlan?.minRentalDays || 7} max={investDialogPlan?.maxRentalDays || 365} value={investmentDuration} onChange={e => setInvestmentDuration(parseInt(e.target.value) || 7)} className="bg-zinc-800 border-zinc-700 mt-1" />
                 <div className="text-xs text-zinc-500 mt-1">{t('copyTraders.minMax', { min: String(investDialogPlan?.minRentalDays || 7), max: String(investDialogPlan?.maxRentalDays || 365) })}</div>
               </div>
             )}
             {/* Summary */}
             <div className="bg-zinc-800 rounded-lg p-4 space-y-2 text-sm">
-              <div className="flex justify-between"><span className="text-zinc-400">{t('copyTraders.totalCost')}</span><span className="font-medium">${fmtUSDT(rentalCalc.totalPrice)} USDT</span></div>
-              <div className="flex justify-between"><span className="text-zinc-400">{t('copyTraders.dailyProfit')}</span><span className="text-cyan-400 font-medium">${fmtUSDT(rentalCalc.dailyReturn)} USDT</span></div>
-              <div className="flex justify-between"><span className="text-zinc-400">{t('copyTraders.totalProfit')}</span><span className="text-cyan-400 font-medium">${fmtUSDT(rentalCalc.totalReturn)} USDT</span></div>
+              <div className="flex justify-between"><span className="text-zinc-400">{t('miners.totalCost')}</span><span className="font-medium">${fmtUSDT(rentalCalc.totalPrice)} USDT</span></div>
+              <div className="flex justify-between"><span className="text-zinc-400">{t('miners.dailyProfit')}</span><span className="text-cyan-400 font-medium">${fmtUSDT(rentalCalc.dailyReturn)} USDT</span></div>
+              <div className="flex justify-between"><span className="text-zinc-400">{t('miners.totalProfit')}</span><span className="text-cyan-400 font-medium">${fmtUSDT(rentalCalc.totalReturn)} USDT</span></div>
               <Separator className="bg-zinc-700" />
-              <div className="flex justify-between"><span className="text-zinc-400">{t('copyTraders.yourBalance')}</span><span className={d(user.balance) >= rentalCalc.totalPrice ? 'text-cyan-400' : 'text-red-400'}>${fmtUSDT(user.balance)} USDT</span></div>
+              <div className="flex justify-between"><span className="text-zinc-400">{t('miners.yourBalance')}</span><span className={d(user.balance) >= rentalCalc.totalPrice ? 'text-cyan-400' : 'text-red-400'}>${fmtUSDT(user.balance)} USDT</span></div>
             </div>
             {d(user.balance) < rentalCalc.totalPrice && !useVoucherForInvest && (
               <div className="flex items-center gap-2 text-red-400 text-sm"><AlertTriangle className="h-4 w-4" /> {t('dashboard.insufficientBalance')}</div>

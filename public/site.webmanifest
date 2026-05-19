@@ -1,7 +1,7 @@
 {
-  "name": "Mining Protocol",
-  "short_name": "MiningProtocol",
-  "description": "Plataforma de alquiler de hashpower con retornos reales en USDT",
+  "name": "PLATAFORMA ROI - Copy Trading",
+  "short_name": "PLATAFORMA ROI",
+  "description": "Plataforma de Copy Trading con retornos reales en USDT. Copia traders profesionales y recibe ganancias diarias.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0a0a0a",

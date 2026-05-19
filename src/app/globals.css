@@ -121,7 +121,7 @@
   }
 }
 
-/* Custom scrollbar for live mining feed and other scrollable areas */
+/* Custom scrollbar for live trading feed and other scrollable areas */
 .custom-scrollbar::-webkit-scrollbar {
   width: 4px;
 }
@@ -136,14 +136,14 @@
   background: #52525b;
 }
 
-/* Mining rig fan animation - smooth continuous spin */
-@keyframes mining-fan {
+/* Trading signal animation - smooth continuous pulse */
+@keyframes trading-signal {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
 
-/* LED blink animation */
-@keyframes led-blink {
+/* Signal pulse animation */
+@keyframes signal-pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.4; }
 }
@@ -154,12 +154,12 @@
   50% { box-shadow: 0 0 20px rgba(16, 185, 129, 0.3); }
 }
 
-.animate-mining-fan {
-  animation: mining-fan 0.8s linear infinite;
+.animate-trading-signal {
+  animation: trading-signal 0.8s linear infinite;
 }
 
-.animate-led-blink {
-  animation: led-blink 2s ease-in-out infinite;
+.animate-signal-pulse {
+  animation: signal-pulse 2s ease-in-out infinite;
 }
 
 .animate-earnings-glow {
