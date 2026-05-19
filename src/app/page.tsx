@@ -2107,9 +2107,9 @@ export default function PlataformaROI() {
                 { amount: 1500, daily: 75.00, doubles: 3000, color: 'from-purple-600 to-purple-500', border: 'border-purple-700/50' },
               ].map((tier, i) => (
                 <motion.div key={tier.amount} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }} viewport={{ once: true }}>
-                  <Card className={\`bg-zinc-900 \${tier.border} hover:border-cyan-500/50 transition-all h-full\`}>
+                  <Card className={`bg-zinc-900 \${tier.border} hover:border-cyan-500/50 transition-all h-full`}>
                     <CardContent className="p-5 text-center">
-                      <div className={\`text-3xl font-bold bg-gradient-to-r \${tier.color} bg-clip-text text-transparent mb-2\`}>\${tier.amount}</div>
+                      <div className={`text-3xl font-bold bg-gradient-to-r \${tier.color} bg-clip-text text-transparent mb-2`}>\${tier.amount}</div>
                       <div className="text-sm text-zinc-400 mb-3">{t('landing.tiers.investLabel')}</div>
                       <div className="bg-zinc-800/80 rounded-lg p-3 mb-3">
                         <div className="text-lg font-semibold text-cyan-400">+\${tier.daily.toFixed(2)}</div>
@@ -2157,9 +2157,9 @@ export default function PlataformaROI() {
                 { level: 11, pct: 1, highlight: false },
               ].map((lvl) => (
                 <motion.div key={lvl.level} initial={{ opacity: 0, scale: 0.9 }} whileInView={{ opacity: 1, scale: 1 }} transition={{ delay: lvl.level * 0.05 }} viewport={{ once: true }}>
-                  <div className={\`rounded-xl p-4 text-center border transition-all \${lvl.highlight ? 'bg-emerald-500/10 border-emerald-500/30 ring-1 ring-emerald-500/20' : 'bg-zinc-800 border-zinc-700 hover:border-cyan-500/30'}\`}>
-                    <div className={\`text-2xl font-bold \${lvl.highlight ? 'text-emerald-400' : 'text-cyan-400'}\`}>{lvl.pct}%</div>
-                    <div className="text-xs text-zinc-400 mt-1">{lvl.level === 1 ? '🥇 Directo' : \`${t('landing.unilevel.level')} \${lvl.level}\`}</div>
+                  <div className={`rounded-xl p-4 text-center border transition-all \${lvl.highlight ? 'bg-emerald-500/10 border-emerald-500/30 ring-1 ring-emerald-500/20' : 'bg-zinc-800 border-zinc-700 hover:border-cyan-500/30'}`}>
+                    <div className={`text-2xl font-bold \${lvl.highlight ? 'text-emerald-400' : 'text-cyan-400'}`}>{lvl.pct}%</div>
+                    <div className="text-xs text-zinc-400 mt-1">{lvl.level === 1 ? '🥇 Directo' : `${t('landing.unilevel.level')} \${lvl.level}`}</div>
                   </div>
                 </motion.div>
               ))}
@@ -2195,10 +2195,10 @@ export default function PlataformaROI() {
                 { emoji: '🥇', name: t('landing.bonuses.gold.name'), bonus: '+3%', desc: t('landing.bonuses.gold.requirement'), color: 'from-yellow-500 to-yellow-400', border: 'border-yellow-600/50', bg: 'bg-yellow-500/5' },
               ].map((b, i) => (
                 <motion.div key={b.name} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.15 }} viewport={{ once: true }}>
-                  <Card className={\`bg-zinc-900 \${b.border} hover:border-cyan-500/30 transition-all\`}>
+                  <Card className={`bg-zinc-900 \${b.border} hover:border-cyan-500/30 transition-all`}>
                     <CardContent className="p-6 text-center">
                       <div className="text-5xl mb-3">{b.emoji}</div>
-                      <h3 className={\`text-xl font-bold bg-gradient-to-r \${b.color} bg-clip-text text-transparent mb-2\`}>{b.name}</h3>
+                      <h3 className={`text-xl font-bold bg-gradient-to-r \${b.color} bg-clip-text text-transparent mb-2`}>{b.name}</h3>
                       <div className="text-3xl font-bold text-cyan-400 mb-2">{b.bonus}</div>
                       <div className="text-sm text-zinc-400">{t('landing.bonuses.extraDaily')}</div>
                       <div className="mt-3 text-xs text-zinc-500 bg-zinc-800 rounded-full px-3 py-1 inline-block">{b.desc}</div>
