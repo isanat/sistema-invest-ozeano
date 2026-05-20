@@ -359,6 +359,8 @@ const CONFIG_LABELS: Record<string, {
   min_withdrawal_usdt: { label: 'Saque Mínimo', description: 'Valor mínimo para saque em USDT', type: 'number', unit: 'USDT' },
   max_withdrawal_usdt: { label: 'Saque Máximo', description: 'Valor máximo para saque em USDT', type: 'number', unit: 'USDT' },
   withdrawal_fee_pct: { label: 'Taxa de Saque', description: 'Percentual cobrado sobre o lucro em saques', type: 'number', unit: '%' },
+  manual_withdrawal_enabled: { label: 'Saque Manual', description: 'Permitir saques manuais (admin aprova cada solicitação)', type: 'boolean' },
+  nowpayments_withdrawal_enabled: { label: 'Saque NowPayments', description: 'Permitir saques automáticos via NowPayments (payout)', type: 'boolean' },
   // Trading
   daily_roi_pct: { label: 'ROI Diário (%)', description: 'Percentual de ROI diário padrão', type: 'number', unit: '%' },
   min_investment_usdt: { label: 'Investimento Mínimo', description: 'Valor mínimo para investimento em USDT', type: 'number', unit: 'USDT' },
@@ -537,15 +539,21 @@ export default function PlataformaROI() {
   const [landingConfig, setLandingConfig] = useState<{ siteName: string; minDeposit: string; minWithdrawal: string; hasPix: boolean; hasUsdt: boolean } | null>(null);
   const [landingRate, setLandingRate] = useState(5.5);
 
-  // Site Config State (for deposit modal toggles)
+  // Site Config State (for deposit/withdrawal modal toggles)
   // All booleans default to FALSE — only enable what admin explicitly sets to 'true'
-  const [siteConfig, setSiteConfig] = useState<{ hasPix: boolean; hasUsdt: boolean; manualDepositEnabled: boolean; nowpaymentsEnabled: boolean; nowpaymentsDepositCurrencies: string[]; minDepositUsdt: number; siteName: string }>({
-    hasPix: false,
-    hasUsdt: false,
-    manualDepositEnabled: false,
-    nowpaymentsEnabled: false,
-    nowpaymentsDepositCurrencies: [],
-    minDepositUsdt: 10,
+  const [siteConfig, setSiteConfig] = useState<{
+    hasPix: boolean; hasUsdt: boolean;
+    manualDepositEnabled: boolean; nowpaymentsEnabled: boolean; nowpaymentsDepositCurrencies: string[];
+    manualWithdrawalEnabled: boolean; nowpaymentsWithdrawalEnabled: boolean;
+    minDepositUsdt: number; maxDepositUsdt: number;
+    minWithdrawalUsdt: number; maxWithdrawalUsdt: number; withdrawalFeePct: number;
+    siteName: string;
+  }>({
+    hasPix: false, hasUsdt: false,
+    manualDepositEnabled: false, nowpaymentsEnabled: false, nowpaymentsDepositCurrencies: [],
+    manualWithdrawalEnabled: false, nowpaymentsWithdrawalEnabled: false,
+    minDepositUsdt: 10, maxDepositUsdt: 100000,
+    minWithdrawalUsdt: 10, maxWithdrawalUsdt: 50000, withdrawalFeePct: 0,
     siteName: 'PLATAFORMA ROI',
   });
 
@@ -738,7 +746,7 @@ export default function PlataformaROI() {
     }
   }, [user]);
 
-  // Fetch site config (deposit toggles) when authenticated
+  // Fetch site config (deposit/withdrawal toggles) when authenticated
   // All values default to FALSE — only what admin explicitly enables is shown
   useEffect(() => {
     fetch('/api/site/config')
@@ -753,7 +761,13 @@ export default function PlataformaROI() {
             manualDepositEnabled: data.manualDepositEnabled ?? false,
             nowpaymentsEnabled: data.nowpaymentsEnabled ?? false,
             nowpaymentsDepositCurrencies: adminCurrencies,
+            manualWithdrawalEnabled: data.manualWithdrawalEnabled ?? false,
+            nowpaymentsWithdrawalEnabled: data.nowpaymentsWithdrawalEnabled ?? false,
             minDepositUsdt: data.minDepositUsdt ?? 10,
+            maxDepositUsdt: data.maxDepositUsdt ?? 100000,
+            minWithdrawalUsdt: data.minWithdrawalUsdt ?? 10,
+            maxWithdrawalUsdt: data.maxWithdrawalUsdt ?? 50000,
+            withdrawalFeePct: data.withdrawalFeePct ?? 0,
             siteName: data.siteName ?? 'PLATAFORMA ROI',
           }));
           // If admin has configured specific currencies, use those exclusively (no API fallback)
@@ -7916,7 +7930,26 @@ Seus 10 indicados diretos investem $100/dia cada:
       {/* Withdraw Dialog */}
       <Dialog open={withdrawDialog} onOpenChange={setWithdrawDialog}>
         <DialogContent className="bg-zinc-900 border-zinc-800 text-white max-w-md w-[95vw] sm:w-full">
-          <DialogHeader><DialogTitle>{t('dashboard.withdraw')}</DialogTitle><DialogDescription className="text-zinc-400">Saque automático via NowPayments</DialogDescription></DialogHeader>
+          <DialogHeader>
+            <DialogTitle>{t('dashboard.withdraw')}</DialogTitle>
+            <DialogDescription className="text-zinc-400">
+              {siteConfig.manualWithdrawalEnabled && siteConfig.nowpaymentsWithdrawalEnabled
+                ? 'Saque manual ou automático via NowPayments'
+                : siteConfig.nowpaymentsWithdrawalEnabled
+                  ? 'Saque automático via NowPayments'
+                  : siteConfig.manualWithdrawalEnabled
+                    ? 'Saque manual (admin aprova)'
+                    : 'Saques temporariamente indisponíveis'}
+            </DialogDescription>
+          </DialogHeader>
+
+          {!siteConfig.manualWithdrawalEnabled && !siteConfig.nowpaymentsWithdrawalEnabled ? (
+            <div className="text-center py-6">
+              <AlertTriangle className="h-10 w-10 text-amber-400 mx-auto mb-3" />
+              <p className="text-zinc-400">Saques temporariamente indisponíveis</p>
+              <p className="text-zinc-500 text-xs mt-1">Entre em contato com o suporte para mais informações.</p>
+            </div>
+          ) : (
           <form onSubmit={handleWithdraw} className="space-y-4">
                         {/* Voucher Withdrawal Warning */}
                         {userVouchers.filter(v => v.status === 'active').length > 0 && (
@@ -7945,22 +7978,32 @@ Seus 10 indicados diretos investem $100/dia cada:
                             )}
                           </div>
                         )}
-            <div><Label className="text-zinc-300">{t('withdrawal.amount')}</Label><Input name="amount" type="number" step="0.01" min="10" max={d(user?.balance)} required className="bg-zinc-800 border-zinc-700 mt-1" placeholder="10.00" />
-              <div className="text-xs text-zinc-500 mt-1">Saldo disponível: ${fmtUSDT(user?.balance || '0')} USDT</div>
+            <div><Label className="text-zinc-300">{t('withdrawal.amount')}</Label><Input name="amount" type="number" step="0.01" min={siteConfig.minWithdrawalUsdt} max={d(user?.balance)} required className="bg-zinc-800 border-zinc-700 mt-1" placeholder={String(siteConfig.minWithdrawalUsdt)} />
+              <div className="text-xs text-zinc-500 mt-1">Saldo disponível: ${fmtUSDT(user?.balance || '0')} USDT · Mínimo: {siteConfig.minWithdrawalUsdt} USDT{siteConfig.withdrawalFeePct > 0 ? ` · Taxa: ${siteConfig.withdrawalFeePct}%` : ''}</div>
             </div>
-            <div><Label className="text-zinc-300">Moeda</Label>
-              <Select name="method" defaultValue={availableWithdrawCurrencies[0] || 'usdt_trc20'}><SelectTrigger className="bg-zinc-800 border-zinc-700 mt-1"><SelectValue /></SelectTrigger>
-                <SelectContent className="bg-zinc-800">
-                  {availableWithdrawCurrencies.map(c => (
-                    <SelectItem key={c} value={c}>{currencyLabel(c)}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div><Label className="text-zinc-300">{t('withdrawal.destination')}</Label><Input name="destination" required className="bg-zinc-800 border-zinc-700 mt-1" placeholder="Endereço da carteira TRC20" /></div>
-            <div className="bg-zinc-800/50 rounded-lg p-3 text-sm">
-              <p className="text-zinc-400">O saque será processado automaticamente via NowPayments para sua carteira cadastrada.</p>
-            </div>
+            {siteConfig.nowpaymentsWithdrawalEnabled && (
+              <>
+                <div><Label className="text-zinc-300">Moeda</Label>
+                  <Select name="method" defaultValue={availableWithdrawCurrencies[0] || 'usdt_trc20'}><SelectTrigger className="bg-zinc-800 border-zinc-700 mt-1"><SelectValue /></SelectTrigger>
+                    <SelectContent className="bg-zinc-800">
+                      {availableWithdrawCurrencies.map(c => (
+                        <SelectItem key={c} value={c}>{currencyLabel(c)}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div><Label className="text-zinc-300">{t('withdrawal.destination')}</Label><Input name="destination" required className="bg-zinc-800 border-zinc-700 mt-1" placeholder="Endereço da carteira" /></div>
+                <div className="bg-zinc-800/50 rounded-lg p-3 text-sm">
+                  <p className="text-zinc-400">O saque será processado automaticamente via NowPayments para sua carteira.</p>
+                </div>
+              </>
+            )}
+            {siteConfig.manualWithdrawalEnabled && !siteConfig.nowpaymentsWithdrawalEnabled && (
+              <div className="bg-zinc-800/50 rounded-lg p-3 text-sm">
+                <p className="text-zinc-400">Sua solicitação de saque será analisada e processada manualmente pela equipe.</p>
+                <p className="text-zinc-500 text-xs mt-1">Prazo: até 24h úteis.</p>
+              </div>
+            )}
             <DialogFooter>
               <Button variant="outline" className="border-zinc-700" type="button" onClick={() => setWithdrawDialog(false)}>{t('common.cancel')}</Button>
               <Button type="submit" className="bg-emerald-600 hover:bg-cyan-700" disabled={withdrawLoading}>
@@ -7968,6 +8011,7 @@ Seus 10 indicados diretos investem $100/dia cada:
               </Button>
             </DialogFooter>
           </form>
+          )}
         </DialogContent>
       </Dialog>
 
