@@ -1782,7 +1782,7 @@ export default function PlataformaROI() {
         const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
 
         setLiveEarningsFeed(prev => {
-          const newEntry = { id: feedIdCounter, amount: microAmount, time: timeStr, coin: investment.trader.name || 'ROI' };
+          const newEntry = { id: feedIdCounter, amount: microAmount, time: timeStr, coin: (investment as any).trader?.name || investment.plan?.name || 'ROI' };
           const updated = [newEntry, ...prev].slice(0, 20); // keep last 20
           return updated;
         });
@@ -1801,9 +1801,9 @@ export default function PlataformaROI() {
     if (selectedPlan) {
       return { totalPrice: d(selectedPlan?.totalPrice), dailyReturn: d(selectedPlan?.dailyReturn), totalReturn: d(selectedPlan?.totalReturn) };
     }
-    const pricePerDay = d(investDialogPlan.pricePerDay);
-    const dailyRevenue = d(investDialogPlan.dailyRevenue);
-    const profitShare = d(investDialogPlan.profitSharePct);
+    const pricePerDay = d((investDialogPlan as any).pricePerDay);
+    const dailyRevenue = d((investDialogPlan as any).dailyRevenue);
+    const profitShare = d((investDialogPlan as any).profitSharePct);
     return {
       totalPrice: pricePerDay * investmentDuration,
       dailyReturn: dailyRevenue * (profitShare / 100),
@@ -2985,7 +2985,7 @@ export default function PlataformaROI() {
                         {/* Active Investments */}
                         <div className="space-y-3">
                           {activeInvestments.map((r, idx) => {
-                            const baseWinRate = parseFloat(r.plan?.winRate || '0');
+                            const baseWinRate = parseFloat((r.plan as any)?.winRate || r.plan?.dailyRoiPct || '0');
                             const currentWR = liveWinRates[idx] || baseWinRate;
                             const currentVolatility = liveVolatility[idx] || 65;
                             const shares = liveShares[idx] || { valid: 0, invalid: 0 };
@@ -3235,7 +3235,7 @@ export default function PlataformaROI() {
                                 </div>
                                 <div className="flex items-center gap-2 flex-wrap">
                                   <Badge className={`bg-zinc-800 border-zinc-700 ${assetColor(trader.riskLevel || '')}`} variant="outline">{trader.riskLevel || ''}</Badge>
-                                  <Badge className={statusColor(trader.status)} variant="outline">{statusLabel(trader.status)}</Badge>
+                                  <Badge className={statusColor(trader.isActive ? 'active' : 'offline')} variant="outline">{statusLabel(trader.isActive ? 'active' : 'offline')}</Badge>
                                 </div>
                               </div>
                               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs sm:text-sm">
@@ -3314,11 +3314,11 @@ export default function PlataformaROI() {
                                 className="border-zinc-700 text-zinc-400 hover:text-white hover:border-cyan-500/50 text-sm"
                                 onClick={() => {
                                   setInvestDialogPlan(trader);
-                                  setInvestmentDuration(plan?.minRentalDays);
+                                  setInvestmentDuration((plan as any)?.minRentalDays || 7);
                                   setSelectedPlanId(undefined);
                                 }}
                               >
-                                {t('copyTraders.customPlan')} • {t('copyTraders.price')}: ${fmtUSDT(trader.winRate)}{t('common.perDay')}
+                                {t('copyTraders.customPlan')} • {t('copyTraders.price')}: ${fmtUSDT(trader.monthlyRoi)}{t('common.perDay')}
                               </Button>
                             </div>
                           )}
@@ -3329,11 +3329,11 @@ export default function PlataformaROI() {
                                 className="bg-emerald-600 hover:bg-cyan-700 text-white"
                                 onClick={() => {
                                   setInvestDialogPlan(trader);
-                                  setInvestmentDuration(plan?.minRentalDays);
+                                  setInvestmentDuration((plan as any)?.minRentalDays || 7);
                                   setSelectedPlanId(undefined);
                                 }}
                               >
-                                <Zap className="mr-2 h-4 w-4" /> {t('copyTraders.invest')} - ${fmtUSDT(trader.winRate)}{t('common.perDay')}
+                                <Zap className="mr-2 h-4 w-4" /> {t('copyTraders.invest')} - ${fmtUSDT(trader.monthlyRoi)}{t('common.perDay')}
                               </Button>
                             </div>
                           )}
@@ -4133,7 +4133,7 @@ export default function PlataformaROI() {
                                             <div className="space-y-1">
                                               {v.usages.map((u: any) => (
                                                 <div key={u.id} className="flex justify-between text-xs bg-zinc-800/50 rounded p-2">
-                                                  <span className="text-zinc-400">{u.investment?.trader.name || 'Investimento'} — {fmtDate(u.createdAt)}</span>
+                                                  <span className="text-zinc-400">{(u as any).investment?.trader?.name || (u as any).investment?.plan?.name || 'Investimento'} — {fmtDate(u.createdAt)}</span>
                                                   <span className="text-amber-400">-{fmtUSDT(u.amount)} USDT</span>
                                                 </div>
                                               ))}
@@ -4637,11 +4637,11 @@ export default function PlataformaROI() {
                                 {adminPlans.map(p => (
                                   <TableRow key={p.id} className="border-zinc-800">
                                     <TableCell className="font-medium">{p.name}</TableCell>
-                                    <TableCell>{p.trader.name || '-'}</TableCell>
-                                    <TableCell>{p.days}</TableCell>
-                                    <TableCell>{p.discountPct}%</TableCell>
-                                    <TableCell>${fmtUSDT(p.totalPrice)}</TableCell>
-                                    <TableCell>${fmtUSDT(p.dailyReturn)}</TableCell>
+                                    <TableCell>{(p as any).trader?.name || '-'}</TableCell>
+                                    <TableCell>{p.durationDays || (p as any).days || '-'}</TableCell>
+                                    <TableCell>{(p as any).discountPct || 0}%</TableCell>
+                                    <TableCell>${fmtUSDT((p as any).totalPrice || p.maxAmount || 0)}</TableCell>
+                                    <TableCell>${fmtUSDT((p as any).dailyReturn || p.dailyRoiPct || 0)}</TableCell>
                                     <TableCell>{p.isActive ? <CheckCircle2 className="h-4 w-4 text-cyan-400" /> : <XCircle className="h-4 w-4 text-red-400" />}</TableCell>
                                     <TableCell>
                                       <div className="flex gap-1">
@@ -6096,7 +6096,7 @@ Seus 10 indicados diretos investem $100/dia cada:
                   <SelectContent className="bg-zinc-800">
                     <SelectItem value="custom">{t('copyTraders.customPlan')}</SelectItem>
                     {(investDialogPlan.plans || []).map(p => (
-                      <SelectItem key={p.id} value={p.id}>{p.name} - {p.days} {t('copyTraders.days')} ({p.discountPct}% {t('copyTraders.off')})</SelectItem>
+                      <SelectItem key={p.id} value={p.id}>{p.name} - {p.durationDays || (p as any).days || '?'} {t('copyTraders.days')} ({(p as any).discountPct || 0}% {t('copyTraders.off')})</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -6106,8 +6106,8 @@ Seus 10 indicados diretos investem $100/dia cada:
             {!selectedPlanId && (
               <div>
                 <Label className="text-zinc-300 text-sm">{t('copyTraders.period')}</Label>
-                <Input type="number" min={investDialogPlan?.minRentalDays || 7} max={investDialogPlan?.maxRentalDays || 365} value={investmentDuration} onChange={e => setInvestmentDuration(parseInt(e.target.value) || 7)} className="bg-zinc-800 border-zinc-700 mt-1" />
-                <div className="text-xs text-zinc-500 mt-1">{t('copyTraders.minMax', { min: String(investDialogPlan?.minRentalDays || 7), max: String(investDialogPlan?.maxRentalDays || 365) })}</div>
+                <Input type="number" min={(investDialogPlan as any)?.minRentalDays || 7} max={(investDialogPlan as any)?.maxRentalDays || 365} value={investmentDuration} onChange={e => setInvestmentDuration(parseInt(e.target.value) || 7)} className="bg-zinc-800 border-zinc-700 mt-1" />
+                <div className="text-xs text-zinc-500 mt-1">{t('copyTraders.minMax', { min: String((investDialogPlan as any)?.minRentalDays || 7), max: String((investDialogPlan as any)?.maxRentalDays || 365) })}</div>
               </div>
             )}
             {/* Summary */}
