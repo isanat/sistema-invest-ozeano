@@ -91,3 +91,21 @@ Stage Summary:
 - Login: admin@ozeano.com / Admin@123 works correctly
 - All APIs tested and returning 200
 - Pushed to GitHub (903ecb5)
+
+---
+Task ID: 5
+Agent: Main
+Task: Fix Vercel deployment - switch from SQLite to PostgreSQL
+
+Work Log:
+- Changed prisma/schema.prisma provider from "sqlite" to "postgresql" for Vercel compatibility
+- Updated build script in package.json to handle DATABASE_URL properly
+- Made bcrypt salt rounds environment-aware: 4 for dev, 10 for production
+- Created .env.example with instructions for PostgreSQL setup
+- Pushed to GitHub (8552f94)
+
+Stage Summary:
+- Prisma schema now uses PostgreSQL (required for Vercel)
+- User needs to set DATABASE_URL in Vercel dashboard pointing to a PostgreSQL database
+- Recommended providers: Neon (free), Supabase (free), Railway (free)
+- bcrypt rounds: 4 (dev) / 10 (production)
