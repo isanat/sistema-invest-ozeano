@@ -520,6 +520,23 @@ export default function PlataformaROI() {
   const [npEstimatedFee, setNpEstimatedFee] = useState<number>(0);
   const [npCountdown, setNpCountdown] = useState<string>('');
 
+  // Dynamic currencies from NowPayments
+  const [availableDepositCurrencies, setAvailableDepositCurrencies] = useState<string[]>(['usdttrc20', 'usdtmatic', 'btc', 'eth', 'trx']);
+  const [availableWithdrawCurrencies, setAvailableWithdrawCurrencies] = useState<string[]>(['usdt_trc20', 'usdt_polygon', 'btc', 'pix']);
+  const [pixEnabled, setPixEnabled] = useState(true);
+
+  // Currency label helper
+  const currencyLabel = (code: string): string => {
+    const labels: Record<string, string> = {
+      usdttrc20: 'USDT TRC20', usdtmatic: 'USDT Polygon', usdtbsc: 'USDT BSC', usdterc20: 'USDT ERC20',
+      btc: 'Bitcoin', eth: 'Ethereum', trx: 'TRON', ltc: 'Litecoin', doge: 'Dogecoin',
+      usdcmatic: 'USDC Polygon',
+      usdt_trc20: 'USDT TRC20', usdt_polygon: 'USDT Polygon', usdt_bsc: 'USDT BSC', usdt_erc20: 'USDT ERC20',
+      usdc_polygon: 'USDC Polygon', pix: 'PIX (BRL)',
+    };
+    return labels[code] || code.toUpperCase();
+  };
+
   // Plans filter state
   const [plansFilter, setPlansFilter] = useState<string>('ALL');
 
@@ -582,6 +599,11 @@ export default function PlataformaROI() {
         const data = await res.json();
         if (data.success && data.user) {
           setUser(data.user);
+          // Set initial tab based on role: admin goes to overview, user goes to home
+          if (data.user.role === 'admin') {
+            setActiveTab('overview');
+            setAdminTab('overview');
+          }
           return;
         }
       }
@@ -597,8 +619,25 @@ export default function PlataformaROI() {
   useEffect(() => {
     if (user) {
       fetchDashboardData();
+      fetchAvailableCurrencies();
     }
   }, [user]);
+
+  const fetchAvailableCurrencies = async () => {
+    try {
+      const res = await fetch('/api/nowpayments/currencies');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success) {
+          if (data.deposit?.length > 0) setAvailableDepositCurrencies(data.deposit);
+          if (data.withdrawal?.length > 0) setAvailableWithdrawCurrencies(data.withdrawal);
+          if (data.pixEnabled !== undefined) setPixEnabled(data.pixEnabled);
+        }
+      }
+    } catch {
+      // Use defaults on error
+    }
+  };
 
   const fetchDashboardData = async () => {
     setDataLoading(true);
@@ -772,14 +811,26 @@ export default function PlataformaROI() {
   }, [activeTab, user, statementFilter]);
 
   // Load admin data when admin tab is selected
+  // For admin users, activeTab IS the admin section ID directly (e.g., 'overview', 'users')
+  const adminTabIds = ['overview', 'copyTraders', 'plans', 'users', 'deposits', 'withdrawals', 'nowpayments', 'affiliates', 'affiliateWithdrawals', 'affiliateRanks', 'affiliateMilestones', 'affiliateContests', 'affiliateBadges', 'vouchers', 'config', 'marketing', 'logs'];
+  const isAdminUser = user?.role === 'admin';
+  const isAdminTab = adminTabIds.includes(activeTab);
+
+  // Sync adminTab state with activeTab for admin users
   useEffect(() => {
-    if (activeTab === 'admin' && user?.role === 'admin') fetchAdminData();
-  }, [activeTab, user]);
+    if (isAdminUser && isAdminTab && adminTab !== activeTab) {
+      setAdminTab(activeTab);
+    }
+  }, [activeTab, isAdminUser, isAdminTab]);
+
+  useEffect(() => {
+    if (isAdminUser && isAdminTab) fetchAdminData();
+  }, [activeTab, isAdminUser]);
 
   // Load admin NowPayments data when that sub-tab is selected
   useEffect(() => {
-    if (activeTab === 'admin' && adminTab === 'nowpayments' && user?.role === 'admin') fetchAdminNpData();
-  }, [activeTab, adminTab, user]);
+    if (isAdminUser && activeTab === 'nowpayments') fetchAdminNpData();
+  }, [activeTab, isAdminUser]);
 
   // ==========================================
   // NOTIFICATION SYSTEM: Load from storage + generate from transactions
@@ -2506,7 +2557,10 @@ export default function PlataformaROI() {
   // ============================================================================
   // AUTHENTICATED → DASHBOARD
   // ============================================================================
-  const navItems = [
+  // For admin users, show admin navigation directly instead of investor navigation
+  const isAdmin = user.role === 'admin';
+
+  const investorNavItems = [
     { id: 'home', label: t('sidebar.home'), icon: Home },
     { id: 'investir', label: t('sidebar.invest'), icon: Bot },
     { id: 'alugueis', label: t('dashboard.activeInvestments'), icon: Clock },
@@ -2516,7 +2570,6 @@ export default function PlataformaROI() {
     { id: 'historico', label: t('sidebar.history'), icon: History },
     { id: 'afiliados', label: t('sidebar.affiliates'), icon: Users },
     { id: 'perfil', label: t('sidebar.profile'), icon: User },
-    ...(user.role === 'admin' ? [{ id: 'admin', label: t('sidebar.admin'), icon: Shield }] : []),
   ];
 
   const adminNavItems = [
@@ -2539,6 +2592,16 @@ export default function PlataformaROI() {
     { id: 'logs', label: t('adminSidebar.logs'), icon: FileText },
   ];
 
+  // Admin users get admin nav directly; regular users get investor nav
+  const navItems = isAdmin
+    ? adminNavItems
+    : investorNavItems;
+
+  // Mobile bottom nav: show key items based on role
+  const mobileNavIds = isAdmin
+    ? ['overview', 'users', 'deposits', 'nowpayments', 'config']
+    : ['home', 'investir', 'extrato', 'afiliados', 'perfil'];
+
   return (
     <div className="min-h-screen flex flex-col bg-zinc-950 text-white">
       {/* HEADER */}
@@ -2550,16 +2613,18 @@ export default function PlataformaROI() {
             </Button>
             <div className="flex items-center gap-2">
               <Bot className="h-6 w-6 text-cyan-400" />
-              <span className="font-bold text-lg hidden sm:inline">PLATAFORMA ROI</span>
+              <span className="font-bold text-lg hidden sm:inline">{isAdmin ? 'ADMIN PANEL' : 'PLATAFORMA ROI'}</span>
             </div>
           </div>
           <div className="flex items-center gap-2 sm:gap-3">
-            {/* Mobile Balance Pill */}
-            <div className="flex items-center gap-1.5 bg-zinc-800 rounded-lg px-2.5 py-1.5 text-sm">
-              <DollarSign className="h-3.5 w-3.5 text-cyan-400" />
-              <span className="font-semibold text-xs sm:text-sm">{fmtUSDT(user.balance)}</span>
-              <span className="text-zinc-400 text-xs hidden sm:inline">USDT</span>
-            </div>
+            {/* Mobile Balance Pill (investors only) */}
+            {!isAdmin && (
+              <div className="flex items-center gap-1.5 bg-zinc-800 rounded-lg px-2.5 py-1.5 text-sm">
+                <DollarSign className="h-3.5 w-3.5 text-cyan-400" />
+                <span className="font-semibold text-xs sm:text-sm">{fmtUSDT(user.balance)}</span>
+                <span className="text-zinc-400 text-xs hidden sm:inline">USDT</span>
+              </div>
+            )}
             {/* Language Selector with Flags */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -2662,12 +2727,9 @@ export default function PlataformaROI() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="bg-zinc-900 border-zinc-800" align="end">
-                <DropdownMenuItem onClick={() => setActiveTab('perfil')}>
-                  <User className="mr-2 h-4 w-4" /> {t('sidebar.profile')}
-                </DropdownMenuItem>
-                {user.role === 'admin' && (
-                  <DropdownMenuItem onClick={() => setActiveTab('admin')}>
-                    <Shield className="mr-2 h-4 w-4" /> Admin Panel
+                {!isAdmin && (
+                  <DropdownMenuItem onClick={() => setActiveTab('perfil')}>
+                    <User className="mr-2 h-4 w-4" /> {t('sidebar.profile')}
                   </DropdownMenuItem>
                 )}
                 <DropdownMenuSeparator className="bg-zinc-800" />
@@ -2697,11 +2759,13 @@ export default function PlataformaROI() {
               </button>
             ))}
           </nav>
-          <div className="p-4 border-t border-zinc-800">
-            <div className="text-xs text-zinc-500">{t('dashboard.balance')}</div>
-            <div className="text-lg font-bold text-cyan-400">${fmtUSDT(user.balance)}</div>
-            <div className="text-xs text-zinc-500">≈ {t('common.brl')} {fmtBRL(balanceBRL)}</div>
-          </div>
+          {!isAdmin && (
+            <div className="p-4 border-t border-zinc-800">
+              <div className="text-xs text-zinc-500">{t('dashboard.balance')}</div>
+              <div className="text-lg font-bold text-cyan-400">${fmtUSDT(user.balance)}</div>
+              <div className="text-xs text-zinc-500">≈ {t('common.brl')} {fmtBRL(balanceBRL)}</div>
+            </div>
+          )}
 
         </aside>
 
@@ -2713,8 +2777,8 @@ export default function PlataformaROI() {
               <motion.aside initial={{ x: -280 }} animate={{ x: 0 }} exit={{ x: -280 }} className="fixed left-0 top-0 bottom-0 w-64 max-w-[80vw] bg-zinc-900 z-50 lg:hidden">
                 <div className="p-4 flex items-center justify-between border-b border-zinc-800">
                   <div className="flex items-center gap-2">
-                    <Bot className="h-6 w-6 text-cyan-400" />
-                    <span className="font-bold">PLATAFORMA ROI</span>
+                    <Shield className="h-6 w-6 text-cyan-400" />
+                    <span className="font-bold">{isAdmin ? 'ADMIN' : 'PLATAFORMA ROI'}</span>
                   </div>
                   <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(false)}><X className="h-5 w-5" /></Button>
                 </div>
@@ -4512,7 +4576,7 @@ export default function PlataformaROI() {
                 )}
 
                 {/* ====== ADMIN TAB ====== */}
-                {activeTab === 'admin' && user.role === 'admin' && (
+                {isAdminUser && isAdminTab && (
                   <div className="space-y-6">
                     <div className="flex items-center justify-between flex-wrap gap-2">
                       <h2 className="text-xl sm:text-2xl font-bold flex items-center gap-2"><Shield className="h-7 w-7 text-cyan-400" /> {t('sidebar.admin')}</h2>
@@ -4520,11 +4584,11 @@ export default function PlataformaROI() {
                         <RefreshCw className="mr-2 h-4 w-4" /> {t('common.refresh')}
                       </Button>
                     </div>
-                    {/* Admin Sub-nav */}
-                    <div className="relative">
+                    {/* Admin Sub-nav (only visible on mobile where sidebar isn't shown) */}
+                    <div className="relative lg:hidden">
                     <div className="flex gap-2 overflow-x-auto pb-2">
                       {adminNavItems.map(item => (
-                        <Button key={item.id} variant={adminTab === item.id ? 'default' : 'outline'} size="sm" className={`whitespace-nowrap min-h-[44px] ${adminTab === item.id ? 'bg-emerald-600 hover:bg-cyan-700' : 'border-zinc-700'}`} onClick={() => setAdminTab(item.id)}>
+                        <Button key={item.id} variant={activeTab === item.id ? 'default' : 'outline'} size="sm" className={`whitespace-nowrap min-h-[44px] ${activeTab === item.id ? 'bg-emerald-600 hover:bg-cyan-700' : 'border-zinc-700'}`} onClick={() => setActiveTab(item.id)}>
                           <item.icon className="mr-2 h-4 w-4" />{item.label}
                         </Button>
                       ))}
@@ -6065,8 +6129,8 @@ Seus 10 indicados diretos investem $100/dia cada:
         <div className="flex justify-around py-1.5 px-1">
           {/* Show only 5 key items on mobile: Home, Investir, Extrato, Afiliados, Perfil */}
           {navItems
-            .filter(item => ['home', 'investir', 'extrato', 'afiliados', 'perfil'].includes(item.id) || (item.id === 'admin' && user?.role === 'admin'))
-            .slice(0, user?.role === 'admin' ? 5 : 5)
+            .filter(item => mobileNavIds.includes(item.id))
+            .slice(0, 5)
             .map(item => (
               <button key={item.id} onClick={() => setActiveTab(item.id)} className={`flex flex-col items-center gap-0.5 px-3 py-2 rounded-lg text-[10px] whitespace-nowrap min-w-[52px] transition-colors ${activeTab === item.id ? 'text-cyan-400' : 'text-zinc-500 active:text-zinc-300'}`}>
                 <item.icon className="h-5 w-5" />
@@ -6212,11 +6276,9 @@ Seus 10 indicados diretos investem $100/dia cada:
                 <Select value={npDepositCurrency} onValueChange={setNpDepositCurrency}>
                   <SelectTrigger className="bg-zinc-800 border-zinc-700 mt-1"><SelectValue /></SelectTrigger>
                   <SelectContent className="bg-zinc-800">
-                    <SelectItem value="usdttrc20">USDT TRC20</SelectItem>
-                    <SelectItem value="usdtmatic">USDT Polygon</SelectItem>
-                    <SelectItem value="btc">Bitcoin</SelectItem>
-                    <SelectItem value="eth">Ethereum</SelectItem>
-                    <SelectItem value="trx">TRON</SelectItem>
+                    {availableDepositCurrencies.map(c => (
+                      <SelectItem key={c} value={c}>{currencyLabel(c)}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -6395,12 +6457,11 @@ Seus 10 indicados diretos investem $100/dia cada:
               <div className="text-xs text-zinc-500 mt-1">Saldo disponível: ${fmtUSDT(user?.balance || '0')} USDT</div>
             </div>
             <div><Label className="text-zinc-300">Moeda</Label>
-              <Select name="method" defaultValue="usdt_trc20"><SelectTrigger className="bg-zinc-800 border-zinc-700 mt-1"><SelectValue /></SelectTrigger>
+              <Select name="method" defaultValue={availableWithdrawCurrencies[0] || 'usdt_trc20'}><SelectTrigger className="bg-zinc-800 border-zinc-700 mt-1"><SelectValue /></SelectTrigger>
                 <SelectContent className="bg-zinc-800">
-                  <SelectItem value="usdt_trc20">USDT TRC20</SelectItem>
-                  <SelectItem value="usdt_polygon">USDT Polygon</SelectItem>
-                  <SelectItem value="btc">Bitcoin</SelectItem>
-                  <SelectItem value="pix">PIX (BRL)</SelectItem>
+                  {availableWithdrawCurrencies.map(c => (
+                    <SelectItem key={c} value={c}>{currencyLabel(c)}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
