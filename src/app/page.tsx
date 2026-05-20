@@ -32,6 +32,7 @@ import {
   LayoutDashboard, UserCog, Banknote, HandCoins, Link2, ChevronLeft,
   Trophy, Target, Crown, Star, Share2, Medal, Award,
   Info, MessageSquare, Ticket, LineChart, Calculator,
+  Lock,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -330,12 +331,86 @@ const txTypeIcon = (type: string) => {
 
 // categoryLabel moved inside component to use t()
 
+// ============================================================================
+// CONFIG_LABELS — Defines how each SystemConfig key is displayed in the admin UI
+// Matches the mining-protocol pattern with label, description, type, unit, options
+// ============================================================================
+const CONFIG_LABELS: Record<string, {
+  label: string;
+  description: string;
+  type?: 'boolean' | 'number' | 'string' | 'select' | 'secret';
+  unit?: string;
+  options?: { value: string; label: string }[];
+}> = {
+  // General
+  site_name: { label: 'Nome do Site', description: 'Nome exibido no site e nos e-mails' },
+  maintenance_mode: { label: 'Modo Manutenção', description: 'Ativar para colocar o site em manutenção', type: 'boolean' },
+  // Deposit
+  has_pix: { label: 'PIX Habilitado', description: 'Permitir depósitos via PIX', type: 'boolean' },
+  has_usdt: { label: 'USDT Habilitado', description: 'Permitir depósitos via USDT', type: 'boolean' },
+  manual_deposit_enabled: { label: 'Depósito Manual', description: 'Permitir depósitos manuais (PIX/USDT) para usuários', type: 'boolean' },
+  min_deposit_usdt: { label: 'Depósito Mínimo', description: 'Valor mínimo para depósito em USDT', type: 'number', unit: 'USDT' },
+  max_deposit_usdt: { label: 'Depósito Máximo', description: 'Valor máximo para depósito em USDT', type: 'number', unit: 'USDT' },
+  pix_wallet_address: { label: 'Carteira PIX', description: 'Endereço da carteira para recebimentos PIX', type: 'string' },
+  usdt_trc20_address: { label: 'Endereço USDT TRC20', description: 'Carteira para depósitos manuais USDT TRC20' },
+  usdt_polygon_address: { label: 'Endereço USDT Polygon', description: 'Carteira para depósitos manuais USDT Polygon' },
+  pix_key: { label: 'Chave PIX', description: 'Chave PIX para recebimentos' },
+  // Withdrawal
+  min_withdrawal_usdt: { label: 'Saque Mínimo', description: 'Valor mínimo para saque em USDT', type: 'number', unit: 'USDT' },
+  max_withdrawal_usdt: { label: 'Saque Máximo', description: 'Valor máximo para saque em USDT', type: 'number', unit: 'USDT' },
+  withdrawal_fee_pct: { label: 'Taxa de Saque', description: 'Percentual cobrado sobre o lucro em saques', type: 'number', unit: '%' },
+  // Trading
+  daily_roi_pct: { label: 'ROI Diário (%)', description: 'Percentual de ROI diário padrão', type: 'number', unit: '%' },
+  min_investment_usdt: { label: 'Investimento Mínimo', description: 'Valor mínimo para investimento em USDT', type: 'number', unit: 'USDT' },
+  // Affiliate
+  affiliate_commission_mode: { label: 'Modo de Comissão', description: 'Como as comissões de afiliados são calculadas', type: 'select', options: [
+    { value: 'system_margin', label: 'Margem do Sistema' },
+    { value: 'roi_profit', label: 'Lucro de ROI' },
+    { value: 'revenue_pool', label: 'Pool de Receita' },
+  ] },
+  affiliate_system_margin_pct: { label: 'Margem do Sistema (%)', description: 'Percentual da margem do sistema para afiliados', type: 'number', unit: '%' },
+  affiliate_pool_revenue_pct: { label: 'Pool de Receita (%)', description: 'Percentual fixo da receita para o pool de afiliados', type: 'number', unit: '%' },
+  affiliate_investment_bonus_pct: { label: 'Bônus de Investimento (%)', description: '% do valor do investimento dado como bônus ao afiliado', type: 'number', unit: '%' },
+  min_affiliate_withdrawal: { label: 'Saque Mínimo Afiliado', description: 'Valor mínimo para saque de comissões em USDT', type: 'number', unit: 'USDT' },
+  affiliate_withdrawal_fee_pct: { label: 'Taxa Saque Afiliado (%)', description: 'Percentual cobrado em saques de afiliado', type: 'number', unit: '%' },
+  affiliate_daily_cap_usd: { label: 'Cap Diário Afiliado', description: 'Cap diário de comissões em USDT (0 = sem limite)', type: 'number', unit: 'USDT' },
+  // NowPayments
+  nowpayments_enabled: { label: 'NowPayments Habilitado', description: 'Ativar integração com NowPayments para depósitos automáticos', type: 'boolean' },
+  nowpayments_deposit_currencies: { label: 'Moedas para Depósito', description: 'Moedas aceitas separadas por vírgula (ex: usdttrc20,usdtmatic,btc)' },
+  nowpayments_api_key: { label: 'Chave de API', description: 'Chave de API do painel NowPayments', type: 'secret' },
+  nowpayments_email: { label: 'E-mail da Conta', description: 'E-mail da conta NowPayments' },
+  nowpayments_password: { label: 'Senha da Conta', description: 'Senha da conta NowPayments', type: 'secret' },
+  nowpayments_ipn_secret: { label: 'Segredo IPN (Webhook)', description: 'Chave secreta para verificação de webhooks', type: 'secret' },
+  nowpayments_2fa_secret: { label: 'Segredo 2FA (TOTP)', description: 'Chave TOTP para verificação automática de payouts', type: 'secret' },
+  nowpayments_base_url: { label: 'URL da API', description: 'URL base da API NowPayments (não alterar)' },
+  nowpayments_split_pct: { label: 'Split da Plataforma (%)', description: 'Percentual do depósito direcionado para carteira da plataforma (0 = desativado)', type: 'number', unit: '%' },
+  nowpayments_split_wallet: { label: 'Carteira de Split', description: 'Endereço da carteira para recebimento do split' },
+};
+
+// Keys hidden from the generic config list (managed via dedicated UI sections)
+const HIDDEN_CONFIG_KEYS = new Set([
+  'nowpayments_split_pct',
+  'nowpayments_split_wallet',
+  'nowpayments_2fa_secret',
+  'site_logo',
+  'site_favicon',
+]);
+
 const categoryIcon = (cat: string) => {
   const icons: Record<string, typeof Settings> = {
     general: Settings, deposit: Banknote, withdrawal: HandCoins,
     trading: LineChart, affiliate: Link2, nowpayments: Globe,
   };
   return icons[cat] || Settings;
+};
+
+const categoryDescription: Record<string, string> = {
+  general: 'Configurações gerais do site',
+  deposit: 'Opções de depósito e métodos de pagamento',
+  withdrawal: 'Regras para saques e taxas',
+  trading: 'Configurações de ROI e investimentos',
+  affiliate: 'Comissões e configurações de afiliados',
+  nowpayments: 'Credenciais e integração com NowPayments',
 };
 
 // ============================================================================
@@ -589,6 +664,7 @@ export default function PlataformaROI() {
   // Config Edit State (grouped by category)
   const [configEdits, setConfigEdits] = useState<Record<string, string>>({});
   const [configSaving, setConfigSaving] = useState<string | null>(null);
+  const [secretVisible, setSecretVisible] = useState<Record<string, boolean>>({});
   const [newConfigDialog, setNewConfigDialog] = useState(false);
   const [changePasswordDialog, setChangePasswordDialog] = useState(false);
   const [removeLoading, setRemoveLoading] = useState(false);
@@ -6960,35 +7036,35 @@ export default function PlataformaROI() {
                     {/* Admin Config */}
                     {adminTab === 'config' && (
                       <div className="space-y-4">
-                        <div className="flex justify-between items-center">
+                        <div className="flex justify-between items-center flex-wrap gap-2">
                           <div className="flex gap-2">
                             <Button variant="outline" className="border-zinc-700 text-cyan-400 hover:bg-cyan-500/10" onClick={() => setChangePasswordDialog(true)}>
-                              <Shield className="mr-2 h-4 w-4" /> {t('admin.passwordChange')}
+                              <Shield className="mr-2 h-4 w-4" /> Alterar Senha
                             </Button>
                             <Button variant="outline" className="border-zinc-700 text-amber-400 hover:bg-amber-500/10" onClick={async () => {
                               try {
                                 const npConfigs = [
-                                  { key: 'nowpayments_api_key', value: '', type: 'string', description: 'NowPayments API Key', category: 'nowpayments' },
-                                  { key: 'nowpayments_email', value: '', type: 'string', description: 'NowPayments Account Email', category: 'nowpayments' },
-                                  { key: 'nowpayments_password', value: '', type: 'string', description: 'NowPayments Account Password', category: 'nowpayments' },
-                                  { key: 'nowpayments_ipn_secret', value: '', type: 'string', description: 'NowPayments IPN Secret (webhook)', category: 'nowpayments' },
-                                  { key: 'nowpayments_base_url', value: 'https://api.nowpayments.io/v1', type: 'string', description: 'NowPayments API Base URL', category: 'nowpayments' },
+                                  { key: 'nowpayments_api_key', value: '', type: 'string', description: 'Chave de API do painel NowPayments', category: 'nowpayments' },
+                                  { key: 'nowpayments_email', value: '', type: 'string', description: 'E-mail da conta NowPayments', category: 'nowpayments' },
+                                  { key: 'nowpayments_password', value: '', type: 'secret', description: 'Senha da conta NowPayments', category: 'nowpayments' },
+                                  { key: 'nowpayments_ipn_secret', value: '', type: 'secret', description: 'Chave secreta para verificação de webhooks', category: 'nowpayments' },
+                                  { key: 'nowpayments_base_url', value: 'https://api.nowpayments.io/v1', type: 'string', description: 'URL base da API NowPayments (não alterar)', category: 'nowpayments' },
                                   { key: 'nowpayments_enabled', value: 'true', type: 'boolean', description: 'Ativar depósito automático via NowPayments', category: 'nowpayments' },
                                   { key: 'nowpayments_deposit_currencies', value: 'usdttrc20', type: 'string', description: 'Moedas aceitas (separar por vírgula, ex: usdttrc20,usdtmatic,btc)', category: 'nowpayments' },
-                                  { key: 'nowpayments_split_pct', value: '0', type: 'number', description: 'Platform split % (0 = disabled)', category: 'nowpayments' },
-                                  { key: 'nowpayments_split_wallet', value: '', type: 'string', description: 'Platform wallet for split payouts', category: 'nowpayments' },
+                                  { key: 'nowpayments_split_pct', value: '0', type: 'number', description: 'Split da Plataforma (%)', category: 'nowpayments' },
+                                  { key: 'nowpayments_split_wallet', value: '', type: 'string', description: 'Carteira de Split', category: 'nowpayments' },
                                 ];
                                 const existing = adminConfigs.filter(c => c.category === 'nowpayments').map(c => c.key);
                                 const toCreate = npConfigs.filter(c => !existing.includes(c.key));
                                 if (toCreate.length === 0) {
-                                  toast.info('NowPayments configs already exist');
+                                  toast.info('NowPayments configs já existem');
                                   return;
                                 }
                                 await api('/api/admin/config', {
                                   method: 'PUT',
                                   body: JSON.stringify({ configs: toCreate }),
                                 });
-                                toast.success(`Created ${toCreate.length} NowPayments config keys`);
+                                toast.success(`${toCreate.length} configs do NowPayments criadas`);
                                 fetchAdminData();
                               } catch (err: any) {
                                 toast.error(err.message);
@@ -6998,78 +7074,132 @@ export default function PlataformaROI() {
                             </Button>
                           </div>
                           <Button className="bg-emerald-600 hover:bg-cyan-700" onClick={() => setNewConfigDialog(true)}>
-                            <Plus className="mr-2 h-4 w-4" /> {t('admin.addConfig')}
+                            <Plus className="mr-2 h-4 w-4" /> Nova Config
                           </Button>
                         </div>
                         {['general', 'deposit', 'withdrawal', 'trading', 'affiliate', 'nowpayments'].map(cat => {
-                          const catConfigs = adminConfigs.filter(c => c.category === cat);
+                          const catConfigs = adminConfigs.filter(c => c.category === cat && !HIDDEN_CONFIG_KEYS.has(c.key));
                           if (catConfigs.length === 0) return null;
                           const CatIcon = categoryIcon(cat);
                           const hasChanges = catConfigs.some(c => configEdits[c.key] !== undefined && configEdits[c.key] !== c.value);
+                          const catDesc = categoryDescription[cat] || '';
                           return (
                             <Card key={cat} className="bg-zinc-900 border-zinc-800">
                               <CardHeader className="pb-3">
                                 <div className="flex items-center justify-between gap-2 flex-wrap">
-                                  <CardTitle className="text-base sm:text-lg flex items-center gap-2 min-w-0">
-                                    <CatIcon className="h-5 w-5 text-cyan-400 shrink-0" />
-                                    <span className="truncate">{categoryLabel(cat)}</span>
-                                    <Badge variant="outline" className="text-xs border-zinc-700 text-zinc-400 shrink-0">{catConfigs.length}</Badge>
-                                  </CardTitle>
+                                  <div>
+                                    <CardTitle className="text-base sm:text-lg flex items-center gap-2 min-w-0">
+                                      <CatIcon className="h-5 w-5 text-emerald-400 shrink-0" />
+                                      <span className="truncate">{categoryLabel(cat)}</span>
+                                      <Badge variant="outline" className="text-xs border-zinc-700 text-zinc-400 shrink-0">{catConfigs.length}</Badge>
+                                    </CardTitle>
+                                    {catDesc && <p className="text-xs text-zinc-500 mt-1 ml-7">{catDesc}</p>}
+                                  </div>
                                   <Button size="sm" className={`h-9 text-xs shrink-0 ${hasChanges ? 'bg-emerald-600 hover:bg-cyan-700' : 'bg-zinc-700 hover:bg-zinc-600'}`} disabled={!hasChanges || configSaving === cat} onClick={() => handleBatchConfigSave(cat)}>
                                     {configSaving === cat && <Loader2 className="mr-1 h-3 w-3 animate-spin" />}
-                                    {t('admin.save')}
+                                    Salvar
                                   </Button>
                                 </div>
                               </CardHeader>
-                              <CardContent className="space-y-3">
-                                {catConfigs.map(cfg => (
-                                  <div key={cfg.id} className="flex items-start gap-3 bg-zinc-800/40 rounded-lg p-3">
-                                    <div className="flex-1 min-w-0">
-                                      <div className="text-sm font-medium text-zinc-300">{cfg.key}</div>
-                                      {cfg.description && <div className="text-xs text-zinc-500 mb-1.5">{cfg.description}</div>}
-                                      {cfg.type === 'boolean' ? (
-                                        <div className="flex items-center gap-3 mt-1">
-                                          <Switch
-                                            checked={configEdits[cfg.key] !== undefined ? configEdits[cfg.key] === 'true' : cfg.value === 'true'}
-                                            onCheckedChange={(checked) => setConfigEdits(prev => ({ ...prev, [cfg.key]: checked ? 'true' : 'false' }))}
-                                          />
-                                          <span className={`text-sm font-medium ${((configEdits[cfg.key] ?? cfg.value) === 'true') ? 'text-emerald-400' : 'text-zinc-500'}`}>
-                                            {(configEdits[cfg.key] ?? cfg.value) === 'true' ? 'Ativado' : 'Desativado'}
-                                          </span>
+                              <CardContent>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                  {catConfigs.map(cfg => {
+                                    const meta = CONFIG_LABELS[cfg.key];
+                                    const fieldType = meta?.type || cfg.type;
+                                    const isChanged = configEdits[cfg.key] !== undefined && configEdits[cfg.key] !== cfg.value;
+                                    const isSecret = fieldType === 'secret';
+                                    const isSelect = fieldType === 'select';
+                                    const unit = meta?.unit;
+                                    const currentValue = configEdits[cfg.key] ?? cfg.value;
+                                    return (
+                                      <div key={cfg.id} className={`bg-zinc-800/40 rounded-lg p-3 ${isChanged ? 'ring-1 ring-amber-500/30' : ''}`}>
+                                        <div className="flex items-center justify-between mb-1.5">
+                                          <Label className="text-sm font-medium text-zinc-300 flex items-center gap-1.5">
+                                            {isSecret && <Lock className="h-3.5 w-3.5 text-amber-400" />}
+                                            {meta?.label || cfg.key}
+                                          </Label>
+                                          {isChanged && (
+                                            <div className="flex items-center gap-1">
+                                              <span className="text-[10px] text-amber-400">modificado</span>
+                                              <Button variant="ghost" size="icon" className="h-5 w-5 text-zinc-500 hover:text-white"
+                                                onClick={() => setConfigEdits(prev => { const next = { ...prev }; delete next[cfg.key]; return next; })}>
+                                                <X className="h-3 w-3" />
+                                              </Button>
+                                            </div>
+                                          )}
                                         </div>
-                                      ) : cfg.type === 'number' ? (
-                                        <Input
-                                          type="number"
-                                          value={configEdits[cfg.key] ?? cfg.value}
-                                          onChange={e => setConfigEdits(prev => ({ ...prev, [cfg.key]: e.target.value }))}
-                                          className="bg-zinc-800 border-zinc-700 text-sm h-8"
-                                        />
-                                      ) : (
-                                        <Input
-                                          value={configEdits[cfg.key] ?? cfg.value}
-                                          onChange={e => setConfigEdits(prev => ({ ...prev, [cfg.key]: e.target.value }))}
-                                          className="bg-zinc-800 border-zinc-700 text-sm h-8"
-                                        />
-                                      )}
-                                      <div className="flex items-center gap-2 mt-1">
-                                        <Badge variant="outline" className="text-[10px] border-zinc-700 text-zinc-500 h-4">{cfg.type}</Badge>
-                                        {configEdits[cfg.key] !== undefined && configEdits[cfg.key] !== cfg.value && (
-                                          <span className="text-[10px] text-amber-400">modificado</span>
+                                        <p className="text-xs text-zinc-500 mb-2">{meta?.description || cfg.description || ''}</p>
+
+                                        {fieldType === 'boolean' ? (
+                                          <div className="flex items-center gap-3">
+                                            <Switch
+                                              checked={currentValue === 'true'}
+                                              onCheckedChange={(checked) => setConfigEdits(prev => ({ ...prev, [cfg.key]: checked ? 'true' : 'false' }))}
+                                            />
+                                            <span className={`text-sm font-medium ${currentValue === 'true' ? 'text-emerald-400' : 'text-zinc-500'}`}>
+                                              {currentValue === 'true' ? 'Ativado' : 'Desativado'}
+                                            </span>
+                                          </div>
+                                        ) : fieldType === 'select' && meta?.options ? (
+                                          <Select
+                                            value={currentValue}
+                                            onValueChange={(val) => setConfigEdits(prev => ({ ...prev, [cfg.key]: val }))}
+                                          >
+                                            <SelectTrigger className="bg-zinc-800 border-zinc-700 text-sm h-8">
+                                              <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent className="bg-zinc-800">
+                                              {meta.options.map(opt => (
+                                                <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                                              ))}
+                                            </SelectContent>
+                                          </Select>
+                                        ) : fieldType === 'number' ? (
+                                          <div className="relative">
+                                            <Input
+                                              type="number"
+                                              value={currentValue}
+                                              onChange={e => setConfigEdits(prev => ({ ...prev, [cfg.key]: e.target.value }))}
+                                              className={`bg-zinc-800 border-zinc-700 text-sm h-8 ${unit ? 'pr-16' : ''}`}
+                                            />
+                                            {unit && (
+                                              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-zinc-500 pointer-events-none">{unit}</span>
+                                            )}
+                                          </div>
+                                        ) : isSecret ? (
+                                          <div className="relative">
+                                            <Input
+                                              type={secretVisible[cfg.key] ? 'text' : 'password'}
+                                              value={currentValue}
+                                              onChange={e => setConfigEdits(prev => ({ ...prev, [cfg.key]: e.target.value }))}
+                                              className="bg-zinc-800 border-zinc-700 text-sm h-8 pr-10"
+                                              placeholder="••••••••"
+                                            />
+                                            <Button
+                                              variant="ghost"
+                                              size="icon"
+                                              className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6 text-zinc-500 hover:text-white"
+                                              onClick={() => setSecretVisible(prev => ({ ...prev, [cfg.key]: !prev[cfg.key] }))}
+                                            >
+                                              {secretVisible[cfg.key] ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                                            </Button>
+                                          </div>
+                                        ) : (
+                                          <Input
+                                            value={currentValue}
+                                            onChange={e => setConfigEdits(prev => ({ ...prev, [cfg.key]: e.target.value }))}
+                                            className="bg-zinc-800 border-zinc-700 text-sm h-8"
+                                          />
                                         )}
                                       </div>
-                                    </div>
-                                    {configEdits[cfg.key] !== undefined && configEdits[cfg.key] !== cfg.value && (
-                                      <Button variant="ghost" size="icon" className="h-7 w-7 text-zinc-500 hover:text-white" onClick={() => setConfigEdits(prev => { const next = { ...prev }; delete next[cfg.key]; return next; })}>
-                                        <X className="h-3.5 w-3.5" />
-                                      </Button>
-                                    )}
-                                  </div>
-                                ))}
+                                    );
+                                  })}
+                                </div>
                               </CardContent>
                             </Card>
                           );
                         })}
-                        {adminConfigs.length === 0 && <p className="text-zinc-500 text-center py-8">{t('admin.config')}</p>}
+                        {adminConfigs.length === 0 && <p className="text-zinc-500 text-center py-8">Nenhuma configuração encontrada</p>}
                       </div>
                     )}
 

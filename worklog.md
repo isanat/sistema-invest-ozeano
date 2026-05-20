@@ -1,28 +1,29 @@
 ---
-Task ID: 1
+Task ID: 2
 Agent: Main Agent
-Task: Fix deposit modal to properly respect admin settings — hide manual deposit when disabled, show only NowPayments-selected currencies without fallbacks
+Task: Compare and improve admin config UI to match mining-protocol repo quality
 
 Work Log:
-- Analyzed current deposit modal code in page.tsx and all related API routes
-- Browsed mining-protocol repo for reference on how settings should control deposit options
-- Found root cause #1: Site Config API had inconsistent boolean checks (`!== 'false'` vs `=== 'true'`), causing some settings to default to TRUE when key was missing
-- Found root cause #2: Admin Config UI used plain `<Input>` for ALL config types including booleans — admin had to type "true"/"false" manually
-- Found root cause #3: Deposit modal had hardcoded default currencies `['usdttrc20', 'usdtmatic', 'btc', 'eth', 'trx']` that showed even when NowPayments returned empty
-- Found root cause #4: No `nowpayments_deposit_currencies` config key existed to let admin select specific currencies
-- Found root cause #5: Server-side deposit APIs (deposit route, nowpayments deposit route) didn't validate admin settings
-- Fixed site config API: all boolean checks now use strict `=== 'true'` (defaults to FALSE if key missing)
-- Added `nowpayments_deposit_currencies` config key to DB, setup route, and admin UI
-- Fixed admin config UI: boolean configs now render Switch components instead of text inputs
-- Fixed deposit modal: removed hardcoded fallback currencies, respects admin-selected currencies only
-- Fixed currencies API: admin-configured currencies take priority over API results
-- Added server-side validation: deposit routes now check `manual_deposit_enabled`, `nowpayments_enabled`, `has_pix`, `has_usdt`, and `nowpayments_deposit_currencies`
-- Fixed landing API to use boolean config flags instead of wallet address presence
+- Browsed mining-protocol repo to analyze its admin config UI pattern
+- Found the key difference: mining-protocol uses CONFIG_LABELS constant with label, description, type, unit, options for each config key
+- Our project was showing raw key names like "has_pix", "manual_deposit_enabled" — very ugly
+- Added CONFIG_LABELS constant with 30+ config keys covering all categories (general, deposit, withdrawal, trading, affiliate, nowpayments)
+- Added HIDDEN_CONFIG_KEYS set to hide keys managed via dedicated UI (splits, logo, favicon)
+- Added categoryDescription for each category with descriptive text
+- Rewrote admin config section with 2-column grid layout
+- Each config field now shows: friendly label from CONFIG_LABELS, description, and proper input type
+- Boolean configs: Switch with "Ativado"/"Desativado" labels and emerald/zinc coloring
+- Number configs: Input with unit suffix overlay (USDT, %, horas)
+- Secret configs: Password input with Lock icon + Eye/EyeOff toggle button
+- Select configs: Dropdown select for enum values (affiliate_commission_mode)
+- Modified fields get amber ring highlight + "modificado" badge + revert button
+- Category icons now use emerald-400 color (matching mining-protocol pattern)
+- Category descriptions shown below the title
 
 Stage Summary:
-- All deposit settings now use strict `=== 'true'` checks throughout the codebase
-- Admin sees Switch toggles for boolean configs (Ativado/Desativado labels)
-- Deposit modal only shows methods explicitly enabled by admin
-- `nowpayments_deposit_currencies` config lets admin control which specific currencies appear
-- Server-side validation prevents bypassing disabled deposit methods
-- API response verified: hasPix=false, hasUsdt=true, manualDepositEnabled=false, nowpaymentsEnabled=true, nowpaymentsDepositCurrencies=["usdttrc20"]
+- Admin config UI now matches mining-protocol quality with CONFIG_LABELS pattern
+- All config keys have friendly Portuguese labels and descriptions
+- 5 field types supported: boolean (Switch), number (with unit), string (Input), secret (password with eye toggle), select (dropdown)
+- 2-column grid layout on desktop, single column on mobile
+- Visual feedback: amber ring on modified fields, emerald/zinc status labels
+- HIDDEN_CONFIG_KEYS hides internal keys from the UI
