@@ -15,10 +15,10 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "PLATAFORMA ROI - Ozeano Invest",
+  title: "PLATAFORMA ROI - Copy Trading Automatizado",
   description: "Plataforma de Copy Trading con retornos reales en USDT. Copia traders profesionales y recibe ganancias diarias.",
   keywords: ["copy trading", "crypto", "ROI", "USDT", "bitcoin", "inversiones", "criptomonedas"],
-  authors: [{ name: "Ozeano Invest" }],
+  authors: [{ name: "PLATAFORMA ROI" }],
   icons: {
     icon: [
       { url: "/favicon.ico", sizes: "32x32" },

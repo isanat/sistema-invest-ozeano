@@ -76,9 +76,9 @@ export async function POST(request: NextRequest) {
       { key: 'usdt_trc20_address', value: '', type: 'string', description: 'Endereço USDT TRC20 para depósitos', category: 'deposit' },
       { key: 'usdt_polygon_address', value: '', type: 'string', description: 'Endereço USDT Polygon para depósitos', category: 'deposit' },
       { key: 'pix_key', value: '', type: 'string', description: 'Chave PIX para recebimentos', category: 'deposit' },
-      { key: 'site_name', value: 'Ozeano Invest', type: 'string', description: 'Nome do site', category: 'general' },
+      { key: 'site_name', value: 'PLATAFORMA ROI', type: 'string', description: 'Nome do site', category: 'general' },
       { key: 'maintenance_mode', value: 'false', type: 'boolean', description: 'Modo manutenção', category: 'general' },
-      { key: 'daily_roi_pct', value: '2', type: 'number', description: 'ROI diário padrão (%)', category: 'trading' },
+      { key: 'daily_roi_pct', value: '5', type: 'number', description: 'ROI diário padrão (%)', category: 'trading' },
       { key: 'min_investment_usdt', value: '10', type: 'number', description: 'Investimento mínimo USDT', category: 'trading' },
     ];
 
@@ -102,55 +102,55 @@ export async function POST(request: NextRequest) {
 
     await db.affiliateLevel.createMany({ data: affiliateLevels });
 
-    // Create default investment plans
+    // Create default investment plans - PLATAFORMA ROI (5% daily ROI)
     const plans = [
       {
         name: 'Starter',
-        description: 'Plano inicial para começar a investir',
+        description: 'Comece com pouco e veja seu saldo crescer a cada 24h',
         minAmount: '10',
         maxAmount: '49.99',
-        dailyRoiPct: '1.5',
+        dailyRoiPct: '5',
         durationDays: 40,
         isActive: true,
         isFeatured: false,
         sortOrder: 1,
       },
       {
-        name: 'Silver',
-        description: 'Plano Silver com ROI incrementado',
+        name: 'Growth',
+        description: 'Dobre seu capital em até 40 dias com ROI diário',
         minAmount: '50',
         maxAmount: '99.99',
-        dailyRoiPct: '2',
+        dailyRoiPct: '5',
         durationDays: 40,
         isActive: true,
-        isFeatured: true,
+        isFeatured: false,
         sortOrder: 2,
       },
       {
-        name: 'Gold',
-        description: 'Plano Gold para investidores intermediários',
+        name: 'Premium',
+        description: 'O plano mais popular! Rendimento diário garantido',
         minAmount: '100',
         maxAmount: '499.99',
-        dailyRoiPct: '2.5',
+        dailyRoiPct: '5',
         durationDays: 40,
         isActive: true,
         isFeatured: true,
         sortOrder: 3,
       },
       {
-        name: 'Platinum',
-        description: 'Plano Platinum para investidores experientes',
+        name: 'Elite',
+        description: 'Para investidores que buscam maximizar ganhos',
         minAmount: '500',
         maxAmount: '1499.99',
-        dailyRoiPct: '3',
+        dailyRoiPct: '5',
         durationDays: 40,
         isActive: true,
         isFeatured: true,
         sortOrder: 4,
       },
       {
-        name: 'Diamond',
-        description: 'Plano Diamond exclusivo para grandes investidores',
+        name: 'VIP',
+        description: 'Exclusivo para grandes investidores - retorno máximo',
         minAmount: '1500',
         maxAmount: null,
         dailyRoiPct: '5',
@@ -220,21 +220,21 @@ export async function POST(request: NextRequest) {
     // Create default trading pools
     const tradingPools = [
       {
-        name: 'Ozeano Alpha Pool',
+        name: 'ROI Alpha Pool',
         totalAum: '1500000',
         dailyVolume: '85000',
         strategy: 'arbitrage',
         status: 'active',
       },
       {
-        name: 'Ozeano Growth Pool',
+        name: 'ROI Growth Pool',
         totalAum: '750000',
         dailyVolume: '42000',
         strategy: 'momentum',
         status: 'active',
       },
       {
-        name: 'Ozeano Stable Pool',
+        name: 'ROI Stable Pool',
         totalAum: '2200000',
         dailyVolume: '95000',
         strategy: 'market_making',

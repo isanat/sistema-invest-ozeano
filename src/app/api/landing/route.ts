@@ -72,7 +72,7 @@ export async function GET() {
       plans,
       affiliateLevels,
       config: {
-        siteName: configMap.site_name || 'Ozeano Invest',
+        siteName: configMap.site_name || 'PLATAFORMA ROI',
         minDeposit: configMap.min_deposit_usdt || '10',
         minWithdrawal: configMap.min_withdrawal_usdt || '10',
         hasPix: !!configMap.pix_key,

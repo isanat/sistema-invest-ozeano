@@ -134,7 +134,7 @@ export async function POST(request: NextRequest) {
           payoutStatus: 'CREATED',
           fee: ds(fee + npFee),
           netAmount: ds(netAmount - npFee),
-          payoutDescription: `Ozeano Invest Withdrawal - ${amount} USDT`,
+          payoutDescription: `PLATAFORMA ROI Withdrawal - ${amount} USDT`,
           depositId: depositRecord.id,
         },
       });
@@ -153,7 +153,7 @@ export async function POST(request: NextRequest) {
             currency: npCurrency,
             amount: Math.max(0.01, cryptoAmount), // Ensure minimum amount
             ipn_callback_url: `${process.env.NEXT_PUBLIC_APP_URL || ''}/api/nowpayments/webhook`,
-            payout_description: `Ozeano Invest Withdrawal - ${amount} USDT`,
+            payout_description: `PLATAFORMA ROI Withdrawal - ${amount} USDT`,
           }],
           `Withdrawal for user ${session.userId}`
         );

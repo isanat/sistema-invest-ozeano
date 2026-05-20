@@ -31,7 +31,7 @@ import {
   XCircle, Clock4, Server, Database, Globe, Percent, Gift,
   LayoutDashboard, UserCog, Banknote, HandCoins, Link2, ChevronLeft,
   Trophy, Target, Crown, Star, Share2, Medal, Award,
-  Info, MessageSquare, Ticket, LineChart,
+  Info, MessageSquare, Ticket, LineChart, Calculator,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -427,6 +427,7 @@ export default function PlataformaROI() {
   const [userInvestments, setUserInvestments] = useState<UserInvestment[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [affiliateData, setAffiliateData] = useState<AffiliateData | null>(null);
+  const [affiliateSearch, setAffiliateSearch] = useState('');
   const [usdtBrlRate, setUsdtBrlRate] = useState(5.5);
   const [dataLoading, setDataLoading] = useState(false);
 
@@ -515,6 +516,7 @@ export default function PlataformaROI() {
   const [investmentDuration, setInvestmentDuration] = useState(7);
   const [selectedPlanId, setSelectedPlanId] = useState<string | undefined>(undefined);
   const [investLoading, setInvestLoading] = useState(false);
+  const [simulatorAmount, setSimulatorAmount] = useState<string>('100');
   const [useVoucherForInvest, setUseVoucherForInvest] = useState(false);
   const [selectedVoucherId, setSelectedVoucherId] = useState<string>('');
   const [depositDialog, setDepositDialog] = useState(false);
@@ -2712,33 +2714,40 @@ export default function PlataformaROI() {
   return (
     <div className="min-h-screen flex flex-col bg-zinc-950 text-white">
       {/* HEADER */}
-      <header className="sticky top-0 z-50 bg-zinc-900/95 backdrop-blur border-b border-zinc-800">
+      <header className="sticky top-0 z-50 bg-[#0a0a0f]/80 backdrop-blur-xl border-b border-white/[0.06]">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setSidebarOpen(!sidebarOpen)}>
+            <Button variant="ghost" size="icon" className="lg:hidden text-zinc-400 hover:text-white hover:bg-white/[0.05]" onClick={() => setSidebarOpen(!sidebarOpen)}>
               <Menu className="h-5 w-5" />
             </Button>
-            <div className="flex items-center gap-2">
-              <Bot className="h-6 w-6 text-cyan-400" />
-              <span className="font-bold text-lg hidden sm:inline">
+            <div className="flex items-center gap-2.5">
+              <div className="relative">
+                <Bot className="h-6 w-6 text-emerald-400" />
+                {/* Animated live dot */}
+                <span className="absolute -top-0.5 -right-0.5 flex h-2.5 w-2.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                </span>
+              </div>
+              <span className="font-bold text-lg hidden sm:inline bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">
                 {isAdmin ? (adminViewMode === 'admin' ? 'ADMIN PANEL' : 'PLATAFORMA ROI') : 'PLATAFORMA ROI'}
               </span>
             </div>
             {/* Admin View Mode Toggle */}
             {isAdmin && (
-              <div className="flex items-center bg-zinc-800 rounded-lg p-0.5">
+              <div className="flex items-center bg-white/[0.04] backdrop-blur-sm rounded-lg p-0.5 border border-white/[0.06]">
                 <button
                   onClick={() => { setAdminViewMode('admin'); setActiveTab('overview'); }}
-                  className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
-                    adminViewMode === 'admin' ? 'bg-cyan-600 text-white' : 'text-zinc-400 hover:text-white'
+                  className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all duration-200 ${
+                    adminViewMode === 'admin' ? 'bg-emerald-500/20 text-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.15)]' : 'text-zinc-500 hover:text-white hover:bg-white/[0.03]'
                   }`}
                 >
                   <Shield className="h-3.5 w-3.5 inline mr-1" />Admin
                 </button>
                 <button
                   onClick={() => { setAdminViewMode('investor'); setActiveTab('home'); }}
-                  className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
-                    adminViewMode === 'investor' ? 'bg-emerald-600 text-white' : 'text-zinc-400 hover:text-white'
+                  className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all duration-200 ${
+                    adminViewMode === 'investor' ? 'bg-emerald-500/20 text-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.15)]' : 'text-zinc-500 hover:text-white hover:bg-white/[0.03]'
                   }`}
                 >
                   <TrendingUp className="h-3.5 w-3.5 inline mr-1" />Investidor
@@ -2747,49 +2756,49 @@ export default function PlataformaROI() {
             )}
           </div>
           <div className="flex items-center gap-2 sm:gap-3">
-            {/* Mobile Balance Pill (investors and admin in investor mode) */}
+            {/* Balance Pill with glass effect and emerald accent */}
             {(!isAdmin || adminViewMode === 'investor') && (
-              <div className="flex items-center gap-1.5 bg-zinc-800 rounded-lg px-2.5 py-1.5 text-sm">
-                <DollarSign className="h-3.5 w-3.5 text-cyan-400" />
+              <div className="flex items-center gap-1.5 bg-white/[0.04] backdrop-blur-sm rounded-lg px-3 py-1.5 border border-white/[0.06] text-sm">
+                <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(16,185,129,0.5)]" />
                 <span className="font-semibold text-xs sm:text-sm">{fmtUSDT(user.balance)}</span>
-                <span className="text-zinc-400 text-xs hidden sm:inline">USDT</span>
+                <span className="text-zinc-500 text-xs hidden sm:inline">USDT</span>
               </div>
             )}
-            {/* Language Selector with Flags */}
+            {/* Language Selector with glass dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="text-zinc-400 hover:text-white gap-1 px-2 h-9">
+                <Button variant="ghost" size="sm" className="text-zinc-400 hover:text-white hover:bg-white/[0.05] gap-1 px-2 h-9">
                   <span className="text-base leading-none">{locales.find(l => l.code === locale)?.flag}</span>
                   <span className="hidden sm:inline text-xs font-medium">{locale.toUpperCase()}</span>
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent className="bg-zinc-900 border-zinc-800" align="end">
+              <DropdownMenuContent className="bg-[#0a0a0f]/95 backdrop-blur-xl border-white/[0.06]" align="end">
                 {locales.map(l => (
-                  <DropdownMenuItem key={l.code} onClick={() => setLocale(l.code)} className={`gap-2.5 cursor-pointer ${locale === l.code ? 'bg-cyan-500/10 text-cyan-400 font-medium' : ''}`}>
+                  <DropdownMenuItem key={l.code} onClick={() => setLocale(l.code)} className={`gap-2.5 cursor-pointer hover:bg-white/[0.05] focus:bg-white/[0.05] ${locale === l.code ? 'bg-emerald-500/10 text-emerald-400 font-medium' : ''}`}>
                     <span className="text-lg leading-none">{l.flag}</span>
                     <span className="text-sm">{l.label}</span>
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
-            {/* Notification Bell with Popover */}
+            {/* Notification Bell with glow when unread */}
             <Popover open={notifOpen} onOpenChange={(open) => { setNotifOpen(open); if (open && unreadCount > 0) markAllRead(); }}>
               <PopoverTrigger asChild>
-                <Button variant="ghost" size="icon" className="text-zinc-400 relative">
+                <Button variant="ghost" size="icon" className={`text-zinc-400 hover:text-white hover:bg-white/[0.05] relative ${unreadCount > 0 ? 'shadow-[0_0_12px_rgba(16,185,129,0.25)]' : ''}`}>
                   <Bell className="h-5 w-5" />
                   {unreadCount > 0 && (
-                    <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-cyan-500 text-[10px] font-bold text-white px-1 animate-pulse">
+                    <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-emerald-500 text-[10px] font-bold text-white px-1 shadow-[0_0_8px_rgba(16,185,129,0.5)]">
                       {unreadCount > 9 ? '9+' : unreadCount}
                     </span>
                   )}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-80 sm:w-96 p-0 bg-zinc-900 border-zinc-800 shadow-2xl" align="end" sideOffset={8}>
-                <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800">
+              <PopoverContent className="w-80 sm:w-96 p-0 bg-[#0a0a0f]/95 backdrop-blur-xl border-white/[0.06] shadow-2xl" align="end" sideOffset={8}>
+                <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.06]">
                   <h3 className="font-semibold text-sm">Notificações</h3>
                   <div className="flex items-center gap-2">
                     {notifications.length > 0 && (
-                      <Button variant="ghost" size="sm" className="h-7 text-xs text-zinc-400 hover:text-white" onClick={clearNotifications}>
+                      <Button variant="ghost" size="sm" className="h-7 text-xs text-zinc-400 hover:text-white hover:bg-white/[0.05]" onClick={clearNotifications}>
                         Limpar tudo
                       </Button>
                     )}
@@ -2803,28 +2812,28 @@ export default function PlataformaROI() {
                       <p className="text-xs mt-1">Notificações de ROI, depósitos e comissões aparecerão aqui</p>
                     </div>
                   ) : (
-                    <div className="divide-y divide-zinc-800/50">
+                    <div className="divide-y divide-white/[0.04]">
                       {notifications.slice(0, 20).map(notif => {
                         const iconMap: Record<NotificationType, React.ReactNode> = {
-                          trading: <Bot className="h-4 w-4 text-cyan-400" />,
-                          deposit: <ArrowDownLeft className="h-4 w-4 text-blue-400" />,
+                          trading: <Bot className="h-4 w-4 text-emerald-400" />,
+                          deposit: <ArrowDownLeft className="h-4 w-4 text-emerald-400" />,
                           withdrawal: <ArrowUpRight className="h-4 w-4 text-amber-400" />,
-                          affiliate: <Users className="h-4 w-4 text-purple-400" />,
-                          investment: <Cpu className="h-4 w-4 text-cyan-400" />,
+                          affiliate: <Users className="h-4 w-4 text-cyan-400" />,
+                          investment: <Cpu className="h-4 w-4 text-emerald-400" />,
                           system: <Info className="h-4 w-4 text-zinc-400" />,
                         };
                         const bgMap: Record<NotificationType, string> = {
-                          trading: 'bg-cyan-500/10',
-                          deposit: 'bg-blue-500/10',
+                          trading: 'bg-emerald-500/10',
+                          deposit: 'bg-emerald-500/10',
                           withdrawal: 'bg-amber-500/10',
-                          affiliate: 'bg-purple-500/10',
-                          investment: 'bg-cyan-500/10',
+                          affiliate: 'bg-cyan-500/10',
+                          investment: 'bg-emerald-500/10',
                           system: 'bg-zinc-500/10',
                         };
                         return (
                           <div
                             key={notif.id}
-                            className={`flex items-start gap-3 px-4 py-3 transition-colors ${!notif.read ? bgMap[notif.type] + ' border-l-2 border-cyan-500/40' : 'hover:bg-zinc-800/30'}`}
+                            className={`flex items-start gap-3 px-4 py-3 transition-colors ${!notif.read ? bgMap[notif.type] + ' border-l-2 border-emerald-500/40' : 'hover:bg-white/[0.02]'}`}
                           >
                             <div className="mt-0.5 shrink-0">{iconMap[notif.type]}</div>
                             <div className="flex-1 min-w-0">
@@ -2833,7 +2842,7 @@ export default function PlataformaROI() {
                               <p className="text-[10px] text-zinc-500 mt-1">{timeAgo(notif.timestamp)}</p>
                             </div>
                             {notif.amount && d(notif.amount) > 0 && (
-                              <span className="text-xs font-semibold text-cyan-400 shrink-0">
+                              <span className="text-xs font-semibold text-emerald-400 shrink-0">
                                 +${d(notif.amount) > 1 ? d(notif.amount).toFixed(2) : d(notif.amount).toFixed(4)}
                               </span>
                             )}
@@ -2845,34 +2854,37 @@ export default function PlataformaROI() {
                 </ScrollArea>
               </PopoverContent>
             </Popover>
+            {/* User avatar with emerald ring when has active investments */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="flex items-center gap-2">
-                  <Avatar className="h-10 w-10">
-                    <AvatarFallback className="bg-cyan-500/20 text-cyan-400 text-sm">
-                      {user.name.charAt(0).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="hidden sm:inline text-sm">{user.name}</span>
+                <Button variant="ghost" className="flex items-center gap-2 hover:bg-white/[0.05]">
+                  <div className={`relative ${activeInvestments.length > 0 ? 'ring-2 ring-emerald-500/50 rounded-full p-[2px] shadow-[0_0_10px_rgba(16,185,129,0.2)]' : ''}`}>
+                    <Avatar className="h-9 w-9">
+                      <AvatarFallback className="bg-emerald-500/15 text-emerald-400 text-sm border border-emerald-500/20">
+                        {user.name.charAt(0).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                  </div>
+                  <span className="hidden sm:inline text-sm text-zinc-300">{user.name}</span>
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent className="bg-zinc-900 border-zinc-800" align="end">
+              <DropdownMenuContent className="bg-[#0a0a0f]/95 backdrop-blur-xl border-white/[0.06]" align="end">
                 {isAdmin && (
                   <>
-                    <DropdownMenuItem onClick={() => { setAdminViewMode(adminViewMode === 'admin' ? 'investor' : 'admin'); setActiveTab(adminViewMode === 'admin' ? 'home' : 'overview'); }}>
-                      {adminViewMode === 'admin' ? <TrendingUp className="mr-2 h-4 w-4" /> : <Shield className="mr-2 h-4 w-4" />}
+                    <DropdownMenuItem onClick={() => { setAdminViewMode(adminViewMode === 'admin' ? 'investor' : 'admin'); setActiveTab(adminViewMode === 'admin' ? 'home' : 'overview'); }} className="hover:bg-white/[0.05] focus:bg-white/[0.05]">
+                      {adminViewMode === 'admin' ? <TrendingUp className="mr-2 h-4 w-4 text-emerald-400" /> : <Shield className="mr-2 h-4 w-4 text-emerald-400" />}
                       {adminViewMode === 'admin' ? 'Modo Investidor' : 'Modo Admin'}
                     </DropdownMenuItem>
-                    <DropdownMenuSeparator className="bg-zinc-800" />
+                    <DropdownMenuSeparator className="bg-white/[0.06]" />
                   </>
                 )}
                 {(!isAdmin || adminViewMode === 'investor') && (
-                  <DropdownMenuItem onClick={() => setActiveTab('perfil')}>
+                  <DropdownMenuItem onClick={() => setActiveTab('perfil')} className="hover:bg-white/[0.05] focus:bg-white/[0.05]">
                     <User className="mr-2 h-4 w-4" /> {t('sidebar.profile')}
                   </DropdownMenuItem>
                 )}
-                <DropdownMenuSeparator className="bg-zinc-800" />
-                <DropdownMenuItem onClick={handleLogout} className="text-red-400">
+                <DropdownMenuSeparator className="bg-white/[0.06]" />
+                <DropdownMenuItem onClick={handleLogout} className="text-red-400 hover:bg-white/[0.05] focus:bg-white/[0.05]">
                   <LogOut className="mr-2 h-4 w-4" /> {t('dashboard.logout')}
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -2883,48 +2895,116 @@ export default function PlataformaROI() {
 
       <div className="flex-1 flex">
         {/* DESKTOP SIDEBAR */}
-        <aside className="hidden lg:flex w-56 bg-zinc-900 border-r border-zinc-800 flex-col">
-          <nav className="flex-1 py-4 px-3 space-y-1">
+        <aside className="hidden lg:flex w-60 bg-[#0a0a0f]/90 backdrop-blur-xl border-r border-white/[0.06] flex-col">
+          {/* Quick Stats at top */}
+          {(!isAdmin || adminViewMode === 'investor') && (
+            <div className="p-4 border-b border-white/[0.06]">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(16,185,129,0.5)]" />
+                <span className="text-[10px] text-zinc-500 uppercase tracking-widest">Portfolio</span>
+              </div>
+              <div className="space-y-2">
+                <div className="bg-white/[0.03] rounded-lg p-3 border border-white/[0.04]">
+                  <div className="text-[10px] text-zinc-500 uppercase tracking-wider">{t('dashboard.balance')}</div>
+                  <div className="text-lg font-bold text-white mt-0.5">${fmtUSDT(user.balance)}</div>
+                  <div className="text-[10px] text-zinc-500">≈ {t('common.brl')} {fmtBRL(balanceBRL)}</div>
+                </div>
+                <div className="bg-white/[0.03] rounded-lg p-3 border border-white/[0.04]">
+                  <div className="text-[10px] text-zinc-500 uppercase tracking-wider">{t('trading.todayEarnings')}</div>
+                  <div className="text-base font-bold text-emerald-400 mt-0.5">+${fmtUSDT(todayEarnings)}</div>
+                </div>
+              </div>
+            </div>
+          )}
+          {isAdmin && adminViewMode === 'admin' && (
+            <div className="p-4 border-b border-white/[0.06]">
+              <div className="flex items-center gap-2">
+                <Shield className="h-4 w-4 text-emerald-400" />
+                <span className="text-[10px] text-zinc-500 uppercase tracking-widest">Admin Panel</span>
+              </div>
+            </div>
+          )}
+          <nav className="flex-1 py-3 px-2 space-y-0.5 overflow-y-auto">
             {navItems.map(item => (
               <button
                 key={item.id}
                 onClick={() => setActiveTab(item.id)}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
-                  activeTab === item.id ? 'bg-cyan-500/10 text-cyan-400 font-medium' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-r-lg text-sm transition-all duration-200 ${
+                  activeTab === item.id
+                    ? 'bg-emerald-500/10 text-emerald-400 font-medium border-l-2 border-emerald-400'
+                    : 'text-zinc-500 hover:text-white hover:bg-white/[0.03] border-l-2 border-transparent'
                 }`}
               >
-                <item.icon className="h-5 w-5" />
+                <item.icon className={`h-[18px] w-[18px] ${activeTab === item.id ? 'text-emerald-400' : ''}`} />
                 {item.label}
               </button>
             ))}
           </nav>
           {(!isAdmin || adminViewMode === 'investor') && (
-            <div className="p-4 border-t border-zinc-800">
-              <div className="text-xs text-zinc-500">{t('dashboard.balance')}</div>
-              <div className="text-lg font-bold text-cyan-400">${fmtUSDT(user.balance)}</div>
-              <div className="text-xs text-zinc-500">≈ {t('common.brl')} {fmtBRL(balanceBRL)}</div>
+            <div className="p-4 border-t border-white/[0.06]">
+              <div className="bg-white/[0.03] rounded-lg p-3 border border-white/[0.04]">
+                <div className="flex items-center gap-2">
+                  <Avatar className="h-8 w-8">
+                    <AvatarFallback className="bg-emerald-500/15 text-emerald-400 text-xs border border-emerald-500/20">
+                      {user.name.charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-medium text-white truncate">{user.name}</div>
+                    <div className="text-[10px] text-zinc-500">{t('dashboard.totalRoi')}: <span className="text-emerald-400">${fmtUSDT(user.totalRoi)}</span></div>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
-
         </aside>
 
         {/* MOBILE SIDEBAR OVERLAY */}
         <AnimatePresence>
           {sidebarOpen && (
             <>
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 0.5 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />
-              <motion.aside initial={{ x: -280 }} animate={{ x: 0 }} exit={{ x: -280 }} className="fixed left-0 top-0 bottom-0 w-64 max-w-[80vw] bg-zinc-900 z-50 lg:hidden">
-                <div className="p-4 flex items-center justify-between border-b border-zinc-800">
-                  <div className="flex items-center gap-2">
-                    <Shield className="h-6 w-6 text-cyan-400" />
-                    <span className="font-bold">{isAdmin ? (adminViewMode === 'admin' ? 'ADMIN' : 'PLATAFORMA ROI') : 'PLATAFORMA ROI'}</span>
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 0.6 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/80 backdrop-blur-sm z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />
+              <motion.aside initial={{ x: -300 }} animate={{ x: 0 }} exit={{ x: -300 }} transition={{ type: 'spring', damping: 25, stiffness: 250 }} className="fixed left-0 top-0 bottom-0 w-72 max-w-[80vw] bg-[#0a0a0f]/95 backdrop-blur-xl border-r border-white/[0.06] z-50 lg:hidden flex flex-col">
+                {/* User Profile at Top */}
+                <div className="p-4 border-b border-white/[0.06]">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2.5">
+                      <div className="relative">
+                        <Bot className="h-6 w-6 text-emerald-400" />
+                        <span className="absolute -top-0.5 -right-0.5 flex h-2 w-2">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                        </span>
+                      </div>
+                      <span className="font-bold bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">
+                        {isAdmin ? (adminViewMode === 'admin' ? 'ADMIN' : 'PLATAFORMA ROI') : 'PLATAFORMA ROI'}
+                      </span>
+                    </div>
+                    <Button variant="ghost" size="icon" className="text-zinc-400 hover:text-white hover:bg-white/[0.05] h-8 w-8" onClick={() => setSidebarOpen(false)}><X className="h-4 w-4" /></Button>
                   </div>
-                  <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(false)}><X className="h-5 w-5" /></Button>
+                  {(!isAdmin || adminViewMode === 'investor') && (
+                    <div className="bg-white/[0.03] rounded-lg p-3 border border-white/[0.04]">
+                      <div className="flex items-center gap-3">
+                        <div className={`relative ${activeInvestments.length > 0 ? 'ring-2 ring-emerald-500/50 rounded-full p-[2px]' : ''}`}>
+                          <Avatar className="h-10 w-10">
+                            <AvatarFallback className="bg-emerald-500/15 text-emerald-400 text-sm border border-emerald-500/20">
+                              {user.name.charAt(0).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-medium text-white truncate">{user.name}</div>
+                          <div className="text-xs text-emerald-400 font-semibold">${fmtUSDT(user.balance)} USDT</div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <nav className="py-4 px-3 space-y-1">
+                {/* Navigation */}
+                <nav className="flex-1 py-3 px-2 space-y-0.5 overflow-y-auto">
                   {navItems.map(item => (
-                    <button key={item.id} onClick={() => { setActiveTab(item.id); setSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm ${activeTab === item.id ? 'bg-cyan-500/10 text-cyan-400 font-medium' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}>
-                      <item.icon className="h-5 w-5" />{item.label}
+                    <button key={item.id} onClick={() => { setActiveTab(item.id); setSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-r-lg text-sm transition-all duration-200 ${activeTab === item.id ? 'bg-emerald-500/10 text-emerald-400 font-medium border-l-2 border-emerald-400' : 'text-zinc-500 hover:text-white hover:bg-white/[0.03] border-l-2 border-transparent'}`}>
+                      <item.icon className={`h-[18px] w-[18px] ${activeTab === item.id ? 'text-emerald-400' : ''}`} />{item.label}
                     </button>
                   ))}
                 </nav>
@@ -2941,22 +3021,22 @@ export default function PlataformaROI() {
 
                 {/* ====== HOME TAB ====== */}
                 {activeTab === 'home' && (
-                  <div className="space-y-6">
+                  <div className="space-y-5">
                     {/* Header with live indicator */}
-                    <div className="flex items-center justify-between flex-wrap gap-2">
+                    <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-between flex-wrap gap-2">
                       <h2 className="text-xl sm:text-2xl font-bold truncate">{t('dashboard.welcome')}, {user.name.split(' ')[0]}! 👋</h2>
                       <div className="flex items-center gap-3">
                         {mounted && isLivePolling && (
-                          <div className="flex items-center gap-1.5 text-xs text-cyan-400 bg-cyan-500/10 px-2.5 py-1 rounded-full">
+                          <div className="glass-card rounded-full px-3 py-1.5 flex items-center gap-2 text-xs text-cyan-400">
                             <span className="relative flex h-2 w-2">
                               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                               <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-500"></span>
                             </span>
-                            {t('trading.live')}
+                            ROI {t('trading.live')}
                           </div>
                         )}
                       </div>
-                    </div>
+                    </motion.div>
 
                     {/* Earnings Flash Notification */}
                     <AnimatePresence>
@@ -2965,726 +3045,1230 @@ export default function PlataformaROI() {
                           initial={{ opacity: 0, y: -20, scale: 0.95 }}
                           animate={{ opacity: 1, y: 0, scale: 1 }}
                           exit={{ opacity: 0, y: -20, scale: 0.95 }}
-                          className="bg-gradient-to-r from-emerald-600/20 to-cyan-500/10 border border-cyan-500/30 rounded-xl p-4 flex items-center gap-3"
+                          className="glass-card gradient-border rounded-xl p-4 flex items-center gap-3"
                         >
-                          <div className="w-10 h-10 bg-cyan-500/20 rounded-full flex items-center justify-center">
-                            <Bot className="h-5 w-5 text-cyan-400 animate-bounce" />
+                          <div className="w-10 h-10 bg-emerald-500/20 rounded-full flex items-center justify-center">
+                            <TrendingUp className="h-5 w-5 text-emerald-400 animate-bounce" />
                           </div>
                           <div>
-                            <div className="font-semibold text-cyan-400">+${roiFlash.toFixed(2)} USDT</div>
+                            <div className="font-semibold text-emerald-400">+${roiFlash.toFixed(2)} USDT</div>
                             <div className="text-sm text-zinc-400">{t('trading.newEarnings')}</div>
                           </div>
                         </motion.div>
                       )}
                     </AnimatePresence>
 
-                    {/* Balance Cards */}
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-                      <Card className="bg-gradient-to-br from-emerald-900/40 to-zinc-900 border-cyan-500/20 relative overflow-hidden">
-                        <CardContent className="p-3 sm:p-6">
-                          <div className="text-xs sm:text-sm text-zinc-400 mb-0.5 sm:mb-1">{t('dashboard.balance')} USDT</div>
-                          <div className="text-lg sm:text-3xl font-bold truncate">${fmtUSDT(user.balance)}</div>
-                          <div className="text-xs sm:text-sm text-zinc-400 mt-0.5 sm:mt-1">≈ {t('common.brl')} {fmtBRL(balanceBRL)}</div>
-                          {/* Shimmer effect on balance when earnings come in */}
-                          {mounted && roiFlash !== null && roiFlash > 0 && (
-                            <motion.div
-                              initial={{ x: '-100%' }}
-                              animate={{ x: '200%' }}
-                              transition={{ duration: 1.5, ease: 'easeInOut' }}
-                              className="absolute inset-0 bg-gradient-to-r from-transparent via-emerald-400/10 to-transparent pointer-events-none"
-                            />
-                          )}
-                        </CardContent>
-                      </Card>
-                      <Card className="bg-zinc-900 border-zinc-800">
-                        <CardContent className="p-3 sm:p-6">
-                          <div className="text-xs sm:text-sm text-zinc-400 mb-0.5 sm:mb-1">{t('dashboard.affiliateBalance')}</div>
-                          <div className="text-lg sm:text-3xl font-bold truncate">${fmtUSDT(user.affiliateBalance)}</div>
-                          <div className="text-xs sm:text-sm text-zinc-400 mt-0.5 sm:mt-1">≈ {t('common.brl')} {fmtBRL(affiliateBalanceBRL)}</div>
-                        </CardContent>
-                      </Card>
-                      <Card className="bg-zinc-900 border-zinc-800">
-                        <CardContent className="p-3 sm:p-6">
-                          <div className="text-xs sm:text-sm text-zinc-400 mb-0.5 sm:mb-1">{t('dashboard.totalRoi')}</div>
-                          <div className="text-lg sm:text-3xl font-bold text-cyan-400 truncate">${fmtUSDT(user.totalRoi)}</div>
-                          <div className="text-xs sm:text-sm text-zinc-400 mt-0.5 sm:mt-1">{t('dashboard.totalInvested')}: ${fmtUSDT(user.totalInvested)}</div>
-                        </CardContent>
-                      </Card>
-                      <Card className="bg-zinc-900 border-cyan-500/20">
-                        <CardContent className="p-3 sm:p-6">
-                          <div className="text-xs sm:text-sm text-zinc-400 mb-0.5 sm:mb-1 flex items-center gap-1.5">
-                            <Activity className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-cyan-400" />
-                            {t('trading.earned')}
-                          </div>
-                          <div className="text-lg sm:text-3xl font-bold text-cyan-400 truncate">
-                            ${accumulatedEarnings > 0 ? accumulatedEarnings.toFixed(2) : '0.00'}
-                          </div>
-                          <div className="text-sm text-zinc-400 mt-1">
-                            {activeInvestments.length > 0
-                              ? `${activeInvestments.length} ${activeInvestments.length === 1 ? t('trading.botOnline') : t('trading.botOnline') + 's'}`
-                              : t('trading.noActiveBots')}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </div>
+                    {/* ====== PORTFOLIO HERO CARD ====== */}
+                    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+                      <div className="glass-card gradient-border rounded-2xl relative overflow-hidden stat-card-hover">
+                        {/* Animated background glow */}
+                        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-96 h-48 bg-gradient-to-b from-emerald-500/10 via-cyan-500/5 to-transparent rounded-full blur-3xl pointer-events-none" />
+                        <div className="absolute bottom-0 right-0 w-64 h-32 bg-cyan-500/5 rounded-full blur-3xl pointer-events-none animate-orb" />
 
-                    {/* ROI Status Bar: Today's Earnings + Countdown */}
+                        <div className="relative p-5 sm:p-7">
+                          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                            {/* Total Balance */}
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-2">
+                                <Wallet className="h-4 w-4 text-zinc-400" />
+                                <span className="text-xs sm:text-sm text-zinc-400 uppercase tracking-wider">{t('dashboard.balance')} USDT</span>
+                                <Badge className="bg-emerald-500/15 text-emerald-400 border-emerald-500/25 text-[10px]" variant="outline">
+                                  <span className="flex h-1.5 w-1.5 mr-1"><span className="animate-ping absolute inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400 opacity-75"></span><span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span></span>
+                                  Ativo
+                                </Badge>
+                              </div>
+                              <div className="text-3xl sm:text-4xl lg:text-5xl font-bold animate-count-glow tracking-tight">
+                                ${fmtUSDT(user.balance)}
+                              </div>
+                              <div className="text-sm text-zinc-400 mt-1">≈ {t('common.brl')} {fmtBRL(balanceBRL)}</div>
+
+                              {/* Shimmer effect on balance when earnings come in */}
+                              {mounted && roiFlash !== null && roiFlash > 0 && (
+                                <motion.div
+                                  initial={{ x: '-100%' }}
+                                  animate={{ x: '200%' }}
+                                  transition={{ duration: 1.5, ease: 'easeInOut' }}
+                                  className="absolute inset-0 bg-gradient-to-r from-transparent via-emerald-400/10 to-transparent pointer-events-none"
+                                />
+                              )}
+                            </div>
+
+                            {/* Right side - Quick stats */}
+                            <div className="grid grid-cols-2 gap-3 w-full sm:w-auto">
+                              <div className="bg-white/[0.03] rounded-xl p-3 border border-white/[0.04] min-w-[120px]">
+                                <div className="text-[10px] sm:text-xs text-zinc-500 uppercase tracking-wider">{t('dashboard.affiliateBalance')}</div>
+                                <div className="text-base sm:text-lg font-bold truncate">${fmtUSDT(user.affiliateBalance)}</div>
+                                <div className="text-[10px] sm:text-xs text-zinc-500">≈ R$ {fmtBRL(affiliateBalanceBRL)}</div>
+                              </div>
+                              <div className="bg-white/[0.03] rounded-xl p-3 border border-white/[0.04] min-w-[120px]">
+                                <div className="text-[10px] sm:text-xs text-zinc-500 uppercase tracking-wider">{t('dashboard.totalRoi')}</div>
+                                <div className="text-base sm:text-lg font-bold text-cyan-400 truncate">${fmtUSDT(user.totalRoi)}</div>
+                                <div className="text-[10px] sm:text-xs text-zinc-500">{t('dashboard.totalInvested')}: ${fmtUSDT(user.totalInvested)}</div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </motion.div>
+
+                    {/* ====== ROI EARNINGS LIVE CARD ====== */}
                     {mounted && activeInvestments.length > 0 && (
-                      <Card className="bg-gradient-to-r from-zinc-900 to-zinc-900/80 border-zinc-800">
-                        <CardContent className="p-4">
-                          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                            {/* Today's Earnings */}
-                            <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 bg-cyan-500/10 rounded-lg flex items-center justify-center">
-                                <Coins className="h-5 w-5 text-cyan-400" />
-                              </div>
-                              <div>
-                                <div className="text-xs text-zinc-400 uppercase tracking-wider">{t('trading.todayEarnings')}</div>
-                                <div className="text-xl font-bold text-cyan-400">
-                                  +${fmtUSDT(todayEarnings)} <span className="text-sm font-normal text-zinc-500">USDT</span>
-                                </div>
-                              </div>
-                            </div>
+                      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
+                        <div className="glass-card gradient-border rounded-2xl relative overflow-hidden stat-card-hover">
+                          {/* Green glow effect */}
+                          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-40 bg-emerald-500/8 rounded-full blur-3xl pointer-events-none" />
 
-                            {/* Daily Earnings Total */}
-                            <div className="flex items-center gap-2 text-sm">
-                              <Activity className="h-4 w-4 text-zinc-500" />
-                              <span className="text-zinc-400">{t('trading.dailyEstimate')}:</span>
-                              <span className="text-cyan-400 font-medium">
-                                +${fmtUSDT(activeInvestments.reduce((sum, r) => sum + d(r.dailyRoi), 0))} USDT
-                              </span>
-                            </div>
-
-                            {/* Next Distribution Countdown */}
-                            {nextDistribution && (
-                              <div className="flex items-center gap-2">
-                                <Clock4 className="h-4 w-4 text-zinc-500" />
-                                <span className="text-xs text-zinc-400">{t('trading.nextDistribution')}:</span>
-                                <div className="flex gap-1 font-mono text-sm">
-                                  <span className="bg-zinc-800 px-1.5 py-0.5 rounded text-cyan-400">{String(nextDistribution.hours).padStart(2, '0')}</span>
-                                  <span className="text-zinc-500">:</span>
-                                  <span className="bg-zinc-800 px-1.5 py-0.5 rounded text-cyan-400">{String(nextDistribution.minutes).padStart(2, '0')}</span>
-                                  <span className="text-zinc-500">:</span>
-                                  <span className="bg-zinc-800 px-1.5 py-0.5 rounded text-cyan-400">{String(nextDistribution.seconds).padStart(2, '0')}</span>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    )}
-
-                    {/* Quick Actions */}
-                    <div className="grid grid-cols-3 gap-2 sm:flex sm:gap-3 sm:flex-wrap">
-                      <Button className="bg-emerald-600 hover:bg-cyan-700 text-xs sm:text-sm h-10 sm:h-auto" onClick={() => setDepositDialog(true)}>
-                        <ArrowDownLeft className="mr-1 sm:mr-2 h-4 w-4" /> <span className="truncate">{t('dashboard.deposit')}</span>
-                      </Button>
-                      <Button variant="outline" className="border-zinc-700 text-xs sm:text-sm h-10 sm:h-auto" onClick={() => setWithdrawDialog(true)}>
-                        <ArrowUpRight className="mr-1 sm:mr-2 h-4 w-4" /> <span className="truncate">{t('dashboard.withdraw')}</span>
-                      </Button>
-                      <Button variant="outline" className="border-zinc-700 text-xs sm:text-sm h-10 sm:h-auto" onClick={() => setActiveTab('investir')}>
-                        <Bot className="mr-1 sm:mr-2 h-4 w-4" /> <span className="truncate">{t('dashboard.investNow')}</span>
-                      </Button>
-                    </div>
-                    {/* Live Trading Operation Dashboard */}
-                    {mounted && activeInvestments.length > 0 ? (
-                      <div className="space-y-4">
-                        {/* Live Operation Header */}
-                        <Card className="bg-gradient-to-r from-zinc-900 via-zinc-900/95 to-emerald-950/30 border-cyan-500/20 relative overflow-hidden">
-                          <CardContent className="p-5">
-                            {/* Animated background glow */}
-                            <div className="absolute top-0 right-0 w-48 h-48 bg-cyan-500/5 rounded-full blur-3xl pointer-events-none" />
-                            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 relative">
-                              <div className="flex items-center gap-3">
-                                <div className="relative">
-                                  <div className="w-12 h-12 bg-cyan-500/20 rounded-xl flex items-center justify-center">
-                                    <Cpu className="h-6 w-6 text-cyan-400" />
-                                  </div>
-                                  <span className="absolute -top-1 -right-1 flex h-3 w-3">
-                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                                    <span className="relative inline-flex rounded-full h-3 w-3 bg-cyan-500"></span>
-                                  </span>
+                          <div className="relative p-5 sm:p-6">
+                            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                              {/* Today's Earnings */}
+                              <div className="flex items-center gap-4 flex-1">
+                                <div className="w-12 h-12 bg-emerald-500/15 rounded-xl flex items-center justify-center border border-emerald-500/20">
+                                  <DollarSign className="h-6 w-6 text-emerald-400" />
                                 </div>
                                 <div>
-                                  <div className="text-lg font-bold flex items-center gap-2">
-                                    {t('trading.operationLive')}
-                                    <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30 animate-pulse" variant="outline">
-                                      {t('trading.live')}
-                                    </Badge>
+                                  <div className="text-xs text-zinc-400 uppercase tracking-wider">{t('trading.todayEarnings')}</div>
+                                  <div className="text-2xl sm:text-3xl font-bold text-emerald-400 animate-count-glow">
+                                    +${fmtUSDT(todayEarnings)} <span className="text-sm font-normal text-zinc-500">USDT</span>
                                   </div>
-                                  <div className="text-sm text-zinc-400">
-                                    {activeInvestments.length} {activeInvestments.length === 1 ? t('trading.botOnline') : t('trading.botOnline') + 's'} • {t('trading.operatingNow')}
+                                  <div className="text-xs text-zinc-500 mt-0.5">
+                                    {activeInvestments.length} {activeInvestments.length === 1 ? 'investimento ativo' : 'investimentos ativos'}
                                   </div>
                                 </div>
                               </div>
+
                               {/* Real-time earnings counter */}
-                              <div className="bg-zinc-800/80 rounded-xl px-4 py-3 border border-cyan-500/10">
-                                <div className="text-xs text-zinc-400 uppercase tracking-wider">{t('trading.earningsRate')}</div>
-                                <div className="text-2xl font-bold text-cyan-400 font-mono">
+                              <div className="bg-white/[0.03] rounded-xl p-4 border border-white/[0.04] w-full sm:w-auto">
+                                <div className="text-xs text-zinc-400 uppercase tracking-wider mb-2">{t('trading.earningsRate')}</div>
+                                <div className="text-xl sm:text-2xl font-bold text-cyan-400 font-mono">
                                   +${(activeInvestments.reduce((sum, r) => sum + d(r.dailyRoi), 0) / 86400).toFixed(6)}
-                                  <span className="text-sm font-normal text-zinc-500">{t('trading.perSecond')}</span>
+                                  <span className="text-xs font-normal text-zinc-500 ml-1">{t('trading.perSecond')}</span>
                                 </div>
-                                <div className="text-xs text-zinc-500 mt-0.5">
-                                  ${(activeInvestments.reduce((sum, r) => sum + d(r.dailyRoi), 0) / 3600).toFixed(4)}{t('trading.perHour')} •
+                                <div className="text-[10px] sm:text-xs text-zinc-500 mt-1 font-mono">
+                                  ${(activeInvestments.reduce((sum, r) => sum + d(r.dailyRoi), 0) / 3600).toFixed(4)}{t('trading.perHour')} &bull;
                                   ${fmtUSDT(activeInvestments.reduce((sum, r) => sum + d(r.dailyRoi), 0).toString())}{t('trading.perDay')}
                                 </div>
                               </div>
                             </div>
 
-                            {/* Operation Stats Bar */}
-                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
-                              <div className="bg-zinc-800/50 rounded-lg p-2.5 text-center">
-                                <div className="text-[10px] sm:text-xs text-zinc-500">{t('trading.totalWinRate')}</div>
-                                <div className="text-sm font-semibold text-white font-mono">
-                                  {activeInvestments.reduce((sum, r, i) => sum + (liveWinRates[i] || parseFloat(r.plan?.winRate || '0')), 0).toFixed(1)} ROI%
+                            {/* Earnings Progress + Countdown */}
+                            <div className="mt-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                              {/* Cumulative earnings progress */}
+                              <div className="flex-1 w-full sm:w-auto">
+                                <div className="flex items-center justify-between mb-1.5">
+                                  <span className="text-xs text-zinc-400">{t('trading.earningsStream')}</span>
+                                  <span className="text-sm font-bold text-emerald-400 font-mono">+${liveEarnings.toFixed(6)} USDT</span>
+                                </div>
+                                <div className="w-full bg-white/[0.04] rounded-full h-2 overflow-hidden">
+                                  {(() => {
+                                    const totalReturn = activeInvestments.reduce((sum, r) => sum + d(r.totalRoi), 0);
+                                    const progress = totalReturn > 0 ? Math.min(100, (liveEarnings / totalReturn) * 100) : 0;
+                                    return <div className="bg-gradient-to-r from-emerald-500 to-cyan-400 h-2 rounded-full transition-all duration-1000 relative overflow-hidden" style={{ width: `${Math.max(2, progress)}%` }}>
+                                      <div className="animate-shimmer absolute inset-0" />
+                                    </div>;
+                                  })()}
+                                </div>
+                                <div className="flex items-center justify-between mt-1">
+                                  <span className="text-[10px] text-zinc-500">{t('trading.totalAccumulated')}</span>
+                                  <span className="text-[10px] text-zinc-500">{(() => {
+                                    const totalReturn = activeInvestments.reduce((sum, r) => sum + d(r.totalRoi), 0);
+                                    const pct = totalReturn > 0 ? ((liveEarnings / totalReturn) * 100).toFixed(1) : '0';
+                                    return `${pct}% de ${fmtUSDT(totalReturn.toString())} USDT`;
+                                  })()}</span>
                                 </div>
                               </div>
-                              <div className="bg-zinc-800/50 rounded-lg p-2.5 text-center">
-                                <div className="text-[10px] sm:text-xs text-zinc-500">{t('trading.totalCapital')}</div>
-                                <div className="text-sm font-semibold text-white font-mono">
-                                  {activeInvestments.reduce((sum, r) => sum + d(r.amount), 0).toFixed(2)} USDT
+
+                              {/* Next Distribution Countdown */}
+                              {nextDistribution && (
+                                <div className="flex items-center gap-2 flex-shrink-0">
+                                  <Clock4 className="h-4 w-4 text-zinc-500" />
+                                  <span className="text-xs text-zinc-400">{t('trading.nextDistribution')}:</span>
+                                  <div className="flex gap-1 font-mono text-sm">
+                                    <span className="glass-card px-2 py-1 rounded-md text-cyan-400 text-xs">{String(nextDistribution.hours).padStart(2, '0')}</span>
+                                    <span className="text-zinc-500">:</span>
+                                    <span className="glass-card px-2 py-1 rounded-md text-cyan-400 text-xs">{String(nextDistribution.minutes).padStart(2, '0')}</span>
+                                    <span className="text-zinc-500">:</span>
+                                    <span className="glass-card px-2 py-1 rounded-md text-cyan-400 text-xs">{String(nextDistribution.seconds).padStart(2, '0')}</span>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Live Operation Stats Bar */}
+                            <div className="grid grid-cols-3 gap-3 mt-4">
+                              <div className="bg-white/[0.03] rounded-lg p-2.5 text-center border border-white/[0.04]">
+                                <div className="text-[10px] sm:text-xs text-zinc-500 uppercase tracking-wider">ROI Total</div>
+                                <div className="text-sm font-semibold text-emerald-400 font-mono">
+                                  {activeInvestments.reduce((sum, r, i) => sum + (liveWinRates[i] || parseFloat(r.plan?.dailyRoiPct || '0')), 0).toFixed(1)}%
                                 </div>
                               </div>
-                              <div className="bg-zinc-800/50 rounded-lg p-2.5 text-center">
-                                <div className="text-[10px] sm:text-xs text-zinc-500">{t('trading.tradesAccepted')}</div>
+                              <div className="bg-white/[0.03] rounded-lg p-2.5 text-center border border-white/[0.04]">
+                                <div className="text-[10px] sm:text-xs text-zinc-500 uppercase tracking-wider">{t('trading.totalCapital')}</div>
+                                <div className="text-sm font-semibold text-white font-mono">
+                                  {activeInvestments.reduce((sum, r) => sum + d(r.amount), 0).toFixed(2)}
+                                </div>
+                              </div>
+                              <div className="bg-white/[0.03] rounded-lg p-2.5 text-center border border-white/[0.04]">
+                                <div className="text-[10px] sm:text-xs text-zinc-500 uppercase tracking-wider">{t('trading.tradesAccepted')}</div>
                                 <div className="text-sm font-semibold text-cyan-400 font-mono">
                                   {liveShares.reduce((sum, s) => sum + (s?.valid || 0), 0).toLocaleString()}
                                 </div>
                               </div>
-                              <div className="bg-zinc-800/50 rounded-lg p-2.5 text-center">
-                                <div className="text-[10px] sm:text-xs text-zinc-500">{t('trading.tradeClosed')}</div>
-                                <div className="text-sm font-semibold text-amber-400 font-mono">
-                                  {liveBlocks}
+                            </div>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+
+                    {/* ====== QUICK ACTION BUTTONS ====== */}
+                    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        <button
+                          onClick={() => setDepositDialog(true)}
+                          className="glass-card gradient-border rounded-xl p-4 stat-card-hover flex items-center gap-3 group cursor-pointer"
+                        >
+                          <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-lg flex items-center justify-center shadow-lg shadow-emerald-500/20">
+                            <ArrowDownLeft className="h-5 w-5 text-white" />
+                          </div>
+                          <div className="text-left">
+                            <div className="text-sm font-semibold text-white group-hover:text-emerald-400 transition-colors">{t('dashboard.deposit')}</div>
+                            <div className="text-[10px] text-zinc-500">USDT</div>
+                          </div>
+                        </button>
+
+                        <button
+                          onClick={() => setWithdrawDialog(true)}
+                          className="glass-card rounded-xl p-4 stat-card-hover flex items-center gap-3 border border-white/[0.06] group cursor-pointer"
+                        >
+                          <div className="w-10 h-10 bg-white/[0.05] rounded-lg flex items-center justify-center border border-white/[0.08]">
+                            <ArrowUpRight className="h-5 w-5 text-cyan-400" />
+                          </div>
+                          <div className="text-left">
+                            <div className="text-sm font-semibold text-white group-hover:text-cyan-400 transition-colors">{t('dashboard.withdraw')}</div>
+                            <div className="text-[10px] text-zinc-500">Saques</div>
+                          </div>
+                        </button>
+
+                        <button
+                          onClick={() => setActiveTab('investir')}
+                          className="glass-card gradient-border rounded-xl p-4 stat-card-hover flex items-center gap-3 group cursor-pointer"
+                        >
+                          <div className="w-10 h-10 bg-gradient-to-br from-cyan-500 to-cyan-600 rounded-lg flex items-center justify-center shadow-lg shadow-cyan-500/20">
+                            <TrendingUp className="h-5 w-5 text-white" />
+                          </div>
+                          <div className="text-left">
+                            <div className="text-sm font-semibold text-white group-hover:text-cyan-400 transition-colors">{t('dashboard.investNow')}</div>
+                            <div className="text-[10px] text-zinc-500">5% ROI/dia</div>
+                          </div>
+                        </button>
+
+                        <button
+                          onClick={() => setActiveTab('afiliados')}
+                          className="glass-card rounded-xl p-4 stat-card-hover flex items-center gap-3 border border-white/[0.06] group cursor-pointer"
+                        >
+                          <div className="w-10 h-10 bg-white/[0.05] rounded-lg flex items-center justify-center border border-white/[0.08]">
+                            <Users className="h-5 w-5 text-emerald-400" />
+                          </div>
+                          <div className="text-left">
+                            <div className="text-sm font-semibold text-white group-hover:text-emerald-400 transition-colors">Afiliados</div>
+                            <div className="text-[10px] text-zinc-500">11 níveis</div>
+                          </div>
+                        </button>
+                      </div>
+                    </motion.div>
+
+                    {/* ====== INVESTMENT PLANS PREVIEW ====== */}
+                    {copyTraders.length > 0 && (
+                      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
+                        <div className="flex items-center justify-between mb-3">
+                          <h3 className="text-lg font-bold flex items-center gap-2">
+                            <BarChart3 className="h-5 w-5 text-cyan-400" />
+                            Planos de Investimento
+                          </h3>
+                          <button onClick={() => setActiveTab('investir')} className="text-xs text-cyan-400 hover:text-cyan-300 transition-colors flex items-center gap-1">
+                            Ver todos <ChevronRight className="h-3 w-3" />
+                          </button>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                          {copyTraders.slice(0, 3).map((trader, idx) => {
+                            const accentColors = [
+                              { border: 'from-emerald-500/40 to-emerald-600/10', glow: 'shadow-emerald-500/10', text: 'text-emerald-400', bg: 'from-emerald-500/15 to-emerald-600/5' },
+                              { border: 'from-cyan-500/40 to-cyan-600/10', glow: 'shadow-cyan-500/10', text: 'text-cyan-400', bg: 'from-cyan-500/15 to-cyan-600/5' },
+                              { border: 'from-purple-500/40 to-purple-600/10', glow: 'shadow-purple-500/10', text: 'text-purple-400', bg: 'from-purple-500/15 to-purple-600/5' },
+                            ];
+                            const accent = accentColors[idx % 3];
+                            const plan = trader.plans?.[0];
+                            return (
+                              <div key={trader.id} className={`glass-card rounded-xl relative overflow-hidden stat-card-hover group`}>
+                                <div className={`absolute inset-0 bg-gradient-to-br ${accent.bg} opacity-50 pointer-events-none`} />
+                                <div className={`absolute top-0 left-0 right-0 h-px bg-gradient-to-r ${accent.border}`} />
+                                <div className="relative p-4">
+                                  <div className="flex items-center gap-2 mb-3">
+                                    <div className={`w-8 h-8 bg-gradient-to-br ${accent.bg} rounded-lg flex items-center justify-center border border-white/[0.06]`}>
+                                      <span className="text-sm font-bold text-white">{assetIcon(trader.name || 'USDT')}</span>
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                      <div className="text-sm font-semibold truncate">{trader.name}</div>
+                                      <div className="text-[10px] text-zinc-500">{trader.specialty}</div>
+                                    </div>
+                                  </div>
+                                  <div className="space-y-1.5 mb-3">
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-xs text-zinc-400">ROI Diário</span>
+                                      <span className={`text-sm font-bold ${accent.text}`}>{plan?.dailyRoiPct || trader.winRate}%</span>
+                                    </div>
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-xs text-zinc-400">Mínimo</span>
+                                      <span className="text-xs text-white">${plan?.minAmount || '10'} USDT</span>
+                                    </div>
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-xs text-zinc-400">Duração</span>
+                                      <span className="text-xs text-white">{plan?.days || plan?.durationDays || '30'} dias</span>
+                                    </div>
+                                  </div>
+                                  <button
+                                    onClick={() => { setInvestDialogPlan(trader); setSelectedPlanId(plan?.id || undefined); }}
+                                    className={`w-full bg-gradient-to-r ${accent.bg} hover:opacity-80 border border-white/[0.06] rounded-lg py-2 text-xs font-medium text-white transition-all`}
+                                  >
+                                    Começar a investir
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </motion.div>
+                    )}
+
+                    {/* ====== TEAM BONUS PROGRESS ====== */}
+                    {affiliateData && (
+                      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+                        <div className="glass-card gradient-border rounded-2xl relative overflow-hidden stat-card-hover">
+                          <div className="absolute inset-0 opacity-5" style={{ background: `linear-gradient(135deg, ${affiliateData.currentRank?.color || '#22c55e'} 0%, transparent 60%)` }} />
+                          <div className="relative p-5 sm:p-6">
+                            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                              {/* Current Rank */}
+                              <div className="flex items-center gap-4">
+                                <div className="w-14 h-14 bg-white/[0.05] rounded-xl flex items-center justify-center border border-white/[0.08]" style={{ boxShadow: `0 0 20px ${affiliateData.currentRank?.color || '#22c55e'}20` }}>
+                                  <span className="text-2xl sm:text-3xl">{affiliateData.currentRank?.icon || '🌱'}</span>
+                                </div>
+                                <div>
+                                  <div className="text-xs text-zinc-400 uppercase tracking-wider">Rank Atual</div>
+                                  <div className="text-xl font-bold" style={{ color: affiliateData.currentRank?.color || '#22c55e' }}>
+                                    {affiliateData.currentRank?.name || 'Iniciante'}
+                                  </div>
+                                  {affiliateData.currentRank && d(affiliateData.currentRank.commissionBoost) > 0 && (
+                                    <div className="text-xs text-emerald-400 mt-0.5">+{affiliateData.currentRank.commissionBoost}% bônus diário</div>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Stats */}
+                              <div className="grid grid-cols-2 gap-3">
+                                <div className="bg-white/[0.03] rounded-lg p-3 border border-white/[0.04] text-center">
+                                  <div className="text-[10px] sm:text-xs text-zinc-500 uppercase tracking-wider">Indicações</div>
+                                  <div className="text-lg font-bold text-white">{affiliateData.directReferrals ?? (affiliateData.referralTree?.[1]?.length || 0)}</div>
+                                </div>
+                                <div className="bg-white/[0.03] rounded-lg p-3 border border-white/[0.04] text-center">
+                                  <div className="text-[10px] sm:text-xs text-zinc-500 uppercase tracking-wider">Ganhos Time</div>
+                                  <div className="text-lg font-bold text-emerald-400">${affiliateData.totalEarnings.toFixed(2)}</div>
                                 </div>
                               </div>
                             </div>
 
-                            {/* Cumulative earnings since userInvestments started (persists across refreshes) */}
-                            <div className="mt-3 bg-gradient-to-r from-emerald-900/30 to-transparent rounded-lg p-3 border border-cyan-500/10">
-                              <div className="flex items-center justify-between">
-                                <span className="text-xs text-zinc-400">{t('trading.earningsStream')}</span>
-                                <span className="text-lg font-bold text-cyan-400 font-mono">+${liveEarnings.toFixed(6)} USDT</span>
+                            {/* Progress to next rank */}
+                            {affiliateData.nextRank && (
+                              <div className="mt-4">
+                                <div className="flex items-center justify-between mb-1.5">
+                                  <span className="text-xs text-zinc-400">Próximo: <span style={{ color: affiliateData.nextRank.color }} className="font-medium">{affiliateData.nextRank.name}</span></span>
+                                  <span className="text-xs text-zinc-500">{affiliateData.nextRankReferralsNeeded || 0} indicações restantes</span>
+                                </div>
+                                <div className="w-full bg-white/[0.04] rounded-full h-2 overflow-hidden">
+                                  {(() => {
+                                    const currentRefs = affiliateData.directReferrals ?? (affiliateData.referralTree?.[1]?.length || 0);
+                                    const minRefs = d(affiliateData.currentRank?.minReferrals?.toString() || '0');
+                                    const nextRefs = d(affiliateData.nextRank.minReferrals?.toString() || '1');
+                                    const progress = nextRefs > minRefs ? Math.min(100, ((currentRefs - minRefs) / (nextRefs - minRefs)) * 100) : (currentRefs >= nextRefs ? 100 : 0);
+                                    return <div className="h-2 rounded-full transition-all duration-700 relative overflow-hidden" style={{ width: `${Math.max(2, progress)}%`, background: `linear-gradient(90deg, ${affiliateData.currentRank?.color || '#22c55e'}, ${affiliateData.nextRank?.color || '#06b6d4'})` }}>
+                                      <div className="animate-shimmer absolute inset-0" />
+                                    </div>;
+                                  })()}
+                                </div>
                               </div>
-                              <div className="w-full bg-zinc-800 rounded-full h-1.5 mt-2 overflow-hidden">
-                                {(() => {
-                                  const totalReturn = activeInvestments.reduce((sum, r) => sum + d(r.totalRoi), 0);
-                                  const progress = totalReturn > 0 ? Math.min(100, (liveEarnings / totalReturn) * 100) : 0;
-                                  return <div className="bg-gradient-to-r from-cyan-500 to-emerald-400 h-1.5 rounded-full transition-all duration-1000" style={{ width: `${progress}%` }} />;
-                                })()}
-                              </div>
-                              <div className="flex items-center justify-between mt-1">
-                                <span className="text-[10px] text-zinc-500">{t('trading.totalAccumulated')}</span>
-                                <span className="text-[10px] text-zinc-500">{(() => {
-                                  const totalReturn = activeInvestments.reduce((sum, r) => sum + d(r.totalRoi), 0);
-                                  const pct = totalReturn > 0 ? ((liveEarnings / totalReturn) * 100).toFixed(1) : '0';
-                                  return `${pct}% de ${fmtUSDT(totalReturn.toString())} USDT`;
-                                })()}</span>
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
+                            )}
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
 
-                        {/* Active Investments */}
+                    {/* ====== ACTIVE INVESTMENTS SUMMARY ====== */}
+                    {mounted && activeInvestments.length > 0 ? (
+                      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}>
                         <div className="space-y-3">
-                          {activeInvestments.map((r, idx) => {
-                            const baseWinRate = parseFloat((r.plan as any)?.winRate || r.plan?.dailyRoiPct || '0');
-                            const currentWR = liveWinRates[idx] || baseWinRate;
-                            const currentVolatility = liveVolatility[idx] || 65;
-                            const shares = liveShares[idx] || { valid: 0, invalid: 0 };
-                            const volatilityColor = currentVolatility > 40 ? 'text-red-400' : currentVolatility > 30 ? 'text-amber-400' : 'text-cyan-400';
-                            const hrPercent = baseWinRate > 0 ? (currentWR / baseWinRate) * 100 : 100;
+                          <div className="flex items-center justify-between">
+                            <h3 className="text-lg font-bold flex items-center gap-2">
+                              <Zap className="h-5 w-5 text-emerald-400" />
+                              Investimentos Ativos
+                              <Badge className="bg-emerald-500/15 text-emerald-400 border-emerald-500/25" variant="outline">{activeInvestments.length}</Badge>
+                            </h3>
+                          </div>
 
-                            return (
-                              <Card key={r.id} className="bg-zinc-900 border-zinc-800 hover:border-zinc-700 transition-colors relative overflow-hidden">
-                                <CardContent className="p-4">
-                                  {/* Animated trading indicator bar */}
+                          <div className="max-h-96 overflow-y-auto space-y-3 custom-scrollbar pr-1">
+                            {activeInvestments.map((r, idx) => {
+                              const baseWinRate = parseFloat((r.plan as any)?.winRate || r.plan?.dailyRoiPct || '0');
+                              const currentWR = liveWinRates[idx] || baseWinRate;
+                              const teamBonus = d(r.teamBonusPct);
+                              return (
+                                <div key={r.id} className="glass-card rounded-xl relative overflow-hidden stat-card-hover">
+                                  {/* Animated top indicator bar */}
                                   <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-emerald-500/50 to-transparent animate-pulse" />
 
-                                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                                    {/* Trading Bot Visual */}
-                                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                                      {/* Trading Bot Icon */}
-                                      <div className="relative w-12 h-12 flex-shrink-0">
-                                        <div className="w-12 h-12 bg-zinc-800 rounded-xl flex items-center justify-center border border-zinc-700">
-                                          <div className="text-lg font-bold text-cyan-400">{assetIcon(r.plan?.name || 'USDT')}</div>
+                                  <div className="p-4">
+                                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                                      {/* Investment Icon + Info */}
+                                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                                        <div className="relative w-11 h-11 flex-shrink-0">
+                                          <div className="w-11 h-11 bg-gradient-to-br from-emerald-500/15 to-cyan-500/10 rounded-xl flex items-center justify-center border border-white/[0.06]">
+                                            <span className="text-base font-bold text-cyan-400">{assetIcon(r.plan?.name || 'USDT')}</span>
+                                          </div>
+                                          <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-zinc-900 rounded-full border border-white/[0.08] flex items-center justify-center">
+                                            <div className="w-2.5 h-2.5 bg-emerald-400 rounded-full animate-pulse" />
+                                          </div>
                                         </div>
-                                        {/* Signal indicator */}
-                                        <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-zinc-900 rounded-full border border-zinc-700 flex items-center justify-center">
-                                          <div className="w-3 h-3 bg-emerald-400 rounded-full animate-pulse" />
+                                        <div className="min-w-0">
+                                          <div className="text-sm font-semibold truncate">{r.plan?.name || t('plans.plan')}</div>
+                                          <div className="flex items-center gap-2 mt-0.5">
+                                            <Badge className="bg-emerald-500/15 text-emerald-400 border-emerald-500/25 text-[10px]" variant="outline">
+                                              {t('status.active')}
+                                            </Badge>
+                                            {teamBonus > 0 && (
+                                              <Badge className="bg-cyan-500/15 text-cyan-400 border-cyan-500/25 text-[10px]" variant="outline">
+                                                +{teamBonus}% bônus
+                                              </Badge>
+                                            )}
+                                          </div>
                                         </div>
-                                        {/* Status indicator */}
-                                        <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-cyan-500 rounded-full animate-pulse shadow-lg shadow-emerald-500/50" />
                                       </div>
-                                      <div className="min-w-0">
-                                        <div className="font-medium text-sm truncate">{r.plan?.name || t('plans.plan')}</div>
-                                        <div className="text-xs text-zinc-400">{r.plan?.name || '-'}</div>
-                                        <div className="flex items-center gap-2 mt-1">
-                                          <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30" variant="outline">
-                                            {t('status.active')}
-                                          </Badge>
-                                          <span className="text-xs text-zinc-500">{r.plan?.name || '-'}</span>
+
+                                      {/* Key Metrics */}
+                                      <div className="grid grid-cols-3 gap-2 w-full sm:w-auto">
+                                        <div className="bg-white/[0.03] rounded-lg p-2 text-center border border-white/[0.04]">
+                                          <div className="text-[10px] text-zinc-500">Valor</div>
+                                          <div className="text-xs font-semibold text-white font-mono">${d(r.amount).toFixed(2)}</div>
+                                        </div>
+                                        <div className="bg-white/[0.03] rounded-lg p-2 text-center border border-white/[0.04]">
+                                          <div className="text-[10px] text-zinc-500">ROI/dia</div>
+                                          <div className="text-xs font-semibold text-emerald-400 font-mono">${d(r.dailyRoi).toFixed(2)}</div>
+                                        </div>
+                                        <div className="bg-white/[0.03] rounded-lg p-2 text-center border border-white/[0.04]">
+                                          <div className="text-[10px] text-zinc-500">{t('trading.earned')}</div>
+                                          <div className="text-xs font-semibold text-cyan-400 font-mono">+${(rentalAccumulatedEarnings[idx] || 0).toFixed(2)}</div>
                                         </div>
                                       </div>
                                     </div>
 
-                                    {/* Live Metrics Grid */}
-                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
-                                      {/* Win Rate */}
-                                      <div className="bg-zinc-800/60 rounded-lg p-2 text-center">
-                                        <div className="text-[10px] text-zinc-500 uppercase tracking-wider">{t('trading.winRate')}</div>
-                                        <div className="text-sm font-semibold font-mono text-white">{currentWR.toFixed(1)}</div>
-                                        <div className="text-[10px] text-zinc-500">ROI%</div>
-                                        <div className="w-full bg-zinc-700 rounded-full h-1 mt-1">
-                                          <div className={`h-1 rounded-full transition-all duration-500 ${hrPercent > 97 ? 'bg-cyan-500' : hrPercent > 93 ? 'bg-amber-500' : 'bg-red-500'}`} style={{ width: `${Math.min(100, hrPercent)}%` }} />
-                                        </div>
+                                    {/* Progress bar */}
+                                    <div className="mt-3">
+                                      <div className="flex items-center justify-between text-[10px] text-zinc-500 mb-1">
+                                        <span>{fmtDate(r.startDate)}</span>
+                                        <span>{(() => {
+                                          const start = new Date(r.startDate).getTime();
+                                          const end = new Date(r.endDate).getTime();
+                                          const now = Date.now();
+                                          const daysElapsed = Math.floor((now - start) / (1000 * 60 * 60 * 24));
+                                          return `${daysElapsed}d / ${r.plan?.durationDays || '?'}d`;
+                                        })()}</span>
+                                        <span>{fmtDate(r.endDate)}</span>
                                       </div>
-                                      {/* Volatility */}
-                                      <div className="bg-zinc-800/60 rounded-lg p-2 text-center">
-                                        <div className="text-[10px] text-zinc-500 uppercase tracking-wider">{t('trading.volatility')}</div>
-                                        <div className={`text-sm font-semibold font-mono ${volatilityColor}`}>{currentVolatility.toFixed(1)}%</div>
-                                        <div className="text-[10px] text-zinc-500">{currentVolatility > 40 ? '⚠' : currentVolatility > 30 ? '⚡' : '✓'}</div>
-                                        <div className="w-full bg-zinc-700 rounded-full h-1 mt-1">
-                                          <div className={`h-1 rounded-full transition-all duration-500 ${currentVolatility > 40 ? 'bg-red-500' : currentVolatility > 30 ? 'bg-amber-500' : 'bg-cyan-500'}`} style={{ width: `${Math.min(100, (currentVolatility / 50) * 100)}%` }} />
-                                        </div>
-                                      </div>
-                                      {/* Trades */}
-                                      <div className="bg-zinc-800/60 rounded-lg p-2 text-center">
-                                        <div className="text-[10px] text-zinc-500 uppercase tracking-wider">{t('trading.shares')}</div>
-                                        <div className="text-sm font-semibold font-mono text-white">{(shares.valid / 1000).toFixed(1)}K</div>
-                                        <div className="text-[10px] text-emerald-500/70">{((shares.valid / (shares.valid + shares.invalid)) * 100).toFixed(2)}% {t('trading.valid')}</div>
-                                      </div>
-                                      {/* Earnings - shows accumulated since investment start */}
-                                      <div className="bg-zinc-800/60 rounded-lg p-2 text-center">
-                                        <div className="text-[10px] text-zinc-500 uppercase tracking-wider">{t('trading.earned')}</div>
-                                        <div className="text-sm font-semibold font-mono text-cyan-400">+${(rentalAccumulatedEarnings[idx] || 0).toFixed(2)}</div>
-                                        <div className="text-[10px] text-zinc-500">{d(r.dailyRoi).toFixed(2)}/dia</div>
+                                      <div className="w-full bg-white/[0.04] rounded-full h-1.5 overflow-hidden">
+                                        {(() => {
+                                          const start = new Date(r.startDate).getTime();
+                                          const end = new Date(r.endDate).getTime();
+                                          const now = Date.now();
+                                          const progress = Math.min(100, Math.max(0, ((now - start) / (end - start)) * 100));
+                                          return <div className="bg-gradient-to-r from-emerald-500 to-cyan-400 h-1.5 rounded-full transition-all duration-1000 relative overflow-hidden" style={{ width: `${progress}%` }}>
+                                            <div className="animate-shimmer absolute inset-0" />
+                                          </div>;
+                                        })()}
                                       </div>
                                     </div>
-                                  </div>
-
-                                  {/* Earnings progress bar */}
-                                  <div className="mt-3">
-                                    <div className="flex items-center justify-between text-xs text-zinc-500 mb-1">
-                                      <span>{fmtDate(r.startDate)}</span>
-                                      <span>{fmtDate(r.endDate)}</span>
-                                    </div>
-                                    <div className="w-full bg-zinc-800 rounded-full h-1.5">
-                                      {(() => {
-                                        const start = new Date(r.startDate).getTime();
-                                        const end = new Date(r.endDate).getTime();
-                                        const now = Date.now();
-                                        const progress = Math.min(100, Math.max(0, ((now - start) / (end - start)) * 100));
-                                        return <div className="bg-gradient-to-r from-emerald-600 to-emerald-400 h-1.5 rounded-full transition-all duration-1000" style={{ width: `${progress}%` }} />;
-                                      })()}
-                                    </div>
-                                  </div>
-                                </CardContent>
-                              </Card>
-                            );
-                          })}
-                        </div>
-
-                        {/* Live Earnings Feed */}
-                        <Card className="bg-zinc-900 border-zinc-800">
-                          <CardHeader className="pb-2">
-                            <CardTitle className="text-sm flex items-center gap-2">
-                              <Coins className="h-4 w-4 text-cyan-400" />
-                              {t('trading.earningsStream')}
-                              <span className="flex h-2 w-2">
-                                <span className="animate-ping absolute inline-flex h-2 w-2 rounded-full bg-emerald-400 opacity-75"></span>
-                                <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-500"></span>
-                              </span>
-                            </CardTitle>
-                          </CardHeader>
-                          <CardContent>
-                            <div className="max-h-48 overflow-y-auto space-y-1.5 custom-scrollbar">
-                              {liveEarningsFeed.length === 0 ? (
-                                <div className="text-xs text-zinc-500 text-center py-4">{t('trading.operatingNow')}...</div>
-                              ) : (
-                                liveEarningsFeed.map(entry => (
-                                  <motion.div
-                                    key={entry.id}
-                                    initial={{ opacity: 0, x: -20 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    className="flex items-center justify-between bg-zinc-800/40 rounded-lg px-3 py-2"
-                                  >
-                                    <div className="flex items-center gap-2">
-                                      <div className="w-6 h-6 bg-cyan-500/10 rounded flex items-center justify-center text-[10px] font-bold text-cyan-400">{assetIcon(entry.coin)}</div>
-                                      <span className="text-xs text-zinc-400 font-mono">{entry.time}</span>
-                                    </div>
-                                    <span className="text-sm font-medium text-cyan-400 font-mono">+${entry.amount.toFixed(6)}</span>
-                                  </motion.div>
-                                ))
-                              )}
-                            </div>
-                          </CardContent>
-                        </Card>
-                      </div>
-                    ) : (
-                      <Card className="bg-zinc-900 border-zinc-800">
-                        <CardHeader className="pb-3">
-                          <CardTitle className="text-lg flex items-center gap-2">
-                            <Activity className="h-5 w-5 text-zinc-500" /> {t('trading.active')}
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="text-center py-8">
-                            <div className="w-16 h-16 bg-zinc-800 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                              <Cpu className="h-8 w-8 text-zinc-600" />
-                            </div>
-                            <p className="text-zinc-500 mb-4">{t('trading.noActiveBots')}</p>
-                            <Button className="bg-emerald-600 hover:bg-cyan-700" onClick={() => setActiveTab('investir')}>
-                              <Bot className="mr-2 h-4 w-4" /> {t('dashboard.investNow')}
-                            </Button>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    )}
-                    {/* Recent Transactions */}
-                    <Card className="bg-zinc-900 border-zinc-800">
-                      <CardHeader className="pb-3">
-                        <CardTitle className="text-lg flex items-center gap-2">
-                          <History className="h-5 w-5 text-cyan-400" /> {t('dashboard.recentActivity')}
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        {transactions.length === 0 ? (
-                          <p className="text-zinc-500 text-center py-6">{t('dashboard.noTransactions')}</p>
-                        ) : (
-                          <div className="space-y-3">
-                            {transactions.slice(0, 5).map(tx => {
-                              const Icon = txTypeIcon(tx.type);
-                              const isPositive = ['deposit', 'roi_profit', 'affiliate_commission'].includes(tx.type);
-                              return (
-                                <div key={tx.id} className="flex items-center justify-between gap-3">
-                                  <div className="flex items-center gap-3 min-w-0 flex-1">
-                                    <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${isPositive ? 'bg-cyan-500/10 text-cyan-400' : 'bg-red-500/10 text-red-400'}`}>
-                                      <Icon className="h-4 w-4" />
-                                    </div>
-                                    <div className="min-w-0">
-                                      <div className="text-sm font-medium truncate">{tx.description}</div>
-                                      <div className="text-xs text-zinc-400">{fmtDateTime(tx.createdAt)}</div>
-                                    </div>
-                                  </div>
-                                  <div className="text-right flex-shrink-0">
-                                    <div className={`text-sm font-medium ${isPositive ? 'text-cyan-400' : 'text-red-400'}`}>
-                                      {isPositive ? '+' : '-'}${fmtUSDT(tx.amount)}
-                                    </div>
-                                    <Badge className={statusColor(tx.status)} variant="outline">{statusLabel(tx.status)}</Badge>
                                   </div>
                                 </div>
                               );
                             })}
                           </div>
-                        )}
-                      </CardContent>
-                    </Card>
+
+                          {/* Live Earnings Feed */}
+                          <div className="glass-card rounded-xl">
+                            <div className="px-4 pt-3 pb-2 flex items-center gap-2">
+                              <Coins className="h-4 w-4 text-cyan-400" />
+                              <span className="text-sm font-medium">{t('trading.earningsStream')}</span>
+                              <span className="relative flex h-2 w-2 ml-1">
+                                <span className="animate-ping absolute inline-flex h-2 w-2 rounded-full bg-emerald-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-500"></span>
+                              </span>
+                            </div>
+                            <div className="px-4 pb-3">
+                              <div className="max-h-36 overflow-y-auto space-y-1.5 custom-scrollbar">
+                                {liveEarningsFeed.length === 0 ? (
+                                  <div className="text-xs text-zinc-500 text-center py-3">{t('trading.operatingNow')}...</div>
+                                ) : (
+                                  liveEarningsFeed.map(entry => (
+                                    <motion.div
+                                      key={entry.id}
+                                      initial={{ opacity: 0, x: -20 }}
+                                      animate={{ opacity: 1, x: 0 }}
+                                      className="flex items-center justify-between bg-white/[0.03] rounded-lg px-3 py-1.5 border border-white/[0.04]"
+                                    >
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-[10px] font-bold text-cyan-400">{assetIcon(entry.coin)}</span>
+                                        <span className="text-[10px] text-zinc-400 font-mono">{entry.time}</span>
+                                      </div>
+                                      <span className="text-xs font-medium text-emerald-400 font-mono">+${entry.amount.toFixed(6)}</span>
+                                    </motion.div>
+                                  ))
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </motion.div>
+                    ) : (
+                      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}>
+                        <div className="glass-card gradient-border rounded-2xl p-8 text-center">
+                          <div className="w-16 h-16 bg-white/[0.04] rounded-2xl flex items-center justify-center mx-auto mb-4 border border-white/[0.06]">
+                            <TrendingUp className="h-8 w-8 text-zinc-600" />
+                          </div>
+                          <p className="text-zinc-400 mb-1 text-lg font-medium">Nenhum investimento ativo</p>
+                          <p className="text-zinc-500 text-sm mb-4">Comece a investir e veja seus lucros em tempo real</p>
+                          <Button className="bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white border-0" onClick={() => setActiveTab('investir')}>
+                            <TrendingUp className="mr-2 h-4 w-4" /> {t('dashboard.investNow')}
+                          </Button>
+                        </div>
+                      </motion.div>
+                    )}
+
+                    {/* ====== RECENT TRANSACTIONS ====== */}
+                    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
+                      <div className="glass-card rounded-2xl overflow-hidden">
+                        <div className="px-5 pt-4 pb-2 flex items-center justify-between">
+                          <h3 className="text-lg font-bold flex items-center gap-2">
+                            <History className="h-5 w-5 text-cyan-400" />
+                            {t('dashboard.recentActivity')}
+                          </h3>
+                        </div>
+                        <div className="px-5 pb-4">
+                          {transactions.length === 0 ? (
+                            <p className="text-zinc-500 text-center py-6">{t('dashboard.noTransactions')}</p>
+                          ) : (
+                            <div className="max-h-64 overflow-y-auto space-y-2 custom-scrollbar">
+                              {transactions.slice(0, 5).map(tx => {
+                                const Icon = txTypeIcon(tx.type);
+                                const isPositive = ['deposit', 'roi_profit', 'affiliate_commission'].includes(tx.type);
+                                return (
+                                  <div key={tx.id} className="flex items-center justify-between gap-3 bg-white/[0.02] rounded-lg px-3 py-2.5 border border-white/[0.03] hover:border-white/[0.06] transition-colors">
+                                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${isPositive ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
+                                        <Icon className="h-4 w-4" />
+                                      </div>
+                                      <div className="min-w-0">
+                                        <div className="text-sm font-medium truncate">{tx.description}</div>
+                                        <div className="text-[10px] text-zinc-500">{fmtDateTime(tx.createdAt)}</div>
+                                      </div>
+                                    </div>
+                                    <div className="text-right flex-shrink-0">
+                                      <div className={`text-sm font-medium font-mono ${isPositive ? 'text-emerald-400' : 'text-red-400'}`}>
+                                        {isPositive ? '+' : '-'}${fmtUSDT(tx.amount)}
+                                      </div>
+                                      <Badge className={`${statusColor(tx.status)} text-[10px]`} variant="outline">{statusLabel(tx.status)}</Badge>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </motion.div>
                   </div>
                 )}
 
-                {/* ====== COPY TRADERS TAB - REAL BITGET DATA ====== */}
+
+                {/* ====== INVESTIR TAB — DeFi-STYLE INVESTMENT PAGE ====== */}
                 {activeTab === 'investir' && (
                   <div className="space-y-6">
-                    <div>
-                      <h2 className="text-xl sm:text-2xl font-bold">{t('sidebar.invest')}</h2>
-                      <p className="text-zinc-400 text-sm mt-1">{t('copyTraders.title')} — {t('copyTraders.realData')}</p>
-                    </div>
-
-                    {/* Search and Filter Bar */}
-                    <div className="flex flex-col sm:flex-row gap-3">
-                      <div className="relative flex-1">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
-                        <Input
-                          className="bg-zinc-800 border-zinc-700 pl-10"
-                          placeholder={t('copyTraders.searchPlaceholder')}
-                          value={bitgetSearch}
-                          onChange={e => setBitgetSearch(e.target.value)}
-                          onKeyDown={e => { if (e.key === 'Enter') { fetchBitgetTraders(bitgetRanking, bitgetSearch); } }}
-                        />
+                    {/* ── HEADER ── */}
+                    <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500/20 to-cyan-500/20 flex items-center justify-center">
+                          <TrendingUp className="h-5 w-5 text-emerald-400" />
+                        </div>
+                        <div>
+                          <h2 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">{t('sidebar.invest')}</h2>
+                          <p className="text-zinc-500 text-sm">Plataforma ROI — {t('copyTraders.realData')}</p>
+                        </div>
                       </div>
-                      <div className="flex gap-2 flex-wrap">
-                        {[
-                          { code: 'profit_rate', label: t('copyTraders.filterROI') },
-                          { code: 'total_income', label: t('copyTraders.filterPnL') },
-                          { code: 'total_follow_profit', label: t('copyTraders.filterFollowers') },
-                          { code: 'trader_pro', label: t('copyTraders.filterPro') },
-                        ].map(f => (
-                          <button
-                            key={f.code}
-                            onClick={() => { setBitgetRanking(f.code); fetchBitgetTraders(f.code, bitgetSearch); }}
-                            className={`px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors ${
-                              bitgetRanking === f.code
-                                ? 'bg-emerald-600 text-white'
-                                : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200'
-                            }`}
-                          >
-                            {f.label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
+                    </motion.div>
 
-                    {/* Loading State */}
-                    {bitgetLoading && (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {[1, 2, 3, 4].map(i => (
-                          <Card key={i} className="bg-zinc-900 border-zinc-800">
-                            <CardContent className="p-4">
-                              <div className="flex items-center gap-3 mb-4">
-                                <Skeleton className="h-12 w-12 rounded-full" />
-                                <div className="space-y-2 flex-1">
-                                  <Skeleton className="h-4 w-24" />
-                                  <Skeleton className="h-3 w-32" />
+                    {/* ── 1. INVESTMENT SIMULATOR ── */}
+                    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.1 }}>
+                      <div className="glass-card gradient-border rounded-2xl overflow-hidden">
+                        <div className="p-5 sm:p-6">
+                          <div className="flex items-center gap-2 mb-5">
+                            <Calculator className="h-5 w-5 text-emerald-400" />
+                            <h3 className="text-lg font-bold text-white">Simulador de Investimento</h3>
+                          </div>
+                          {/* Amount Input */}
+                          <div className="mb-5">
+                            <label className="text-sm text-zinc-400 mb-2 block">Quanto você quer investir?</label>
+                            <div className="relative">
+                              <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-emerald-400" />
+                              <Input
+                                type="number"
+                                min="10"
+                                step="10"
+                                value={simulatorAmount}
+                                onChange={e => setSimulatorAmount(e.target.value)}
+                                className="bg-zinc-800/80 border-emerald-500/30 focus:border-emerald-400 pl-11 h-13 text-lg font-semibold text-white rounded-xl"
+                                placeholder="100.00"
+                              />
+                              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-medium text-emerald-400">USDT</span>
+                            </div>
+                          </div>
+                          {/* Calculations */}
+                          {(() => {
+                            const simAmt = Math.max(0, parseFloat(simulatorAmount) || 0);
+                            const dailyRoi = simAmt * 0.05;
+                            const weeklyRoi = dailyRoi * 7;
+                            const monthlyRoi = dailyRoi * 30;
+                            const daysToDouble = simAmt > 0 ? Math.ceil(simAmt / dailyRoi) : 0;
+                            return (
+                              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3 text-center stat-card-hover">
+                                  <div className="text-[10px] sm:text-xs text-emerald-400/70 mb-1 flex items-center justify-center gap-1"><Clock4 className="h-3 w-3" /> Diário</div>
+                                  <div className="text-lg sm:text-xl font-bold text-emerald-400 animate-count-glow">${fmtUSDT(dailyRoi)}</div>
+                                </div>
+                                <div className="bg-cyan-500/10 border border-cyan-500/20 rounded-xl p-3 text-center stat-card-hover">
+                                  <div className="text-[10px] sm:text-xs text-cyan-400/70 mb-1 flex items-center justify-center gap-1"><BarChart3 className="h-3 w-3" /> Semanal</div>
+                                  <div className="text-lg sm:text-xl font-bold text-cyan-400">${fmtUSDT(weeklyRoi)}</div>
+                                </div>
+                                <div className="bg-teal-500/10 border border-teal-500/20 rounded-xl p-3 text-center stat-card-hover">
+                                  <div className="text-[10px] sm:text-xs text-teal-400/70 mb-1 flex items-center justify-center gap-1"><TrendingUp className="h-3 w-3" /> Mensal</div>
+                                  <div className="text-lg sm:text-xl font-bold text-teal-400">${fmtUSDT(monthlyRoi)}</div>
+                                </div>
+                                <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 text-center stat-card-hover">
+                                  <div className="text-[10px] sm:text-xs text-amber-400/70 mb-1 flex items-center justify-center gap-1"><Zap className="h-3 w-3" /> Dobra em</div>
+                                  <div className="text-lg sm:text-xl font-bold text-amber-400">{daysToDouble} dias</div>
                                 </div>
                               </div>
-                              <div className="grid grid-cols-3 gap-2">
-                                <Skeleton className="h-16 rounded-lg" />
-                                <Skeleton className="h-16 rounded-lg" />
-                                <Skeleton className="h-16 rounded-lg" />
-                              </div>
-                            </CardContent>
-                          </Card>
-                        ))}
+                            );
+                          })()}
+                          {/* Team Bonus Calculator */}
+                          <div className="mt-4 p-3 rounded-xl bg-zinc-800/50 border border-zinc-700/50">
+                            <div className="flex items-center gap-2 mb-3">
+                              <Crown className="h-4 w-4 text-amber-400" />
+                              <span className="text-sm font-medium text-zinc-300">Bônus de Equipe (ROI Extra)</span>
+                            </div>
+                            <div className="grid grid-cols-3 gap-2">
+                              {[
+                                { rank: 'Bronze', bonus: 1, color: 'text-orange-400', border: 'border-orange-500/20', bg: 'bg-orange-500/10', icon: Medal },
+                                { rank: 'Prata', bonus: 2, color: 'text-zinc-300', border: 'border-zinc-400/20', bg: 'bg-zinc-400/10', icon: Award },
+                                { rank: 'Ouro', bonus: 3, color: 'text-amber-400', border: 'border-amber-500/20', bg: 'bg-amber-500/10', icon: Crown },
+                              ].map(tier => {
+                                const simAmt = Math.max(0, parseFloat(simulatorAmount) || 0);
+                                const extraDaily = simAmt * 0.05 * (tier.bonus / 100);
+                                return (
+                                  <div key={tier.rank} className={`${tier.bg} border ${tier.border} rounded-lg p-2.5 text-center stat-card-hover`}>
+                                    <tier.icon className={`h-4 w-4 ${tier.color} mx-auto mb-1`} />
+                                    <div className="text-[10px] text-zinc-400">{tier.rank}</div>
+                                    <div className={`text-xs font-bold ${tier.color}`}>+{tier.bonus}%</div>
+                                    <div className="text-[10px] text-zinc-500 mt-0.5">+${fmtUSDT(extraDaily)}/dia</div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                    )}
+                    </motion.div>
 
-                    {/* Empty State */}
-                    {!bitgetLoading && bitgetTraders.length === 0 && (
-                      <Card className="bg-zinc-900 border-zinc-800">
-                        <CardContent className="py-12 text-center">
-                          <TrendingUp className="h-12 w-12 text-zinc-600 mx-auto mb-4" />
-                          <p className="text-zinc-500">{t('copyTraders.noTraders')}</p>
-                          <Button className="mt-4 bg-emerald-600 hover:bg-emerald-700" onClick={() => fetchBitgetTraders(bitgetRanking)}>
-                            <RefreshCw className="mr-2 h-4 w-4" /> {t('common.refresh')}
-                          </Button>
-                        </CardContent>
-                      </Card>
-                    )}
+                    {/* ── 2. INVESTMENT STATS BAR ── */}
+                    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.15 }}>
+                      <div className="grid grid-cols-3 gap-3">
+                        <div className="glass-card gradient-border rounded-xl p-3 sm:p-4 text-center stat-card-hover">
+                          <div className="text-[10px] sm:text-xs text-zinc-500 mb-1 flex items-center justify-center gap-1"><Coins className="h-3 w-3" /> Total Investido</div>
+                          <div className="text-base sm:text-lg font-bold text-emerald-400">${fmtUSDT(d(user?.totalInvested || '0'))}</div>
+                        </div>
+                        <div className="glass-card gradient-border rounded-xl p-3 sm:p-4 text-center stat-card-hover">
+                          <div className="text-[10px] sm:text-xs text-zinc-500 mb-1 flex items-center justify-center gap-1"><Percent className="h-3 w-3" /> ROI Médio/Dia</div>
+                          <div className="text-base sm:text-lg font-bold text-cyan-400">5.00%</div>
+                        </div>
+                        <div className="glass-card gradient-border rounded-xl p-3 sm:p-4 text-center stat-card-hover">
+                          <div className="text-[10px] sm:text-xs text-zinc-500 mb-1 flex items-center justify-center gap-1"><Users className="h-3 w-3" /> Investidores</div>
+                          <div className="text-base sm:text-lg font-bold text-teal-400">{activeInvestments.length}</div>
+                        </div>
+                      </div>
+                    </motion.div>
 
-                    {/* Real Bitget Copy Traders Grid */}
-                    {!bitgetLoading && bitgetTraders.length > 0 && (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {bitgetTraders.map((trader) => {
-                          // Parse klineProfit for mini chart
-                          let chartPoints: number[] = [];
-                          try {
-                            if (trader.klineProfit) {
-                              const parsed = typeof trader.klineProfit === 'string' ? JSON.parse(trader.klineProfit) : trader.klineProfit;
-                              if (Array.isArray(parsed)) {
-                                chartPoints = parsed.map((p: any) => parseFloat(p?.profitRate || p?.roi || p || 0)).filter(v => !isNaN(v));
-                              }
-                            }
-                          } catch {}
+                    {/* ── 3. INVESTMENT PLANS CARDS ── */}
+                    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.2 }}>
+                      <div className="flex items-center gap-2 mb-4">
+                        <Target className="h-5 w-5 text-emerald-400" />
+                        <h3 className="text-lg font-bold text-white">Planos de Investimento</h3>
+                      </div>
+                      {(() => {
+                        // Collect unique plans from all copy traders
+                        const allPlans = copyTraders
+                          .filter(t => t.isActive)
+                          .flatMap(t => (t.plans || []).map(p => ({ ...p, traderName: t.name, traderId: t.id })))
+                          .filter(p => p.isActive);
+                        const uniquePlanIds = [...new Set(allPlans.map(p => p.id))];
+                        const uniquePlans = uniquePlanIds.map(id => allPlans.find(p => p.id === id)!);
 
-                          const roiVal = parseFloat(trader.roi) || 0;
-                          const pnlVal = parseFloat(trader.totalPnl) || 0;
-                          const aumVal = parseFloat(trader.aum) || 0;
-                          const drawdownVal = parseFloat(trader.maxDrawdown) || 0;
-                          const symbolLabels = (trader.topSymbols || []).slice(0, 3).map(s => s.replace('USDT_UMCBL', '').replace('USDT', ''));
-
+                        if (uniquePlans.length === 0) {
+                          // Show default platform plans when no DB plans exist
+                          const defaultPlans = [
+                            { id: 'starter', name: 'Starter', dailyRoiPct: '5', minAmount: '10', maxAmount: '499', durationDays: 40, totalReturn: '200', isFeatured: false, description: 'Ideal para começar' },
+                            { id: 'growth', name: 'Growth', dailyRoiPct: '5', minAmount: '500', maxAmount: '1999', durationDays: 35, totalReturn: '175', isFeatured: true, description: 'O mais popular' },
+                            { id: 'premium', name: 'Premium', dailyRoiPct: '5', minAmount: '2000', maxAmount: '9999', durationDays: 30, totalReturn: '150', isFeatured: false, description: 'Para investidores sérios' },
+                            { id: 'elite', name: 'Elite', dailyRoiPct: '5', minAmount: '10000', maxAmount: '999999', durationDays: 25, totalReturn: '125', isFeatured: false, description: 'Retorno acelerado' },
+                          ];
                           return (
-                            <Card key={trader.traderId} className="bg-zinc-900 border-zinc-800 hover:border-cyan-500/30 transition-all duration-200">
-                              <CardContent className="p-4 sm:p-5">
-                                {/* Header: Avatar + Name + Grade */}
-                                <div className="flex items-start gap-3 mb-4">
-                                  <div className="relative">
-                                    {trader.avatar ? (
-                                      <img src={trader.avatar} alt={trader.displayName} className="w-12 h-12 rounded-full object-cover border-2 border-zinc-700" />
-                                    ) : (
-                                      <div className="w-12 h-12 bg-gradient-to-br from-cyan-500/20 to-emerald-500/20 rounded-full flex items-center justify-center text-lg font-bold text-cyan-400">
-                                        {trader.displayName.charAt(0)}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                              {defaultPlans.map((plan, idx) => (
+                                <motion.div
+                                  key={plan.id}
+                                  initial={{ opacity: 0, y: 20 }}
+                                  animate={{ opacity: 1, y: 0 }}
+                                  transition={{ duration: 0.5, delay: 0.25 + idx * 0.1 }}
+                                >
+                                  <div className={`glass-card rounded-2xl overflow-hidden stat-card-hover relative plan-card-gradient ${plan.isFeatured ? 'gradient-border plan-card-featured' : 'border border-zinc-800'}`}>
+                                    {/* Featured badge */}
+                                    {plan.isFeatured && (
+                                      <div className="absolute top-0 right-0 bg-gradient-to-l from-emerald-500 to-cyan-500 text-white text-[10px] font-bold px-3 py-1 rounded-bl-xl z-10">
+                                        ⭐ POPULAR
                                       </div>
                                     )}
-                                    <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-emerald-400 rounded-full border-2 border-zinc-900" title="Live" />
-                                  </div>
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2">
-                                      <h3 className="font-semibold text-sm truncate">{trader.displayName}</h3>
-                                      {trader.grade?.name && (
-                                        <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 text-[10px] px-1.5 py-0" variant="outline">
-                                          <Star className="h-2.5 w-2.5 mr-0.5" />{trader.grade.name}
-                                        </Badge>
-                                      )}
+                                    {/* Animated gradient bg */}
+                                    <div className="absolute inset-0 opacity-5 animate-shimmer pointer-events-none" />
+                                    <div className="relative p-5">
+                                      {/* Plan Name */}
+                                      <h4 className="text-base font-bold text-white mb-1">{plan.name}</h4>
+                                      <p className="text-xs text-zinc-500 mb-4">{plan.description}</p>
+                                      {/* Daily ROI - Large & Prominent */}
+                                      <div className="text-center mb-4">
+                                        <div className="text-3xl sm:text-4xl font-black text-emerald-400 animate-count-glow">
+                                          {d(plan.dailyRoiPct).toFixed(0)}%
+                                        </div>
+                                        <div className="text-xs text-zinc-500 mt-1">ROI Diário</div>
+                                      </div>
+                                      {/* Plan Details */}
+                                      <div className="space-y-2 mb-4">
+                                        <div className="flex justify-between text-sm">
+                                          <span className="text-zinc-500">Mínimo</span>
+                                          <span className="text-zinc-300 font-medium">${fmtUSDT(plan.minAmount)}</span>
+                                        </div>
+                                        <div className="flex justify-between text-sm">
+                                          <span className="text-zinc-500">Máximo</span>
+                                          <span className="text-zinc-300 font-medium">${fmtUSDT(plan.maxAmount)}</span>
+                                        </div>
+                                        <div className="flex justify-between text-sm">
+                                          <span className="text-zinc-500">Duração</span>
+                                          <span className="text-zinc-300 font-medium">{plan.durationDays} dias</span>
+                                        </div>
+                                        <Separator className="bg-zinc-800" />
+                                        <div className="flex justify-between text-sm">
+                                          <span className="text-zinc-400">Retorno Total</span>
+                                          <span className="text-emerald-400 font-bold">{d(plan.totalReturn).toFixed(0)}%</span>
+                                        </div>
+                                        <div className="flex justify-between text-sm">
+                                          <span className="text-zinc-400">Capital Dobra em</span>
+                                          <span className="text-amber-400 font-bold">{Math.ceil(100 / d(plan.dailyRoiPct))} dias</span>
+                                        </div>
+                                      </div>
+                                      {/* CTA Button */}
+                                      <Button
+                                        className={`w-full font-semibold rounded-xl ${
+                                          plan.isFeatured
+                                            ? 'bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-white shadow-lg shadow-emerald-500/20'
+                                            : 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                                        }`}
+                                        onClick={() => {
+                                          setInvestDialogPlan({
+                                            id: plan.id,
+                                            name: plan.name,
+                                            avatar: null,
+                                            specialty: plan.description || 'Copy Trading',
+                                            winRate: '85',
+                                            monthlyRoi: String(d(plan.dailyRoiPct) * 30),
+                                            totalPnl: plan.totalReturn,
+                                            riskLevel: 'low',
+                                            isActive: true,
+                                            isFeatured: plan.isFeatured,
+                                            sortOrder: idx,
+                                            createdAt: new Date().toISOString(),
+                                            updatedAt: new Date().toISOString(),
+                                            plans: [{
+                                              id: plan.id,
+                                              name: plan.name,
+                                              description: plan.description || null,
+                                              minAmount: plan.minAmount,
+                                              maxAmount: plan.maxAmount,
+                                              dailyRoiPct: plan.dailyRoiPct,
+                                              durationDays: plan.durationDays,
+                                              days: plan.durationDays,
+                                              totalReturn: plan.totalReturn,
+                                              isActive: true,
+                                              isFeatured: plan.isFeatured,
+                                              sortOrder: idx,
+                                              createdAt: new Date().toISOString(),
+                                              updatedAt: new Date().toISOString(),
+                                            }],
+                                          } as CopyTrader);
+                                          setSelectedPlanId(plan.id);
+                                          setInvestmentDuration(plan.durationDays);
+                                        }}
+                                      >
+                                        <Zap className="mr-2 h-4 w-4" /> Investir Agora
+                                      </Button>
                                     </div>
-                                    <div className="flex items-center gap-2 mt-0.5">
-                                      <span className="text-xs text-zinc-500">#{trader.rank}</span>
-                                      <span className="text-zinc-700">•</span>
-                                      <span className="text-xs text-zinc-500">{trader.followers} {t('copyTraders.followers')}</span>
-                                    </div>
                                   </div>
-                                </div>
-
-                                {/* Labels/Tags */}
-                                {trader.labels?.length > 0 && (
-                                  <div className="flex flex-wrap gap-1 mb-3">
-                                    {trader.labels.slice(0, 3).map((label, i) => (
-                                      <Badge key={i} className="bg-zinc-800 text-zinc-400 border-zinc-700 text-[10px] px-1.5 py-0" variant="outline">
-                                        {label.name}
-                                      </Badge>
-                                    ))}
-                                  </div>
-                                )}
-
-                                {/* Mini Chart */}
-                                {chartPoints.length > 1 && (
-                                  <div className="flex items-end gap-px h-12 mb-3 bg-zinc-800/30 rounded-lg p-1.5">
-                                    {chartPoints.slice(-20).map((val, i) => {
-                                      const maxVal = Math.max(...chartPoints.slice(-20).map(Math.abs), 1);
-                                      const height = Math.max(Math.abs(val) / maxVal * 100, 4);
-                                      const isPositive = val >= 0;
-                                      return (
-                                        <div
-                                          key={i}
-                                          className="flex-1 rounded-t"
-                                          style={{
-                                            height: `${height}%`,
-                                            background: isPositive
-                                              ? 'linear-gradient(to top, rgba(16,185,129,0.3), rgba(16,185,129,0.7))'
-                                              : 'linear-gradient(to top, rgba(239,68,68,0.3), rgba(239,68,68,0.7))',
-                                          }}
-                                        />
-                                      );
-                                    })}
-                                  </div>
-                                )}
-
-                                {/* Stats Grid */}
-                                <div className="grid grid-cols-3 gap-2 mb-4">
-                                  <div className="bg-zinc-800/50 rounded-lg p-2.5 text-center">
-                                    <div className="text-[10px] text-zinc-500 mb-0.5">{t('copyTraders.roiLabel')}</div>
-                                    <div className={`font-bold text-sm ${roiVal >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                                      {roiVal >= 0 ? '+' : ''}{roiVal.toFixed(1)}%
-                                    </div>
-                                  </div>
-                                  <div className="bg-zinc-800/50 rounded-lg p-2.5 text-center">
-                                    <div className="text-[10px] text-zinc-500 mb-0.5">{t('copyTraders.pnlLabel')}</div>
-                                    <div className={`font-bold text-sm ${pnlVal >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                                      ${Math.abs(pnlVal) >= 1000 ? `${(pnlVal/1000).toFixed(1)}k` : pnlVal.toFixed(0)}
-                                    </div>
-                                  </div>
-                                  <div className="bg-zinc-800/50 rounded-lg p-2.5 text-center">
-                                    <div className="text-[10px] text-zinc-500 mb-0.5">{t('copyTraders.aumLabel')}</div>
-                                    <div className="font-bold text-sm text-cyan-400">
-                                      ${aumVal >= 1000 ? `${(aumVal/1000).toFixed(1)}k` : aumVal.toFixed(0)}
-                                    </div>
-                                  </div>
-                                </div>
-
-                                {/* Drawdown + Symbols */}
-                                <div className="flex items-center justify-between mb-4">
-                                  <div className="text-xs">
-                                    <span className="text-zinc-500">{t('copyTraders.drawdown')}: </span>
-                                    <span className={`font-medium ${drawdownVal > 50 ? 'text-red-400' : drawdownVal > 20 ? 'text-amber-400' : 'text-emerald-400'}`}>
-                                      {drawdownVal.toFixed(1)}%
-                                    </span>
-                                  </div>
-                                  {symbolLabels.length > 0 && (
-                                    <div className="flex gap-1">
-                                      {symbolLabels.map((s, i) => (
-                                        <Badge key={i} className="bg-cyan-500/10 text-cyan-400 border-cyan-500/20 text-[10px] px-1.5 py-0" variant="outline">
-                                          {s}
-                                        </Badge>
-                                      ))}
-                                    </div>
-                                  )}
-                                </div>
-
-                                {/* Invest Button */}
-                                <Button
-                                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
-                                  onClick={() => {
-                                    setInvestDialogPlan({
-                                      id: trader.traderId,
-                                      name: trader.displayName,
-                                      avatar: trader.avatar || null,
-                                      specialty: (trader.labels?.[0]?.name) || 'Copy Trading',
-                                      winRate: String(Math.min(99, 70 + Math.random() * 25)),
-                                      monthlyRoi: String(Math.max(1, roiVal / 30).toFixed(2)),
-                                      totalPnl: trader.totalPnl,
-                                      riskLevel: drawdownVal > 50 ? 'high' : drawdownVal > 20 ? 'medium' : 'low',
-                                      isActive: true,
-                                      isFeatured: trader.grade?.name === 'Diamond' || trader.grade?.name === 'Platinum',
-                                      sortOrder: trader.rank,
-                                      createdAt: new Date().toISOString(),
-                                      updatedAt: new Date().toISOString(),
-                                    } as CopyTrader);
-                                    setSelectedPlanId(undefined);
-                                    setInvestmentDuration(30);
-                                  }}
-                                >
-                                  <Zap className="mr-2 h-4 w-4" /> {t('copyTraders.invest')} — {trader.displayName}
-                                </Button>
-                              </CardContent>
-                            </Card>
+                                </motion.div>
+                              ))}
+                            </div>
                           );
-                        })}
-                      </div>
-                    )}
+                        }
 
-                    {/* Load More / Refresh */}
-                    {!bitgetLoading && bitgetTraders.length > 0 && (
-                      <div className="flex justify-center gap-3">
+                        // Render DB plans from copy traders
+                        return (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {uniquePlans.map((plan, idx) => {
+                              const traderForPlan = copyTraders.find(t => t.isActive && (t.plans || []).some(p => p.id === plan.id));
+                              return (
+                                <motion.div
+                                  key={plan.id}
+                                  initial={{ opacity: 0, y: 20 }}
+                                  animate={{ opacity: 1, y: 0 }}
+                                  transition={{ duration: 0.5, delay: 0.25 + idx * 0.1 }}
+                                >
+                                  <div className={`glass-card rounded-2xl overflow-hidden stat-card-hover relative plan-card-gradient ${plan.isFeatured ? 'gradient-border plan-card-featured' : 'border border-zinc-800'}`}>
+                                    {plan.isFeatured && (
+                                      <div className="absolute top-0 right-0 bg-gradient-to-l from-emerald-500 to-cyan-500 text-white text-[10px] font-bold px-3 py-1 rounded-bl-xl z-10">
+                                        ⭐ DESTAQUE
+                                      </div>
+                                    )}
+                                    <div className="absolute inset-0 opacity-5 animate-shimmer pointer-events-none" />
+                                    <div className="relative p-5">
+                                      <h4 className="text-base font-bold text-white mb-1">{plan.name}</h4>
+                                      {plan.description && <p className="text-xs text-zinc-500 mb-4">{plan.description}</p>}
+                                      <div className="text-center mb-4">
+                                        <div className="text-3xl sm:text-4xl font-black text-emerald-400 animate-count-glow">
+                                          {d(plan.dailyRoiPct).toFixed(0)}%
+                                        </div>
+                                        <div className="text-xs text-zinc-500 mt-1">ROI Diário</div>
+                                      </div>
+                                      <div className="space-y-2 mb-4">
+                                        <div className="flex justify-between text-sm">
+                                          <span className="text-zinc-500">Mínimo</span>
+                                          <span className="text-zinc-300 font-medium">${fmtUSDT(plan.minAmount)}</span>
+                                        </div>
+                                        <div className="flex justify-between text-sm">
+                                          <span className="text-zinc-500">Máximo</span>
+                                          <span className="text-zinc-300 font-medium">${fmtUSDT(plan.maxAmount)}</span>
+                                        </div>
+                                        <div className="flex justify-between text-sm">
+                                          <span className="text-zinc-500">Duração</span>
+                                          <span className="text-zinc-300 font-medium">{plan.durationDays} dias</span>
+                                        </div>
+                                        <Separator className="bg-zinc-800" />
+                                        <div className="flex justify-between text-sm">
+                                          <span className="text-zinc-400">Retorno Total</span>
+                                          <span className="text-emerald-400 font-bold">{d(plan.totalReturn).toFixed(0)}%</span>
+                                        </div>
+                                      </div>
+                                      <Button
+                                        className={`w-full font-semibold rounded-xl ${
+                                          plan.isFeatured
+                                            ? 'bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-white shadow-lg shadow-emerald-500/20'
+                                            : 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                                        }`}
+                                        onClick={() => {
+                                          if (traderForPlan) {
+                                            setInvestDialogPlan(traderForPlan);
+                                            setSelectedPlanId(plan.id);
+                                            setInvestmentDuration(plan.durationDays);
+                                          }
+                                        }}
+                                      >
+                                        <Zap className="mr-2 h-4 w-4" /> Investir Agora
+                                      </Button>
+                                    </div>
+                                  </div>
+                                </motion.div>
+                              );
+                            })}
+                          </div>
+                        );
+                      })()}
+                    </motion.div>
+
+                    {/* ── 4. COPY TRADERS SECTION ── */}
+                    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.3 }}>
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                          <Bot className="h-5 w-5 text-cyan-400" />
+                          <h3 className="text-lg font-bold text-white">Traders em Tempo Real</h3>
+                          <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+                            <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" />
+                            <span className="text-[10px] text-emerald-400 font-medium">LIVE</span>
+                          </div>
+                        </div>
                         <Button
-                          variant="outline"
-                          className="border-zinc-700 text-zinc-400 hover:text-white hover:border-cyan-500/50"
+                          variant="ghost"
+                          size="sm"
+                          className="text-zinc-500 hover:text-white"
                           onClick={() => fetchBitgetTraders(bitgetRanking, bitgetSearch)}
                         >
-                          <RefreshCw className="mr-2 h-4 w-4" /> {t('common.refresh')}
+                          <RefreshCw className={`h-4 w-4 ${bitgetLoading ? 'animate-spin' : ''}`} />
                         </Button>
                       </div>
-                    )}
 
-                    {/* Fallback: DB Copy Traders when Bitget is unavailable */}
-                    {!bitgetLoading && bitgetTraders.length === 0 && copyTraders.length > 0 && (
-                      <div className="space-y-4">
-                        <div className="flex items-center gap-2 text-zinc-400 text-sm">
-                          <AlertTriangle className="h-4 w-4 text-amber-400" />
-                          <span>{t('copyTraders.bitgetUnavailable')}</span>
+                      {/* Search and Filter Bar */}
+                      <div className="flex flex-col sm:flex-row gap-3 mb-4">
+                        <div className="relative flex-1">
+                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
+                          <Input
+                            className="bg-zinc-800/50 border-zinc-700/50 pl-10 rounded-xl"
+                            placeholder={t('copyTraders.searchPlaceholder')}
+                            value={bitgetSearch}
+                            onChange={e => setBitgetSearch(e.target.value)}
+                            onKeyDown={e => { if (e.key === 'Enter') { fetchBitgetTraders(bitgetRanking, bitgetSearch); } }}
+                          />
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          {copyTraders.filter(m => m.isActive).map(trader => (
-                            <Card key={trader.id} className="bg-zinc-900 border-zinc-800 hover:border-cyan-500/30 transition-all">
+                        <div className="flex gap-2 flex-wrap">
+                          {[
+                            { code: 'profit_rate', label: t('copyTraders.filterROI') },
+                            { code: 'total_income', label: t('copyTraders.filterPnL') },
+                            { code: 'total_follow_profit', label: t('copyTraders.filterFollowers') },
+                            { code: 'trader_pro', label: t('copyTraders.filterPro') },
+                          ].map(f => (
+                            <button
+                              key={f.code}
+                              onClick={() => { setBitgetRanking(f.code); fetchBitgetTraders(f.code, bitgetSearch); }}
+                              className={`px-3 py-2 rounded-xl text-xs sm:text-sm font-medium transition-colors ${
+                                bitgetRanking === f.code
+                                  ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/20'
+                                  : 'bg-zinc-800/50 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200'
+                              }`}
+                            >
+                              {f.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Loading State */}
+                      {bitgetLoading && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                          {[1, 2, 3].map(i => (
+                            <Card key={i} className="glass-card border-zinc-800">
                               <CardContent className="p-4">
-                                <div className="flex items-center gap-3 mb-3">
-                                  <div className="w-10 h-10 bg-cyan-500/10 rounded-full flex items-center justify-center text-lg font-bold text-cyan-400">
-                                    {trader.name.charAt(0)}
-                                  </div>
-                                  <div className="flex-1">
-                                    <h3 className="font-semibold text-sm">{trader.name}</h3>
-                                    <p className="text-xs text-zinc-400">{trader.specialty} • {trader.winRate}%</p>
-                                  </div>
-                                  <Badge className={trader.riskLevel === 'high' ? 'bg-red-500/20 text-red-400' : trader.riskLevel === 'low' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-400'} variant="outline">
-                                    {trader.riskLevel}
-                                  </Badge>
-                                </div>
-                                <div className="grid grid-cols-3 gap-2 mb-3">
-                                  <div className="bg-zinc-800/50 rounded-lg p-2 text-center">
-                                    <div className="text-[10px] text-zinc-500">{t('copyTraders.roiLabel')}</div>
-                                    <div className="font-bold text-sm text-emerald-400">+{trader.monthlyRoi}%</div>
-                                  </div>
-                                  <div className="bg-zinc-800/50 rounded-lg p-2 text-center">
-                                    <div className="text-[10px] text-zinc-500">{t('copyTraders.pnlLabel')}</div>
-                                    <div className="font-bold text-sm text-cyan-400">${fmtUSDT(trader.totalPnl)}</div>
-                                  </div>
-                                  <div className="bg-zinc-800/50 rounded-lg p-2 text-center">
-                                    <div className="text-[10px] text-zinc-500">{t('copyTraders.performance')}</div>
-                                    <div className="font-bold text-sm">{trader.winRate}%</div>
+                                <div className="flex items-center gap-3 mb-4">
+                                  <Skeleton className="h-12 w-12 rounded-full" />
+                                  <div className="space-y-2 flex-1">
+                                    <Skeleton className="h-4 w-24" />
+                                    <Skeleton className="h-3 w-32" />
                                   </div>
                                 </div>
-                                <Button
-                                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
-                                  onClick={() => {
-                                    setInvestDialogPlan(trader);
-                                    setSelectedPlanId(undefined);
-                                    setInvestmentDuration(30);
-                                  }}
-                                >
-                                  <Zap className="mr-2 h-4 w-4" /> {t('copyTraders.invest')} — {trader.name}
-                                </Button>
+                                <div className="grid grid-cols-3 gap-2">
+                                  <Skeleton className="h-16 rounded-lg" />
+                                  <Skeleton className="h-16 rounded-lg" />
+                                  <Skeleton className="h-16 rounded-lg" />
+                                </div>
                               </CardContent>
                             </Card>
                           ))}
                         </div>
+                      )}
+
+                      {/* Empty State */}
+                      {!bitgetLoading && bitgetTraders.length === 0 && copyTraders.filter(m => m.isActive).length === 0 && (
+                        <Card className="glass-card border-zinc-800">
+                          <CardContent className="py-12 text-center">
+                            <TrendingUp className="h-12 w-12 text-zinc-600 mx-auto mb-4" />
+                            <p className="text-zinc-500">{t('copyTraders.noTraders')}</p>
+                            <Button className="mt-4 bg-emerald-600 hover:bg-emerald-700" onClick={() => fetchBitgetTraders(bitgetRanking)}>
+                              <RefreshCw className="mr-2 h-4 w-4" /> {t('common.refresh')}
+                            </Button>
+                          </CardContent>
+                        </Card>
+                      )}
+
+                      {/* Real Bitget Copy Traders Grid */}
+                      {!bitgetLoading && bitgetTraders.length > 0 && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                          {bitgetTraders.map((trader, idx) => {
+                            let chartPoints: number[] = [];
+                            try {
+                              if (trader.klineProfit) {
+                                const parsed = typeof trader.klineProfit === 'string' ? JSON.parse(trader.klineProfit) : trader.klineProfit;
+                                if (Array.isArray(parsed)) {
+                                  chartPoints = parsed.map((p: any) => parseFloat(p?.profitRate || p?.roi || p || 0)).filter(v => !isNaN(v));
+                                }
+                              }
+                            } catch {}
+
+                            const roiVal = parseFloat(trader.roi) || 0;
+                            const pnlVal = parseFloat(trader.totalPnl) || 0;
+                            const aumVal = parseFloat(trader.aum) || 0;
+                            const drawdownVal = parseFloat(trader.maxDrawdown) || 0;
+                            const symbolLabels = (trader.topSymbols || []).slice(0, 3).map(s => s.replace('USDT_UMCBL', '').replace('USDT', ''));
+                            const isFeatured = trader.grade?.name === 'Diamond' || trader.grade?.name === 'Platinum';
+
+                            return (
+                              <motion.div
+                                key={trader.traderId}
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ duration: 0.4, delay: 0.05 * idx }}
+                              >
+                                <div className={`glass-card rounded-2xl overflow-hidden stat-card-hover relative ${isFeatured ? 'gradient-border' : 'border border-zinc-800'}`}>
+                                  <div className="absolute inset-0 opacity-[0.02] animate-shimmer" />
+                                  <div className="relative p-4 sm:p-5">
+                                    {/* Header */}
+                                    <div className="flex items-start gap-3 mb-3">
+                                      <div className="relative">
+                                        {trader.avatar ? (
+                                          <img src={trader.avatar} alt={trader.displayName} className="w-11 h-11 rounded-full object-cover border-2 border-zinc-700" />
+                                        ) : (
+                                          <div className="w-11 h-11 bg-gradient-to-br from-cyan-500/20 to-emerald-500/20 rounded-full flex items-center justify-center text-base font-bold text-cyan-400">
+                                            {trader.displayName.charAt(0)}
+                                          </div>
+                                        )}
+                                        <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-400 rounded-full border-2 border-zinc-900 animate-pulse" />
+                                      </div>
+                                      <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2">
+                                          <h3 className="font-semibold text-sm truncate">{trader.displayName}</h3>
+                                          {trader.grade?.name && (
+                                            <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 text-[10px] px-1.5 py-0" variant="outline">
+                                              <Star className="h-2.5 w-2.5 mr-0.5" />{trader.grade.name}
+                                            </Badge>
+                                          )}
+                                        </div>
+                                        <div className="flex items-center gap-2 mt-0.5">
+                                          <span className="text-xs text-zinc-500">#{trader.rank}</span>
+                                          <span className="text-zinc-700">•</span>
+                                          <span className="text-xs text-zinc-500">{trader.followers} {t('copyTraders.followers')}</span>
+                                          <span className="px-1.5 py-0 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[9px] text-emerald-400 font-medium flex items-center gap-1">
+                                            <div className="w-1 h-1 bg-emerald-400 rounded-full animate-pulse" />LIVE
+                                          </span>
+                                        </div>
+                                      </div>
+                                    </div>
+
+                                    {/* Labels */}
+                                    {trader.labels?.length > 0 && (
+                                      <div className="flex flex-wrap gap-1 mb-3">
+                                        {trader.labels.slice(0, 3).map((label, i) => (
+                                          <Badge key={i} className="bg-zinc-800/50 text-zinc-400 border-zinc-700/50 text-[10px] px-1.5 py-0" variant="outline">
+                                            {label.name}
+                                          </Badge>
+                                        ))}
+                                      </div>
+                                    )}
+
+                                    {/* Mini Chart */}
+                                    {chartPoints.length > 1 && (
+                                      <div className="flex items-end gap-px h-10 mb-3 bg-zinc-800/30 rounded-lg p-1.5">
+                                        {chartPoints.slice(-20).map((val, i) => {
+                                          const maxVal = Math.max(...chartPoints.slice(-20).map(Math.abs), 1);
+                                          const height = Math.max(Math.abs(val) / maxVal * 100, 4);
+                                          const isPositive = val >= 0;
+                                          return (
+                                            <div
+                                              key={i}
+                                              className="flex-1 rounded-t"
+                                              style={{
+                                                height: `${height}%`,
+                                                background: isPositive
+                                                  ? 'linear-gradient(to top, rgba(16,185,129,0.3), rgba(16,185,129,0.7))'
+                                                  : 'linear-gradient(to top, rgba(239,68,68,0.3), rgba(239,68,68,0.7))',
+                                              }}
+                                            />
+                                          );
+                                        })}
+                                      </div>
+                                    )}
+
+                                    {/* Stats Grid */}
+                                    <div className="grid grid-cols-3 gap-2 mb-3">
+                                      <div className="bg-zinc-800/40 rounded-lg p-2 text-center">
+                                        <div className="text-[10px] text-zinc-500 mb-0.5">{t('copyTraders.roiLabel')}</div>
+                                        <div className={`font-bold text-sm ${roiVal >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                                          {roiVal >= 0 ? '+' : ''}{roiVal.toFixed(1)}%
+                                        </div>
+                                      </div>
+                                      <div className="bg-zinc-800/40 rounded-lg p-2 text-center">
+                                        <div className="text-[10px] text-zinc-500 mb-0.5">{t('copyTraders.pnlLabel')}</div>
+                                        <div className={`font-bold text-sm ${pnlVal >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                                          ${Math.abs(pnlVal) >= 1000 ? `${(pnlVal/1000).toFixed(1)}k` : pnlVal.toFixed(0)}
+                                        </div>
+                                      </div>
+                                      <div className="bg-zinc-800/40 rounded-lg p-2 text-center">
+                                        <div className="text-[10px] text-zinc-500 mb-0.5">{t('copyTraders.aumLabel')}</div>
+                                        <div className="font-bold text-sm text-cyan-400">
+                                          ${aumVal >= 1000 ? `${(aumVal/1000).toFixed(1)}k` : aumVal.toFixed(0)}
+                                        </div>
+                                      </div>
+                                    </div>
+
+                                    {/* Drawdown + Symbols */}
+                                    <div className="flex items-center justify-between mb-3">
+                                      <div className="text-xs">
+                                        <span className="text-zinc-500">{t('copyTraders.drawdown')}: </span>
+                                        <span className={`font-medium ${drawdownVal > 50 ? 'text-red-400' : drawdownVal > 20 ? 'text-amber-400' : 'text-emerald-400'}`}>
+                                          {drawdownVal.toFixed(1)}%
+                                        </span>
+                                      </div>
+                                      {symbolLabels.length > 0 && (
+                                        <div className="flex gap-1">
+                                          {symbolLabels.map((s, i) => (
+                                            <Badge key={i} className="bg-cyan-500/10 text-cyan-400 border-cyan-500/20 text-[10px] px-1.5 py-0" variant="outline">
+                                              {s}
+                                            </Badge>
+                                          ))}
+                                        </div>
+                                      )}
+                                    </div>
+
+                                    {/* Invest Button */}
+                                    <Button
+                                      className={`w-full font-semibold rounded-xl ${
+                                        isFeatured
+                                          ? 'bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-white'
+                                          : 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                                      }`}
+                                      onClick={() => {
+                                        setInvestDialogPlan({
+                                          id: trader.traderId,
+                                          name: trader.displayName,
+                                          avatar: trader.avatar || null,
+                                          specialty: (trader.labels?.[0]?.name) || 'Copy Trading',
+                                          winRate: String(Math.min(99, 70 + Math.random() * 25)),
+                                          monthlyRoi: String(Math.max(1, roiVal / 30).toFixed(2)),
+                                          totalPnl: trader.totalPnl,
+                                          riskLevel: drawdownVal > 50 ? 'high' : drawdownVal > 20 ? 'medium' : 'low',
+                                          isActive: true,
+                                          isFeatured,
+                                          sortOrder: trader.rank,
+                                          createdAt: new Date().toISOString(),
+                                          updatedAt: new Date().toISOString(),
+                                        } as CopyTrader);
+                                        setSelectedPlanId(undefined);
+                                        setInvestmentDuration(30);
+                                      }}
+                                    >
+                                      <Zap className="mr-2 h-4 w-4" /> {t('copyTraders.invest')}
+                                    </Button>
+                                  </div>
+                                </div>
+                              </motion.div>
+                            );
+                          })}
+                        </div>
+                      )}
+
+                      {/* Fallback: DB Copy Traders when Bitget is unavailable */}
+                      {!bitgetLoading && bitgetTraders.length === 0 && copyTraders.filter(m => m.isActive).length > 0 && (
+                        <div className="space-y-4">
+                          <div className="flex items-center gap-2 text-zinc-400 text-sm">
+                            <AlertTriangle className="h-4 w-4 text-amber-400" />
+                            <span>{t('copyTraders.bitgetUnavailable')}</span>
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {copyTraders.filter(m => m.isActive).map((trader, idx) => (
+                              <motion.div
+                                key={trader.id}
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ duration: 0.4, delay: 0.05 * idx }}
+                              >
+                                <div className={`glass-card rounded-2xl overflow-hidden stat-card-hover relative ${trader.isFeatured ? 'gradient-border' : 'border border-zinc-800'}`}>
+                                  <div className="absolute inset-0 opacity-[0.02] animate-shimmer" />
+                                  <div className="relative p-4">
+                                    {/* Header */}
+                                    <div className="flex items-center gap-3 mb-3">
+                                      <div className="relative">
+                                        <div className="w-10 h-10 bg-gradient-to-br from-cyan-500/20 to-emerald-500/20 rounded-full flex items-center justify-center text-lg font-bold text-cyan-400">
+                                          {trader.name.charAt(0)}
+                                        </div>
+                                        <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-400 rounded-full border-2 border-zinc-900" />
+                                      </div>
+                                      <div className="flex-1 min-w-0">
+                                        <h3 className="font-semibold text-sm">{trader.name}</h3>
+                                        <p className="text-xs text-zinc-400">{trader.specialty} • {trader.winRate}%</p>
+                                      </div>
+                                      <Badge className={trader.riskLevel === 'high' ? 'bg-red-500/20 text-red-400' : trader.riskLevel === 'low' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-400'} variant="outline">
+                                        {trader.riskLevel}
+                                      </Badge>
+                                    </div>
+                                    {/* Stats */}
+                                    <div className="grid grid-cols-3 gap-2 mb-3">
+                                      <div className="bg-zinc-800/40 rounded-lg p-2 text-center">
+                                        <div className="text-[10px] text-zinc-500">{t('copyTraders.roiLabel')}</div>
+                                        <div className="font-bold text-sm text-emerald-400">+{trader.monthlyRoi}%</div>
+                                      </div>
+                                      <div className="bg-zinc-800/40 rounded-lg p-2 text-center">
+                                        <div className="text-[10px] text-zinc-500">{t('copyTraders.pnlLabel')}</div>
+                                        <div className="font-bold text-sm text-cyan-400">${fmtUSDT(trader.totalPnl)}</div>
+                                      </div>
+                                      <div className="bg-zinc-800/40 rounded-lg p-2 text-center">
+                                        <div className="text-[10px] text-zinc-500">{t('copyTraders.performance')}</div>
+                                        <div className="font-bold text-sm">{trader.winRate}%</div>
+                                      </div>
+                                    </div>
+                                    {/* Plans linked to this trader */}
+                                    {(trader.plans || []).length > 0 && (
+                                      <div className="mb-3 p-2 rounded-lg bg-emerald-500/5 border border-emerald-500/10">
+                                        <div className="text-[10px] text-emerald-400/70 mb-1">Planos disponíveis:</div>
+                                        <div className="flex flex-wrap gap-1">
+                                          {(trader.plans || []).slice(0, 3).map(p => (
+                                            <Badge key={p.id} className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 text-[10px] px-1.5 py-0" variant="outline">
+                                              {p.name} ({d(p.dailyRoiPct).toFixed(0)}%/dia)
+                                            </Badge>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    )}
+                                    <Button
+                                      className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-xl"
+                                      onClick={() => {
+                                        setInvestDialogPlan(trader);
+                                        setSelectedPlanId(undefined);
+                                        setInvestmentDuration(30);
+                                      }}
+                                    >
+                                      <Zap className="mr-2 h-4 w-4" /> {t('copyTraders.invest')} — {trader.name}
+                                    </Button>
+                                  </div>
+                                </div>
+                              </motion.div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </motion.div>
+
+                    {/* ── REFRESH BUTTON ── */}
+                    {!bitgetLoading && bitgetTraders.length > 0 && (
+                      <div className="flex justify-center">
+                        <Button
+                          variant="outline"
+                          className="border-zinc-700/50 text-zinc-400 hover:text-white hover:border-emerald-500/50 rounded-xl"
+                          onClick={() => fetchBitgetTraders(bitgetRanking, bitgetSearch)}
+                        >
+                          <RefreshCw className="mr-2 h-4 w-4" /> {t('common.refresh')}
+                        </Button>
                       </div>
                     )}
                   </div>
@@ -4348,269 +4932,451 @@ export default function PlataformaROI() {
                   </div>
                 )}
 
-                {/* ====== AFILIADOS TAB ====== */}
+                {/* ====== AFILIADOS TAB (DeFi Redesign) ====== */}
                 {activeTab === 'afiliados' && (
                   <div className="space-y-6">
-                    <h2 className="text-xl sm:text-2xl font-bold">{t('affiliates.title')}</h2>
+                    {/* Section Title */}
+                    <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-3">
+                      <div className="p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                        <Users className="h-6 w-6 text-emerald-400" />
+                      </div>
+                      <div>
+                        <h2 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">{t('affiliates.title')}</h2>
+                        <p className="text-xs text-zinc-500">Unilevel 11 Níveis · Bônus de Equipe · Saque Diário</p>
+                      </div>
+                    </motion.div>
 
-                            {/* Voucher Dashboard for Leaders */}
-                            {userVouchers.length > 0 && (
-                              <div className="space-y-4 mb-6">
-                                <div className="flex items-center justify-between">
-                                  <div>
-                                    <h3 className="text-lg font-semibold flex items-center gap-2"><Ticket className="h-5 w-5 text-purple-400" /> Meus Vouchers</h3>
-                                    <p className="text-sm text-zinc-500 mt-1">Saldo de voucher só pode ser usado para investir em planos de copy trading. Saques desbloqueiam conforme você cumpre as metas.</p>
+                    {/* ═══════════════ 1. AFFILIATE HERO SECTION ═══════════════ */}
+                    {!affiliateData?.linkUnlocked ? (
+                      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+                        <div className="glass-card gradient-border rounded-2xl p-8 text-center glow-emerald">
+                          <div className="text-6xl mb-4">🔗</div>
+                          <h3 className="text-xl font-bold text-white mb-2">{t('affiliates.unlockDesc')}</h3>
+                          <p className="text-sm text-zinc-400 mb-6">Invista para desbloquear seu link de afiliado e comece a ganhar comissões</p>
+                          {user.hasInvested ? (
+                            <Button className="bg-emerald-600 hover:bg-emerald-700 text-white px-8 h-12 text-base" onClick={handleUnlockAffiliate}>
+                              <Zap className="mr-2 h-5 w-5" /> {t('affiliates.unlockBtn')}
+                            </Button>
+                          ) : (
+                            <Button className="bg-emerald-600 hover:bg-emerald-700 text-white px-8 h-12 text-base" onClick={() => setActiveTab('investir')}>
+                              <TrendingUp className="mr-2 h-5 w-5" /> {t('dashboard.investNow')}
+                            </Button>
+                          )}
+                        </div>
+                      </motion.div>
+                    ) : (
+                      <>
+                        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
+                          <div className="glass-card gradient-border rounded-2xl p-5 sm:p-6 glow-emerald relative overflow-hidden">
+                            <div className="absolute inset-0 opacity-[0.03]" style={{ background: 'radial-gradient(ellipse at top right, #10b981, transparent 60%)' }} />
+                            <div className="relative z-10">
+                              {/* Top row: Stats */}
+                              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-5">
+                                <div className="stat-card-hover">
+                                  <div className="glass-card rounded-xl p-4 text-center border border-emerald-500/10">
+                                    <DollarSign className="h-5 w-5 text-emerald-400 mx-auto mb-1" />
+                                    <div className="text-2xl sm:text-3xl font-bold text-emerald-400" style={{ textShadow: '0 0 20px rgba(16,185,129,0.3)' }}>${fmtUSDT(affiliateData?.totalEarnings || 0)}</div>
+                                    <div className="text-[11px] text-zinc-500 mt-1">{t('affiliates.totalEarnings')}</div>
                                   </div>
-                                  <Button variant="outline" className="border-zinc-700 text-purple-400 hover:bg-purple-500/10" onClick={recalculateVoucherProgress} disabled={voucherProgressLoading}>
-                                    <RefreshCw className={`mr-2 h-4 w-4 ${voucherProgressLoading ? 'animate-spin' : ''}`} /> Atualizar
-                                  </Button>
+                                </div>
+                                <div className="stat-card-hover">
+                                  <div className="glass-card rounded-xl p-4 text-center border border-cyan-500/10">
+                                    <Users className="h-5 w-5 text-cyan-400 mx-auto mb-1" />
+                                    <div className="text-2xl sm:text-3xl font-bold text-cyan-400">{affiliateData?.directReferrals ?? (affiliateData?.referralTree?.[1]?.length || 0)}</div>
+                                    <div className="text-[11px] text-zinc-500 mt-1">{t('affiliates.directReferrals')}</div>
+                                  </div>
+                                </div>
+                                <div className="stat-card-hover">
+                                  <div className="glass-card rounded-xl p-4 text-center border border-emerald-500/10">
+                                    <Globe className="h-5 w-5 text-emerald-300 mx-auto mb-1" />
+                                    <div className="text-2xl sm:text-3xl font-bold text-emerald-300">{affiliateData?.totalReferrals || 0}</div>
+                                    <div className="text-[11px] text-zinc-500 mt-1">{t('affiliates.totalReferrals')}</div>
+                                  </div>
+                                </div>
+                                <div className="stat-card-hover">
+                                  <div className="glass-card rounded-xl p-4 text-center border border-amber-500/10">
+                                    <Wallet className="h-5 w-5 text-amber-400 mx-auto mb-1" />
+                                    <div className="text-2xl sm:text-3xl font-bold text-amber-400">${fmtUSDT(affiliateData?.affiliateBalance || 0)}</div>
+                                    <div className="text-[11px] text-zinc-500 mt-1">{t('affiliates.availableBalance')}</div>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Bottom row: Rank badge + Referral link */}
+                              <div className="flex flex-col sm:flex-row items-stretch gap-4">
+                                {/* Current Rank Badge */}
+                                <div className="flex items-center gap-3 glass-card rounded-xl p-3 sm:p-4 border border-white/5 flex-1">
+                                  <div className="text-4xl sm:text-5xl" style={{ filter: `drop-shadow(0 0 16px ${(affiliateData?.currentRank?.color || '#22c55e')}50)` }}>
+                                    {affiliateData?.currentRank?.icon || '🌱'}
+                                  </div>
+                                  <div>
+                                    <div className="text-[10px] uppercase tracking-wider text-zinc-500">{t('affiliates.currentRank')}</div>
+                                    <div className="text-lg font-bold" style={{ color: affiliateData?.currentRank?.color || '#22c55e' }}>
+                                      {affiliateData?.currentRank?.name || 'Iniciante'}
+                                    </div>
+                                    {affiliateData?.currentRank && d(affiliateData.currentRank.commissionBoost) > 0 && (
+                                      <div className="text-xs text-emerald-400">+{affiliateData.currentRank.commissionBoost}% bônus ROI diário</div>
+                                    )}
+                                  </div>
                                 </div>
 
-                                {userVouchers.map((v: any) => {
-                                  const available = d(v.amount) - d(v.usedAmount);
-                                  const goalTarget = d(v.goalNetworkMultiple) * d(v.amount);
-                                  const referralPct = v.goalDirectReferrals > 0 ? Math.round((v.qualifyingReferrals / v.goalDirectReferrals) * 100) : 0;
-                                  const networkPct = goalTarget > 0 ? Math.round((d(v.currentNetworkInvestment) / goalTarget) * 100) : 0;
-                                  const unlockPct = d(v.withdrawalUnlockPct);
-                                  const daysLeft = v.status === 'active' ? Math.max(0, Math.ceil((new Date(v.deadline).getTime() - Date.now()) / 86400000)) : 0;
+                                {/* Referral Link + Share */}
+                                <div className="glass-card rounded-xl p-3 sm:p-4 border border-white/5 flex-1">
+                                  <div className="text-[10px] uppercase tracking-wider text-zinc-500 mb-2">{t('affiliates.yourLink')}</div>
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <code className="bg-zinc-800/80 px-3 py-1.5 rounded-lg text-emerald-400 font-mono text-xs sm:text-sm flex-1 min-w-0 truncate">
+                                      {typeof window !== 'undefined' ? `${window.location.origin}?ref=${affiliateData?.code || user.affiliateCode}` : ''}
+                                    </code>
+                                    <CopyButton text={typeof window !== 'undefined' ? `${window.location.origin}?ref=${affiliateData?.code || user.affiliateCode}` : ''} t={t} />
+                                  </div>
+                                  <div className="flex flex-wrap gap-1.5">
+                                    {typeof window !== 'undefined' && (() => {
+                                      const link = `${window.location.origin}?ref=${affiliateData?.code || user.affiliateCode}`;
+                                      const text = encodeURIComponent('🚀 Invista com PLATAFORMA ROI! Use meu link e comece a ganhar:');
+                                      return (
+                                        <>
+                                          <a href={`https://wa.me/?text=${text}%20${encodeURIComponent(link)}`} target="_blank" rel="noopener noreferrer">
+                                            <Button size="sm" variant="outline" className="border-green-600/50 text-green-400 hover:bg-green-500/10 gap-1 h-8 text-xs">
+                                              <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.136.558 4.143 1.534 5.886L.057 23.64l5.888-1.545A11.95 11.95 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.82c-1.98 0-3.826-.544-5.41-1.49l-.387-.23-4.007 1.05 1.07-3.903-.253-.4A9.794 9.794 0 012.18 12c0-5.422 4.398-9.82 9.82-9.82 5.422 0 9.82 4.398 9.82 9.82 0 5.422-4.398 9.82-9.82 9.82z"/></svg>
+                                              WhatsApp
+                                            </Button>
+                                          </a>
+                                          <a href={`https://t.me/share/url?url=${encodeURIComponent(link)}&text=${text}`} target="_blank" rel="noopener noreferrer">
+                                            <Button size="sm" variant="outline" className="border-sky-600/50 text-sky-400 hover:bg-sky-500/10 gap-1 h-8 text-xs">
+                                              <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.479.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>
+                                              Telegram
+                                            </Button>
+                                          </a>
+                                          <a href={`https://twitter.com/intent/tweet?text=${text}&url=${encodeURIComponent(link)}`} target="_blank" rel="noopener noreferrer">
+                                            <Button size="sm" variant="outline" className="border-zinc-600/50 text-zinc-300 hover:bg-zinc-500/10 gap-1 h-8 text-xs">
+                                              <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                                              X
+                                            </Button>
+                                          </a>
+                                        </>
+                                      );
+                                    })()}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </motion.div>
 
+                        {/* ═══════════════ 2. TEAM BONUS RANKS VISUALIZATION ═══════════════ */}
+                        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+                          <div className="glass-card gradient-border rounded-2xl p-5 sm:p-6">
+                            <div className="flex items-center gap-2 mb-5">
+                              <Crown className="h-5 w-5 text-amber-400" />
+                              <h3 className="text-lg font-bold text-white">Team Bonus Ranks</h3>
+                              <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 ml-auto" variant="outline">Bônus Extra ROI Diário</Badge>
+                            </div>
+
+                            {/* Rank Cards Row */}
+                            <div className="grid grid-cols-3 gap-3 sm:gap-4 mb-5">
+                              {(() => {
+                                const directRefs = affiliateData?.directReferrals ?? (affiliateData?.referralTree?.[1]?.length || 0);
+                                const rankDefs = [
+                                  { name: 'Bronze', medal: '🥉', minRef: 10, bonusPct: 1, color: '#cd7f32', glow: 'rgba(205,127,50,0.3)', borderColor: 'border-amber-700/40', bgColor: 'bg-amber-900/10' },
+                                  { name: 'Prata', medal: '🥈', minRef: 20, bonusPct: 2, color: '#c0c0c0', glow: 'rgba(192,192,192,0.3)', borderColor: 'border-zinc-400/40', bgColor: 'bg-zinc-500/10' },
+                                  { name: 'Ouro', medal: '🥇', minRef: 30, bonusPct: 3, color: '#ffd700', glow: 'rgba(255,215,0,0.3)', borderColor: 'border-yellow-500/40', bgColor: 'bg-yellow-500/10' },
+                                ];
+                                const currentRankName = affiliateData?.currentRank?.name || 'Iniciante';
+                                return rankDefs.map((rank) => {
+                                  const isCurrentRank = currentRankName.toLowerCase() === rank.name.toLowerCase();
+                                  const isUnlocked = directRefs >= rank.minRef;
+                                  const isNext = !isUnlocked && (
+                                    (rank.name === 'Bronze' && directRefs < 10) ||
+                                    (rank.name === 'Prata' && directRefs >= 10 && directRefs < 20) ||
+                                    (rank.name === 'Ouro' && directRefs >= 20 && directRefs < 30)
+                                  );
+                                  const progressPct = Math.min(100, (directRefs / rank.minRef) * 100);
                                   return (
-                                    <Card key={v.id} className={`border-2 ${v.status === 'active' ? 'border-purple-500/40 bg-purple-500/5' : v.status === 'completed' ? 'border-cyan-500/40 bg-cyan-500/5' : 'border-zinc-700 bg-zinc-900'}`}>
-                                      <CardContent className="p-5">
-                                        <div className="flex items-center justify-between mb-3">
-                                          <div className="flex items-center gap-2">
-                                            <Badge className={v.status === 'active' ? 'bg-purple-500/20 text-purple-400 border-purple-500/30' : v.status === 'completed' ? 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30' : 'bg-red-500/20 text-red-400 border-red-500/30'} variant="outline">
-                                              {v.status === 'active' ? '🟢 Ativo' : v.status === 'completed' ? '✅ Completo' : v.status === 'expired' ? '⏰ Expirado' : '🚫 Revogado'}
-                                            </Badge>
-                                            <Badge className="bg-zinc-700 text-zinc-300" variant="outline">
-                                              {v.type === 'basic' ? t('copyTraders.planBasic') : v.type === 'premium' ? t('copyTraders.planPremium') : t('copyTraders.planCustom')}
-                                            </Badge>
-                                          </div>
-                                          {v.status === 'active' && (
-                                            <div className={`text-sm font-medium ${daysLeft <= 7 ? 'text-red-400' : 'text-zinc-400'}`}>
-                                              ⏰ {daysLeft} dias restantes
-                                            </div>
-                                          )}
+                                    <div key={rank.name} className={`stat-card-hover relative rounded-xl border p-4 text-center transition-all ${
+                                      isCurrentRank ? `${rank.borderColor} ${rank.bgColor}` :
+                                      isUnlocked ? 'border-emerald-500/30 bg-emerald-500/5' :
+                                      isNext ? 'border-amber-500/20 bg-amber-500/5' :
+                                      'border-zinc-800/50 bg-zinc-900/30 opacity-50'
+                                    }`}>
+                                      {isCurrentRank && (
+                                        <div className="absolute inset-0 rounded-xl pointer-events-none" style={{ boxShadow: `0 0 25px ${rank.glow}, inset 0 0 25px ${rank.glow}` }} />
+                                      )}
+                                      <div className="relative z-10">
+                                        <div className="text-4xl sm:text-5xl mb-2" style={isCurrentRank ? { filter: `drop-shadow(0 0 12px ${rank.glow})` } : !isUnlocked ? { filter: 'grayscale(0.8) brightness(0.5)' } : {}}>
+                                          {rank.medal}
                                         </div>
-
-                                        {/* Balance Section */}
-                                        <div className="grid grid-cols-3 gap-4 mb-4">
-                                          <div className="text-center p-3 rounded-lg bg-zinc-800/50">
-                                            <div className="text-xs text-zinc-500 mb-1">Total do Voucher</div>
-                                            <div className="text-lg font-bold text-white">{fmtUSDT(v.amount)} USDT</div>
-                                          </div>
-                                          <div className="text-center p-3 rounded-lg bg-zinc-800/50">
-                                            <div className="text-xs text-zinc-500 mb-1">Disponível para Usar</div>
-                                            <div className="text-lg font-bold text-cyan-400">{fmtUSDT(available)} USDT</div>
-                                          </div>
-                                          <div className="text-center p-3 rounded-lg bg-zinc-800/50">
-                                            <div className="text-xs text-zinc-500 mb-1">Desbloqueio de Saque</div>
-                                            <div className={`text-lg font-bold ${unlockPct >= 100 ? 'text-cyan-400' : unlockPct > 0 ? 'text-amber-400' : 'text-red-400'}`}>{unlockPct}%</div>
-                                          </div>
+                                        <div className="text-sm font-bold" style={{ color: isUnlocked || isCurrentRank ? rank.color : undefined }}>{rank.name}</div>
+                                        <div className="text-[10px] text-zinc-500 mt-0.5">{rank.minRef} indicações</div>
+                                        <div className="mt-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                                          <TrendingUp className="h-3 w-3" /> +{rank.bonusPct}% ROI
                                         </div>
-
-                                        {/* Goals Progress */}
-                                        {v.status === 'active' && (
-                                          <div className="space-y-3">
-                                            <div className="text-sm font-medium text-zinc-300 mb-2">📊 Progresso das Metas</div>
-                                            <div>
-                                              <div className="flex justify-between text-xs mb-1">
-                                                <span className="text-zinc-400">🤝 Indicações qualificadas (que investiram ≥ {fmtUSDT(v.goalMinReferralInvest)} USDT)</span>
-                                                <span className="font-medium">{v.qualifyingReferrals}/{v.goalDirectReferrals}</span>
-                                              </div>
-                                              <Progress value={Math.min(100, referralPct)} className="h-3 bg-zinc-800 [&>[data-slot=indicator]]:bg-cyan-500" />
-                                            </div>
-                                            <div>
-                                              <div className="flex justify-between text-xs mb-1">
-                                                <span className="text-zinc-400">💰 Investimento total da rede</span>
-                                                <span className="font-medium">{fmtUSDT(v.currentNetworkInvestment)}/{fmtUSDT(goalTarget)} USDT</span>
-                                              </div>
-                                              <Progress value={Math.min(100, networkPct)} className="h-3 bg-zinc-800 [&>[data-slot=indicator]]:bg-blue-500" />
-                                            </div>
-
-                                            {/* Gradual Unlock Timeline */}
-                                            <div className="mt-4 p-3 rounded-lg bg-zinc-800/50">
-                                              <div className="text-xs font-medium text-zinc-300 mb-2">🔓 Desbloqueio Gradual de Saque</div>
-                                              <div className="flex items-center gap-1">
-                                                <div className={`flex-1 h-3 rounded-l-full ${unlockPct >= 25 ? 'bg-cyan-500' : 'bg-zinc-700'}`} />
-                                                <div className={`flex-1 h-3 ${unlockPct >= 50 ? 'bg-cyan-500' : 'bg-zinc-700'}`} />
-                                                <div className={`flex-1 h-3 ${unlockPct >= 75 ? 'bg-cyan-500' : 'bg-zinc-700'}`} />
-                                                <div className={`flex-1 h-3 rounded-r-full ${unlockPct >= 100 ? 'bg-cyan-500' : 'bg-zinc-700'}`} />
-                                              </div>
-                                              <div className="flex justify-between text-[10px] mt-1 text-zinc-500">
-                                                <span className={unlockPct >= 25 ? 'text-cyan-400' : ''}>25%</span>
-                                                <span className={unlockPct >= 50 ? 'text-cyan-400' : ''}>50%</span>
-                                                <span className={unlockPct >= 75 ? 'text-cyan-400' : ''}>75%</span>
-                                                <span className={unlockPct >= 100 ? 'text-cyan-400' : ''}>100%</span>
-                                              </div>
-                                              <div className="mt-2 space-y-1 text-[10px] text-zinc-500">
-                                                <div className={unlockPct >= 25 ? 'text-cyan-400' : ''}>✓ 25% — Trazer 50% das indicações necessárias</div>
-                                                <div className={unlockPct >= 50 ? 'text-cyan-400' : ''}>✓ 50% — 75% das indicações + 50% do investimento da rede</div>
-                                                <div className={unlockPct >= 75 ? 'text-cyan-400' : ''}>✓ 75% — 100% das indicações + 75% do investimento</div>
-                                                <div className={unlockPct >= 100 ? 'text-cyan-400' : ''}>✓ 100% — Todas as metas completas</div>
-                                              </div>
-                                            </div>
-
-                                            {unlockPct === 0 && (
-                                              <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20">
-                                                <div className="text-sm text-red-400 font-medium">⛔ Saques bloqueados</div>
-                                                <div className="text-xs text-zinc-400 mt-1">Cumpra as metas para desbloquear gradualmente seus saques.</div>
-                                              </div>
-                                            )}
-                                            {unlockPct > 0 && unlockPct < 100 && (
-                                              <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
-                                                <div className="text-sm text-amber-400 font-medium">⚠️ Saques parcialmente desbloqueados ({unlockPct}%)</div>
-                                                <div className="text-xs text-zinc-400 mt-1">Você pode sacar até {unlockPct}% do seu saldo normal. Continue cumprindo as metas para desbloquear mais.</div>
-                                              </div>
-                                            )}
-                                            {unlockPct >= 100 && (
-                                              <div className="p-3 rounded-lg bg-cyan-500/10 border border-cyan-500/20">
-                                                <div className="text-sm text-cyan-400 font-medium">✅ Saques totalmente desbloqueados!</div>
-                                                <div className="text-xs text-zinc-400 mt-1">Parabéns! Todas as metas foram cumpridas. Você pode sacar normalmente.</div>
-                                              </div>
-                                            )}
+                                        {!isUnlocked && !isCurrentRank && (
+                                          <div className="mt-2">
+                                            <Progress value={progressPct} className="h-1.5 bg-zinc-800 [&>[data-slot=indicator]]:bg-amber-500" />
+                                            <div className="text-[9px] text-zinc-600 mt-0.5">{directRefs}/{rank.minRef}</div>
                                           </div>
                                         )}
-
-                                        {/* Usage History */}
-                                        {v.usages && v.usages.length > 0 && (
-                                          <div className="mt-4">
-                                            <div className="text-sm font-medium text-zinc-300 mb-2">📝 Histórico de Uso</div>
-                                            <div className="space-y-1">
-                                              {v.usages.map((u: any) => (
-                                                <div key={u.id} className="flex justify-between text-xs bg-zinc-800/50 rounded p-2">
-                                                  <span className="text-zinc-400">{(u as any).investment?.trader?.name || (u as any).investment?.plan?.name || 'Investimento'} — {fmtDate(u.createdAt)}</span>
-                                                  <span className="text-amber-400">-{fmtUSDT(u.amount)} USDT</span>
-                                                </div>
-                                              ))}
-                                            </div>
-                                          </div>
+                                        {isCurrentRank && (
+                                          <div className="mt-2 text-[10px] text-emerald-400 font-medium">✓ Rank Atual</div>
                                         )}
-                                      </CardContent>
-                                    </Card>
+                                        {isUnlocked && !isCurrentRank && (
+                                          <div className="mt-2 text-[10px] text-cyan-400 font-medium">✓ Desbloqueado</div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  );
+                                });
+                              })()}
+                            </div>
+
+                            {/* Progress to Next Rank */}
+                            {affiliateData?.nextRank && (
+                              <div className="glass-card rounded-xl p-4 border border-amber-500/15">
+                                <div className="flex items-center justify-between mb-2">
+                                  <div className="flex items-center gap-2">
+                                    <Target className="h-4 w-4 text-amber-400" />
+                                    <span className="text-sm font-medium text-zinc-300">Próximo: <span style={{ color: affiliateData.nextRank.color }}>{affiliateData.nextRank.icon} {affiliateData.nextRank.name}</span></span>
+                                  </div>
+                                  <span className="text-xs text-zinc-500">
+                                    {affiliateData.nextRankReferralsNeeded! > 0 && <span>+{affiliateData.nextRankReferralsNeeded} referrals</span>}
+                                    {affiliateData.nextRankReferralsNeeded! > 0 && affiliateData.nextRankEarningsNeeded! > 0 && <span> · </span>}
+                                    {affiliateData.nextRankEarningsNeeded! > 0 && <span>+${fmtUSDT(affiliateData.nextRankEarningsNeeded)} earnings</span>}
+                                  </span>
+                                </div>
+                                <Progress
+                                  value={Math.max(0, 100 - ((affiliateData.nextRankReferralsNeeded! + affiliateData.nextRankEarningsNeeded!) / (affiliateData.nextRank.minReferrals + d(affiliateData.nextRank.minEarnings)) * 100))}
+                                  className="h-2 bg-zinc-800 [&>[data-slot=indicator]]:bg-gradient-to-r [&>[data-slot=indicator]]:from-emerald-500 [&>[data-slot=indicator]]:to-cyan-500"
+                                />
+                              </div>
+                            )}
+                            {!affiliateData?.nextRank && affiliateData?.currentRank && (
+                              <div className="glass-card rounded-xl p-4 border border-amber-500/20 text-center">
+                                <div className="text-2xl mb-1">👑</div>
+                                <div className="text-sm font-bold text-amber-400">{t('affiliates.maxRank')}</div>
+                              </div>
+                            )}
+                          </div>
+                        </motion.div>
+
+                        {/* ═══════════════ 3. 11-LEVEL UNILEVEL VISUALIZATION ═══════════════ */}
+                        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
+                          <div className="glass-card gradient-border rounded-2xl p-5 sm:p-6">
+                            <div className="flex items-center gap-2 mb-4">
+                              <Activity className="h-5 w-5 text-cyan-400" />
+                              <h3 className="text-lg font-bold text-white">Unilevel 11 Níveis</h3>
+                              {affiliateData?.commissionMode && (
+                                <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30 ml-auto text-[10px]" variant="outline">
+                                  {affiliateData.commissionMode === 'system_margin' ? 'System Margin' : affiliateData.commissionMode === 'roi_profit' ? 'Trading Profit' : 'Revenue Pool'}
+                                </Badge>
+                              )}
+                            </div>
+
+                            {/* L1 - Direct (highlighted) */}
+                            {(() => {
+                              const lvl1Refs = affiliateData?.referralTree?.[1] || [];
+                              const lvl1Comm = affiliateData?.commissionByLevel?.find(c => c.level === 1);
+                              const lvl1Pct = affiliateData?.affiliateLevels?.find(l => l.level === 1);
+                              const lvl1Active = lvl1Refs.length > 0;
+                              return (
+                                <div className={`glass-card rounded-xl p-4 mb-3 border transition-all ${lvl1Active ? 'border-emerald-500/30 glow-emerald' : 'border-white/5'}`}>
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                      <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-emerald-500/20 border border-emerald-500/30">
+                                        <span className="text-sm font-bold text-emerald-400">L1</span>
+                                      </div>
+                                      <div>
+                                        <div className="flex items-center gap-2">
+                                          <span className="text-lg font-bold text-emerald-400">{lvl1Pct?.percentage || '10'}%</span>
+                                          <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 text-[9px]" variant="outline">DIRECT</Badge>
+                                        </div>
+                                        <div className="text-xs text-zinc-500">{lvl1Refs.length} {t('common.referrals')}</div>
+                                      </div>
+                                    </div>
+                                    <div className="text-right">
+                                      <div className="text-lg font-bold text-emerald-400" style={lvl1Active ? { textShadow: '0 0 12px rgba(16,185,129,0.4)' } : {}}>${fmtUSDT(lvl1Comm?._sum?.commissionAmount || 0)}</div>
+                                      <div className="text-[10px] text-zinc-500">{t('common.earned')}</div>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })()}
+
+                            {/* L2-L5 Row */}
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-2">
+                              {[2, 3, 4, 5].map((level) => {
+                                const refs = affiliateData?.referralTree?.[level] || [];
+                                const comm = affiliateData?.commissionByLevel?.find(c => c.level === level);
+                                const levelPct = affiliateData?.affiliateLevels?.find(l => l.level === level);
+                                const isActive = refs.length > 0;
+                                return (
+                                  <div key={level} className={`stat-card-hover glass-card rounded-xl p-3 border transition-all ${isActive ? 'border-cyan-500/20' : 'border-white/5 opacity-50'}`}>
+                                    <div className="flex items-center gap-2 mb-1">
+                                      <div className={`flex items-center justify-center w-7 h-7 rounded-md text-xs font-bold ${isActive ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30' : 'bg-zinc-800 text-zinc-500 border border-zinc-700'}`}>
+                                        L{level}
+                                      </div>
+                                      <span className={`text-base font-bold ${isActive ? 'text-cyan-400' : 'text-zinc-500'}`}>{levelPct?.percentage || '?'}%</span>
+                                    </div>
+                                    <div className="text-[10px] text-zinc-500">{refs.length} {t('common.referrals')}</div>
+                                    <div className={`text-sm font-semibold mt-1 ${isActive ? 'text-cyan-400' : 'text-zinc-600'}`}>${fmtUSDT(comm?._sum?.commissionAmount || 0)}</div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+
+                            {/* L6-L11 Row */}
+                            <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                              {[6, 7, 8, 9, 10, 11].map((level) => {
+                                const refs = affiliateData?.referralTree?.[level] || [];
+                                const comm = affiliateData?.commissionByLevel?.find(c => c.level === level);
+                                const levelPct = affiliateData?.affiliateLevels?.find(l => l.level === level);
+                                const isActive = refs.length > 0;
+                                return (
+                                  <div key={level} className={`stat-card-hover glass-card rounded-lg p-2.5 border transition-all ${isActive ? 'border-emerald-500/20' : 'border-white/5 opacity-40'}`}>
+                                    <div className="flex items-center justify-center gap-1 mb-0.5">
+                                      <span className={`text-[10px] font-bold ${isActive ? 'text-emerald-400' : 'text-zinc-600'}`}>L{level}</span>
+                                      <span className={`text-sm font-bold ${isActive ? 'text-emerald-300' : 'text-zinc-600'}`}>{levelPct?.percentage || '?'}%</span>
+                                    </div>
+                                    <div className="text-[9px] text-zinc-600 text-center">{refs.length} ref</div>
+                                    <div className={`text-xs font-semibold text-center mt-0.5 ${isActive ? 'text-emerald-400' : 'text-zinc-700'}`}>${fmtUSDT(comm?._sum?.commissionAmount || 0)}</div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+
+                            {/* Total */}
+                            <div className="mt-3 flex items-center justify-between px-2 py-2 rounded-lg bg-zinc-800/30 border border-zinc-700/30">
+                              <span className="text-xs text-zinc-400">Total Unilevel</span>
+                              <span className="text-sm font-bold text-emerald-400">
+                                {affiliateData?.affiliateLevels?.length ? affiliateData.affiliateLevels.reduce((sum, l) => sum + d(l.percentage), 0).toFixed(1) : '28'}% · ${fmtUSDT(affiliateData?.commissionByLevel?.reduce((sum, c) => sum + (c._sum?.commissionAmount || 0), 0) || 0)}
+                              </span>
+                            </div>
+
+                            {affiliateData?.commissionMode === 'roi_profit' && (
+                              <div className="mt-2 p-3 bg-zinc-800/30 rounded-lg border border-zinc-700/30">
+                                <div className="text-xs text-zinc-400">
+                                  <span className="text-cyan-400 font-medium">💡 {t('affiliates.howItWorks')}:</span>{' '}
+                                  {t('affiliates.tradingProfitExplanation')}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </motion.div>
+
+                        {/* ═══════════════ 4. REFERRAL TREE (Collapsible) ═══════════════ */}
+                        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+                          <Accordion type="single" collapsible defaultValue="referral-tree" className="space-y-0">
+                            <AccordionItem value="referral-tree" className="border-0">
+                              <AccordionTrigger className="glass-card gradient-border rounded-2xl px-5 py-4 hover:no-underline hover:bg-white/[0.02] [&[data-state=open]]:rounded-b-none">
+                                <div className="flex items-center gap-2">
+                                  <Users className="h-5 w-5 text-cyan-400" />
+                                  <h3 className="text-lg font-bold text-white">Árvore de Indicações</h3>
+                                  <Badge className="bg-zinc-700 text-zinc-300 text-[10px]" variant="outline">{affiliateData?.totalReferrals || 0}</Badge>
+                                </div>
+                              </AccordionTrigger>
+                              <AccordionContent className="glass-card rounded-b-2xl border-t-0 border border-white/5 p-4">
+                                {/* Search */}
+                                <div className="relative mb-4">
+                                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
+                                  <Input
+                                    placeholder="Buscar afiliado..."
+                                    value={affiliateSearch}
+                                    onChange={(e) => setAffiliateSearch(e.target.value)}
+                                    className="bg-zinc-800/50 border-zinc-700/50 pl-9 h-9 text-sm"
+                                  />
+                                </div>
+                                {/* Direct Referrals List */}
+                                <div className="max-h-80 overflow-y-auto space-y-2 pr-1" style={{ scrollbarWidth: 'thin', scrollbarColor: '#27272a transparent' }}>
+                                  {(() => {
+                                    const allRefs = Object.entries(affiliateData?.referralTree || {}).flatMap(([level, refs]) =>
+                                      refs.map(r => ({ ...r, level: parseInt(level) }))
+                                    );
+                                    const filtered = affiliateSearch
+                                      ? allRefs.filter(r => r.name.toLowerCase().includes(affiliateSearch.toLowerCase()) || r.email.toLowerCase().includes(affiliateSearch.toLowerCase()))
+                                      : allRefs.filter(r => r.level <= 3); // Show first 3 levels by default, search shows all
+                                    if (filtered.length === 0) {
+                                      return (
+                                        <div className="text-center py-8 text-zinc-500 text-sm">
+                                          <Users className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                                          {affiliateSearch ? 'Nenhum resultado encontrado' : 'Nenhuma indicação ainda'}
+                                        </div>
+                                      );
+                                    }
+                                    return filtered.map((ref) => (
+                                      <div key={ref.id} className="flex items-center justify-between bg-zinc-800/40 rounded-lg p-3 hover:bg-zinc-800/60 transition-colors">
+                                        <div className="flex items-center gap-3">
+                                          <Avatar className="h-8 w-8">
+                                            <AvatarFallback className="bg-zinc-700 text-zinc-300 text-xs">{ref.name.charAt(0).toUpperCase()}</AvatarFallback>
+                                          </Avatar>
+                                          <div>
+                                            <div className="text-sm font-medium text-zinc-200">{ref.name}</div>
+                                            <div className="text-[10px] text-zinc-500">{fmtDate(ref.createdAt)}</div>
+                                          </div>
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                          <div className="text-right">
+                                            <div className="text-sm font-semibold text-zinc-300">${fmtUSDT(ref.totalInvested)}</div>
+                                            <div className="text-[10px] text-zinc-500">investido</div>
+                                          </div>
+                                          <Badge variant="outline" className={`text-[9px] ${ref.level === 1 ? 'border-emerald-500/30 text-emerald-400' : ref.level === 2 ? 'border-cyan-500/30 text-cyan-400' : 'border-zinc-600 text-zinc-400'}`}>
+                                            L{ref.level}
+                                          </Badge>
+                                        </div>
+                                      </div>
+                                    ));
+                                  })()}
+                                </div>
+                              </AccordionContent>
+                            </AccordionItem>
+                          </Accordion>
+                        </motion.div>
+
+                        {/* ═══════════════ 5. RECENT COMMISSIONS FEED ═══════════════ */}
+                        {affiliateData?.recentCommissions && affiliateData.recentCommissions.length > 0 && (
+                          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
+                            <div className="glass-card gradient-border rounded-2xl p-5 sm:p-6">
+                              <div className="flex items-center gap-2 mb-4">
+                                <Clock4 className="h-5 w-5 text-cyan-400" />
+                                <h3 className="text-lg font-bold text-white">Comissões Recentes</h3>
+                              </div>
+                              <div className="max-h-64 overflow-y-auto space-y-2 pr-1" style={{ scrollbarWidth: 'thin', scrollbarColor: '#27272a transparent' }}>
+                                {affiliateData.recentCommissions.map((comm) => {
+                                  const levelColors: Record<number, string> = {
+                                    1: 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10',
+                                    2: 'text-cyan-400 border-cyan-500/30 bg-cyan-500/10',
+                                    3: 'text-teal-400 border-teal-500/30 bg-teal-500/10',
+                                    4: 'text-blue-400 border-blue-500/30 bg-blue-500/10',
+                                    5: 'text-indigo-400 border-indigo-500/30 bg-indigo-500/10',
+                                  };
+                                  const colorClass = levelColors[comm.level] || 'text-zinc-400 border-zinc-500/30 bg-zinc-500/10';
+                                  return (
+                                    <div key={comm.id} className="flex items-center justify-between bg-zinc-800/30 rounded-lg p-3 hover:bg-zinc-800/50 transition-colors">
+                                      <div className="flex items-center gap-3">
+                                        <Badge variant="outline" className={`text-[9px] font-bold ${colorClass}`}>L{comm.level}</Badge>
+                                        <div>
+                                          <div className="text-sm text-zinc-300">{comm.user?.name || '***'}</div>
+                                          <div className="text-[10px] text-zinc-500">{comm.percentage}% de ${fmtUSDT(comm.baseAmount)}</div>
+                                        </div>
+                                      </div>
+                                      <div className="text-right">
+                                        <div className="text-sm font-bold text-emerald-400">+${fmtUSDT(comm.commissionAmount)}</div>
+                                        <div className="text-[10px] text-zinc-600">{relativeTime(comm.createdAt)}</div>
+                                      </div>
+                                    </div>
                                   );
                                 })}
                               </div>
-                            )}
-
-                    {/* Affiliate Link & Share Tools */}
-                    <Card className="bg-zinc-900 border-zinc-800">
-                      <CardContent className="p-4 sm:p-6">
-                        {!affiliateData?.linkUnlocked ? (
-                          <div className="text-center py-8">
-                            <Users className="h-12 w-12 text-zinc-600 mx-auto mb-4" />
-                            <p className="text-zinc-400 mb-4">{t('affiliates.unlockDesc')}</p>
-                            {user.hasInvested ? (
-                              <Button className="bg-emerald-600 hover:bg-cyan-700" onClick={handleUnlockAffiliate}>{t('affiliates.unlockBtn')}</Button>
-                            ) : (
-                              <Button className="bg-emerald-600 hover:bg-cyan-700" onClick={() => setActiveTab('investir')}>{t('dashboard.investNow')}</Button>
-                            )}
-                          </div>
-                        ) : (
-                          <div className="space-y-4">
-                            <div>
-                              <Label className="text-zinc-400 text-sm">{t('affiliates.yourCode')}</Label>
-                              <div className="flex items-center gap-2 mt-1">
-                                <code className="bg-zinc-800 px-4 py-2 rounded-lg text-cyan-400 font-mono text-base sm:text-lg flex-1 min-w-0 break-all">{affiliateData?.code || user.affiliateCode}</code>
-                                <CopyButton text={affiliateData?.code || user.affiliateCode || ''} t={t} />
-                              </div>
                             </div>
-                            <div>
-                              <Label className="text-zinc-400 text-sm">{t('affiliates.yourLink')}</Label>
-                              <div className="flex items-center gap-2 mt-1">
-                                <code className="bg-zinc-800 px-4 py-2 rounded-lg text-zinc-300 text-xs sm:text-sm flex-1 min-w-0 truncate">
-                                  {typeof window !== 'undefined' ? `${window.location.origin}?ref=${affiliateData?.code || user.affiliateCode}` : ''}
-                                </code>
-                                <CopyButton text={typeof window !== 'undefined' ? `${window.location.origin}?ref=${affiliateData?.code || user.affiliateCode}` : ''} t={t} />
-                              </div>
-                            </div>
-                            {/* Share Buttons */}
-                            <div className="pt-2">
-                              <Label className="text-zinc-400 text-sm mb-2 block">{t('affiliates.shareLink')}</Label>
-                              <div className="flex flex-wrap gap-2">
-                                {typeof window !== 'undefined' && (() => {
-                                  const link = `${window.location.origin}?ref=${affiliateData?.code || user.affiliateCode}`;
-                                  const text = encodeURIComponent('🚀 Invista com PLATAFORMA ROI! Use meu link e comece a ganhar:');
-                                  return (
-                                    <>
-                                      <a href={`https://wa.me/?text=${text}%20${encodeURIComponent(link)}`} target="_blank" rel="noopener noreferrer">
-                                        <Button size="sm" variant="outline" className="border-green-600/50 text-green-400 hover:bg-green-500/10 gap-1.5 min-h-[44px]">
-                                          <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.136.558 4.143 1.534 5.886L.057 23.64l5.888-1.545A11.95 11.95 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.82c-1.98 0-3.826-.544-5.41-1.49l-.387-.23-4.007 1.05 1.07-3.903-.253-.4A9.794 9.794 0 012.18 12c0-5.422 4.398-9.82 9.82-9.82 5.422 0 9.82 4.398 9.82 9.82 0 5.422-4.398 9.82-9.82 9.82z"/></svg>
-                                          {t('affiliates.shareWhatsApp')}
-                                        </Button>
-                                      </a>
-                                      <a href={`https://t.me/share/url?url=${encodeURIComponent(link)}&text=${text}`} target="_blank" rel="noopener noreferrer">
-                                        <Button size="sm" variant="outline" className="border-sky-600/50 text-sky-400 hover:bg-sky-500/10 gap-1.5 min-h-[44px]">
-                                          <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.479.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>
-                                          {t('affiliates.shareTelegram')}
-                                        </Button>
-                                      </a>
-                                      <a href={`https://twitter.com/intent/tweet?text=${text}&url=${encodeURIComponent(link)}`} target="_blank" rel="noopener noreferrer">
-                                        <Button size="sm" variant="outline" className="border-zinc-600/50 text-zinc-300 hover:bg-zinc-500/10 gap-1.5 min-h-[44px]">
-                                          <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-                                          {t('affiliates.shareTwitter')}
-                                        </Button>
-                                      </a>
-                                    </>
-                                  );
-                                })()}
-                              </div>
-                            </div>
-                          </div>
+                          </motion.div>
                         )}
-                      </CardContent>
-                    </Card>
 
-                    {affiliateData?.linkUnlocked && (
-                      <>
-                        {/* RANK CARD - Always visible */}
-                        <Card className="bg-zinc-900 border-zinc-800 overflow-hidden relative">
-                          <div className="absolute inset-0 opacity-5" style={{ background: `linear-gradient(135deg, ${affiliateData.currentRank?.color || '#22c55e'} 0%, transparent 60%)` }} />
-                          <CardContent className="p-4 sm:p-6 relative">
-                            <div className="flex flex-col sm:flex-row items-center gap-4">
-                              <div className="text-5xl sm:text-6xl" style={{ filter: `drop-shadow(0 0 12px ${(affiliateData.currentRank?.color || '#22c55e')}40)` }}>
-                                {affiliateData.currentRank?.icon || '🌱'}
-                              </div>
-                              <div className="text-center sm:text-left flex-1">
-                                <div className="text-sm text-zinc-400 mb-1">{t('affiliates.currentRank')}</div>
-                                <div className="text-2xl font-bold" style={{ color: affiliateData.currentRank?.color || '#22c55e' }}>
-                                  {affiliateData.currentRank?.name || 'Iniciante'}
-                                </div>
-                                {affiliateData.currentRank && d(affiliateData.currentRank.commissionBoost) > 0 && (
-                                  <div className="text-sm text-cyan-400 mt-1">+{affiliateData.currentRank.commissionBoost}% {t('affiliates.rankBoost')}</div>
-                                )}
-                                {affiliateData.currentRank?.perks && (
-                                  <div className="text-xs text-zinc-500 mt-1">
-                                    {(() => { try { return JSON.parse(affiliateData.currentRank.perks).join(' · '); } catch { return affiliateData.currentRank.perks; } })()}
-                                  </div>
-                                )}
-                              </div>
-                              {affiliateData.nextRank ? (
-                                <div className="text-center sm:text-right bg-zinc-800/50 rounded-lg p-3 min-w-[160px]">
-                                  <div className="text-xs text-zinc-400 mb-1">{t('affiliates.nextRank')}</div>
-                                  <div className="text-lg font-semibold" style={{ color: affiliateData.nextRank.color }}>{affiliateData.nextRank.icon} {affiliateData.nextRank.name}</div>
-                                  <div className="text-xs text-zinc-500 mt-1">
-                                    {affiliateData.nextRankReferralsNeeded! > 0 && <span>+{affiliateData.nextRankReferralsNeeded} {t('affiliates.referralsNeeded').toLowerCase()}</span>}
-                                    {affiliateData.nextRankReferralsNeeded! > 0 && affiliateData.nextRankEarningsNeeded! > 0 && <span> · </span>}
-                                    {affiliateData.nextRankEarningsNeeded! > 0 && <span>+${fmtUSDT(affiliateData.nextRankEarningsNeeded)} {t('affiliates.earningsNeeded').toLowerCase()}</span>}
-                                  </div>
-                                  <Progress value={Math.max(0, 100 - ((affiliateData.nextRankReferralsNeeded! + affiliateData.nextRankEarningsNeeded!) / (affiliateData.nextRank.minReferrals + d(affiliateData.nextRank.minEarnings)) * 100))} className="mt-2 h-1.5" />
-                                </div>
-                              ) : (
-                                <div className="text-center bg-zinc-800/50 rounded-lg p-3">
-                                  <div className="text-2xl">👑</div>
-                                  <div className="text-xs text-amber-400 mt-1">{t('affiliates.maxRank')}</div>
-                                </div>
-                              )}
-                            </div>
-                          </CardContent>
-                        </Card>
-
-                        {/* BADGES / CONQUISTAS */}
+                        {/* ═══════════════ BADGES / CONQUISTAS ═══════════════ */}
                         {affiliateData.badges && affiliateData.badges.length > 0 && (
-                          <Card className="bg-zinc-900 border-zinc-800">
-                            <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Award className="h-5 w-5 text-amber-400" /> {t('affiliates.badges')}</CardTitle></CardHeader>
-                            <CardContent>
+                          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.28 }}>
+                            <div className="glass-card rounded-2xl p-5 sm:p-6 border border-white/5">
+                              <div className="flex items-center gap-2 mb-4">
+                                <Award className="h-5 w-5 text-amber-400" />
+                                <h3 className="text-lg font-bold text-white">{t('affiliates.badges')}</h3>
+                              </div>
                               <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
                                 {affiliateData.badges.map((badge) => (
                                   <div
@@ -4639,67 +5405,18 @@ export default function PlataformaROI() {
                                   </div>
                                 ))}
                               </div>
-                            </CardContent>
-                          </Card>
+                            </div>
+                          </motion.div>
                         )}
 
-                        {/* STATS CARDS */}
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-                          <Card className="bg-zinc-900 border-zinc-800"><CardContent className="p-3 sm:p-4 text-center"><div className="text-lg sm:text-2xl font-bold text-cyan-400">${fmtUSDT(affiliateData.totalEarnings)}</div><div className="text-xs sm:text-sm text-zinc-400">{t('affiliates.totalEarnings')}</div></CardContent></Card>
-                          <Card className="bg-zinc-900 border-zinc-800"><CardContent className="p-3 sm:p-4 text-center"><div className="text-lg sm:text-2xl font-bold">${fmtUSDT(affiliateData.affiliateBalance)}</div><div className="text-xs sm:text-sm text-zinc-400">{t('affiliates.availableBalance')}</div></CardContent></Card>
-                          <Card className="bg-zinc-900 border-zinc-800"><CardContent className="p-3 sm:p-4 text-center"><div className="text-lg sm:text-2xl font-bold">{affiliateData.totalReferrals}</div><div className="text-xs sm:text-sm text-zinc-400">{t('affiliates.totalReferrals')}</div></CardContent></Card>
-                          <Card className="bg-zinc-900 border-zinc-800"><CardContent className="p-3 sm:p-4 text-center"><div className="text-lg sm:text-2xl font-bold">{affiliateData.directReferrals ?? (affiliateData.referralTree?.[1]?.length || 0)}</div><div className="text-xs sm:text-sm text-zinc-400">{t('affiliates.directReferrals')}</div></CardContent></Card>
-                        </div>
-
-                        {/* COMMISSION STRUCTURE */}
-                        <Card className="bg-zinc-900 border-zinc-800">
-                          <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Activity className="h-5 w-5 text-cyan-400" /> {t('affiliates.commissionStructure')}</CardTitle></CardHeader>
-                          <CardContent>
-                            {affiliateData.commissionMode && (
-                              <div className="mb-3 flex flex-wrap gap-2">
-                                <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30" variant="outline">
-                                  {t(`affiliates.mode${affiliateData.commissionMode === 'system_margin' ? 'SystemMargin' : affiliateData.commissionMode === 'roi_profit' ? 'TradingProfit' : 'RevenuePool'}`)}
-                                </Badge>
-                                {affiliateData.commissionMode === 'roi_profit' && affiliateData.investmentBonusPct && affiliateData.investmentBonusPct > 0 && (
-                                  <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30" variant="outline">
-                                    +{affiliateData.investmentBonusPct}% bônus locação
-                                  </Badge>
-                                )}
-                              </div>
-                            )}
-                            <div className="space-y-2">
-                              {[1, 2, 3, 4, 5].map(level => {
-                                const refs = affiliateData.referralTree?.[level] || [];
-                                const comm = affiliateData.commissionByLevel?.find(c => c.level === level);
-                                const levelPct = affiliateData.affiliateLevels?.find(l => l.level === level);
-                                return (
-                                  <div key={level} className="flex items-center justify-between bg-zinc-800/50 rounded-lg p-3">
-                                    <div className="flex items-center gap-3">
-                                      <Badge variant="outline" className="border-cyan-500/30 text-cyan-400">{t('affiliates.level')} {level}</Badge>
-                                      <span className="text-sm text-zinc-300">{levelPct?.percentage || '?'}%</span>
-                                      <span className="text-sm text-zinc-500">{refs.length} {t('common.referrals')}</span>
-                                    </div>
-                                    <span className="text-sm text-cyan-400">${fmtUSDT(comm?._sum?.commissionAmount || 0)} {t('common.earned')}</span>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                            {affiliateData.commissionMode === 'roi_profit' && (
-                              <div className="mt-3 p-3 bg-zinc-800/30 rounded-lg border border-zinc-700/50">
-                                <div className="text-xs text-zinc-400">
-                                  <span className="text-cyan-400 font-medium">💡 {t('affiliates.howItWorks')}:</span>{' '}
-                                  {t('affiliates.tradingProfitExplanation')}
-                                </div>
-                              </div>
-                            )}
-                          </CardContent>
-                        </Card>
-
-                        {/* MILESTONES - Always show if data exists */}
+                        {/* ═══════════════ MILESTONES ═══════════════ */}
                         {affiliateData.milestones && affiliateData.milestones.length > 0 && (
-                          <Card className="bg-zinc-900 border-zinc-800">
-                            <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Target className="h-5 w-5 text-cyan-400" /> {t('affiliates.milestones')}</CardTitle></CardHeader>
-                            <CardContent>
+                          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+                            <div className="glass-card rounded-2xl p-5 sm:p-6 border border-white/5">
+                              <div className="flex items-center gap-2 mb-4">
+                                <Target className="h-5 w-5 text-cyan-400" />
+                                <h3 className="text-lg font-bold text-white">{t('affiliates.milestones')}</h3>
+                              </div>
                               <div className="space-y-3">
                                 {affiliateData.milestones.map((m) => {
                                   const directRefs = affiliateData.directReferrals ?? (affiliateData.referralTree?.[1]?.length || 0);
@@ -4731,15 +5448,18 @@ export default function PlataformaROI() {
                                   );
                                 })}
                               </div>
-                            </CardContent>
-                          </Card>
+                            </div>
+                          </motion.div>
                         )}
 
-                        {/* ACTIVE CONTESTS */}
+                        {/* ═══════════════ CONTESTS ═══════════════ */}
                         {affiliateData.contests && affiliateData.contests.length > 0 && (
-                          <Card className="bg-zinc-900 border-zinc-800">
-                            <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Trophy className="h-5 w-5 text-amber-400" /> {t('affiliates.activeContests')}</CardTitle></CardHeader>
-                            <CardContent>
+                          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.32 }}>
+                            <div className="glass-card rounded-2xl p-5 sm:p-6 border border-amber-500/10">
+                              <div className="flex items-center gap-2 mb-4">
+                                <Trophy className="h-5 w-5 text-amber-400" />
+                                <h3 className="text-lg font-bold text-white">{t('affiliates.activeContests')}</h3>
+                              </div>
                               <div className="space-y-3">
                                 {affiliateData.contests.map((c) => (
                                   <div key={c.id} className="bg-gradient-to-r from-amber-500/5 to-cyan-500/5 border border-amber-500/20 rounded-lg p-4">
@@ -4757,15 +5477,18 @@ export default function PlataformaROI() {
                                   </div>
                                 ))}
                               </div>
-                            </CardContent>
-                          </Card>
+                            </div>
+                          </motion.div>
                         )}
 
-                        {/* LEADERBOARD */}
+                        {/* ═══════════════ LEADERBOARD ═══════════════ */}
                         {affiliateData.leaderboard && affiliateData.leaderboard.length > 0 && (
-                          <Card className="bg-zinc-900 border-zinc-800">
-                            <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Medal className="h-5 w-5 text-amber-400" /> {t('affiliates.leaderboardTitle')}</CardTitle></CardHeader>
-                            <CardContent>
+                          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.34 }}>
+                            <div className="glass-card rounded-2xl p-5 sm:p-6 border border-white/5">
+                              <div className="flex items-center gap-2 mb-4">
+                                <Medal className="h-5 w-5 text-amber-400" />
+                                <h3 className="text-lg font-bold text-white">{t('affiliates.leaderboardTitle')}</h3>
+                              </div>
                               <div className="space-y-2">
                                 {affiliateData.leaderboard.map((entry, idx) => (
                                   <div key={idx} className={`flex items-center justify-between rounded-lg p-3 ${idx === 0 ? 'bg-amber-500/10 border border-amber-500/20' : idx === 1 ? 'bg-zinc-400/5 border border-zinc-500/20' : idx === 2 ? 'bg-amber-700/5 border border-amber-700/20' : 'bg-zinc-800/50'}`}>
@@ -4784,28 +5507,210 @@ export default function PlataformaROI() {
                                   </div>
                                 ))}
                               </div>
-                            </CardContent>
-                          </Card>
+                            </div>
+                          </motion.div>
                         )}
 
-                        {/* WITHDRAW */}
-                        {d(user.affiliateBalance) > 0 && (
-                          <Card className="bg-zinc-900 border-zinc-800">
-                            <CardHeader><CardTitle className="text-lg">{t('affiliates.withdraw')}</CardTitle></CardHeader>
-                            <CardContent>
+                        {/* ═══════════════ 6. AFFILIATE WITHDRAWAL SECTION ═══════════════ */}
+                        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.36 }}>
+                          <div className="glass-card gradient-border rounded-2xl p-5 sm:p-6">
+                            <div className="flex items-center gap-2 mb-4">
+                              <HandCoins className="h-5 w-5 text-emerald-400" />
+                              <h3 className="text-lg font-bold text-white">{t('affiliates.withdraw')}</h3>
+                              <div className="ml-auto flex items-center gap-2">
+                                <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30" variant="outline">Saque Diário</Badge>
+                                <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30" variant="outline">0% Taxa</Badge>
+                              </div>
+                            </div>
+
+                            {/* Balance Display */}
+                            <div className="flex items-center justify-between mb-5 p-4 rounded-xl bg-zinc-800/40 border border-zinc-700/30">
+                              <div>
+                                <div className="text-xs text-zinc-500">{t('affiliates.availableBalance')}</div>
+                                <div className="text-3xl font-bold text-emerald-400" style={{ textShadow: '0 0 20px rgba(16,185,129,0.3)' }}>${fmtUSDT(user.affiliateBalance)}</div>
+                              </div>
+                              <div className="text-5xl opacity-20">💰</div>
+                            </div>
+
+                            {d(user.affiliateBalance) > 0 ? (
                               <form onSubmit={handleAffiliateWithdraw} className="space-y-4">
                                 <div className="grid sm:grid-cols-3 gap-4">
-                                  <div><Label className="text-zinc-400">{t('deposit.amount')}</Label><Input name="amount" type="number" step="0.01" min="1" max={d(user.affiliateBalance)} required className="bg-zinc-800 border-zinc-700 mt-1" /></div>
-                                  <div><Label className="text-zinc-400">{t('deposit.method')}</Label><Select name="method" defaultValue="usdt_trc20"><SelectTrigger className="bg-zinc-800 border-zinc-700 mt-1"><SelectValue /></SelectTrigger><SelectContent className="bg-zinc-800"><SelectItem value="usdt_trc20">USDT TRC20</SelectItem><SelectItem value="pix">PIX</SelectItem></SelectContent></Select></div>
-                                  <div><Label className="text-zinc-400">{t('affiliates.destination')}</Label><Input name="destination" required className="bg-zinc-800 border-zinc-700 mt-1" placeholder={t('withdrawal.destinationPlaceholder')} /></div>
+                                  <div>
+                                    <Label className="text-zinc-400 text-sm">{t('deposit.amount')}</Label>
+                                    <Input name="amount" type="number" step="0.01" min="1" max={d(user.affiliateBalance)} required className="bg-zinc-800/50 border-zinc-700/50 mt-1 h-10" placeholder="0.00" />
+                                  </div>
+                                  <div>
+                                    <Label className="text-zinc-400 text-sm">{t('deposit.method')}</Label>
+                                    <Select name="method" defaultValue="usdt_trc20">
+                                      <SelectTrigger className="bg-zinc-800/50 border-zinc-700/50 mt-1 h-10"><SelectValue /></SelectTrigger>
+                                      <SelectContent className="bg-zinc-800">
+                                        <SelectItem value="usdt_trc20">USDT TRC20</SelectItem>
+                                        <SelectItem value="pix">PIX</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                  <div>
+                                    <Label className="text-zinc-400 text-sm">{t('affiliates.destination')}</Label>
+                                    <Input name="destination" required className="bg-zinc-800/50 border-zinc-700/50 mt-1 h-10" placeholder={t('withdrawal.destinationPlaceholder')} />
+                                  </div>
                                 </div>
-                                <Button type="submit" className="bg-emerald-600 hover:bg-cyan-700">{t('affiliates.withdraw')}</Button>
+                                <Button type="submit" className="bg-emerald-600 hover:bg-emerald-700 text-white h-11 w-full sm:w-auto px-8">
+                                  <ArrowUpRight className="mr-2 h-4 w-4" /> {t('affiliates.withdraw')}
+                                </Button>
                               </form>
-                            </CardContent>
-                          </Card>
-                        )}
+                            ) : (
+                              <div className="text-center py-4 text-zinc-500 text-sm">
+                                <Wallet className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                                Saldo insuficiente para saque
+                              </div>
+                            )}
+                          </div>
+                        </motion.div>
                       </>
                     )}
+
+                    {/* ═══════════════ VOUCHER DASHBOARD FOR LEADERS ═══════════════ */}
+                    {userVouchers.length > 0 && (
+                      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <h3 className="text-lg font-semibold flex items-center gap-2"><Ticket className="h-5 w-5 text-purple-400" /> Meus Vouchers</h3>
+                              <p className="text-sm text-zinc-500 mt-1">Saldo de voucher só pode ser usado para investir em planos de copy trading. Saques desbloqueiam conforme você cumpre as metas.</p>
+                            </div>
+                            <Button variant="outline" className="border-zinc-700 text-purple-400 hover:bg-purple-500/10" onClick={recalculateVoucherProgress} disabled={voucherProgressLoading}>
+                              <RefreshCw className={`mr-2 h-4 w-4 ${voucherProgressLoading ? 'animate-spin' : ''}`} /> Atualizar
+                            </Button>
+                          </div>
+
+                          {userVouchers.map((v: any) => {
+                            const available = d(v.amount) - d(v.usedAmount);
+                            const goalTarget = d(v.goalNetworkMultiple) * d(v.amount);
+                            const referralPct = v.goalDirectReferrals > 0 ? Math.round((v.qualifyingReferrals / v.goalDirectReferrals) * 100) : 0;
+                            const networkPct = goalTarget > 0 ? Math.round((d(v.currentNetworkInvestment) / goalTarget) * 100) : 0;
+                            const unlockPct = d(v.withdrawalUnlockPct);
+                            const daysLeft = v.status === 'active' ? Math.max(0, Math.ceil((new Date(v.deadline).getTime() - Date.now()) / 86400000)) : 0;
+
+                            return (
+                              <Card key={v.id} className={`border-2 ${v.status === 'active' ? 'border-purple-500/40 bg-purple-500/5' : v.status === 'completed' ? 'border-cyan-500/40 bg-cyan-500/5' : 'border-zinc-700 bg-zinc-900'}`}>
+                                <CardContent className="p-5">
+                                  <div className="flex items-center justify-between mb-3">
+                                    <div className="flex items-center gap-2">
+                                      <Badge className={v.status === 'active' ? 'bg-purple-500/20 text-purple-400 border-purple-500/30' : v.status === 'completed' ? 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30' : 'bg-red-500/20 text-red-400 border-red-500/30'} variant="outline">
+                                        {v.status === 'active' ? '🟢 Ativo' : v.status === 'completed' ? '✅ Completo' : v.status === 'expired' ? '⏰ Expirado' : '🚫 Revogado'}
+                                      </Badge>
+                                      <Badge className="bg-zinc-700 text-zinc-300" variant="outline">
+                                        {v.type === 'basic' ? t('copyTraders.planBasic') : v.type === 'premium' ? t('copyTraders.planPremium') : t('copyTraders.planCustom')}
+                                      </Badge>
+                                    </div>
+                                    {v.status === 'active' && (
+                                      <div className={`text-sm font-medium ${daysLeft <= 7 ? 'text-red-400' : 'text-zinc-400'}`}>
+                                        ⏰ {daysLeft} dias restantes
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  {/* Balance Section */}
+                                  <div className="grid grid-cols-3 gap-4 mb-4">
+                                    <div className="text-center p-3 rounded-lg bg-zinc-800/50">
+                                      <div className="text-xs text-zinc-500 mb-1">Total do Voucher</div>
+                                      <div className="text-lg font-bold text-white">{fmtUSDT(v.amount)} USDT</div>
+                                    </div>
+                                    <div className="text-center p-3 rounded-lg bg-zinc-800/50">
+                                      <div className="text-xs text-zinc-500 mb-1">Disponível para Usar</div>
+                                      <div className="text-lg font-bold text-cyan-400">{fmtUSDT(available)} USDT</div>
+                                    </div>
+                                    <div className="text-center p-3 rounded-lg bg-zinc-800/50">
+                                      <div className="text-xs text-zinc-500 mb-1">Desbloqueio de Saque</div>
+                                      <div className={`text-lg font-bold ${unlockPct >= 100 ? 'text-cyan-400' : unlockPct > 0 ? 'text-amber-400' : 'text-red-400'}`}>{unlockPct}%</div>
+                                    </div>
+                                  </div>
+
+                                  {/* Goals Progress */}
+                                  {v.status === 'active' && (
+                                    <div className="space-y-3">
+                                      <div className="text-sm font-medium text-zinc-300 mb-2">📊 Progresso das Metas</div>
+                                      <div>
+                                        <div className="flex justify-between text-xs mb-1">
+                                          <span className="text-zinc-400">🤝 Indicações qualificadas (que investiram ≥ {fmtUSDT(v.goalMinReferralInvest)} USDT)</span>
+                                          <span className="font-medium">{v.qualifyingReferrals}/{v.goalDirectReferrals}</span>
+                                        </div>
+                                        <Progress value={Math.min(100, referralPct)} className="h-3 bg-zinc-800 [&>[data-slot=indicator]]:bg-cyan-500" />
+                                      </div>
+                                      <div>
+                                        <div className="flex justify-between text-xs mb-1">
+                                          <span className="text-zinc-400">💰 Investimento total da rede</span>
+                                          <span className="font-medium">{fmtUSDT(v.currentNetworkInvestment)}/{fmtUSDT(goalTarget)} USDT</span>
+                                        </div>
+                                        <Progress value={Math.min(100, networkPct)} className="h-3 bg-zinc-800 [&>[data-slot=indicator]]:bg-blue-500" />
+                                      </div>
+
+                                      {/* Gradual Unlock Timeline */}
+                                      <div className="mt-4 p-3 rounded-lg bg-zinc-800/50">
+                                        <div className="text-xs font-medium text-zinc-300 mb-2">🔓 Desbloqueio Gradual de Saque</div>
+                                        <div className="flex items-center gap-1">
+                                          <div className={`flex-1 h-3 rounded-l-full ${unlockPct >= 25 ? 'bg-cyan-500' : 'bg-zinc-700'}`} />
+                                          <div className={`flex-1 h-3 ${unlockPct >= 50 ? 'bg-cyan-500' : 'bg-zinc-700'}`} />
+                                          <div className={`flex-1 h-3 ${unlockPct >= 75 ? 'bg-cyan-500' : 'bg-zinc-700'}`} />
+                                          <div className={`flex-1 h-3 rounded-r-full ${unlockPct >= 100 ? 'bg-cyan-500' : 'bg-zinc-700'}`} />
+                                        </div>
+                                        <div className="flex justify-between text-[10px] mt-1 text-zinc-500">
+                                          <span className={unlockPct >= 25 ? 'text-cyan-400' : ''}>25%</span>
+                                          <span className={unlockPct >= 50 ? 'text-cyan-400' : ''}>50%</span>
+                                          <span className={unlockPct >= 75 ? 'text-cyan-400' : ''}>75%</span>
+                                          <span className={unlockPct >= 100 ? 'text-cyan-400' : ''}>100%</span>
+                                        </div>
+                                        <div className="mt-2 space-y-1 text-[10px] text-zinc-500">
+                                          <div className={unlockPct >= 25 ? 'text-cyan-400' : ''}>✓ 25% — Trazer 50% das indicações necessárias</div>
+                                          <div className={unlockPct >= 50 ? 'text-cyan-400' : ''}>✓ 50% — 75% das indicações + 50% do investimento da rede</div>
+                                          <div className={unlockPct >= 75 ? 'text-cyan-400' : ''}>✓ 75% — 100% das indicações + 75% do investimento</div>
+                                          <div className={unlockPct >= 100 ? 'text-cyan-400' : ''}>✓ 100% — Todas as metas completas</div>
+                                        </div>
+                                      </div>
+
+                                      {unlockPct === 0 && (
+                                        <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20">
+                                          <div className="text-sm text-red-400 font-medium">⛔ Saques bloqueados</div>
+                                          <div className="text-xs text-zinc-400 mt-1">Cumpra as metas para desbloquear gradualmente seus saques.</div>
+                                        </div>
+                                      )}
+                                      {unlockPct > 0 && unlockPct < 100 && (
+                                        <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                                          <div className="text-sm text-amber-400 font-medium">⚠️ Saques parcialmente desbloqueados ({unlockPct}%)</div>
+                                          <div className="text-xs text-zinc-400 mt-1">Você pode sacar até {unlockPct}% do seu saldo normal. Continue cumprindo as metas para desbloquear mais.</div>
+                                        </div>
+                                      )}
+                                      {unlockPct >= 100 && (
+                                        <div className="p-3 rounded-lg bg-cyan-500/10 border border-cyan-500/20">
+                                          <div className="text-sm text-cyan-400 font-medium">✅ Saques totalmente desbloqueados!</div>
+                                          <div className="text-xs text-zinc-400 mt-1">Parabéns! Todas as metas foram cumpridas. Você pode sacar normalmente.</div>
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+
+                                  {/* Usage History */}
+                                  {v.usages && v.usages.length > 0 && (
+                                    <div className="mt-4">
+                                      <div className="text-sm font-medium text-zinc-300 mb-2">📝 Histórico de Uso</div>
+                                      <div className="space-y-1">
+                                        {v.usages.map((u: any) => (
+                                          <div key={u.id} className="flex justify-between text-xs bg-zinc-800/50 rounded p-2">
+                                            <span className="text-zinc-400">{(u as any).investment?.trader?.name || (u as any).investment?.plan?.name || 'Investimento'} — {fmtDate(u.createdAt)}</span>
+                                            <span className="text-amber-400">-{fmtUSDT(u.amount)} USDT</span>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+                                </CardContent>
+                              </Card>
+                            );
+                          })}
+                        </div>
+                      </motion.div>
+                    )}
+
                   </div>
                 )}
 
@@ -6408,15 +7313,15 @@ Seus 10 indicados diretos investem $100/dia cada:
       </div>
 
       {/* MOBILE BOTTOM NAV */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-zinc-900/95 backdrop-blur-lg border-t border-zinc-800 lg:hidden z-50 safe-area-bottom">
-        <div className="flex justify-around py-1.5 px-1">
+      <nav className="fixed bottom-0 left-0 right-0 bg-[#0a0a0f]/90 backdrop-blur-xl border-t border-white/[0.06] lg:hidden z-50 safe-area-bottom">
+        <div className="flex justify-around py-1.5 px-1 pb-[max(0.375rem,env(safe-area-inset-bottom))]">
           {/* Show only 5 key items on mobile: Home, Investir, Extrato, Afiliados, Perfil */}
           {navItems
             .filter(item => mobileNavIds.includes(item.id))
             .slice(0, 5)
             .map(item => (
-              <button key={item.id} onClick={() => setActiveTab(item.id)} className={`flex flex-col items-center gap-0.5 px-3 py-2 rounded-lg text-[10px] whitespace-nowrap min-w-[52px] transition-colors ${activeTab === item.id ? 'text-cyan-400' : 'text-zinc-500 active:text-zinc-300'}`}>
-                <item.icon className="h-5 w-5" />
+              <button key={item.id} onClick={() => setActiveTab(item.id)} className={`flex flex-col items-center gap-0.5 px-3 py-2 rounded-lg text-[10px] whitespace-nowrap min-w-[52px] transition-all duration-200 ${activeTab === item.id ? 'text-emerald-400' : 'text-zinc-500 active:text-zinc-300'}`}>
+                <item.icon className={`h-5 w-5 ${activeTab === item.id ? 'drop-shadow-[0_0_4px_rgba(16,185,129,0.5)]' : ''}`} />
                 <span className="font-medium">{item.id === 'home' ? t('sidebar.home') : item.label}</span>
               </button>
             ))}
