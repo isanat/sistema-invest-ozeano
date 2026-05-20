@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
           fee: ds(fee),
           netAmount: ds(netAmount),
           method: data.method,
-          address: data.method === 'usdt_trc20' ? data.destination : null,
+          address: (data.method === 'usdt_trc20' || data.method === 'usdt_polygon') ? data.destination : null,
           pixKey: data.method === 'pix' ? data.destination : null,
           status: 'pending',
         },

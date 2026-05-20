@@ -142,7 +142,7 @@ export async function POST(request: NextRequest) {
             totalRoi: ds(totalRoi),
             startDate,
             endDate,
-            rankBonusPct: ds(rankBonusPct),
+            teamBonusPct: ds(rankBonusPct),
             status: 'active',
           },
           include: {
@@ -204,7 +204,7 @@ export async function POST(request: NextRequest) {
             totalRoi: ds(totalRoi),
             startDate,
             endDate,
-            rankBonusPct: ds(rankBonusPct),
+            teamBonusPct: ds(rankBonusPct),
             status: 'active',
           },
           include: {

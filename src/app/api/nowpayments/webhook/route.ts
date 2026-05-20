@@ -191,8 +191,21 @@ async function processPaymentWebhook(
 
     // Credit user balance
     await db.$transaction(async (tx) => {
-      // Add to user balance
-      await tx.$executeRaw`UPDATE "User" SET balance = (CAST(balance AS NUMERIC) + ${userAmount})::text, "totalInvested" = (CAST("totalInvested" AS NUMERIC) + ${userAmount})::text, "hasInvested" = true WHERE id = ${deposit.userId}`;
+      // Acquire row lock on the deposit to prevent concurrent webhook processing
+      const lockedDeposit = await tx.$queryRaw<Array<{ id: string; paymentStatus: string; splitProcessed: boolean }>>`
+        SELECT id, "paymentStatus", "splitProcessed" FROM "NowPaymentsDeposit" WHERE id = ${deposit.id} FOR UPDATE
+      `;
+
+      // Double-check: if already processed with a final status, skip
+      if (lockedDeposit.length > 0) {
+        const currentStatus = lockedDeposit[0].paymentStatus;
+        if (isPaymentFinal(currentStatus) && lockedDeposit[0].splitProcessed) {
+          return; // Already processed by another webhook
+        }
+      }
+
+      // Add to user balance (totalInvested only increases on plan investment, not deposit)
+      await tx.$executeRaw`UPDATE "User" SET balance = (CAST(balance AS NUMERIC) + ${userAmount})::text, "hasInvested" = true WHERE id = ${deposit.userId}`;
 
       // Update deposit status if linked
       if (deposit.depositId) {
@@ -233,6 +246,12 @@ async function processPaymentWebhook(
           },
         });
       }
+
+      // Update deposit record (inside transaction to prevent double-credit on re-processing)
+      await tx.nowPaymentsDeposit.update({
+        where: { id: deposit.id },
+        data: updateData,
+      });
     });
   } else if (paymentStatus === 'failed' || paymentStatus === 'expired' || paymentStatus === 'refunded') {
     // Mark deposit as failed
@@ -250,12 +269,6 @@ async function processPaymentWebhook(
       });
     }
   }
-
-  // Update deposit record
-  await db.nowPaymentsDeposit.update({
-    where: { id: deposit.id },
-    data: updateData,
-  });
 }
 
 // ============================================================================
@@ -299,35 +312,33 @@ async function processPayoutWebhook(
       ? JSON.stringify(body.withdrawals)
       : payout.txHash;
 
-    // Update linked deposit
-    if (payout.depositId) {
-      await db.deposit.update({
-        where: { id: payout.depositId },
-        data: {
-          status: 'confirmed',
-          processedAt: new Date(),
-        },
-      });
-    }
+    await db.$transaction(async (tx) => {
+      // Update linked deposit
+      if (payout.depositId) {
+        await tx.deposit.update({
+          where: { id: payout.depositId },
+          data: {
+            status: 'confirmed',
+            processedAt: new Date(),
+          },
+        });
+      }
 
-    // Update linked transaction
-    const linkedDeposit = payout.depositId
-      ? await db.deposit.findUnique({ where: { id: payout.depositId } })
-      : null;
+      // Update linked transaction
+      if (payout.depositId) {
+        await tx.transaction.updateMany({
+          where: {
+            referenceId: payout.depositId,
+            referenceType: 'Deposit',
+            type: 'withdrawal',
+          },
+          data: { status: 'completed' },
+        });
+      }
 
-    if (linkedDeposit) {
-      await db.transaction.updateMany({
-        where: {
-          referenceId: linkedDeposit.id,
-          referenceType: 'Deposit',
-          type: 'withdrawal',
-        },
-        data: { status: 'completed' },
-      });
-    }
-
-    // Update user totalWithdrawn
-    await db.$executeRaw`UPDATE "User" SET "totalWithdrawn" = (CAST("totalWithdrawn" AS NUMERIC) + ${d(payout.amount)})::text WHERE id = ${payout.userId}`;
+      // Update user totalWithdrawn
+      await tx.$executeRaw`UPDATE "User" SET "totalWithdrawn" = (CAST("totalWithdrawn" AS NUMERIC) + ${d(payout.amount)})::text WHERE id = ${payout.userId}`;
+    });
 
   } else if (payoutStatus === 'FAILED' || payoutStatus === 'REJECTED') {
     // Refund the user's balance since payout failed

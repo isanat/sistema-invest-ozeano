@@ -272,38 +272,46 @@ export async function GET(request: NextRequest) {
         }
       }
 
-      // Award qualifying badges in the background
+      // Award qualifying badges in a transaction to prevent double-crediting
       if (badgesToAward.length > 0) {
         try {
-          for (const badgeId of badgesToAward) {
-            await db.affiliateBadgeAward.upsert({
-              where: { userId_badgeId: { userId: session.userId, badgeId } },
-              create: { userId: session.userId, badgeId },
-              update: {},
-            });
-            // Add to awardedMap so it shows as earned immediately
-            awardedMap.set(badgeId, new Date());
+          await db.$transaction(async (tx) => {
+            for (const badgeId of badgesToAward) {
+              // Use findUnique inside transaction to prevent race conditions
+              const existing = await tx.affiliateBadgeAward.findUnique({
+                where: { userId_badgeId: { userId: session.userId, badgeId } },
+              });
 
-            // If badge has cash reward, credit it
-            const badge = allBadges.find(b => b.id === badgeId);
-            if (badge && badge.rewardType === 'cash') {
-              const rewardValue = d(badge.rewardValue);
-              if (rewardValue > 0) {
-                await db.$executeRaw`UPDATE "User" SET "affiliateBalance" = (CAST("affiliateBalance" AS NUMERIC) + ${rewardValue})::text, "totalAffiliateEarnings" = (CAST("totalAffiliateEarnings" AS NUMERIC) + ${rewardValue})::text WHERE id = ${session.userId}`;
-                await db.transaction.create({
-                  data: {
-                    userId: session.userId,
-                    type: 'affiliate_commission',
-                    amount: rewardValue.toFixed(8),
-                    status: 'completed',
-                    description: `Recompensa badge: ${badge.name}`,
-                    referenceId: badgeId,
-                    referenceType: 'AffiliateBadge',
-                  },
-                });
+              if (existing) continue; // Already awarded by another concurrent request
+
+              await tx.affiliateBadgeAward.create({
+                data: { userId: session.userId, badgeId },
+              });
+
+              // Add to awardedMap so it shows as earned immediately
+              awardedMap.set(badgeId, new Date());
+
+              // If badge has cash reward, credit it
+              const badge = allBadges.find(b => b.id === badgeId);
+              if (badge && badge.rewardType === 'cash') {
+                const rewardValue = d(badge.rewardValue);
+                if (rewardValue > 0) {
+                  await tx.$executeRaw`UPDATE "User" SET "affiliateBalance" = (CAST("affiliateBalance" AS NUMERIC) + ${rewardValue})::text, "totalAffiliateEarnings" = (CAST("totalAffiliateEarnings" AS NUMERIC) + ${rewardValue})::text WHERE id = ${session.userId}`;
+                  await tx.transaction.create({
+                    data: {
+                      userId: session.userId,
+                      type: 'affiliate_commission',
+                      amount: rewardValue.toFixed(8),
+                      status: 'completed',
+                      description: `Recompensa badge: ${badge.name}`,
+                      referenceId: badgeId,
+                      referenceType: 'AffiliateBadge',
+                    },
+                  });
+                }
               }
             }
-          }
+          });
         } catch (awardErr) {
           console.error('[Affiliate] Error auto-awarding badges:', awardErr);
         }

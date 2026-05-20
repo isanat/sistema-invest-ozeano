@@ -478,8 +478,12 @@ export async function verifyWebhookSignature(body: Record<string, unknown>, sign
   const config = await getConfig();
 
   if (!config.ipnSecret) {
-    console.warn('[NowPayments] IPN_SECRET not configured, skipping webhook verification');
-    return true; // Allow in development
+    if (process.env.NODE_ENV === 'production') {
+      console.error('[NowPayments] CRITICAL: IPN_SECRET not configured in production - webhook REJECTED');
+      return false;
+    }
+    console.warn('[NowPayments] IPN_SECRET not configured, skipping webhook verification (development only)');
+    return true;
   }
 
   try {

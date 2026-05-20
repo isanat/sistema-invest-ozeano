@@ -12,7 +12,6 @@ import {
 
 export async function GET(request: NextRequest) {
   try {
-    await requireAuth();
     const session = await requireAuth();
 
     const { searchParams } = new URL(request.url);

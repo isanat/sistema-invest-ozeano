@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
     // ========== WITHDRAWAL INTERVAL CHECK ==========
     const intervalHours = d(configMap.withdrawal_interval_hours) || 0;
     if (intervalHours > 0) {
-      const lastWithdrawal = await db.investment.findFirst({
+      const lastWithdrawal = await db.deposit.findFirst({
         where: {
           userId: session.userId,
           type: 'withdrawal',
@@ -135,8 +135,8 @@ export async function POST(request: NextRequest) {
       const usdtBrlRate = await getUSDTBRLRate();
       const brlAmount = data.method === 'pix' ? data.amount * usdtBrlRate : null;
 
-      // Create investment record (withdrawal)
-      const investment = await tx.investment.create({
+      // Create deposit record (withdrawal)
+      const deposit = await tx.deposit.create({
         data: {
           userId: session.userId,
           amount: ds(data.amount),
@@ -144,7 +144,7 @@ export async function POST(request: NextRequest) {
           usdtRate: ds(usdtBrlRate),
           type: 'withdrawal',
           method: data.method,
-          network: data.method === 'usdt_trc20' ? 'TRC20' : null,
+          network: data.method === 'usdt_trc20' ? 'TRC20' : data.method === 'usdt_polygon' ? 'Polygon' : null,
           status: 'pending',
           destination: data.destination,
           description: `Saque ${data.method === 'pix' ? 'PIX' : data.method.toUpperCase()} - ${dusdt(data.amount)} USDT${fee > 0 ? ` (taxa: ${dusdt(fee)} USDT)` : ''}`,
@@ -162,16 +162,16 @@ export async function POST(request: NextRequest) {
           usdtRate: ds(usdtBrlRate),
           status: 'pending',
           description: `Saque solicitado - ${data.method === 'pix' ? 'PIX' : data.method.toUpperCase()}${fee > 0 ? ` (taxa: ${dusdt(fee)} USDT)` : ''}`,
-          referenceId: investment.id,
-          referenceType: 'Investment',
+          referenceId: deposit.id,
+          referenceType: 'Deposit',
         },
       });
 
-      return { investment, fee, netAmount };
+      return { deposit, fee, netAmount };
     });
 
     return apiSuccess({
-      withdrawal: result.investment,
+      withdrawal: result.deposit,
       fee: dusdt(result.fee),
       netAmount: dusdt(result.netAmount),
       message: 'Solicitação de saque criada. Aguarde o processamento.',

@@ -8051,12 +8051,31 @@ Seus 10 indicados diretos investem $100/dia cada:
                 </div>
               </>
             )}
-            {siteConfig.manualWithdrawalEnabled && !siteConfig.nowpaymentsWithdrawalEnabled && (
-              <div className="bg-zinc-800/50 rounded-lg p-3 text-sm">
-                <p className="text-zinc-400">Sua solicitação de saque será analisada e processada manualmente pela equipe.</p>
-                <p className="text-zinc-500 text-xs mt-1">Prazo: até 24h úteis.</p>
-              </div>
-            )}
+            {siteConfig.manualWithdrawalEnabled && !siteConfig.nowpaymentsWithdrawalEnabled && (() => {
+              const manualMethods = [];
+              if (siteConfig.hasPix) manualMethods.push({ value: 'pix', label: 'PIX' });
+              if (siteConfig.hasUsdt) {
+                manualMethods.push({ value: 'usdt_trc20', label: 'USDT TRC20' });
+                manualMethods.push({ value: 'usdt_polygon', label: 'USDT Polygon' });
+              }
+              if (manualMethods.length === 0) return null;
+              return (
+                <>
+                  <div><Label className="text-zinc-300">{t('deposit.method')}</Label>
+                    <Select name="method" defaultValue={manualMethods[0].value}><SelectTrigger className="bg-zinc-800 border-zinc-700 mt-1"><SelectValue /></SelectTrigger>
+                      <SelectContent className="bg-zinc-800">
+                        {manualMethods.map(m => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div><Label className="text-zinc-300">{t('withdrawal.destination')}</Label><Input name="destination" required className="bg-zinc-800 border-zinc-700 mt-1" placeholder="Chave PIX ou endereço da carteira" /></div>
+                  <div className="bg-zinc-800/50 rounded-lg p-3 text-sm">
+                    <p className="text-zinc-400">Sua solicitação de saque será analisada e processada manualmente pela equipe.</p>
+                    <p className="text-zinc-500 text-xs mt-1">Prazo: até 24h úteis.</p>
+                  </div>
+                </>
+              );
+            })()}
             <DialogFooter>
               <Button variant="outline" className="border-zinc-700" type="button" onClick={() => setWithdrawDialog(false)}>{t('common.cancel')}</Button>
               <Button type="submit" className="bg-emerald-600 hover:bg-cyan-700" disabled={withdrawLoading}>

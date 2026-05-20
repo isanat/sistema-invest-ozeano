@@ -1,42 +1,54 @@
 import { NextRequest } from 'next/server';
 import { db } from '@/lib/db';
+import { requireAuth } from '@/lib/auth';
 import { getTeamBonusPct } from '@/lib/affiliate';
-import { requireAuth, apiSuccess, apiError, handleApiError } from '@/lib/api-utils';
+import { apiSuccess, apiError, handleApiError } from '@/lib/api-utils';
 
 export async function GET(request: NextRequest) {
   try {
-    const userId = await requireAuth(request);
-    if (!userId) return apiError('Não autorizado', 401);
+    const session = await requireAuth();
 
     const user = await db.user.findUnique({
-      where: { id: userId },
+      where: { id: session.userId },
       select: { id: true, referredBy: true },
     });
 
     if (!user) return apiError('Usuário não encontrado', 404);
 
     const directReferrals = await db.user.count({
-      where: { referredBy: userId, hasInvested: true },
+      where: { referredBy: session.userId, hasInvested: true },
     });
 
-    const bonusPct = await getTeamBonusPct(userId);
+    const bonusPct = await getTeamBonusPct(session.userId);
 
+    // Determine tier dynamically from database ranks
     let tier = 'none';
-    let nextTier = 'Bronze';
-    let referralsToNext = 10 - directReferrals;
+    let nextTier: string | null = 'Bronze';
+    let referralsToNext = 0;
 
-    if (directReferrals >= 30) {
-      tier = 'gold';
-      nextTier = null;
-      referralsToNext = 0;
-    } else if (directReferrals >= 20) {
-      tier = 'silver';
-      nextTier = 'Ouro';
-      referralsToNext = 30 - directReferrals;
-    } else if (directReferrals >= 10) {
-      tier = 'bronze';
-      nextTier = 'Prata';
-      referralsToNext = 20 - directReferrals;
+    const ranks = await db.affiliateRank.findMany({
+      where: { isActive: true },
+      orderBy: { sortOrder: 'asc' },
+    });
+
+    // Find current and next rank based on direct referrals
+    for (let i = 0; i < ranks.length; i++) {
+      const rank = ranks[i];
+      if (directReferrals >= rank.minReferrals) {
+        tier = rank.name.toLowerCase();
+        if (i + 1 < ranks.length) {
+          nextTier = ranks[i + 1].name;
+          referralsToNext = Math.max(0, ranks[i + 1].minReferrals - directReferrals);
+        } else {
+          nextTier = null;
+          referralsToNext = 0;
+        }
+        break;
+      } else {
+        // User doesn't qualify for this rank yet
+        nextTier = rank.name;
+        referralsToNext = Math.max(0, rank.minReferrals - directReferrals);
+      }
     }
 
     return apiSuccess({
@@ -44,7 +56,7 @@ export async function GET(request: NextRequest) {
       bonusPct,
       directReferrals,
       nextTier,
-      referralsToNext: Math.max(0, referralsToNext),
+      referralsToNext,
     });
   } catch (error) {
     return handleApiError(error);

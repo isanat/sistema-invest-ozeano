@@ -82,9 +82,22 @@ export async function PUT(request: NextRequest) {
       }
     }
 
+    const data: Record<string, unknown> = {};
+    if (updates.name !== undefined) data.name = updates.name;
+    if (updates.description !== undefined) data.description = updates.description;
+    if (updates.icon !== undefined) data.icon = updates.icon;
+    if (updates.color !== undefined) data.color = updates.color;
+    if (updates.category !== undefined) data.category = updates.category;
+    if (updates.requirement !== undefined) data.requirement = updates.requirement;
+    if (updates.rewardType !== undefined) data.rewardType = updates.rewardType;
+    if (updates.rewardValue !== undefined) data.rewardValue = updates.rewardValue;
+    if (updates.isAuto !== undefined) data.isAuto = updates.isAuto;
+    if (updates.sortOrder !== undefined) data.sortOrder = updates.sortOrder;
+    if (updates.isActive !== undefined) data.isActive = updates.isActive;
+
     const badge = await db.affiliateBadge.update({
       where: { id },
-      data: updates,
+      data,
     });
 
     return apiSuccess({ badge, message: 'Badge atualizado com sucesso!' });

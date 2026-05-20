@@ -53,14 +53,14 @@ export async function POST(request: NextRequest) {
 
     // Check for duplicate txHash
     if (data.txHash) {
-      const existing = await db.investment.findUnique({ where: { txHash: data.txHash } });
+      const existing = await db.deposit.findUnique({ where: { txHash: data.txHash } });
       if (existing) {
         return apiError('Hash de transação já registrado', 409);
       }
     }
 
     // Create deposit
-    const deposit = await db.investment.create({
+    const deposit = await db.deposit.create({
       data: {
         userId: session.userId,
         amount: ds(data.amount),
