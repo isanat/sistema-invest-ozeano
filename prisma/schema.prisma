@@ -26,6 +26,7 @@ model User {
   // Balances (stored as string for precision, parsed as Decimal in app)
   balance            String   @default("0")       // USDT main balance
   affiliateBalance   String   @default("0")       // USDT affiliate commissions
+  voucherBalance     String   @default("0")       // USDT voucher balance (from leader vouchers)
   totalRoi           String   @default("0")       // USDT total ROI earned
   totalInvested      String   @default("0")       // USDT total invested
   totalWithdrawn     String   @default("0")       // USDT total withdrawn

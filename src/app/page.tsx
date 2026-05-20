@@ -1046,12 +1046,11 @@ export default function PlataformaROI() {
     if (!investDialogPlan) return;
     setInvestLoading(true);
     try {
-      await api('/api/investment', {
+      await api('/api/investments', {
         method: 'POST',
         body: JSON.stringify({
-          minerId: investDialogPlan.id,
-          days: investmentDuration,
-          planId: selectedPlanId || undefined,
+          planId: selectedPlanId || investDialogPlan.plans?.[0]?.id || '',
+          amount: rentalCalc.totalPrice,
           useVoucher: useVoucherForInvest,
           voucherId: useVoucherForInvest ? selectedVoucherId : undefined,
         }),
@@ -3314,7 +3313,7 @@ export default function PlataformaROI() {
                                 className="border-zinc-700 text-zinc-400 hover:text-white hover:border-cyan-500/50 text-sm"
                                 onClick={() => {
                                   setInvestDialogPlan(trader);
-                                  setInvestmentDuration((plan as any)?.minRentalDays || 7);
+                                  setInvestmentDuration(7);
                                   setSelectedPlanId(undefined);
                                 }}
                               >
@@ -3329,7 +3328,7 @@ export default function PlataformaROI() {
                                 className="bg-emerald-600 hover:bg-cyan-700 text-white"
                                 onClick={() => {
                                   setInvestDialogPlan(trader);
-                                  setInvestmentDuration((plan as any)?.minRentalDays || 7);
+                                  setInvestmentDuration(7);
                                   setSelectedPlanId(undefined);
                                 }}
                               >
