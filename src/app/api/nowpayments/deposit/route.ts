@@ -28,6 +28,7 @@ export async function POST(request: NextRequest) {
       'min_deposit_usdt',
       'max_deposit_usdt',
       'nowpayments_enabled',
+      'nowpayments_deposit_currencies',
       'nowpayments_split_pct',
       'nowpayments_split_wallet',
     ];
@@ -38,6 +39,20 @@ export async function POST(request: NextRequest) {
 
     const minDeposit = d(configMap.min_deposit_usdt) || 10;
     const maxDeposit = d(configMap.max_deposit_usdt) || 100000;
+
+    // STRICT: NowPayments must be explicitly enabled in admin settings
+    if (configMap.nowpayments_enabled !== 'true') {
+      return apiError('Depósitos via NowPayments estão desabilitados', 403);
+    }
+
+    // Check if the requested currency is allowed by admin settings
+    const adminCurrencies = (configMap.nowpayments_deposit_currencies || '')
+      .split(',')
+      .map((c: string) => c.trim().toLowerCase())
+      .filter(Boolean);
+    if (adminCurrencies.length > 0 && !adminCurrencies.includes(payCurrency.toLowerCase())) {
+      return apiError(`Moeda ${payCurrency} não está disponível para depósito`);
+    }
 
     if (amount < minDeposit) {
       return apiError(`Depósito mínimo: ${dusdt(minDeposit)} USDT`);

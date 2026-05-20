@@ -80,6 +80,7 @@ export async function POST(request: NextRequest) {
       { key: 'has_usdt', value: 'true', type: 'boolean', description: 'Ativar depósito via USDT', category: 'deposit' },
       { key: 'manual_deposit_enabled', value: 'false', type: 'boolean', description: 'Ativar depósito manual (hash de transação)', category: 'deposit' },
       { key: 'nowpayments_enabled', value: 'true', type: 'boolean', description: 'Ativar depósito automático via NowPayments', category: 'nowpayments' },
+      { key: 'nowpayments_deposit_currencies', value: 'usdttrc20', type: 'string', description: 'Moedas aceitas para depósito NowPayments (separar por vírgula, ex: usdttrc20,usdtmatic,btc)', category: 'nowpayments' },
       { key: 'site_name', value: 'PLATAFORMA ROI', type: 'string', description: 'Nome do site', category: 'general' },
       { key: 'maintenance_mode', value: 'false', type: 'boolean', description: 'Modo manutenção', category: 'general' },
       { key: 'daily_roi_pct', value: '5', type: 'number', description: 'ROI diário padrão (%)', category: 'trading' },

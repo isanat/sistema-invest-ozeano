@@ -12,11 +12,24 @@ export async function POST(request: NextRequest) {
     const data = depositSchema.parse(body);
 
     // Get deposit limits from SystemConfig
-    const configKeys = ['min_deposit_usdt', 'max_deposit_usdt', 'pix_wallet_address', 'usdt_trc20_address', 'usdt_polygon_address', 'pix_key'];
+    const configKeys = ['min_deposit_usdt', 'max_deposit_usdt', 'manual_deposit_enabled', 'has_pix', 'has_usdt', 'pix_wallet_address', 'usdt_trc20_address', 'usdt_polygon_address', 'pix_key'];
     const configs = await db.systemConfig.findMany({
       where: { key: { in: configKeys } },
     });
     const configMap = Object.fromEntries(configs.map((c) => [c.key, c.value]));
+
+    // STRICT: Manual deposits must be explicitly enabled in admin settings
+    if (configMap.manual_deposit_enabled !== 'true') {
+      return apiError('Depósitos manuais estão desabilitados', 403);
+    }
+
+    // Check if the selected method is allowed
+    if (data.method === 'pix' && configMap.has_pix !== 'true') {
+      return apiError('Depósito via PIX está desabilitado', 403);
+    }
+    if ((data.method === 'usdt_trc20' || data.method === 'usdt_polygon') && configMap.has_usdt !== 'true') {
+      return apiError('Depósito via USDT está desabilitado', 403);
+    }
 
     const minDeposit = d(configMap.min_deposit_usdt) || 10;
     const maxDeposit = d(configMap.max_deposit_usdt) || 100000;

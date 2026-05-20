@@ -463,11 +463,13 @@ export default function PlataformaROI() {
   const [landingRate, setLandingRate] = useState(5.5);
 
   // Site Config State (for deposit modal toggles)
-  const [siteConfig, setSiteConfig] = useState<{ hasPix: boolean; hasUsdt: boolean; manualDepositEnabled: boolean; nowpaymentsEnabled: boolean; minDepositUsdt: number; siteName: string }>({
+  // All booleans default to FALSE — only enable what admin explicitly sets to 'true'
+  const [siteConfig, setSiteConfig] = useState<{ hasPix: boolean; hasUsdt: boolean; manualDepositEnabled: boolean; nowpaymentsEnabled: boolean; nowpaymentsDepositCurrencies: string[]; minDepositUsdt: number; siteName: string }>({
     hasPix: false,
-    hasUsdt: true,
+    hasUsdt: false,
     manualDepositEnabled: false,
-    nowpaymentsEnabled: true,
+    nowpaymentsEnabled: false,
+    nowpaymentsDepositCurrencies: [],
     minDepositUsdt: 10,
     siteName: 'PLATAFORMA ROI',
   });
@@ -550,10 +552,10 @@ export default function PlataformaROI() {
   const [npEstimatedFee, setNpEstimatedFee] = useState<number>(0);
   const [npCountdown, setNpCountdown] = useState<string>('');
 
-  // Dynamic currencies from NowPayments
-  const [availableDepositCurrencies, setAvailableDepositCurrencies] = useState<string[]>(['usdttrc20', 'usdtmatic', 'btc', 'eth', 'trx']);
-  const [availableWithdrawCurrencies, setAvailableWithdrawCurrencies] = useState<string[]>(['usdt_trc20', 'usdt_polygon', 'btc', 'pix']);
-  const [pixEnabled, setPixEnabled] = useState(true);
+  // Dynamic currencies — populated ONLY from admin settings or NowPayments API (no hardcoded fallbacks)
+  const [availableDepositCurrencies, setAvailableDepositCurrencies] = useState<string[]>([]);
+  const [availableWithdrawCurrencies, setAvailableWithdrawCurrencies] = useState<string[]>([]);
+  const [pixEnabled, setPixEnabled] = useState(false);
 
   // Currency label helper
   const currencyLabel = (code: string): string => {
@@ -661,20 +663,27 @@ export default function PlataformaROI() {
   }, [user]);
 
   // Fetch site config (deposit toggles) when authenticated
+  // All values default to FALSE — only what admin explicitly enables is shown
   useEffect(() => {
     fetch('/api/site/config')
       .then(r => r.json())
       .then(data => {
         if (data.success) {
+          const adminCurrencies: string[] = data.nowpaymentsDepositCurrencies || [];
           setSiteConfig(prev => ({
             ...prev,
             hasPix: data.hasPix ?? false,
-            hasUsdt: data.hasUsdt ?? true,
+            hasUsdt: data.hasUsdt ?? false,
             manualDepositEnabled: data.manualDepositEnabled ?? false,
-            nowpaymentsEnabled: data.nowpaymentsEnabled ?? true,
+            nowpaymentsEnabled: data.nowpaymentsEnabled ?? false,
+            nowpaymentsDepositCurrencies: adminCurrencies,
             minDepositUsdt: data.minDepositUsdt ?? 10,
             siteName: data.siteName ?? 'PLATAFORMA ROI',
           }));
+          // If admin has configured specific currencies, use those exclusively (no API fallback)
+          if (adminCurrencies.length > 0) {
+            setAvailableDepositCurrencies(adminCurrencies);
+          }
         }
       })
       .catch(() => {});
@@ -686,13 +695,19 @@ export default function PlataformaROI() {
       if (res.ok) {
         const data = await res.json();
         if (data.success) {
-          if (data.deposit?.length > 0) setAvailableDepositCurrencies(data.deposit);
+          // Admin-configured currencies take priority — never override with API results
+          if (siteConfig.nowpaymentsDepositCurrencies.length > 0) {
+            // Already set from site config, keep those (no API fallback)
+          } else if (data.deposit?.length > 0) {
+            // No admin config — use what NowPayments API returns
+            setAvailableDepositCurrencies(data.deposit);
+          }
           if (data.withdrawal?.length > 0) setAvailableWithdrawCurrencies(data.withdrawal);
           if (data.pixEnabled !== undefined) setPixEnabled(data.pixEnabled);
         }
       }
     } catch {
-      // Use defaults on error
+      // No fallback on error — currencies must be properly configured
     }
   };
 
@@ -6958,6 +6973,8 @@ export default function PlataformaROI() {
                                   { key: 'nowpayments_password', value: '', type: 'string', description: 'NowPayments Account Password', category: 'nowpayments' },
                                   { key: 'nowpayments_ipn_secret', value: '', type: 'string', description: 'NowPayments IPN Secret (webhook)', category: 'nowpayments' },
                                   { key: 'nowpayments_base_url', value: 'https://api.nowpayments.io/v1', type: 'string', description: 'NowPayments API Base URL', category: 'nowpayments' },
+                                  { key: 'nowpayments_enabled', value: 'true', type: 'boolean', description: 'Ativar depósito automático via NowPayments', category: 'nowpayments' },
+                                  { key: 'nowpayments_deposit_currencies', value: 'usdttrc20', type: 'string', description: 'Moedas aceitas (separar por vírgula, ex: usdttrc20,usdtmatic,btc)', category: 'nowpayments' },
                                   { key: 'nowpayments_split_pct', value: '0', type: 'number', description: 'Platform split % (0 = disabled)', category: 'nowpayments' },
                                   { key: 'nowpayments_split_wallet', value: '', type: 'string', description: 'Platform wallet for split payouts', category: 'nowpayments' },
                                 ];
@@ -7010,11 +7027,30 @@ export default function PlataformaROI() {
                                     <div className="flex-1 min-w-0">
                                       <div className="text-sm font-medium text-zinc-300">{cfg.key}</div>
                                       {cfg.description && <div className="text-xs text-zinc-500 mb-1.5">{cfg.description}</div>}
-                                      <Input
-                                        value={configEdits[cfg.key] ?? cfg.value}
-                                        onChange={e => setConfigEdits(prev => ({ ...prev, [cfg.key]: e.target.value }))}
-                                        className="bg-zinc-800 border-zinc-700 text-sm h-8"
-                                      />
+                                      {cfg.type === 'boolean' ? (
+                                        <div className="flex items-center gap-3 mt-1">
+                                          <Switch
+                                            checked={configEdits[cfg.key] !== undefined ? configEdits[cfg.key] === 'true' : cfg.value === 'true'}
+                                            onCheckedChange={(checked) => setConfigEdits(prev => ({ ...prev, [cfg.key]: checked ? 'true' : 'false' }))}
+                                          />
+                                          <span className={`text-sm font-medium ${((configEdits[cfg.key] ?? cfg.value) === 'true') ? 'text-emerald-400' : 'text-zinc-500'}`}>
+                                            {(configEdits[cfg.key] ?? cfg.value) === 'true' ? 'Ativado' : 'Desativado'}
+                                          </span>
+                                        </div>
+                                      ) : cfg.type === 'number' ? (
+                                        <Input
+                                          type="number"
+                                          value={configEdits[cfg.key] ?? cfg.value}
+                                          onChange={e => setConfigEdits(prev => ({ ...prev, [cfg.key]: e.target.value }))}
+                                          className="bg-zinc-800 border-zinc-700 text-sm h-8"
+                                        />
+                                      ) : (
+                                        <Input
+                                          value={configEdits[cfg.key] ?? cfg.value}
+                                          onChange={e => setConfigEdits(prev => ({ ...prev, [cfg.key]: e.target.value }))}
+                                          className="bg-zinc-800 border-zinc-700 text-sm h-8"
+                                        />
+                                      )}
                                       <div className="flex items-center gap-2 mt-1">
                                         <Badge variant="outline" className="text-[10px] border-zinc-700 text-zinc-500 h-4">{cfg.type}</Badge>
                                         {configEdits[cfg.key] !== undefined && configEdits[cfg.key] !== cfg.value && (
@@ -7545,11 +7581,22 @@ Seus 10 indicados diretos investem $100/dia cada:
       {/* Deposit Dialog */}
       <Dialog open={depositDialog} onOpenChange={(open) => { setDepositDialog(open); if (!open) resetNpDeposit(); }}>
         <DialogContent className="bg-zinc-900 border-zinc-800 text-white max-w-lg w-[95vw] sm:w-full">
-          <DialogHeader><DialogTitle>{t('dashboard.deposit')}</DialogTitle><DialogDescription className="text-zinc-400">Deposite USDT na sua conta</DialogDescription></DialogHeader>
+          <DialogHeader>
+            <DialogTitle>{t('dashboard.deposit')}</DialogTitle>
+            <DialogDescription className="text-zinc-400">
+              {siteConfig.nowpaymentsEnabled && siteConfig.manualDepositEnabled
+                ? 'Deposite USDT via NowPayments ou manualmente'
+                : siteConfig.nowpaymentsEnabled
+                  ? 'Deposite USDT via NowPayments'
+                  : siteConfig.manualDepositEnabled
+                    ? 'Deposite USDT manualmente'
+                    : 'Depósitos temporariamente indisponíveis'}
+            </DialogDescription>
+          </DialogHeader>
 
           {!npDepositAddress ? (
             <div className="space-y-4">
-              {/* NowPayments Auto Deposit */}
+              {/* NowPayments Auto Deposit — ONLY if enabled in admin settings */}
               {siteConfig.nowpaymentsEnabled && (
                 <>
                   <div><Label className="text-zinc-300">Valor (USDT)</Label><Input type="number" step="0.01" min={siteConfig.minDepositUsdt} value={npDepositAmount} onChange={e => setNpDepositAmount(e.target.value)} className="bg-zinc-800 border-zinc-700 mt-1" placeholder={String(siteConfig.minDepositUsdt)} />
@@ -7559,9 +7606,13 @@ Seus 10 indicados diretos investem $100/dia cada:
                     <Select value={npDepositCurrency} onValueChange={setNpDepositCurrency}>
                       <SelectTrigger className="bg-zinc-800 border-zinc-700 mt-1"><SelectValue /></SelectTrigger>
                       <SelectContent className="bg-zinc-800">
-                        {availableDepositCurrencies.map(c => (
-                          <SelectItem key={c} value={c}>{currencyLabel(c)}</SelectItem>
-                        ))}
+                        {availableDepositCurrencies.length > 0 ? (
+                          availableDepositCurrencies.map(c => (
+                            <SelectItem key={c} value={c}>{currencyLabel(c)}</SelectItem>
+                          ))
+                        ) : (
+                          <SelectItem value="usdttrc20" disabled>Configurando moedas...</SelectItem>
+                        )}
                       </SelectContent>
                     </Select>
                   </div>
@@ -7571,38 +7622,46 @@ Seus 10 indicados diretos investem $100/dia cada:
                   </div>
                   <DialogFooter>
                     <Button variant="outline" className="border-zinc-700" onClick={() => setDepositDialog(false)}>{t('common.cancel')}</Button>
-                    <Button className="bg-emerald-600 hover:bg-cyan-700" onClick={handleNowPaymentsDeposit} disabled={npGeneratingAddress || !npDepositAmount || parseFloat(npDepositAmount) < siteConfig.minDepositUsdt}>
+                    <Button className="bg-emerald-600 hover:bg-cyan-700" onClick={handleNowPaymentsDeposit} disabled={npGeneratingAddress || !npDepositAmount || parseFloat(npDepositAmount) < siteConfig.minDepositUsdt || availableDepositCurrencies.length === 0}>
                       {npGeneratingAddress && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Gerar Endereço
                     </Button>
                   </DialogFooter>
                 </>
               )}
 
-              {/* Manual Deposit - only shown when enabled in config */}
-              {siteConfig.manualDepositEnabled && siteConfig.nowpaymentsEnabled && (
+              {/* Separator — ONLY if BOTH NowPayments AND Manual are enabled */}
+              {siteConfig.nowpaymentsEnabled && siteConfig.manualDepositEnabled && (
                 <div className="relative">
                   <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-zinc-700" /></div>
                   <div className="relative flex justify-center text-xs"><span className="bg-zinc-900 px-2 text-zinc-500">ou depósito manual</span></div>
                 </div>
               )}
 
-              {siteConfig.manualDepositEnabled && (
-                <form onSubmit={handleDeposit} className="space-y-3">
-                  <div><Label className="text-zinc-300 text-xs">{t('deposit.amount')}</Label><Input name="amount" type="number" step="0.01" min={siteConfig.minDepositUsdt} required className="bg-zinc-800 border-zinc-700 mt-1" placeholder={String(siteConfig.minDepositUsdt)} /></div>
-                  <div><Label className="text-zinc-300 text-xs">{t('deposit.method')}</Label>
-                    <Select name="method" defaultValue={siteConfig.hasPix ? 'pix' : 'usdt_trc20'}><SelectTrigger className="bg-zinc-800 border-zinc-700 mt-1"><SelectValue /></SelectTrigger>
-                      <SelectContent className="bg-zinc-800">
-                        {siteConfig.hasPix && <SelectItem value="pix">{t('method.pix')}</SelectItem>}
-                        {siteConfig.hasUsdt && <SelectItem value="usdt_trc20">{t('method.usdt_trc20')}</SelectItem>}
-                        {siteConfig.hasUsdt && <SelectItem value="usdt_polygon">{t('method.usdt_polygon')}</SelectItem>}
-                      </SelectContent></Select>
-                  </div>
-                  <div><Label className="text-zinc-300 text-xs">{t('deposit.txHash')}</Label><Input name="txHash" className="bg-zinc-800 border-zinc-700 mt-1" placeholder={t('deposit.txHashPlaceholder')} /></div>
-                  <Button type="submit" className="w-full bg-zinc-700 hover:bg-zinc-600 text-sm" disabled={depositLoading}>
-                    {depositLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Depósito Manual
-                  </Button>
-                </form>
-              )}
+              {/* Manual Deposit — ONLY if enabled in admin settings */}
+              {siteConfig.manualDepositEnabled && (() => {
+                const manualMethods = [];
+                if (siteConfig.hasPix) manualMethods.push({ value: 'pix', label: 'PIX' });
+                if (siteConfig.hasUsdt) {
+                  manualMethods.push({ value: 'usdt_trc20', label: 'USDT TRC20' });
+                  manualMethods.push({ value: 'usdt_polygon', label: 'USDT Polygon' });
+                }
+                if (manualMethods.length === 0) return null;
+                return (
+                  <form onSubmit={handleDeposit} className="space-y-3">
+                    <div><Label className="text-zinc-300 text-xs">{t('deposit.amount')}</Label><Input name="amount" type="number" step="0.01" min={siteConfig.minDepositUsdt} required className="bg-zinc-800 border-zinc-700 mt-1" placeholder={String(siteConfig.minDepositUsdt)} /></div>
+                    <div><Label className="text-zinc-300 text-xs">{t('deposit.method')}</Label>
+                      <Select name="method" defaultValue={manualMethods[0].value}><SelectTrigger className="bg-zinc-800 border-zinc-700 mt-1"><SelectValue /></SelectTrigger>
+                        <SelectContent className="bg-zinc-800">
+                          {manualMethods.map(m => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}
+                        </SelectContent></Select>
+                    </div>
+                    <div><Label className="text-zinc-300 text-xs">{t('deposit.txHash')}</Label><Input name="txHash" className="bg-zinc-800 border-zinc-700 mt-1" placeholder={t('deposit.txHashPlaceholder')} /></div>
+                    <Button type="submit" className="w-full bg-zinc-700 hover:bg-zinc-600 text-sm" disabled={depositLoading}>
+                      {depositLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Depósito Manual
+                    </Button>
+                  </form>
+                );
+              })()}
 
               {/* Neither option available */}
               {!siteConfig.nowpaymentsEnabled && !siteConfig.manualDepositEnabled && (
