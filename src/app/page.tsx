@@ -1897,7 +1897,7 @@ export default function PlataformaROI() {
               <span className="text-xl font-bold bg-gradient-to-r from-emerald-400 to-green-400 bg-clip-text text-transparent">
                 {landingConfig?.siteName || 'PLATAFORMA ROI'}
               </span>
-              <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 text-[10px] px-1.5 py-0">LIVE</Badge>
+              <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 text-[10px] px-1.5 py-0">{t('landing.badges.live')}</Badge>
             </div>
             <div className="flex items-center gap-2 sm:gap-3">
               <DropdownMenu>
@@ -1946,7 +1946,7 @@ export default function PlataformaROI() {
               <motion.div initial={{ opacity: 0, x: -40 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.7 }}>
                 <div className="inline-flex items-center gap-2 glass-card rounded-full px-4 py-1.5 mb-6 text-sm text-emerald-400 border-emerald-500/20">
                   <Activity className="h-4 w-4" />
-                  <span className="font-medium">Copy Trading Platform</span>
+                  <span className="font-medium">{t('landing.badges.copyTrading')}</span>
                   <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
                 </div>
                 <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold leading-tight mb-6">
@@ -1980,11 +1980,11 @@ export default function PlataformaROI() {
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-2">
                       <BarChart3 className="h-5 w-5 text-emerald-400" />
-                      <span className="text-sm font-medium text-zinc-300">Live Trading Dashboard</span>
+                      <span className="text-sm font-medium text-zinc-300">{t('landing.badges.liveDashboard')}</span>
                     </div>
                     <div className="flex items-center gap-1.5">
                       <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
-                      <span className="text-xs text-emerald-400">LIVE</span>
+                      <span className="text-xs text-emerald-400">{t('landing.badges.live')}</span>
                     </div>
                   </div>
                   {/* Animated Chart SVG */}
@@ -2003,7 +2003,7 @@ export default function PlataformaROI() {
                       </circle>
                     </svg>
                     <div className="absolute top-3 right-3 text-right">
-                      <div className="text-xs text-zinc-500">Portfolio Value</div>
+                      <div className="text-xs text-zinc-500">{t('landing.badges.portfolioValue')}</div>
                       <div className="text-lg font-bold text-emerald-400 animate-count-glow">+127.4%</div>
                     </div>
                   </div>
@@ -2011,15 +2011,15 @@ export default function PlataformaROI() {
                   <div className="grid grid-cols-3 gap-3">
                     <div className="bg-white/[0.03] rounded-lg p-3 text-center">
                       <div className="text-lg font-bold text-emerald-400">94.2%</div>
-                      <div className="text-[10px] text-zinc-500 uppercase tracking-wider">Win Rate</div>
+                      <div className="text-[10px] text-zinc-500 uppercase tracking-wider">{t('landing.badges.winRate')}</div>
                     </div>
                     <div className="bg-white/[0.03] rounded-lg p-3 text-center">
                       <div className="text-lg font-bold text-cyan-400">24/7</div>
-                      <div className="text-[10px] text-zinc-500 uppercase tracking-wider">Trading</div>
+                      <div className="text-[10px] text-zinc-500 uppercase tracking-wider">{t('landing.badges.trading')}</div>
                     </div>
                     <div className="bg-white/[0.03] rounded-lg p-3 text-center">
                       <div className="text-lg font-bold text-green-400">5%</div>
-                      <div className="text-[10px] text-zinc-500 uppercase tracking-wider">Daily ROI</div>
+                      <div className="text-[10px] text-zinc-500 uppercase tracking-wider">{t('landing.badges.dailyRoi')}</div>
                     </div>
                   </div>
                 </div>
@@ -2089,7 +2089,7 @@ export default function PlataformaROI() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 relative z-10">
             <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-12">
               <span className="inline-flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm font-medium px-4 py-1.5 rounded-full mb-4">
-                <Zap className="h-4 w-4" /> Simple &amp; Powerful
+                <Zap className="h-4 w-4" /> {t('landing.badges.simplePowerful')}
               </span>
               <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold">
                 <span className="bg-gradient-to-r from-emerald-400 to-green-400 bg-clip-text text-transparent">{t('landing.steps.title')}</span>
@@ -2106,7 +2106,7 @@ export default function PlataformaROI() {
                     <div className={`w-16 h-16 bg-gradient-to-br ${s.grad} rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-emerald-500/20`}>
                       <s.icon className="h-8 w-8 text-white" />
                     </div>
-                    <div className="text-emerald-400 font-mono text-sm mb-3 tracking-widest">STEP {s.step}</div>
+                    <div className="text-emerald-400 font-mono text-sm mb-3 tracking-widest">{t('landing.badges.step')} {s.step}</div>
                     <h3 className="text-xl font-semibold mb-3">{s.title}</h3>
                     <p className="text-zinc-400 leading-relaxed">{s.desc}</p>
                   </div>
@@ -2125,7 +2125,7 @@ export default function PlataformaROI() {
             <div className="max-w-7xl mx-auto px-4 sm:px-6 relative z-10">
               <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-12">
                 <span className="inline-flex items-center gap-2 bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 text-sm font-medium px-4 py-1.5 rounded-full mb-4">
-                  <Bot className="h-4 w-4" /> Top Traders
+                  <Bot className="h-4 w-4" /> {t('landing.badges.topTraders')}
                 </span>
                 <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold">
                   <span className="bg-gradient-to-r from-cyan-400 to-emerald-400 bg-clip-text text-transparent">{t('landing.featured.title')}</span>
@@ -2229,7 +2229,7 @@ export default function PlataformaROI() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 relative z-10">
             <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-10 sm:mb-14">
               <span className="inline-flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm font-medium px-4 py-1.5 rounded-full mb-4">
-                <DollarSign className="h-4 w-4" /> DAILY ROI
+                <DollarSign className="h-4 w-4" /> {t('landing.badges.dailyRoiTag')}
               </span>
               <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-3">
                 <span className="bg-gradient-to-r from-emerald-400 to-green-300 bg-clip-text text-transparent">{t('landing.tiers.title')}</span>
@@ -2246,7 +2246,7 @@ export default function PlataformaROI() {
               ].map((tier, i) => (
                 <motion.div key={tier.amount} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }} viewport={{ once: true }} className="stat-card-hover">
                   <div className={`glass-card rounded-2xl p-5 text-center h-full ${tier.featured ? 'tier-card-premium gradient-border glow-emerald' : 'border border-white/5'}`}>
-                    {tier.featured && <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 mb-3 text-[10px]">POPULAR</Badge>}
+                    {tier.featured && <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 mb-3 text-[10px]">{t('landing.badges.popular')}</Badge>}
                     <div className={`text-3xl font-bold bg-gradient-to-r ${tier.color} bg-clip-text text-transparent mb-2`}>${tier.amount}</div>
                     <div className="text-sm text-zinc-400 mb-3">{t('landing.tiers.investLabel')}</div>
                     <div className="bg-white/[0.03] rounded-lg p-3 mb-3">
@@ -2272,7 +2272,7 @@ export default function PlataformaROI() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 relative z-10">
             <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-10 sm:mb-14">
               <span className="inline-flex items-center gap-2 bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 text-sm font-medium px-4 py-1.5 rounded-full mb-4">
-                <Users className="h-4 w-4" /> CAREER PLAN
+                <Users className="h-4 w-4" /> {t('landing.badges.careerPlan')}
               </span>
               <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-3">
                 <span className="bg-gradient-to-r from-cyan-400 to-emerald-400 bg-clip-text text-transparent">{t('landing.unilevel.title')}</span>
@@ -2343,7 +2343,7 @@ export default function PlataformaROI() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 relative z-10">
             <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-10 sm:mb-14">
               <span className="inline-flex items-center gap-2 bg-amber-500/10 border border-amber-500/20 text-amber-400 text-sm font-medium px-4 py-1.5 rounded-full mb-4">
-                <Trophy className="h-4 w-4" /> TEAM REWARDS
+                <Trophy className="h-4 w-4" /> {t('landing.badges.teamRewards')}
               </span>
               <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-3">
                 <span className="bg-gradient-to-r from-amber-400 to-orange-400 bg-clip-text text-transparent">{t('landing.bonuses.title')}</span>
@@ -2377,7 +2377,7 @@ export default function PlataformaROI() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 relative z-10">
             <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-10 sm:mb-14">
               <span className="inline-flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm font-medium px-4 py-1.5 rounded-full mb-4">
-                <Share2 className="h-4 w-4" /> REFERRAL PROGRAM
+                <Share2 className="h-4 w-4" /> {t('landing.badges.referralProgram')}
               </span>
               <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-3">
                 <span className="bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">{t('landing.affiliate.title')}</span>
@@ -2469,15 +2469,15 @@ export default function PlataformaROI() {
                 </ul>
               </div>
               <div>
-                <h4 className="font-semibold text-zinc-300 mb-3">Legal</h4>
+                <h4 className="font-semibold text-zinc-300 mb-3">{t('landing.footer.legal')}</h4>
                 <ul className="space-y-2 text-sm text-zinc-500">
-                  <li>Terms of Service</li><li>Privacy Policy</li><li>Risk Disclaimer</li>
+                  <li>{t('landing.footer.terms')}</li><li>{t('landing.footer.privacy')}</li><li>{t('landing.footer.risk')}</li>
                 </ul>
               </div>
               <div>
-                <h4 className="font-semibold text-zinc-300 mb-3">Support</h4>
+                <h4 className="font-semibold text-zinc-300 mb-3">{t('landing.footer.support')}</h4>
                 <ul className="space-y-2 text-sm text-zinc-500">
-                  <li>support@platform.com</li><li>Telegram</li><li>Discord</li>
+                  <li>{t('landing.footer.email')}</li><li>Telegram</li><li>Discord</li>
                 </ul>
               </div>
             </div>

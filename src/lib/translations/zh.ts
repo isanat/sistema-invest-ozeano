@@ -11,7 +11,9 @@ export const zh = {
     stats: {
       users: '活跃用户',
       investments: '活跃投资',
+      investment: '活跃投资',
       roiEarned: '总ROI收益',
+      mined: '总ROI收益',
       invested: '总投资额',
     },
     steps: {
@@ -59,6 +61,7 @@ export const zh = {
     // 投资层级
     tiers: {
       investLabel: '投资额',
+      perDay: '/天',
       title: '个人盈利潜力',
       subtitle: '今天投资，每24小时看到资金增长',
       items: [
@@ -74,9 +77,9 @@ export const zh = {
       extraDaily: '每日额外',
       title: '团队奖金',
       subtitle: '提升等级，增加每日收益',
-      bronze: '+1%每日额外（10个直推）',
-      silver: '+2%每日额外（20个直推）',
-      gold: '+3%每日额外（30个直推）',
+      bronze: { name: '青铜', requirement: '10个直推' },
+      silver: { name: '白银', requirement: '20个直推' },
+      gold: { name: '黄金', requirement: '30个直推' },
     },
     // 单线职业计划
     unilevel: {
@@ -142,7 +145,30 @@ export const zh = {
     },
     footer: {
       rights: '版权所有。',
-      links: { miners: '跟单交易员', plans: '计划', affiliates: '推荐', faq: '常见问题' },
+      links: { invest: '投资', miners: '跟单交易员', plans: '计划', affiliates: '推荐', faq: '常见问题' },
+      legal: '法律',
+      terms: '服务条款',
+      privacy: '隐私政策',
+      risk: '风险提示',
+      support: '支持',
+      email: 'support@platform.com',
+    },
+    badges: {
+      copyTrading: '跟单交易平台',
+      liveDashboard: '实时交易面板',
+      portfolioValue: '投资组合价值',
+      winRate: '胜率',
+      trading: '交易',
+      dailyRoi: '每日ROI',
+      simplePowerful: '简单而强大',
+      step: '步骤',
+      topTraders: '顶级交易员',
+      dailyRoiTag: '每日收益',
+      careerPlan: '职业计划',
+      teamRewards: '团队奖励',
+      referralProgram: '推荐计划',
+      live: '实时',
+      popular: '热门',
     },
     auth: {
       loginTitle: '登录您的账户',
@@ -191,6 +217,7 @@ export const zh = {
   // === 侧边栏 ===
   sidebar: {
     home: '首页',
+    invest: '投资',
     miners: '投资',
     plans: '我的计划',
     history: '历史',

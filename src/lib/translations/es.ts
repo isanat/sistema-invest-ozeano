@@ -11,7 +11,9 @@ export const es = {
     stats: {
       users: 'Usuarios Activos',
       investments: 'Inversiones Activas',
+      investment: 'Inversiones Activas',
       roiEarned: 'Total ROI Ganado',
+      mined: 'Total ROI Ganado',
       invested: 'Total Invertido',
     },
     steps: {
@@ -59,6 +61,7 @@ export const es = {
     // Investment tiers
     tiers: {
       investLabel: 'Inversión',
+      perDay: '/día',
       title: 'Potencial de Ganancia Individual',
       subtitle: 'Invierte hoy y ve tu dinero crecer cada 24 horas',
       items: [
@@ -74,9 +77,9 @@ export const es = {
       extraDaily: 'diario extra',
       title: 'Bonificación de Equipo',
       subtitle: 'Sube de patente y turbine tus rendimientos diarios',
-      bronze: '+1% diario extra (10 Directos)',
-      silver: '+2% diario extra (20 Directos)',
-      gold: '+3% diario extra (30 Directos)',
+      bronze: { name: 'Bronce', requirement: '10 Directos' },
+      silver: { name: 'Plata', requirement: '20 Directos' },
+      gold: { name: 'Oro', requirement: '30 Directos' },
     },
     // Unilevel career plan
     unilevel: {
@@ -142,7 +145,30 @@ export const es = {
     },
     footer: {
       rights: 'Todos los derechos reservados.',
-      links: { miners: 'Copy Traders', plans: 'Planes', affiliates: 'Afiliados', faq: 'FAQ' },
+      links: { invest: 'Invertir', miners: 'Copy Traders', plans: 'Planes', affiliates: 'Afiliados', faq: 'FAQ' },
+      legal: 'Legal',
+      terms: 'Términos de Servicio',
+      privacy: 'Política de Privacidad',
+      risk: 'Aviso de Riesgo',
+      support: 'Soporte',
+      email: 'soporte@plataforma.com',
+    },
+    badges: {
+      copyTrading: 'Plataforma de Copy Trading',
+      liveDashboard: 'Panel de Trading en Vivo',
+      portfolioValue: 'Valor del Portafolio',
+      winRate: 'Tasa de Acierto',
+      trading: 'Trading',
+      dailyRoi: 'ROI Diario',
+      simplePowerful: 'Simple y Potente',
+      step: 'PASO',
+      topTraders: 'Top Traders',
+      dailyRoiTag: 'RENDIMIENTO DIARIO',
+      careerPlan: 'PLAN DE CARRERA',
+      teamRewards: 'RECOMPENSAS DE EQUIPO',
+      referralProgram: 'PROGRAMA DE AFILIADOS',
+      live: 'EN VIVO',
+      popular: 'POPULAR',
     },
     auth: {
       loginTitle: 'Iniciar Sesión en tu Cuenta',
@@ -191,6 +217,7 @@ export const es = {
   // === SIDEBAR ===
   sidebar: {
     home: 'Inicio',
+    invest: 'Invertir',
     miners: 'Invertir',
     plans: 'Mis Planes',
     history: 'Historial',

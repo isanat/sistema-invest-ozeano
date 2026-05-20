@@ -11,7 +11,9 @@ export const en = {
     stats: {
       users: 'Active Users',
       investments: 'Active Investments',
+      investment: 'Active Investments',
       roiEarned: 'Total ROI Earned',
+      mined: 'Total ROI Earned',
       invested: 'Total Invested',
     },
     steps: {
@@ -59,6 +61,7 @@ export const en = {
     // Investment tiers
     tiers: {
       investLabel: 'Investment',
+      perDay: '/day',
       title: 'Individual Earning Potential',
       subtitle: 'Invest today and watch your money grow every 24 hours',
       items: [
@@ -74,9 +77,9 @@ export const en = {
       extraDaily: 'daily extra',
       title: 'Team Bonus',
       subtitle: 'Level up your rank and boost your daily returns',
-      bronze: '+1% extra daily (10 Direct)',
-      silver: '+2% extra daily (20 Direct)',
-      gold: '+3% extra daily (30 Direct)',
+      bronze: { name: 'Bronze', requirement: '10 Direct' },
+      silver: { name: 'Silver', requirement: '20 Direct' },
+      gold: { name: 'Gold', requirement: '30 Direct' },
     },
     // Unilevel career plan
     unilevel: {
@@ -142,7 +145,30 @@ export const en = {
     },
     footer: {
       rights: 'All rights reserved.',
-      links: { miners: 'Copy Traders', plans: 'Plans', affiliates: 'Affiliates', faq: 'FAQ' },
+      links: { invest: 'Invest', miners: 'Copy Traders', plans: 'Plans', affiliates: 'Affiliates', faq: 'FAQ' },
+      legal: 'Legal',
+      terms: 'Terms of Service',
+      privacy: 'Privacy Policy',
+      risk: 'Risk Disclaimer',
+      support: 'Support',
+      email: 'support@platform.com',
+    },
+    badges: {
+      copyTrading: 'Copy Trading Platform',
+      liveDashboard: 'Live Trading Dashboard',
+      portfolioValue: 'Portfolio Value',
+      winRate: 'Win Rate',
+      trading: 'Trading',
+      dailyRoi: 'Daily ROI',
+      simplePowerful: 'Simple & Powerful',
+      step: 'STEP',
+      topTraders: 'Top Traders',
+      dailyRoiTag: 'DAILY ROI',
+      careerPlan: 'CAREER PLAN',
+      teamRewards: 'TEAM REWARDS',
+      referralProgram: 'REFERRAL PROGRAM',
+      live: 'LIVE',
+      popular: 'POPULAR',
     },
     auth: {
       loginTitle: 'Sign In to Your Account',
@@ -191,6 +217,7 @@ export const en = {
   // === SIDEBAR ===
   sidebar: {
     home: 'Home',
+    invest: 'Invest',
     miners: 'Invest',
     plans: 'My Plans',
     history: 'History',

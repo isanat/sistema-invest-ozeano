@@ -1123,3 +1123,35 @@ Stage Summary:
 - Visual unilevel commission tree ✅
 - No mining references in landing page ✅
 - Deployed to Vercel: https://sistema-invest-ozeano.vercel.app ✅
+
+---
+Task ID: 11
+Agent: Main Agent
+Task: Fix missing translation keys on the landing page (landing.footer.links.invest and others)
+
+Work Log:
+- Investigated the i18n translation system (src/lib/i18n.tsx, src/lib/translations/*.ts)
+- Identified all missing translation keys used in page.tsx but not defined in translation files:
+  1. landing.footer.links.invest - footer was only using 'miners' key
+  2. landing.stats.mined - stats didn't have this key
+  3. landing.stats.investment - stats didn't have this key
+  4. landing.tiers.perDay - tiers didn't have this key
+  5. landing.bonuses.bronze.name / .requirement - bonuses were flat strings, not objects
+  6. landing.bonuses.silver.name / .requirement - same issue
+  7. landing.bonuses.gold.name / .requirement - same issue
+  8. sidebar.invest - sidebar only had 'miners' key
+- Added all missing keys to all 4 translation files (es.ts, pt.ts, en.ts, zh.ts)
+- Converted landing.bonuses.bronze/silver/gold from flat strings to objects with name/requirement
+- Added new landing.footer section keys: legal, terms, privacy, risk, support, email
+- Added new landing.badges section with 16 keys for all hardcoded badge/label strings
+- Updated page.tsx to replace 20 hardcoded English strings with t() translation calls
+- Verified: lint passes, dev server compiles without errors, page renders 200 OK
+
+Stage Summary:
+- Fixed all missing translation keys across 4 locale files (ES, PT, EN, ZH) ✅
+- Converted bonuses from flat strings to nested objects for proper i18n ✅
+- Added landing.badges section for 16 previously hardcoded strings ✅
+- Added landing.footer legal/support section ✅
+- Added sidebar.invest key ✅
+- All 20 hardcoded landing page strings now use t() calls ✅
+- No compilation errors, lint clean ✅

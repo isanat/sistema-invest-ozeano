@@ -11,7 +11,9 @@ export const pt = {
     stats: {
       users: 'Usuários Ativos',
       investments: 'Investimentos Ativos',
+      investment: 'Investimentos Ativos',
       roiEarned: 'Total ROI Ganho',
+      mined: 'Total ROI Ganho',
       invested: 'Total Investido',
     },
     steps: {
@@ -59,6 +61,7 @@ export const pt = {
     // Investment tiers
     tiers: {
       investLabel: 'Investimento',
+      perDay: '/dia',
       title: 'Potencial de Ganho Individual',
       subtitle: 'Invista hoje e veja seu dinheiro crescer a cada 24 horas',
       items: [
@@ -74,9 +77,9 @@ export const pt = {
       extraDaily: 'diário extra',
       title: 'Bonificação de Equipe',
       subtitle: 'Suba de patente e turbine seus rendimentos diários',
-      bronze: '+1% diário extra (10 Diretos)',
-      silver: '+2% diário extra (20 Diretos)',
-      gold: '+3% diário extra (30 Diretos)',
+      bronze: { name: 'Bronze', requirement: '10 Diretos' },
+      silver: { name: 'Prata', requirement: '20 Diretos' },
+      gold: { name: 'Ouro', requirement: '30 Diretos' },
     },
     // Unilevel career plan
     unilevel: {
@@ -142,7 +145,30 @@ export const pt = {
     },
     footer: {
       rights: 'Todos os direitos reservados.',
-      links: { miners: 'Copy Traders', plans: 'Planos', affiliates: 'Afiliados', faq: 'FAQ' },
+      links: { invest: 'Investir', miners: 'Copy Traders', plans: 'Planos', affiliates: 'Afiliados', faq: 'FAQ' },
+      legal: 'Legal',
+      terms: 'Termos de Serviço',
+      privacy: 'Política de Privacidade',
+      risk: 'Aviso de Risco',
+      support: 'Suporte',
+      email: 'suporte@plataforma.com',
+    },
+    badges: {
+      copyTrading: 'Plataforma de Copy Trading',
+      liveDashboard: 'Painel de Trading ao Vivo',
+      portfolioValue: 'Valor do Portfólio',
+      winRate: 'Taxa de Acerto',
+      trading: 'Trading',
+      dailyRoi: 'ROI Diário',
+      simplePowerful: 'Simples e Poderoso',
+      step: 'PASSO',
+      topTraders: 'Top Traders',
+      dailyRoiTag: 'RENDIMENTO DIÁRIO',
+      careerPlan: 'PLANO DE CARREIRA',
+      teamRewards: 'RECOMPENSAS DE EQUIPE',
+      referralProgram: 'PROGRAMA DE AFILIADOS',
+      live: 'AO VIVO',
+      popular: 'POPULAR',
     },
     auth: {
       loginTitle: 'Entrar na sua Conta',
@@ -191,6 +217,7 @@ export const pt = {
   // === SIDEBAR ===
   sidebar: {
     home: 'Início',
+    invest: 'Investir',
     miners: 'Investir',
     plans: 'Meus Planos',
     history: 'Histórico',
