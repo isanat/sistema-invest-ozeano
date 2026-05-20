@@ -48,5 +48,6 @@ export async function GET(request: NextRequest) {
     // This prevents the frontend from crashing when auth check fails
     console.error('[/api/auth/me] Error:', error?.message || error);
     return NextResponse.json({ success: true, user: null });
+
   }
 }
