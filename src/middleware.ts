@@ -17,6 +17,8 @@ const JWT_SECRET = new TextEncoder().encode(
 const PUBLIC_API_ROUTES = [
   '/api/auth/login',
   '/api/auth/register',
+  '/api/auth/me', // Public: returns user data or null (no 401/500)
+  '/api/auth/logout', // Public: clears session cookie
   '/api/crypto/prices',
   '/api/crypto/stats',
   '/api/exchange-rate',

@@ -39,7 +39,14 @@ export async function GET(request: NextRequest) {
     }
 
     return apiSuccess({ user });
-  } catch (error) {
+  } catch (error: any) {
+    // If no session / Unauthorized, return a graceful 200 with user: null
+    // instead of a 401/500 so the client can handle it cleanly.
+    const message = error?.message || String(error);
+    if (message === 'Unauthorized' || message.includes('Unauthorized')) {
+      return apiSuccess({ user: null });
+    }
+    // For any other error, still return a proper response instead of crashing with 500
     return handleApiError(error);
   }
 }

@@ -1888,21 +1888,21 @@ export default function PlataformaROI() {
 
         {/* ── Fixed Navigation ── */}
         <nav className="fixed top-0 left-0 right-0 z-50 glass-card border-b border-white/5">
-          <div className="max-w-7xl mx-auto flex items-center justify-between px-4 sm:px-6 py-3">
-            <div className="flex items-center gap-2.5">
+          <div className="max-w-7xl mx-auto flex items-center justify-between px-3 sm:px-6 py-2.5 sm:py-3">
+            <div className="flex items-center gap-2 sm:gap-2.5">
               <div className="relative">
-                <TrendingUp className="h-7 w-7 text-emerald-400" />
-                <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full animate-pulse" />
+                <TrendingUp className="h-5 w-5 sm:h-7 sm:w-7 text-emerald-400" />
+                <div className="absolute -top-1 -right-1 w-2.5 h-2.5 sm:w-3 sm:h-3 bg-emerald-500 rounded-full animate-pulse" />
               </div>
-              <span className="text-xl font-bold bg-gradient-to-r from-emerald-400 to-green-400 bg-clip-text text-transparent">
+              <span className="text-base sm:text-xl font-bold bg-gradient-to-r from-emerald-400 to-green-400 bg-clip-text text-transparent">
                 {landingConfig?.siteName || 'PLATAFORMA ROI'}
               </span>
-              <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 text-[10px] px-1.5 py-0">{t('landing.badges.live')}</Badge>
+              <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 text-[9px] sm:text-[10px] px-1 sm:px-1.5 py-0 hidden sm:inline-flex">{t('landing.badges.live')}</Badge>
             </div>
-            <div className="flex items-center gap-2 sm:gap-3">
+            <div className="flex items-center gap-1.5 sm:gap-3">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="text-zinc-400 hover:text-white gap-1 px-2 h-8">
+                  <Button variant="ghost" className="text-zinc-400 hover:text-white gap-1 px-1.5 sm:px-2 h-8">
                     <span className="text-base leading-none">{locales.find(l => l.code === locale)?.flag}</span>
                     <span className="hidden sm:inline text-xs font-medium">{locale.toUpperCase()}</span>
                   </Button>
@@ -1916,9 +1916,9 @@ export default function PlataformaROI() {
                   ))}
                 </DropdownMenuContent>
               </DropdownMenu>
-              <Button variant="ghost" className="text-zinc-400 hover:text-white hidden sm:inline-flex text-sm h-8" onClick={() => { setAuthMode('login'); setShowAuth(true); }}>{t('landing.hero.login')}</Button>
-              <Button className="bg-gradient-to-r from-emerald-600 to-green-500 hover:from-emerald-500 hover:to-green-400 text-white text-sm h-8 px-4" onClick={() => { setAuthMode('register'); setShowAuth(true); }}>
-                {t('landing.hero.cta')} <ArrowUpRight className="ml-1 h-4 w-4" />
+              <Button variant="ghost" className="text-zinc-400 hover:text-white text-sm h-8 px-2 sm:px-3" onClick={() => { setAuthMode('login'); setShowAuth(true); }}>{t('landing.hero.login')}</Button>
+              <Button className="bg-gradient-to-r from-emerald-600 to-green-500 hover:from-emerald-500 hover:to-green-400 text-white text-sm h-8 px-3 sm:px-4" onClick={() => { setAuthMode('register'); setShowAuth(true); }}>
+                <span className="hidden sm:inline">{t('landing.hero.cta')}</span><span className="sm:hidden">{t('landing.hero.register')}</span> <ArrowUpRight className="ml-1 h-4 w-4" />
               </Button>
             </div>
           </div>
@@ -1940,36 +1940,36 @@ export default function PlataformaROI() {
             ))}
           </div>
 
-          <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 pt-16 sm:pt-24 pb-16 sm:pb-20">
+          <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 pt-20 sm:pt-24 pb-20 sm:pb-20">
             <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
               {/* Left: Text Content */}
               <motion.div initial={{ opacity: 0, x: -40 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.7 }}>
-                <div className="inline-flex items-center gap-2 glass-card rounded-full px-4 py-1.5 mb-6 text-sm text-emerald-400 border-emerald-500/20">
-                  <Activity className="h-4 w-4" />
+                <div className="inline-flex items-center gap-2 glass-card rounded-full px-3 sm:px-4 py-1.5 mb-4 sm:mb-6 text-xs sm:text-sm text-emerald-400 border-emerald-500/20">
+                  <Activity className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                   <span className="font-medium">{t('landing.badges.copyTrading')}</span>
                   <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
                 </div>
-                <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold leading-tight mb-6">
+                <h1 className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold leading-tight mb-4 sm:mb-6">
                   <span className="bg-gradient-to-r from-emerald-400 via-green-300 to-emerald-500 bg-clip-text text-transparent">
                     {landingConfig?.siteName || 'PLATAFORMA ROI'}
                   </span>
                 </h1>
-                <p className="text-lg sm:text-xl text-zinc-400 mb-8 max-w-lg">
+                <p className="text-base sm:text-xl text-zinc-400 mb-6 sm:mb-8 max-w-lg">
                   {t('landing.hero.subtitle')}
                 </p>
-                <div className="flex flex-col sm:flex-row gap-3 mb-8">
-                  <Button size="lg" className="bg-gradient-to-r from-emerald-600 to-green-500 hover:from-emerald-500 hover:to-green-400 text-white text-lg px-8 py-6 glow-emerald" onClick={() => { setAuthMode('register'); setShowAuth(true); }}>
+                <div className="flex flex-col sm:flex-row gap-3 mb-6 sm:mb-8">
+                  <Button size="lg" className="bg-gradient-to-r from-emerald-600 to-green-500 hover:from-emerald-500 hover:to-green-400 text-white text-base sm:text-lg px-6 sm:px-8 py-5 sm:py-6 glow-emerald" onClick={() => { setAuthMode('register'); setShowAuth(true); }}>
                     {t('landing.hero.cta')} <ArrowUpRight className="ml-2 h-5 w-5" />
                   </Button>
-                  <Button size="lg" variant="outline" className="border-white/10 text-zinc-300 hover:text-white hover:bg-white/5 text-lg px-8 py-6" onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })}>
+                  <Button size="lg" variant="outline" className="border-white/10 text-zinc-300 hover:text-white hover:bg-white/5 text-base sm:text-lg px-6 sm:px-8 py-5 sm:py-6" onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })}>
                     {t('landing.steps.title')}
                   </Button>
                 </div>
                 {/* Mini Stats */}
-                <div className="flex gap-6 text-sm">
-                  <div><span className="text-2xl font-bold text-white animate-count-glow">{landingStats?.totalUsers || 0}+</span><p className="text-zinc-500">{t('landing.stats.users')}</p></div>
-                  <div><span className="text-2xl font-bold text-emerald-400">{landingStats?.totalRoi ? `$${(landingStats.totalRoi / 1000).toFixed(0)}k+` : '$0'}</span><p className="text-zinc-500">{t('landing.stats.mined')}</p></div>
-                  <div><span className="text-2xl font-bold text-cyan-400">5%</span><p className="text-zinc-500">{t('common.perDay')}</p></div>
+                <div className="flex gap-4 sm:gap-6 text-xs sm:text-sm">
+                  <div><span className="text-xl sm:text-2xl font-bold text-white animate-count-glow">{landingStats?.totalUsers || 0}+</span><p className="text-zinc-500">{t('landing.stats.users')}</p></div>
+                  <div><span className="text-xl sm:text-2xl font-bold text-emerald-400">{landingStats?.totalRoi ? `$${(landingStats.totalRoi / 1000).toFixed(0)}k+` : '$0'}</span><p className="text-zinc-500">{t('landing.stats.mined')}</p></div>
+                  <div><span className="text-xl sm:text-2xl font-bold text-cyan-400">5%</span><p className="text-zinc-500">{t('common.perDay')}</p></div>
                 </div>
               </motion.div>
 
@@ -2451,8 +2451,20 @@ export default function PlataformaROI() {
           </motion.div>
         </section>
 
+        {/* ── Mobile Floating CTA Bar ── */}
+        <div className="fixed bottom-0 left-0 right-0 z-50 sm:hidden bg-[#0a0a0f]/95 backdrop-blur-lg border-t border-white/10 safe-area-bottom">
+          <div className="flex gap-3 p-3">
+            <Button variant="outline" className="flex-1 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 h-12 text-base font-semibold" onClick={() => { setAuthMode('login'); setShowAuth(true); }}>
+              {t('landing.hero.login')}
+            </Button>
+            <Button className="flex-1 bg-gradient-to-r from-emerald-600 to-green-500 hover:from-emerald-500 hover:to-green-400 text-white h-12 text-base font-semibold" onClick={() => { setAuthMode('register'); setShowAuth(true); }}>
+              {t('landing.hero.register')} <ArrowUpRight className="ml-1.5 h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+
         {/* ── Footer ── */}
-        <footer className="mt-auto border-t border-white/5 bg-white/[0.01] py-12">
+        <footer className="mt-auto border-t border-white/5 bg-white/[0.01] py-12 pb-24 sm:pb-12">
           <div className="max-w-7xl mx-auto px-4 sm:px-6">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8 mb-8">
               <div>
@@ -2543,10 +2555,11 @@ export default function PlataformaROI() {
             </div>
           </div>
           <div className="flex items-center gap-2 sm:gap-3">
-            <div className="hidden sm:flex items-center gap-2 bg-zinc-800 rounded-lg px-3 py-1.5 text-sm">
-              <DollarSign className="h-4 w-4 text-cyan-400" />
-              <span className="font-semibold">{fmtUSDT(user.balance)}</span>
-              <span className="text-zinc-400">USDT</span>
+            {/* Mobile Balance Pill */}
+            <div className="flex items-center gap-1.5 bg-zinc-800 rounded-lg px-2.5 py-1.5 text-sm">
+              <DollarSign className="h-3.5 w-3.5 text-cyan-400" />
+              <span className="font-semibold text-xs sm:text-sm">{fmtUSDT(user.balance)}</span>
+              <span className="text-zinc-400 text-xs hidden sm:inline">USDT</span>
             </div>
             {/* Language Selector with Flags */}
             <DropdownMenu>
@@ -2764,12 +2777,12 @@ export default function PlataformaROI() {
                     </AnimatePresence>
 
                     {/* Balance Cards */}
-                    <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                       <Card className="bg-gradient-to-br from-emerald-900/40 to-zinc-900 border-cyan-500/20 relative overflow-hidden">
-                        <CardContent className="p-4 sm:p-6">
-                          <div className="text-sm text-zinc-400 mb-1">{t('dashboard.balance')} USDT</div>
-                          <div className="text-2xl sm:text-3xl font-bold truncate">${fmtUSDT(user.balance)}</div>
-                          <div className="text-sm text-zinc-400 mt-1">≈ {t('common.brl')} {fmtBRL(balanceBRL)}</div>
+                        <CardContent className="p-3 sm:p-6">
+                          <div className="text-xs sm:text-sm text-zinc-400 mb-0.5 sm:mb-1">{t('dashboard.balance')} USDT</div>
+                          <div className="text-lg sm:text-3xl font-bold truncate">${fmtUSDT(user.balance)}</div>
+                          <div className="text-xs sm:text-sm text-zinc-400 mt-0.5 sm:mt-1">≈ {t('common.brl')} {fmtBRL(balanceBRL)}</div>
                           {/* Shimmer effect on balance when earnings come in */}
                           {mounted && roiFlash !== null && roiFlash > 0 && (
                             <motion.div
@@ -2782,26 +2795,26 @@ export default function PlataformaROI() {
                         </CardContent>
                       </Card>
                       <Card className="bg-zinc-900 border-zinc-800">
-                        <CardContent className="p-4 sm:p-6">
-                          <div className="text-sm text-zinc-400 mb-1">{t('dashboard.affiliateBalance')}</div>
-                          <div className="text-2xl sm:text-3xl font-bold truncate">${fmtUSDT(user.affiliateBalance)}</div>
-                          <div className="text-sm text-zinc-400 mt-1">≈ {t('common.brl')} {fmtBRL(affiliateBalanceBRL)}</div>
+                        <CardContent className="p-3 sm:p-6">
+                          <div className="text-xs sm:text-sm text-zinc-400 mb-0.5 sm:mb-1">{t('dashboard.affiliateBalance')}</div>
+                          <div className="text-lg sm:text-3xl font-bold truncate">${fmtUSDT(user.affiliateBalance)}</div>
+                          <div className="text-xs sm:text-sm text-zinc-400 mt-0.5 sm:mt-1">≈ {t('common.brl')} {fmtBRL(affiliateBalanceBRL)}</div>
                         </CardContent>
                       </Card>
                       <Card className="bg-zinc-900 border-zinc-800">
-                        <CardContent className="p-4 sm:p-6">
-                          <div className="text-sm text-zinc-400 mb-1">{t('dashboard.totalRoi')}</div>
-                          <div className="text-2xl sm:text-3xl font-bold text-cyan-400 truncate">${fmtUSDT(user.totalRoi)}</div>
-                          <div className="text-sm text-zinc-400 mt-1">{t('dashboard.totalInvested')}: ${fmtUSDT(user.totalInvested)}</div>
+                        <CardContent className="p-3 sm:p-6">
+                          <div className="text-xs sm:text-sm text-zinc-400 mb-0.5 sm:mb-1">{t('dashboard.totalRoi')}</div>
+                          <div className="text-lg sm:text-3xl font-bold text-cyan-400 truncate">${fmtUSDT(user.totalRoi)}</div>
+                          <div className="text-xs sm:text-sm text-zinc-400 mt-0.5 sm:mt-1">{t('dashboard.totalInvested')}: ${fmtUSDT(user.totalInvested)}</div>
                         </CardContent>
                       </Card>
                       <Card className="bg-zinc-900 border-cyan-500/20">
-                        <CardContent className="p-4 sm:p-6">
-                          <div className="text-sm text-zinc-400 mb-1 flex items-center gap-1.5">
-                            <Activity className="h-3.5 w-3.5 text-cyan-400" />
+                        <CardContent className="p-3 sm:p-6">
+                          <div className="text-xs sm:text-sm text-zinc-400 mb-0.5 sm:mb-1 flex items-center gap-1.5">
+                            <Activity className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-cyan-400" />
                             {t('trading.earned')}
                           </div>
-                          <div className="text-2xl sm:text-3xl font-bold text-cyan-400 truncate">
+                          <div className="text-lg sm:text-3xl font-bold text-cyan-400 truncate">
                             ${accumulatedEarnings > 0 ? accumulatedEarnings.toFixed(2) : '0.00'}
                           </div>
                           <div className="text-sm text-zinc-400 mt-1">
@@ -2860,15 +2873,15 @@ export default function PlataformaROI() {
                     )}
 
                     {/* Quick Actions */}
-                    <div className="flex gap-3 flex-wrap">
-                      <Button className="bg-emerald-600 hover:bg-cyan-700" onClick={() => setDepositDialog(true)}>
-                        <ArrowDownLeft className="mr-2 h-4 w-4" /> {t('dashboard.deposit')}
+                    <div className="grid grid-cols-3 gap-2 sm:flex sm:gap-3 sm:flex-wrap">
+                      <Button className="bg-emerald-600 hover:bg-cyan-700 text-xs sm:text-sm h-10 sm:h-auto" onClick={() => setDepositDialog(true)}>
+                        <ArrowDownLeft className="mr-1 sm:mr-2 h-4 w-4" /> <span className="truncate">{t('dashboard.deposit')}</span>
                       </Button>
-                      <Button variant="outline" className="border-zinc-700" onClick={() => setWithdrawDialog(true)}>
-                        <ArrowUpRight className="mr-2 h-4 w-4" /> {t('dashboard.withdraw')}
+                      <Button variant="outline" className="border-zinc-700 text-xs sm:text-sm h-10 sm:h-auto" onClick={() => setWithdrawDialog(true)}>
+                        <ArrowUpRight className="mr-1 sm:mr-2 h-4 w-4" /> <span className="truncate">{t('dashboard.withdraw')}</span>
                       </Button>
-                      <Button variant="outline" className="border-zinc-700" onClick={() => setActiveTab('investir')}>
-                        <Bot className="mr-2 h-4 w-4" /> {t('dashboard.investNow')}
+                      <Button variant="outline" className="border-zinc-700 text-xs sm:text-sm h-10 sm:h-auto" onClick={() => setActiveTab('investir')}>
+                        <Bot className="mr-1 sm:mr-2 h-4 w-4" /> <span className="truncate">{t('dashboard.investNow')}</span>
                       </Button>
                     </div>
                     {/* Live Trading Operation Dashboard */}
@@ -3235,9 +3248,9 @@ export default function PlataformaROI() {
                           </Card>
 
                           {/* Plans for this trader */}
-                          {trader.plans.filter(p => p.isActive).length > 0 && (
+                          {(trader.plans || []).filter(p => p.isActive).length > 0 && (
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
-                              {trader.plans
+                              {(trader.plans || [])
                                 .filter(p => p.isActive)
                                 .sort((a, b) => a.days - b.days)
                                 .map(plan => {
@@ -3294,7 +3307,7 @@ export default function PlataformaROI() {
                           )}
 
                           {/* Custom investment option */}
-                          {trader.plans.filter(p => p.isActive).length > 0 && (
+                          {(trader.plans || []).filter(p => p.isActive).length > 0 && (
                             <div className="flex justify-center">
                               <Button
                                 variant="outline"
@@ -3310,7 +3323,7 @@ export default function PlataformaROI() {
                             </div>
                           )}
 
-                          {trader.plans.filter(p => p.isActive).length === 0 && (
+                          {(trader.plans || []).filter(p => p.isActive).length === 0 && (
                             <div className="flex justify-center">
                               <Button
                                 className="bg-emerald-600 hover:bg-cyan-700 text-white"
@@ -6049,14 +6062,18 @@ Seus 10 indicados diretos investem $100/dia cada:
       </div>
 
       {/* MOBILE BOTTOM NAV */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-zinc-900 border-t border-zinc-800 lg:hidden z-50 safe-area-bottom">
-        <div className="flex justify-around py-2.5 px-1 overflow-x-auto">
-          {navItems.map(item => (
-            <button key={item.id} onClick={() => setActiveTab(item.id)} className={`flex flex-col items-center gap-0.5 px-2 py-2.5 rounded-lg text-[10px] whitespace-nowrap min-w-[48px] ${activeTab === item.id ? 'text-cyan-400' : 'text-zinc-500'}`}>
-              <item.icon className="h-5 w-5" />
-              <span>{item.label}</span>
-            </button>
-          ))}
+      <nav className="fixed bottom-0 left-0 right-0 bg-zinc-900/95 backdrop-blur-lg border-t border-zinc-800 lg:hidden z-50 safe-area-bottom">
+        <div className="flex justify-around py-1.5 px-1">
+          {/* Show only 5 key items on mobile: Home, Investir, Extrato, Afiliados, Perfil */}
+          {navItems
+            .filter(item => ['home', 'investir', 'extrato', 'afiliados', 'perfil'].includes(item.id) || (item.id === 'admin' && user?.role === 'admin'))
+            .slice(0, user?.role === 'admin' ? 5 : 5)
+            .map(item => (
+              <button key={item.id} onClick={() => setActiveTab(item.id)} className={`flex flex-col items-center gap-0.5 px-3 py-2 rounded-lg text-[10px] whitespace-nowrap min-w-[52px] transition-colors ${activeTab === item.id ? 'text-cyan-400' : 'text-zinc-500 active:text-zinc-300'}`}>
+                <item.icon className="h-5 w-5" />
+                <span className="font-medium">{item.id === 'home' ? t('sidebar.home') : item.label}</span>
+              </button>
+            ))}
         </div>
       </nav>
 
@@ -6071,14 +6088,14 @@ Seus 10 indicados diretos investem $100/dia cada:
           </DialogHeader>
           <div className="space-y-4">
             {/* Plan selection */}
-            {investDialogPlan && investDialogPlan.plans.length > 0 && (
+            {investDialogPlan && (investDialogPlan.plans || []).length > 0 && (
               <div>
                 <Label className="text-zinc-300 text-sm">{t('copyTraders.selectPlan')}</Label>
-                <Select value={selectedPlanId || 'custom'} onValueChange={v => { if (v === 'custom') { setSelectedPlanId(undefined); } else { setSelectedPlanId(v); const p = investDialogPlan.plans.find(pp => pp.id === v); if (p) setInvestmentDuration(p.days); } }}>
+                <Select value={selectedPlanId || 'custom'} onValueChange={v => { if (v === 'custom') { setSelectedPlanId(undefined); } else { setSelectedPlanId(v); const p = (investDialogPlan.plans || []).find(pp => pp.id === v); if (p) setInvestmentDuration(p.days); } }}>
                   <SelectTrigger className="bg-zinc-800 border-zinc-700 mt-1"><SelectValue placeholder={t('copyTraders.customPlan')} /></SelectTrigger>
                   <SelectContent className="bg-zinc-800">
                     <SelectItem value="custom">{t('copyTraders.customPlan')}</SelectItem>
-                    {investDialogPlan.plans.map(p => (
+                    {(investDialogPlan.plans || []).map(p => (
                       <SelectItem key={p.id} value={p.id}>{p.name} - {p.days} {t('copyTraders.days')} ({p.discountPct}% {t('copyTraders.off')})</SelectItem>
                     ))}
                   </SelectContent>
