@@ -462,6 +462,16 @@ export default function PlataformaROI() {
   const [landingConfig, setLandingConfig] = useState<{ siteName: string; minDeposit: string; minWithdrawal: string; hasPix: boolean; hasUsdt: boolean } | null>(null);
   const [landingRate, setLandingRate] = useState(5.5);
 
+  // Site Config State (for deposit modal toggles)
+  const [siteConfig, setSiteConfig] = useState<{ hasPix: boolean; hasUsdt: boolean; manualDepositEnabled: boolean; nowpaymentsEnabled: boolean; minDepositUsdt: number; siteName: string }>({
+    hasPix: false,
+    hasUsdt: true,
+    manualDepositEnabled: false,
+    nowpaymentsEnabled: true,
+    minDepositUsdt: 10,
+    siteName: 'PLATAFORMA ROI',
+  });
+
   // Admin Data
   const [adminCopyTraders, setAdminCopyTraders] = useState <CopyTrader[]> ([]);
   const [adminPlans, setAdminPlans] = useState<InvestmentPlan[]>([]);
@@ -649,6 +659,26 @@ export default function PlataformaROI() {
       fetchAvailableCurrencies();
     }
   }, [user]);
+
+  // Fetch site config (deposit toggles) when authenticated
+  useEffect(() => {
+    fetch('/api/site/config')
+      .then(r => r.json())
+      .then(data => {
+        if (data.success) {
+          setSiteConfig(prev => ({
+            ...prev,
+            hasPix: data.hasPix ?? false,
+            hasUsdt: data.hasUsdt ?? true,
+            manualDepositEnabled: data.manualDepositEnabled ?? false,
+            nowpaymentsEnabled: data.nowpaymentsEnabled ?? true,
+            minDepositUsdt: data.minDepositUsdt ?? 10,
+            siteName: data.siteName ?? 'PLATAFORMA ROI',
+          }));
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const fetchAvailableCurrencies = async () => {
     try {
@@ -7515,50 +7545,73 @@ Seus 10 indicados diretos investem $100/dia cada:
       {/* Deposit Dialog */}
       <Dialog open={depositDialog} onOpenChange={(open) => { setDepositDialog(open); if (!open) resetNpDeposit(); }}>
         <DialogContent className="bg-zinc-900 border-zinc-800 text-white max-w-lg w-[95vw] sm:w-full">
-          <DialogHeader><DialogTitle>{t('dashboard.deposit')}</DialogTitle><DialogDescription className="text-zinc-400">Deposite USDT via NowPayments ou manualmente</DialogDescription></DialogHeader>
+          <DialogHeader><DialogTitle>{t('dashboard.deposit')}</DialogTitle><DialogDescription className="text-zinc-400">Deposite USDT na sua conta</DialogDescription></DialogHeader>
 
           {!npDepositAddress ? (
             <div className="space-y-4">
-              <div><Label className="text-zinc-300">Valor (USDT)</Label><Input type="number" step="0.01" min="20" value={npDepositAmount} onChange={e => setNpDepositAmount(e.target.value)} className="bg-zinc-800 border-zinc-700 mt-1" placeholder="20.00" />
-                <p className="text-zinc-500 text-xs mt-1">Mínimo: 20 USDT (exigência NowPayments)</p>
-              </div>
-              <div><Label className="text-zinc-300">Moeda de Pagamento</Label>
-                <Select value={npDepositCurrency} onValueChange={setNpDepositCurrency}>
-                  <SelectTrigger className="bg-zinc-800 border-zinc-700 mt-1"><SelectValue /></SelectTrigger>
-                  <SelectContent className="bg-zinc-800">
-                    {availableDepositCurrencies.map(c => (
-                      <SelectItem key={c} value={c}>{currencyLabel(c)}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="bg-zinc-800/50 rounded-lg p-3 text-sm">
-                <p className="text-zinc-400">Clique em &quot;Gerar Endereço&quot; para obter uma carteira de depósito exclusiva via NowPayments.</p>
-                <p className="text-zinc-500 text-xs mt-1">O saldo será creditado automaticamente após a confirmação na blockchain.</p>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" className="border-zinc-700" onClick={() => setDepositDialog(false)}>{t('common.cancel')}</Button>
-                <Button className="bg-emerald-600 hover:bg-cyan-700" onClick={handleNowPaymentsDeposit} disabled={npGeneratingAddress || !npDepositAmount || parseFloat(npDepositAmount) < 10}>
-                  {npGeneratingAddress && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Gerar Endereço
-                </Button>
-              </DialogFooter>
+              {/* NowPayments Auto Deposit */}
+              {siteConfig.nowpaymentsEnabled && (
+                <>
+                  <div><Label className="text-zinc-300">Valor (USDT)</Label><Input type="number" step="0.01" min={siteConfig.minDepositUsdt} value={npDepositAmount} onChange={e => setNpDepositAmount(e.target.value)} className="bg-zinc-800 border-zinc-700 mt-1" placeholder={String(siteConfig.minDepositUsdt)} />
+                    <p className="text-zinc-500 text-xs mt-1">Mínimo: {siteConfig.minDepositUsdt} USDT</p>
+                  </div>
+                  <div><Label className="text-zinc-300">Moeda de Pagamento</Label>
+                    <Select value={npDepositCurrency} onValueChange={setNpDepositCurrency}>
+                      <SelectTrigger className="bg-zinc-800 border-zinc-700 mt-1"><SelectValue /></SelectTrigger>
+                      <SelectContent className="bg-zinc-800">
+                        {availableDepositCurrencies.map(c => (
+                          <SelectItem key={c} value={c}>{currencyLabel(c)}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="bg-zinc-800/50 rounded-lg p-3 text-sm">
+                    <p className="text-zinc-400">Clique em &quot;Gerar Endereço&quot; para obter uma carteira de depósito exclusiva via NowPayments.</p>
+                    <p className="text-zinc-500 text-xs mt-1">O saldo será creditado automaticamente após a confirmação na blockchain.</p>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" className="border-zinc-700" onClick={() => setDepositDialog(false)}>{t('common.cancel')}</Button>
+                    <Button className="bg-emerald-600 hover:bg-cyan-700" onClick={handleNowPaymentsDeposit} disabled={npGeneratingAddress || !npDepositAmount || parseFloat(npDepositAmount) < siteConfig.minDepositUsdt}>
+                      {npGeneratingAddress && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Gerar Endereço
+                    </Button>
+                  </DialogFooter>
+                </>
+              )}
 
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-zinc-700" /></div>
-                <div className="relative flex justify-center text-xs"><span className="bg-zinc-900 px-2 text-zinc-500">ou depósito manual</span></div>
-              </div>
-
-              <form onSubmit={handleDeposit} className="space-y-3">
-                <div><Label className="text-zinc-300 text-xs">{t('deposit.amount')}</Label><Input name="amount" type="number" step="0.01" min="10" required className="bg-zinc-800 border-zinc-700 mt-1" placeholder="10.00" /></div>
-                <div><Label className="text-zinc-300 text-xs">{t('deposit.method')}</Label>
-                  <Select name="method" defaultValue="pix"><SelectTrigger className="bg-zinc-800 border-zinc-700 mt-1"><SelectValue /></SelectTrigger>
-                    <SelectContent className="bg-zinc-800"><SelectItem value="pix">{t('method.pix')}</SelectItem><SelectItem value="usdt_trc20">{t('method.usdt_trc20')}</SelectItem><SelectItem value="usdt_polygon">{t('method.usdt_polygon')}</SelectItem></SelectContent></Select>
+              {/* Manual Deposit - only shown when enabled in config */}
+              {siteConfig.manualDepositEnabled && siteConfig.nowpaymentsEnabled && (
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-zinc-700" /></div>
+                  <div className="relative flex justify-center text-xs"><span className="bg-zinc-900 px-2 text-zinc-500">ou depósito manual</span></div>
                 </div>
-                <div><Label className="text-zinc-300 text-xs">{t('deposit.txHash')}</Label><Input name="txHash" className="bg-zinc-800 border-zinc-700 mt-1" placeholder={t('deposit.txHashPlaceholder')} /></div>
-                <Button type="submit" className="w-full bg-zinc-700 hover:bg-zinc-600 text-sm" disabled={depositLoading}>
-                  {depositLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Depósito Manual
-                </Button>
-              </form>
+              )}
+
+              {siteConfig.manualDepositEnabled && (
+                <form onSubmit={handleDeposit} className="space-y-3">
+                  <div><Label className="text-zinc-300 text-xs">{t('deposit.amount')}</Label><Input name="amount" type="number" step="0.01" min={siteConfig.minDepositUsdt} required className="bg-zinc-800 border-zinc-700 mt-1" placeholder={String(siteConfig.minDepositUsdt)} /></div>
+                  <div><Label className="text-zinc-300 text-xs">{t('deposit.method')}</Label>
+                    <Select name="method" defaultValue={siteConfig.hasPix ? 'pix' : 'usdt_trc20'}><SelectTrigger className="bg-zinc-800 border-zinc-700 mt-1"><SelectValue /></SelectTrigger>
+                      <SelectContent className="bg-zinc-800">
+                        {siteConfig.hasPix && <SelectItem value="pix">{t('method.pix')}</SelectItem>}
+                        {siteConfig.hasUsdt && <SelectItem value="usdt_trc20">{t('method.usdt_trc20')}</SelectItem>}
+                        {siteConfig.hasUsdt && <SelectItem value="usdt_polygon">{t('method.usdt_polygon')}</SelectItem>}
+                      </SelectContent></Select>
+                  </div>
+                  <div><Label className="text-zinc-300 text-xs">{t('deposit.txHash')}</Label><Input name="txHash" className="bg-zinc-800 border-zinc-700 mt-1" placeholder={t('deposit.txHashPlaceholder')} /></div>
+                  <Button type="submit" className="w-full bg-zinc-700 hover:bg-zinc-600 text-sm" disabled={depositLoading}>
+                    {depositLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Depósito Manual
+                  </Button>
+                </form>
+              )}
+
+              {/* Neither option available */}
+              {!siteConfig.nowpaymentsEnabled && !siteConfig.manualDepositEnabled && (
+                <div className="text-center py-6">
+                  <AlertTriangle className="h-10 w-10 text-amber-400 mx-auto mb-3" />
+                  <p className="text-zinc-400">Depósitos temporariamente indisponíveis</p>
+                  <p className="text-zinc-500 text-xs mt-1">Entre em contato com o suporte para mais informações.</p>
+                </div>
+              )}
             </div>
           ) : (
             <div className="space-y-4">

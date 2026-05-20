@@ -26,6 +26,7 @@ const PUBLIC_API_ROUTES = [
   '/api/cron/', // Cron uses Bearer token auth, not session
   '/api/admin/setup', // Setup is public (creates first admin)
   '/api/landing', // Public landing page data
+  '/api/site/config', // Public site configuration (deposit methods, etc.)
   '/api/nowpayments/currencies', // Public: available currencies for deposit/withdrawal
   '/api/bitget/', // Public: Bitget trader ranking/search data (no auth needed)
 ];

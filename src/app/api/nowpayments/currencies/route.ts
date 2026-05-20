@@ -7,45 +7,45 @@ import { db } from '@/lib/db';
 export async function GET() {
   try {
     // Check if NowPayments is enabled in system config
-    const enabledConfig = await db.systemConfig.findUnique({
-      where: { key: 'nowpayments_enabled' },
+    const configs = await db.systemConfig.findMany({
+      where: { key: { in: ['nowpayments_enabled', 'has_pix'] } },
     });
+    const configMap = Object.fromEntries(configs.map((c) => [c.key, c.value]));
 
-    const isEnabled = enabledConfig?.value === 'true' || !enabledConfig;
+    const isNpEnabled = configMap.nowpayments_enabled !== 'false'; // default true
+    const pixEnabled = configMap.has_pix === 'true'; // default false
 
-    if (!isEnabled) {
+    if (!isNpEnabled) {
       return NextResponse.json({
         success: true,
         currencies: [],
         deposit: [],
         withdrawal: [],
-        message: 'NowPayments is disabled',
+        pixEnabled: false,
       });
     }
 
     const configured = await isNowPaymentsConfigured();
 
     if (!configured) {
-      // Fallback to default currencies if NP not configured
+      // NowPayments not configured - return empty (no fallback)
       return NextResponse.json({
         success: true,
-        currencies: ['usdttrc20', 'usdtmatic', 'btc', 'eth', 'trx'],
-        deposit: ['usdttrc20', 'usdtmatic', 'btc', 'eth', 'trx'],
-        withdrawal: ['usdt_trc20', 'usdt_polygon', 'btc'],
-        pixEnabled: true,
+        currencies: [],
+        deposit: [],
+        withdrawal: [],
+        pixEnabled,
+        message: 'NowPayments not configured',
       });
     }
 
     // =========================================================================
     // STEP 1: Try to get MERCHANT-CONFIGURED coins (only coins the merchant has enabled)
-    // The /merchant/coins endpoint returns only currencies configured in the account
     // =========================================================================
     let merchantCoins: string[] = [];
     try {
       const merchantResult = await getMerchantCoins() as any;
-      // The merchant/coins endpoint returns an array of coin objects or currency strings
       if (Array.isArray(merchantResult)) {
-        // Each item may be a string or an object with currency/coin field
         merchantCoins = merchantResult.map((item: any) => {
           if (typeof item === 'string') return item.toLowerCase();
           return (item.currency || item.coin || item.code || '').toLowerCase();
@@ -56,7 +56,7 @@ export async function GET() {
           return (c.currency || c.coin || c.code || '').toLowerCase();
         }).filter(Boolean);
       }
-      console.log('[/api/nowpayments/currencies] Merchant coins from API:', merchantCoins);
+      console.log('[/api/nowpayments/currencies] Merchant coins from API:', merchantCoins.length);
     } catch (err) {
       console.warn('[/api/nowpayments/currencies] Failed to fetch merchant coins:', err);
     }
@@ -73,30 +73,27 @@ export async function GET() {
     }
 
     // =========================================================================
-    // STEP 3: Determine effective currencies
-    // Priority: merchant coins > available currencies > our CURRENCY_MAP fallback
+    // STEP 3: Determine effective currencies - STRICT MODE
+    // Priority: merchant coins > available currencies > EMPTY (no generic fallback)
     // =========================================================================
-    const supportedNpCurrencies = Object.values(CURRENCY_MAP).map(c => c.toLowerCase()); // NP format codes in lowercase
+    const supportedNpCurrencies = Object.values(CURRENCY_MAP).map(c => c.toLowerCase());
 
     let effectiveCurrencies: string[] = [];
 
     if (merchantCoins.length > 0) {
       // Filter merchant coins to only include currencies we support in our CURRENCY_MAP
       effectiveCurrencies = merchantCoins.filter(c => supportedNpCurrencies.includes(c));
-      console.log('[/api/nowpayments/currencies] Filtered merchant coins (in CURRENCY_MAP):', effectiveCurrencies);
+      console.log('[/api/nowpayments/currencies] Using merchant coins (filtered):', effectiveCurrencies.length);
     }
 
     // If merchant coins API returned nothing useful, try available currencies
     if (effectiveCurrencies.length === 0 && availableCurrencies.length > 0) {
       effectiveCurrencies = availableCurrencies.filter(c => supportedNpCurrencies.includes(c));
-      console.log('[/api/nowpayments/currencies] Using available currencies (filtered):', effectiveCurrencies);
+      console.log('[/api/nowpayments/currencies] Using available currencies (filtered):', effectiveCurrencies.length);
     }
 
-    // Last resort fallback: use all supported currencies
-    if (effectiveCurrencies.length === 0) {
-      effectiveCurrencies = supportedNpCurrencies;
-      console.log('[/api/nowpayments/currencies] Using fallback (all CURRENCY_MAP):', effectiveCurrencies);
-    }
+    // NO MORE GENERIC FALLBACK - if nothing from NP API, return empty
+    // The user must configure their NowPayments account properly
 
     // Normalize back to the original casing in CURRENCY_MAP
     const normalizedCurrencies = effectiveCurrencies.map(c => {
@@ -107,9 +104,8 @@ export async function GET() {
     // Map NP currency codes to our internal codes for deposit
     const depositCurrencies = normalizedCurrencies.map(c => fromNowPaymentsCurrency(c));
 
-    // Withdrawal currencies (same as deposit, plus PIX option)
+    // Withdrawal currencies (same as deposit, plus PIX option if enabled)
     const withdrawalCurrencies = depositCurrencies.map(c => {
-      // Convert NP format to our internal format with underscores
       if (c === 'usdttrc20') return 'usdt_trc20';
       if (c === 'usdtmatic') return 'usdt_polygon';
       if (c === 'usdtbsc') return 'usdt_bsc';
@@ -118,27 +114,22 @@ export async function GET() {
       return c;
     });
 
-    // Check if PIX is enabled (from system config or env)
-    const hasPixConfig = await db.systemConfig.findUnique({ where: { key: 'pix_enabled' } });
-    const pixEnabled = hasPixConfig?.value !== 'false'; // default true
-
     return NextResponse.json({
       success: true,
       currencies: normalizedCurrencies,
       deposit: depositCurrencies,
       withdrawal: pixEnabled ? [...withdrawalCurrencies, 'pix'] : withdrawalCurrencies,
       pixEnabled,
-      merchantCoinsCount: merchantCoins.length, // Debug info
     });
   } catch (error: any) {
     console.error('[/api/nowpayments/currencies] Error:', error?.message || error);
-    // Graceful fallback
+    // Return empty on error - no fallback
     return NextResponse.json({
       success: true,
-      currencies: ['usdttrc20', 'usdtmatic', 'btc', 'eth', 'trx'],
-      deposit: ['usdttrc20', 'usdtmatic', 'btc', 'eth', 'trx'],
-      withdrawal: ['usdt_trc20', 'usdt_polygon', 'btc', 'pix'],
-      pixEnabled: true,
+      currencies: [],
+      deposit: [],
+      withdrawal: [],
+      pixEnabled: false,
     });
   }
 }
