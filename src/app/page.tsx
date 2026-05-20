@@ -895,7 +895,24 @@ export default function PlataformaROI() {
       if (usersRes.status === 'fulfilled') setAdminUsers(usersRes.value.users || []);
       if (depsRes.status === 'fulfilled') setAdminDeposits(depsRes.value.deposits || []);
       if (wdsRes.status === 'fulfilled') setAdminWithdrawals(wdsRes.value.withdrawals || []);
-      if (configsRes.status === 'fulfilled') setAdminConfigs(configsRes.value.configs || []);
+      if (configsRes.status === 'fulfilled') {
+        const loadedConfigs = configsRes.value.configs || [];
+        setAdminConfigs(loadedConfigs);
+        // Auto-migrate: if key categories are missing, run migration silently
+        const categories = new Set(loadedConfigs.map((c: SystemConfig) => c.category));
+        if (!categories.has('branding') || !categories.has('withdrawal') || loadedConfigs.length < 30) {
+          try {
+            const migrateRes = await api<{ created: number }>('/api/admin/migrate-config', { method: 'POST' });
+            if (migrateRes.created > 0) {
+              // Reload configs after migration
+              const freshConfigs = await api<{ success: boolean; configs: SystemConfig[] }>('/api/admin/config');
+              setAdminConfigs(freshConfigs.configs || []);
+            }
+          } catch {
+            // Migration failed silently — admin can use manual "Migrar Configs" button
+          }
+        }
+      }
       if (logsRes.status === 'fulfilled') setAdminLogs(logsRes.value.logs || []);
       if (affRes.status === 'fulfilled') {
         setAdminAffiliates(affRes.value.stats);
