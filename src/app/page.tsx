@@ -32,7 +32,7 @@ import {
   LayoutDashboard, UserCog, Banknote, HandCoins, Link2, ChevronLeft,
   Trophy, Target, Crown, Star, Share2, Medal, Award,
   Info, MessageSquare, Ticket, LineChart, Calculator,
-  Lock,
+  Lock, Image,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -342,9 +342,13 @@ const CONFIG_LABELS: Record<string, {
   unit?: string;
   options?: { value: string; label: string }[];
 }> = {
+  // Branding
+  site_logo: { label: 'Logo do Site', description: 'URL da imagem do logo (PNG ou SVG, fundo transparente, 200x60px recomendado)', type: 'string' },
+  site_favicon: { label: 'Favicon (Ícone da Aba)', description: 'URL do favicon (ICO ou PNG, 32x32px ou 64x64px recomendado)', type: 'string' },
   // General
   site_name: { label: 'Nome do Site', description: 'Nome exibido no site e nos e-mails' },
   maintenance_mode: { label: 'Modo Manutenção', description: 'Ativar para colocar o site em manutenção', type: 'boolean' },
+  usdt_brl_rate: { label: 'Câmbio USDT/BRL', description: 'Taxa de câmbio fixa USDT para BRL', type: 'number', unit: 'BRL' },
   // Deposit
   has_pix: { label: 'PIX Habilitado', description: 'Permitir depósitos via PIX', type: 'boolean' },
   has_usdt: { label: 'USDT Habilitado', description: 'Permitir depósitos via USDT', type: 'boolean' },
@@ -358,7 +362,8 @@ const CONFIG_LABELS: Record<string, {
   // Withdrawal
   min_withdrawal_usdt: { label: 'Saque Mínimo', description: 'Valor mínimo para saque em USDT', type: 'number', unit: 'USDT' },
   max_withdrawal_usdt: { label: 'Saque Máximo', description: 'Valor máximo para saque em USDT', type: 'number', unit: 'USDT' },
-  withdrawal_fee_pct: { label: 'Taxa de Saque', description: 'Percentual cobrado sobre o lucro em saques', type: 'number', unit: '%' },
+  withdrawal_fee_pct: { label: 'Taxa de Saque', description: 'Percentual cobrado sobre o lucro em saques (não sobre o capital investido)', type: 'number', unit: '%' },
+  withdrawal_interval_hours: { label: 'Intervalo Mínimo entre Saques', description: 'Horas mínimas entre solicitações de saque', type: 'number', unit: 'horas' },
   manual_withdrawal_enabled: { label: 'Saque Manual', description: 'Permitir saques manuais (admin aprova cada solicitação)', type: 'boolean' },
   nowpayments_withdrawal_enabled: { label: 'Saque NowPayments', description: 'Permitir saques automáticos via NowPayments (payout)', type: 'boolean' },
   // Trading
@@ -394,19 +399,18 @@ const HIDDEN_CONFIG_KEYS = new Set([
   'nowpayments_split_pct',
   'nowpayments_split_wallet',
   'nowpayments_2fa_secret',
-  'site_logo',
-  'site_favicon',
 ]);
 
 const categoryIcon = (cat: string) => {
   const icons: Record<string, typeof Settings> = {
-    general: Settings, deposit: Banknote, withdrawal: HandCoins,
+    branding: Image, general: Settings, deposit: Banknote, withdrawal: HandCoins,
     trading: LineChart, affiliate: Link2, nowpayments: Globe,
   };
   return icons[cat] || Settings;
 };
 
 const categoryDescription: Record<string, string> = {
+  branding: 'Logo e favicon exibidos no site. Formatos aceitos: PNG, SVG, JPG, ICO (máx. 2MB)',
   general: 'Configurações gerais do site',
   deposit: 'Opções de depósito e métodos de pagamento',
   withdrawal: 'Regras para saques e taxas',
@@ -463,8 +467,8 @@ export default function PlataformaROI() {
   };
   const categoryLabel = (cat: string): string => {
     const labels: Record<string, string> = {
-      general: t('category.general'), deposit: t('category.deposit'), withdrawal: t('category.withdrawal'),
-      trading: t('category.trading'), affiliate: t('category.affiliate'), nowpayments: 'NowPayments',
+      branding: 'Marca do Site', general: t('category.general'), deposit: t('category.deposit'), withdrawal: t('category.withdrawal'),
+      trading: t('category.trading'), affiliate: t('category.affiliate'), nowpayments: 'NowPayments (Credenciais)',
     };
     return labels[cat] || cat;
   };
@@ -7057,41 +7061,21 @@ export default function PlataformaROI() {
                             </Button>
                             <Button variant="outline" className="border-zinc-700 text-amber-400 hover:bg-amber-500/10" onClick={async () => {
                               try {
-                                const npConfigs = [
-                                  { key: 'nowpayments_api_key', value: '', type: 'string', description: 'Chave de API do painel NowPayments', category: 'nowpayments' },
-                                  { key: 'nowpayments_email', value: '', type: 'string', description: 'E-mail da conta NowPayments', category: 'nowpayments' },
-                                  { key: 'nowpayments_password', value: '', type: 'secret', description: 'Senha da conta NowPayments', category: 'nowpayments' },
-                                  { key: 'nowpayments_ipn_secret', value: '', type: 'secret', description: 'Chave secreta para verificação de webhooks', category: 'nowpayments' },
-                                  { key: 'nowpayments_base_url', value: 'https://api.nowpayments.io/v1', type: 'string', description: 'URL base da API NowPayments (não alterar)', category: 'nowpayments' },
-                                  { key: 'nowpayments_enabled', value: 'true', type: 'boolean', description: 'Ativar depósito automático via NowPayments', category: 'nowpayments' },
-                                  { key: 'nowpayments_deposit_currencies', value: 'usdttrc20', type: 'string', description: 'Moedas aceitas (separar por vírgula, ex: usdttrc20,usdtmatic,btc)', category: 'nowpayments' },
-                                  { key: 'nowpayments_split_pct', value: '0', type: 'number', description: 'Split da Plataforma (%)', category: 'nowpayments' },
-                                  { key: 'nowpayments_split_wallet', value: '', type: 'string', description: 'Carteira de Split', category: 'nowpayments' },
-                                ];
-                                const existing = adminConfigs.filter(c => c.category === 'nowpayments').map(c => c.key);
-                                const toCreate = npConfigs.filter(c => !existing.includes(c.key));
-                                if (toCreate.length === 0) {
-                                  toast.info('NowPayments configs já existem');
-                                  return;
-                                }
-                                await api('/api/admin/config', {
-                                  method: 'PUT',
-                                  body: JSON.stringify({ configs: toCreate }),
-                                });
-                                toast.success(`${toCreate.length} configs do NowPayments criadas`);
+                                const data = await api<{ message: string; created: number }>('/api/admin/migrate-config', { method: 'POST' });
+                                toast.success(data.message);
                                 fetchAdminData();
                               } catch (err: any) {
                                 toast.error(err.message);
                               }
                             }}>
-                              <Globe className="mr-2 h-4 w-4" /> Setup NowPayments
+                              <RefreshCw className="mr-2 h-4 w-4" /> Migrar Configs
                             </Button>
                           </div>
                           <Button className="bg-emerald-600 hover:bg-cyan-700" onClick={() => setNewConfigDialog(true)}>
                             <Plus className="mr-2 h-4 w-4" /> Nova Config
                           </Button>
                         </div>
-                        {['general', 'deposit', 'withdrawal', 'trading', 'affiliate', 'nowpayments'].map(cat => {
+                        {['branding', 'general', 'deposit', 'withdrawal', 'trading', 'affiliate', 'nowpayments'].map(cat => {
                           const catConfigs = adminConfigs.filter(c => c.category === cat && !HIDDEN_CONFIG_KEYS.has(c.key));
                           if (catConfigs.length === 0) return null;
                           const CatIcon = categoryIcon(cat);
@@ -7116,6 +7100,57 @@ export default function PlataformaROI() {
                                 </div>
                               </CardHeader>
                               <CardContent>
+                                {/* Branding: Logo preview */}
+                                {cat === 'branding' && (() => {
+                                  const logoVal = configEdits['site_logo'] ?? adminConfigs.find(c => c.key === 'site_logo')?.value ?? '';
+                                  const faviconVal = configEdits['site_favicon'] ?? adminConfigs.find(c => c.key === 'site_favicon')?.value ?? '';
+                                  return (
+                                    <div className="mb-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                      <div className="bg-zinc-800/60 rounded-lg p-4 flex flex-col items-center gap-2 border border-zinc-700">
+                                        <span className="text-xs text-zinc-400">Prévia do Logo</span>
+                                        {logoVal ? (
+                                          <img src={logoVal} alt="Logo" className="max-h-12 object-contain" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                                        ) : (
+                                          <div className="h-12 w-32 bg-zinc-700/50 rounded flex items-center justify-center text-zinc-500 text-xs">Sem logo</div>
+                                        )}
+                                        <span className="text-[10px] text-zinc-600">Recomendado: PNG ou SVG, fundo transparente, 200×60px</span>
+                                      </div>
+                                      <div className="bg-zinc-800/60 rounded-lg p-4 flex flex-col items-center gap-2 border border-zinc-700">
+                                        <span className="text-xs text-zinc-400">Prévia do Favicon</span>
+                                        {faviconVal ? (
+                                          <img src={faviconVal} alt="Favicon" className="h-8 w-8 object-contain" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                                        ) : (
+                                          <div className="h-8 w-8 bg-zinc-700/50 rounded flex items-center justify-center text-zinc-500 text-xs">—</div>
+                                        )}
+                                        <span className="text-[10px] text-zinc-600">Recomendado: ICO ou PNG, 32×32px ou 64×64px</span>
+                                      </div>
+                                    </div>
+                                  );
+                                })()}
+                                {/* NowPayments: Connection test */}
+                                {cat === 'nowpayments' && (
+                                  <div className="mb-4 flex items-center gap-3 flex-wrap">
+                                    <Button size="sm" variant="outline" className="h-8 text-xs border-amber-500/30 text-amber-400 hover:bg-amber-500/10"
+                                      onClick={async () => {
+                                        try {
+                                          const data = await api<{ connected: boolean; status: string; message: string }>('/api/nowpayments/test-connection', { method: 'POST' });
+                                          if (data.connected) {
+                                            toast.success(data.message);
+                                          } else {
+                                            toast.warning(data.message);
+                                          }
+                                        } catch (err: any) {
+                                          toast.error(err.message || 'Erro ao testar conexão');
+                                        }
+                                      }}>
+                                      <RefreshCw className="mr-1.5 h-3.5 w-3.5" /> Testar Conexão
+                                    </Button>
+                                    <div className="flex items-center gap-2 text-xs text-zinc-400">
+                                      <Info className="h-3.5 w-3.5 text-sky-400" />
+                                      <span>O split de pagamentos é gerenciado na aba NowPayments &gt; Sócios &amp; Split</span>
+                                    </div>
+                                  </div>
+                                )}
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                   {catConfigs.map(cfg => {
                                     const meta = CONFIG_LABELS[cfg.key];

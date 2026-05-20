@@ -59,9 +59,9 @@ export const adminPlanSchema = z.object({
 export const adminConfigSchema = z.object({
   key: z.string().min(1),
   value: z.string(),
-  type: z.enum(['string', 'number', 'boolean', 'json']).default('string'),
+  type: z.enum(['string', 'number', 'boolean', 'json', 'secret']).default('string'),
   description: z.string().optional(),
-  category: z.enum(['general', 'affiliate', 'withdrawal', 'trading', 'deposit', 'nowpayments']).default('general'),
+  category: z.enum(['general', 'branding', 'affiliate', 'withdrawal', 'trading', 'deposit', 'nowpayments']).default('general'),
 });
 
 export const adminUserUpdateSchema = z.object({

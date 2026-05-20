@@ -22,9 +22,12 @@ export async function GET() {
       'min_withdrawal_usdt',
       'max_withdrawal_usdt',
       'withdrawal_fee_pct',
+      'withdrawal_interval_hours',
       'site_name',
       'site_logo',
       'site_favicon',
+      'usdt_brl_rate',
+      'maintenance_mode',
     ];
 
     const configs = await db.systemConfig.findMany({
@@ -67,10 +70,15 @@ export async function GET() {
       minWithdrawalUsdt: Number(configMap.min_withdrawal_usdt) || 10,
       maxWithdrawalUsdt: Number(configMap.max_withdrawal_usdt) || 50000,
       withdrawalFeePct: Number(configMap.withdrawal_fee_pct) || 0,
+      withdrawalIntervalHours: Number(configMap.withdrawal_interval_hours) || 0,
       // Site settings
       siteName: configMap.site_name || 'PLATAFORMA ROI',
       hasLogo: !!configMap.site_logo,
       hasFavicon: !!configMap.site_favicon,
+      siteLogo: configMap.site_logo || '',
+      siteFavicon: configMap.site_favicon || '',
+      usdtBrlRate: Number(configMap.usdt_brl_rate) || 5.50,
+      maintenanceMode: configMap.maintenance_mode === 'true',
     });
   } catch (error) {
     return handleApiError(error);

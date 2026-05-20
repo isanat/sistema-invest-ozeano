@@ -11,11 +11,16 @@ export async function POST(request: NextRequest) {
     const data = affiliateWithdrawalSchema.parse(body);
 
     // Get config
-    const configKeys = ['min_affiliate_withdrawal', 'affiliate_withdrawal_fee_pct'];
+    const configKeys = ['min_affiliate_withdrawal', 'affiliate_withdrawal_fee_pct', 'manual_withdrawal_enabled'];
     const configs = await db.systemConfig.findMany({
       where: { key: { in: configKeys } },
     });
     const configMap = Object.fromEntries(configs.map((c) => [c.key, c.value]));
+
+    // Check if withdrawals are enabled
+    if (configMap.manual_withdrawal_enabled !== 'true') {
+      return apiError('Saques estão temporariamente desabilitados. Tente novamente mais tarde.');
+    }
 
     const minWithdrawal = d(configMap.min_affiliate_withdrawal) || 10;
     const feePct = d(configMap.affiliate_withdrawal_fee_pct) || 0;

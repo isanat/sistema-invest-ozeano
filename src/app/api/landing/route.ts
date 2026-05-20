@@ -31,10 +31,14 @@ export async function GET() {
           key: {
             in: [
               'site_name',
+              'site_logo',
+              'site_favicon',
               'min_deposit_usdt',
               'min_withdrawal_usdt',
               'has_pix',
               'has_usdt',
+              'usdt_brl_rate',
+              'maintenance_mode',
             ],
           },
         },
@@ -73,10 +77,14 @@ export async function GET() {
       affiliateLevels,
       config: {
         siteName: configMap.site_name || 'PLATAFORMA ROI',
+        siteLogo: configMap.site_logo || '',
+        siteFavicon: configMap.site_favicon || '',
         minDeposit: configMap.min_deposit_usdt || '10',
         minWithdrawal: configMap.min_withdrawal_usdt || '10',
         hasPix: configMap.has_pix === 'true',
         hasUsdt: configMap.has_usdt === 'true',
+        usdtBrlRate: Number(configMap.usdt_brl_rate) || usdtBrlRate,
+        maintenanceMode: configMap.maintenance_mode === 'true',
       },
       stats: {
         totalUsers,

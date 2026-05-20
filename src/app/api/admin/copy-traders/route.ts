@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
     if (!adminId) return apiError('Não autorizado', 401);
 
     const body = await request.json();
-    const { name, avatar, specialty, winRate, totalPnl, monthlyRoi, riskLevel, isFeatured, sortOrder } = body;
+    const { name, avatar, specialty, winRate, totalPnl, monthlyRoi, riskLevel, isActive, isFeatured, sortOrder } = body;
 
     if (!name) return apiError('Nome é obrigatório', 400);
 
@@ -35,12 +35,69 @@ export async function POST(request: NextRequest) {
         totalPnl: totalPnl || '0',
         monthlyRoi: monthlyRoi || '150',
         riskLevel: riskLevel || 'medium',
+        isActive: isActive !== undefined ? isActive : true,
         isFeatured: isFeatured || false,
         sortOrder: sortOrder || 0,
       },
     });
 
     return apiSuccess({ trader }, 'Copy trader criado com sucesso');
+  } catch (error) {
+    return handleApiError(error);
+  }
+}
+
+export async function PUT(request: NextRequest) {
+  try {
+    const adminId = await requireAdmin(request);
+    if (!adminId) return apiError('Não autorizado', 401);
+
+    const body = await request.json();
+    const { id, name, avatar, specialty, winRate, totalPnl, monthlyRoi, riskLevel, isActive, isFeatured, sortOrder } = body;
+
+    if (!id) return apiError('ID é obrigatório para atualização', 400);
+
+    const existing = await db.copyTrader.findUnique({ where: { id } });
+    if (!existing) return apiError('Copy trader não encontrado', 404);
+
+    const trader = await db.copyTrader.update({
+      where: { id },
+      data: {
+        ...(name !== undefined && { name }),
+        ...(avatar !== undefined && { avatar: avatar || null }),
+        ...(specialty !== undefined && { specialty }),
+        ...(winRate !== undefined && { winRate }),
+        ...(totalPnl !== undefined && { totalPnl }),
+        ...(monthlyRoi !== undefined && { monthlyRoi }),
+        ...(riskLevel !== undefined && { riskLevel }),
+        ...(isActive !== undefined && { isActive }),
+        ...(isFeatured !== undefined && { isFeatured }),
+        ...(sortOrder !== undefined && { sortOrder }),
+      },
+    });
+
+    return apiSuccess({ trader }, 'Copy trader atualizado com sucesso');
+  } catch (error) {
+    return handleApiError(error);
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const adminId = await requireAdmin(request);
+    if (!adminId) return apiError('Não autorizado', 401);
+
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+
+    if (!id) return apiError('ID é obrigatório para exclusão', 400);
+
+    const existing = await db.copyTrader.findUnique({ where: { id } });
+    if (!existing) return apiError('Copy trader não encontrado', 404);
+
+    await db.copyTrader.delete({ where: { id } });
+
+    return apiSuccess({ id }, 'Copy trader excluído com sucesso');
   } catch (error) {
     return handleApiError(error);
   }

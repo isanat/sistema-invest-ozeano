@@ -11,12 +11,28 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const data = withdrawalSchema.parse(body);
 
-    // Get withdrawal config
-    const configKeys = ['min_withdrawal_usdt', 'max_withdrawal_usdt', 'withdrawal_fee_pct'];
+    // Get withdrawal config — includes enable/disable toggles
+    const configKeys = [
+      'min_withdrawal_usdt', 'max_withdrawal_usdt', 'withdrawal_fee_pct',
+      'manual_withdrawal_enabled', 'nowpayments_withdrawal_enabled',
+      'withdrawal_interval_hours',
+    ];
     const configs = await db.systemConfig.findMany({
       where: { key: { in: configKeys } },
     });
     const configMap = Object.fromEntries(configs.map((c) => [c.key, c.value]));
+
+    // ========== WITHDRAWAL METHOD TOGGLE CHECK ==========
+    const manualWithdrawalEnabled = configMap.manual_withdrawal_enabled === 'true';
+    const nowpaymentsWithdrawalEnabled = configMap.nowpayments_withdrawal_enabled === 'true';
+
+    // Check if the requested withdrawal method is enabled
+    if (data.method === 'pix' || data.method === 'usdt_trc20') {
+      // Manual withdrawal methods — check if manual withdrawal is enabled
+      if (!manualWithdrawalEnabled && !nowpaymentsWithdrawalEnabled) {
+        return apiError('Saques estão temporariamente desabilitados. Tente novamente mais tarde.');
+      }
+    }
 
     const minWithdrawal = d(configMap.min_withdrawal_usdt) || 10;
     const maxWithdrawal = d(configMap.max_withdrawal_usdt) || 50000;
@@ -28,6 +44,26 @@ export async function POST(request: NextRequest) {
 
     if (data.amount > maxWithdrawal) {
       return apiError(`Saque máximo: ${dusdt(maxWithdrawal)} USDT`);
+    }
+
+    // ========== WITHDRAWAL INTERVAL CHECK ==========
+    const intervalHours = d(configMap.withdrawal_interval_hours) || 0;
+    if (intervalHours > 0) {
+      const lastWithdrawal = await db.investment.findFirst({
+        where: {
+          userId: session.userId,
+          type: 'withdrawal',
+          status: { in: ['pending', 'confirmed'] },
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+      if (lastWithdrawal) {
+        const elapsed = (Date.now() - new Date(lastWithdrawal.createdAt).getTime()) / (1000 * 60 * 60);
+        if (elapsed < intervalHours) {
+          const remaining = Math.ceil(intervalHours - elapsed);
+          return apiError(`Aguarde ${remaining}h antes de solicitar outro saque. Intervalo mínimo: ${intervalHours}h.`);
+        }
+      }
     }
 
     // ========== VOUCHER WITHDRAWAL LOCK CHECK ==========
