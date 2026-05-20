@@ -419,6 +419,8 @@ export default function PlataformaROI() {
   const [activeTab, setActiveTab] = useState('home');
   const [adminTab, setAdminTab] = useState('overview');
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  // Admin view mode: 'admin' shows admin panel, 'investor' shows investor dashboard
+  const [adminViewMode, setAdminViewMode] = useState<'admin' | 'investor'>('admin');
 
   // Data State
   const [copyTraders, setCopyTraders] = useState <CopyTrader[]> ([]);
@@ -869,7 +871,8 @@ export default function PlataformaROI() {
   // For admin users, activeTab IS the admin section ID directly (e.g., 'overview', 'users')
   const adminTabIds = ['overview', 'copyTraders', 'plans', 'users', 'deposits', 'withdrawals', 'nowpayments', 'affiliates', 'affiliateWithdrawals', 'affiliateRanks', 'affiliateMilestones', 'affiliateContests', 'affiliateBadges', 'vouchers', 'config', 'marketing', 'logs'];
   const isAdminUser = user?.role === 'admin';
-  const isAdminTab = adminTabIds.includes(activeTab);
+  // Admin tab is only active if the admin is in admin view mode AND the tab is an admin tab
+  const isAdminTab = isAdminUser && adminViewMode === 'admin' && adminTabIds.includes(activeTab);
 
   // Sync adminTab state with activeTab for admin users
   useEffect(() => {
@@ -2693,14 +2696,17 @@ export default function PlataformaROI() {
     { id: 'logs', label: t('adminSidebar.logs'), icon: FileText },
   ];
 
-  // Admin users get admin nav directly; regular users get investor nav
+  // Admin users can toggle between admin and investor views
+  // When adminViewMode is 'investor', admin sees the investor menu
   const navItems = isAdmin
-    ? adminNavItems
+    ? (adminViewMode === 'admin' ? adminNavItems : investorNavItems)
     : investorNavItems;
 
-  // Mobile bottom nav: show key items based on role
+  // Mobile bottom nav: show key items based on role and view mode
   const mobileNavIds = isAdmin
-    ? ['overview', 'users', 'deposits', 'nowpayments', 'config']
+    ? (adminViewMode === 'admin'
+        ? ['overview', 'users', 'deposits', 'nowpayments', 'config']
+        : ['home', 'investir', 'extrato', 'afiliados', 'perfil'])
     : ['home', 'investir', 'extrato', 'afiliados', 'perfil'];
 
   return (
@@ -2714,12 +2720,35 @@ export default function PlataformaROI() {
             </Button>
             <div className="flex items-center gap-2">
               <Bot className="h-6 w-6 text-cyan-400" />
-              <span className="font-bold text-lg hidden sm:inline">{isAdmin ? 'ADMIN PANEL' : 'PLATAFORMA ROI'}</span>
+              <span className="font-bold text-lg hidden sm:inline">
+                {isAdmin ? (adminViewMode === 'admin' ? 'ADMIN PANEL' : 'PLATAFORMA ROI') : 'PLATAFORMA ROI'}
+              </span>
             </div>
+            {/* Admin View Mode Toggle */}
+            {isAdmin && (
+              <div className="flex items-center bg-zinc-800 rounded-lg p-0.5">
+                <button
+                  onClick={() => { setAdminViewMode('admin'); setActiveTab('overview'); }}
+                  className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
+                    adminViewMode === 'admin' ? 'bg-cyan-600 text-white' : 'text-zinc-400 hover:text-white'
+                  }`}
+                >
+                  <Shield className="h-3.5 w-3.5 inline mr-1" />Admin
+                </button>
+                <button
+                  onClick={() => { setAdminViewMode('investor'); setActiveTab('home'); }}
+                  className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
+                    adminViewMode === 'investor' ? 'bg-emerald-600 text-white' : 'text-zinc-400 hover:text-white'
+                  }`}
+                >
+                  <TrendingUp className="h-3.5 w-3.5 inline mr-1" />Investidor
+                </button>
+              </div>
+            )}
           </div>
           <div className="flex items-center gap-2 sm:gap-3">
-            {/* Mobile Balance Pill (investors only) */}
-            {!isAdmin && (
+            {/* Mobile Balance Pill (investors and admin in investor mode) */}
+            {(!isAdmin || adminViewMode === 'investor') && (
               <div className="flex items-center gap-1.5 bg-zinc-800 rounded-lg px-2.5 py-1.5 text-sm">
                 <DollarSign className="h-3.5 w-3.5 text-cyan-400" />
                 <span className="font-semibold text-xs sm:text-sm">{fmtUSDT(user.balance)}</span>
@@ -2828,7 +2857,16 @@ export default function PlataformaROI() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="bg-zinc-900 border-zinc-800" align="end">
-                {!isAdmin && (
+                {isAdmin && (
+                  <>
+                    <DropdownMenuItem onClick={() => { setAdminViewMode(adminViewMode === 'admin' ? 'investor' : 'admin'); setActiveTab(adminViewMode === 'admin' ? 'home' : 'overview'); }}>
+                      {adminViewMode === 'admin' ? <TrendingUp className="mr-2 h-4 w-4" /> : <Shield className="mr-2 h-4 w-4" />}
+                      {adminViewMode === 'admin' ? 'Modo Investidor' : 'Modo Admin'}
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator className="bg-zinc-800" />
+                  </>
+                )}
+                {(!isAdmin || adminViewMode === 'investor') && (
                   <DropdownMenuItem onClick={() => setActiveTab('perfil')}>
                     <User className="mr-2 h-4 w-4" /> {t('sidebar.profile')}
                   </DropdownMenuItem>
@@ -2860,7 +2898,7 @@ export default function PlataformaROI() {
               </button>
             ))}
           </nav>
-          {!isAdmin && (
+          {(!isAdmin || adminViewMode === 'investor') && (
             <div className="p-4 border-t border-zinc-800">
               <div className="text-xs text-zinc-500">{t('dashboard.balance')}</div>
               <div className="text-lg font-bold text-cyan-400">${fmtUSDT(user.balance)}</div>
@@ -2879,7 +2917,7 @@ export default function PlataformaROI() {
                 <div className="p-4 flex items-center justify-between border-b border-zinc-800">
                   <div className="flex items-center gap-2">
                     <Shield className="h-6 w-6 text-cyan-400" />
-                    <span className="font-bold">{isAdmin ? 'ADMIN' : 'PLATAFORMA ROI'}</span>
+                    <span className="font-bold">{isAdmin ? (adminViewMode === 'admin' ? 'ADMIN' : 'PLATAFORMA ROI') : 'PLATAFORMA ROI'}</span>
                   </div>
                   <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(false)}><X className="h-5 w-5" /></Button>
                 </div>
