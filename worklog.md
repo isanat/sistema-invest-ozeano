@@ -109,3 +109,28 @@ Stage Summary:
 - User needs to set DATABASE_URL in Vercel dashboard pointing to a PostgreSQL database
 - Recommended providers: Neon (free), Supabase (free), Railway (free)
 - bcrypt rounds: 4 (dev) / 10 (production)
+
+---
+Task ID: 6
+Agent: Main
+Task: Fix UX flow - Deposit button, Copy Traders confusion, new user onboarding
+
+Work Log:
+- Changed "Copiar" (Copy) buttons on Live Traders to "Ver Planos" (View Plans) with Eye icon - makes it clear traders are informational, not for direct copy trading
+- Added prominent "Depositar Agora" (Deposit Now) button in investment modal when user has insufficient balance - redirects to deposit dialog
+- Added new user onboarding CTA for users with $0 balance - shows 3-step flow: 1. Deposite 2. Escolha um Plano 3. Ganhe 5%/dia
+- Updated investment dialog description from "{specialty} • {winRate}% win • {riskLevel}" to "{specialty} • 5% ROI/dia"
+- Updated translations in all 4 languages (PT, ES, EN, ZH):
+  - copyTraders.title: "Copy Traders" → "Traders da Plataforma" / "Platform Traders" / "平台交易员"
+  - copy: "Copiar" → "Ver Planos" / "View Plans" / "查看计划"
+  - copyTrader: "Copiar Trader" → "Trader da Plataforma" / "Platform Trader" / "平台交易员"
+  - platformUsesTraders: Clarified that traders generate returns paid in investment plans, not for direct copying
+- All lint checks pass
+- Dev server running fine with hot reload
+
+Stage Summary:
+- UX flow now clear: Deposit → Choose Plan → Earn ROI
+- No more confusion about "Copiar" buttons on traders
+- New users with $0 balance see clear onboarding CTA with deposit button
+- Investment modal guides users to deposit when balance is insufficient
+- All translations updated across 4 languages

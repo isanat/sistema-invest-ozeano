@@ -3111,6 +3111,59 @@ export default function PlataformaROI() {
                       </div>
                     </motion.div>
 
+                    {/* ====== NEW USER ONBOARDING CTA ====== */}
+                    {mounted && d(user.balance) === 0 && activeInvestments.length === 0 && (
+                      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
+                        <div className="glass-card rounded-2xl relative overflow-hidden stat-card-hover border border-emerald-500/20">
+                          {/* Animated gradient bg */}
+                          <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 via-transparent to-cyan-500/5 pointer-events-none" />
+                          <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-emerald-500/40 to-transparent" />
+                          
+                          <div className="relative p-6 sm:p-8 text-center">
+                            <div className="w-16 h-16 bg-gradient-to-br from-emerald-500/20 to-cyan-500/20 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-emerald-500/20 shadow-lg shadow-emerald-500/10">
+                              <Wallet className="h-8 w-8 text-emerald-400" />
+                            </div>
+                            <h3 className="text-xl sm:text-2xl font-bold text-white mb-2">Comece a Investir Agora</h3>
+                            <p className="text-zinc-400 text-sm max-w-md mx-auto mb-6">
+                              Deposite USDT na sua conta e comece a ganhar <span className="text-emerald-400 font-semibold">5% de ROI diário</span> automaticamente. O processo é simples e rápido!
+                            </p>
+                            
+                            {/* Steps */}
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6 max-w-lg mx-auto">
+                              <div className="bg-white/[0.03] rounded-xl p-3 border border-white/[0.04]">
+                                <div className="w-8 h-8 bg-emerald-500/15 rounded-lg flex items-center justify-center mx-auto mb-2">
+                                  <ArrowDownLeft className="h-4 w-4 text-emerald-400" />
+                                </div>
+                                <div className="text-xs font-semibold text-white mb-0.5">1. Deposite</div>
+                                <div className="text-[10px] text-zinc-500">USDT via crypto ou PIX</div>
+                              </div>
+                              <div className="bg-white/[0.03] rounded-xl p-3 border border-white/[0.04]">
+                                <div className="w-8 h-8 bg-cyan-500/15 rounded-lg flex items-center justify-center mx-auto mb-2">
+                                  <Target className="h-4 w-4 text-cyan-400" />
+                                </div>
+                                <div className="text-xs font-semibold text-white mb-0.5">2. Escolha um Plano</div>
+                                <div className="text-[10px] text-zinc-500">A partir de $10 USDT</div>
+                              </div>
+                              <div className="bg-white/[0.03] rounded-xl p-3 border border-white/[0.04]">
+                                <div className="w-8 h-8 bg-amber-500/15 rounded-lg flex items-center justify-center mx-auto mb-2">
+                                  <TrendingUp className="h-4 w-4 text-amber-400" />
+                                </div>
+                                <div className="text-xs font-semibold text-white mb-0.5">3. Ganhe 5%/dia</div>
+                                <div className="text-[10px] text-zinc-500">ROI diário automático</div>
+                              </div>
+                            </div>
+                            
+                            <Button
+                              className="bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-white font-semibold rounded-xl px-8 py-3 text-base shadow-lg shadow-emerald-500/20"
+                              onClick={() => setDepositDialog(true)}
+                            >
+                              <Wallet className="mr-2 h-5 w-5" /> Depositar Agora
+                            </Button>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+
                     {/* ====== ROI EARNINGS LIVE CARD ====== */}
                     {mounted && activeInvestments.length > 0 && (
                       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
@@ -4149,7 +4202,7 @@ export default function PlataformaROI() {
                                       )}
                                     </div>
 
-                                    {/* Copy Trader Button - scrolls to plans */}
+                                    {/* View Plans Button - informational: shows this trader's strategy powers the platform */}
                                     <Button
                                       className={`w-full font-semibold rounded-xl ${
                                         isFeatured
@@ -4162,10 +4215,9 @@ export default function PlataformaROI() {
                                         if (plansSection) {
                                           plansSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
                                         }
-                                        toast.success(`${t('copyTraders.copyTrader')}: ${trader.displayName}`, { description: t('copyTraders.platformUsesTraders'), duration: 4000 });
                                       }}
                                     >
-                                      <Copy className="mr-2 h-4 w-4" /> {t('copyTraders.copy')}
+                                      <Eye className="mr-2 h-4 w-4" /> Ver Planos
                                     </Button>
                                   </div>
                                 </div>
@@ -4245,10 +4297,9 @@ export default function PlataformaROI() {
                                         if (plansSection) {
                                           plansSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
                                         }
-                                        toast.success(`${t('copyTraders.copyTrader')}: ${trader.name}`, { description: t('copyTraders.platformUsesTraders'), duration: 4000 });
                                       }}
                                     >
-                                      <Copy className="mr-2 h-4 w-4" /> {t('copyTraders.copy')} — {trader.name}
+                                      <Eye className="mr-2 h-4 w-4" /> Ver Planos — {trader.name}
                                     </Button>
                                   </div>
                                 </div>
@@ -7330,12 +7381,12 @@ Seus 10 indicados diretos investem $100/dia cada:
 
       {/* ====== DIALOGS ====== */}
 
-      {/* Invest in Copy Trader Dialog */}
+      {/* Invest in Plan Dialog */}
       <Dialog open={!!investDialogPlan} onOpenChange={() => setInvestDialogPlan(null)}>
         <DialogContent className="bg-zinc-900 border-zinc-800 text-white max-w-md w-[95vw] sm:w-full">
           <DialogHeader>
             <DialogTitle>{t('copyTraders.invest')} — {investDialogPlan?.name}</DialogTitle>
-            <DialogDescription className="text-zinc-400">{investDialogPlan?.specialty || ''} • {investDialogPlan?.winRate || ''}% win • {investDialogPlan?.riskLevel || ''}</DialogDescription>
+            <DialogDescription className="text-zinc-400">{investDialogPlan?.specialty || 'Plano de Investimento'} • 5% ROI/dia</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             {/* Plan selection */}
@@ -7370,7 +7421,18 @@ Seus 10 indicados diretos investem $100/dia cada:
               <div className="flex justify-between"><span className="text-zinc-400">{t('copyTraders.yourBalance')}</span><span className={d(user.balance) >= rentalCalc.totalPrice ? 'text-cyan-400' : 'text-red-400'}>${fmtUSDT(user.balance)} USDT</span></div>
             </div>
             {d(user.balance) < rentalCalc.totalPrice && !useVoucherForInvest && (
-              <div className="flex items-center gap-2 text-red-400 text-sm"><AlertTriangle className="h-4 w-4" /> {t('dashboard.insufficientBalance')}</div>
+              <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 space-y-3">
+                <div className="flex items-center gap-2 text-red-400 text-sm font-medium">
+                  <AlertTriangle className="h-4 w-4" /> Saldo insuficiente
+                </div>
+                <p className="text-zinc-400 text-xs">Você precisa de pelo menos <span className="text-white font-medium">{fmtUSDT(rentalCalc.totalPrice)} USDT</span> para investir neste plano. Deposite agora e comece a ganhar!</p>
+                <Button
+                  className="w-full bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-white font-semibold rounded-xl shadow-lg shadow-emerald-500/20"
+                  onClick={() => { setInvestDialogPlan(null); setDepositDialog(true); }}
+                >
+                  <Wallet className="mr-2 h-4 w-4" /> Depositar Agora
+                </Button>
+              </div>
             )}
 
             {/* Payment Method Selection */}

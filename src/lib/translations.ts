@@ -174,7 +174,7 @@ export const translations: Record<string, any> = {
 
     // === COPY TRADERS ===
     copyTraders: {
-      title: 'Copy Traders',
+      title: 'Traders de la Plataforma',
       availablePlans: 'Planes disponibles:',
       status: 'Estado',
       dailyReturn: 'Retorno Diario',
@@ -183,9 +183,9 @@ export const translations: Record<string, any> = {
       efficiency: 'Rendimiento',
       performance: 'Rendimiento',
       invest: 'Invertir',
-      copy: 'Copiar',
-      copyTrader: 'Copiar Trader',
-      platformUsesTraders: 'Estos traders operan 24/7 para generar los retornos de los planes de inversión',
+      copy: 'Ver Planes',
+      copyTrader: 'Trader de la Plataforma',
+      platformUsesTraders: 'Estos traders operan 24/7 para generar los retornos pagados en los planes de inversión. Vea los planes arriba para invertir.',
       selectPlan: 'Seleccionar Plan',
       customPlan: 'Personalizado',
       days: 'días',
@@ -869,7 +869,7 @@ export const translations: Record<string, any> = {
     },
 
     copyTraders: {
-      title: 'Copy Traders',
+      title: 'Traders da Plataforma',
       availablePlans: 'Planos disponíveis:',
       status: 'Status',
       dailyReturn: 'Retorno Diário',
@@ -878,9 +878,9 @@ export const translations: Record<string, any> = {
       efficiency: 'Rendimento',
       performance: 'Rendimento',
       invest: 'Investir',
-      copy: 'Copiar',
-      copyTrader: 'Copiar Trader',
-      platformUsesTraders: 'Estes traders operam 24/7 para gerar os retornos dos planos de investimento',
+      copy: 'Ver Planos',
+      copyTrader: 'Trader da Plataforma',
+      platformUsesTraders: 'Estes traders operam 24/7 para gerar os retornos pagos nos planos de investimento. Veja os planos acima para investir.',
       selectPlan: 'Selecionar Plano',
       customPlan: 'Personalizado',
       days: 'dias',
@@ -1478,7 +1478,7 @@ export const translations: Record<string, any> = {
     },
 
     copyTraders: {
-      title: 'Copy Traders',
+      title: 'Platform Traders',
       availablePlans: 'Available plans:',
       status: 'Status',
       dailyReturn: 'Daily Return',
@@ -1487,9 +1487,9 @@ export const translations: Record<string, any> = {
       efficiency: 'Performance',
       performance: 'Performance',
       invest: 'Invest',
-      copy: 'Copy',
-      copyTrader: 'Copy Trader',
-      platformUsesTraders: 'These traders operate 24/7 to generate returns for investment plans',
+      copy: 'View Plans',
+      copyTrader: 'Platform Trader',
+      platformUsesTraders: 'These traders operate 24/7 to generate returns paid in investment plans. See the plans above to invest.',
       selectPlan: 'Select Plan',
       customPlan: 'Custom',
       days: 'days',
@@ -2074,7 +2074,7 @@ export const translations: Record<string, any> = {
     },
 
     copyTraders: {
-      title: '跟单交易员',
+      title: '平台交易员',
       availablePlans: '可用计划：',
       status: '状态',
       dailyReturn: '日回报',
@@ -2083,9 +2083,9 @@ export const translations: Record<string, any> = {
       efficiency: '表现',
       performance: '表现',
       invest: '投资',
-      copy: '复制',
-      copyTrader: '复制交易员',
-      platformUsesTraders: '这些交易员24/7运营，为投资计划创造回报',
+      copy: '查看计划',
+      copyTrader: '平台交易员',
+      platformUsesTraders: '这些交易员24/7运营，为投资计划生成回报。请查看上方的投资计划。',
       selectPlan: '选择计划',
       customPlan: '自定义',
       days: '天',
