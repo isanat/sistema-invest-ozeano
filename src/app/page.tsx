@@ -3710,10 +3710,10 @@ export default function PlataformaROI() {
                     </motion.div>
 
                     {/* ── 3. INVESTMENT PLANS CARDS ── */}
-                    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.2 }}>
+                    <motion.div id="investment-plans-section" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.2 }}>
                       <div className="flex items-center gap-2 mb-4">
                         <Target className="h-5 w-5 text-emerald-400" />
-                        <h3 className="text-lg font-bold text-white">Planos de Investimento</h3>
+                        <h3 className="text-lg font-bold text-white">{t('plans.title')}</h3>
                       </div>
                       {(() => {
                         // Collect unique plans from all copy traders
@@ -3916,7 +3916,7 @@ export default function PlataformaROI() {
                       <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-2">
                           <Bot className="h-5 w-5 text-cyan-400" />
-                          <h3 className="text-lg font-bold text-white">Traders em Tempo Real</h3>
+                          <h3 className="text-lg font-bold text-white">{t('copyTraders.title')}</h3>
                           <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
                             <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" />
                             <span className="text-[10px] text-emerald-400 font-medium">LIVE</span>
@@ -3930,6 +3930,14 @@ export default function PlataformaROI() {
                         >
                           <RefreshCw className={`h-4 w-4 ${bitgetLoading ? 'animate-spin' : ''}`} />
                         </Button>
+                      </div>
+
+                      {/* Platform explanation */}
+                      <div className="glass-card rounded-xl p-3 mb-4 border border-emerald-500/10 bg-emerald-500/[0.03]">
+                        <div className="flex items-start gap-2">
+                          <Info className="h-4 w-4 text-emerald-400 mt-0.5 shrink-0" />
+                          <p className="text-xs text-zinc-400 leading-relaxed">{t('copyTraders.platformUsesTraders')}</p>
+                        </div>
                       </div>
 
                       {/* Search and Filter Bar */}
@@ -4141,34 +4149,23 @@ export default function PlataformaROI() {
                                       )}
                                     </div>
 
-                                    {/* Invest Button */}
+                                    {/* Copy Trader Button - scrolls to plans */}
                                     <Button
                                       className={`w-full font-semibold rounded-xl ${
                                         isFeatured
-                                          ? 'bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-white'
-                                          : 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                                          ? 'bg-gradient-to-r from-emerald-500/20 to-cyan-500/20 hover:from-emerald-500/30 hover:to-cyan-500/30 text-emerald-400 border border-emerald-500/30'
+                                          : 'bg-white/[0.04] hover:bg-white/[0.08] text-emerald-400 border border-white/[0.08]'
                                       }`}
                                       onClick={() => {
-                                        setInvestDialogPlan({
-                                          id: trader.traderId,
-                                          name: trader.displayName,
-                                          avatar: trader.avatar || null,
-                                          specialty: (trader.labels?.[0]?.name) || 'Copy Trading',
-                                          winRate: String(Math.min(99, 70 + Math.random() * 25)),
-                                          monthlyRoi: String(Math.max(1, roiVal / 30).toFixed(2)),
-                                          totalPnl: trader.totalPnl,
-                                          riskLevel: drawdownVal > 50 ? 'high' : drawdownVal > 20 ? 'medium' : 'low',
-                                          isActive: true,
-                                          isFeatured,
-                                          sortOrder: trader.rank,
-                                          createdAt: new Date().toISOString(),
-                                          updatedAt: new Date().toISOString(),
-                                        } as CopyTrader);
-                                        setSelectedPlanId(undefined);
-                                        setInvestmentDuration(30);
+                                        // Scroll to the plans section above
+                                        const plansSection = document.getElementById('investment-plans-section');
+                                        if (plansSection) {
+                                          plansSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                        }
+                                        toast.success(`${t('copyTraders.copyTrader')}: ${trader.displayName}`, { description: t('copyTraders.platformUsesTraders'), duration: 4000 });
                                       }}
                                     >
-                                      <Zap className="mr-2 h-4 w-4" /> {t('copyTraders.invest')}
+                                      <Copy className="mr-2 h-4 w-4" /> {t('copyTraders.copy')}
                                     </Button>
                                   </div>
                                 </div>
@@ -4241,14 +4238,17 @@ export default function PlataformaROI() {
                                       </div>
                                     )}
                                     <Button
-                                      className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-xl"
+                                      className="w-full bg-white/[0.04] hover:bg-white/[0.08] text-emerald-400 border border-white/[0.08] font-semibold rounded-xl"
                                       onClick={() => {
-                                        setInvestDialogPlan(trader);
-                                        setSelectedPlanId(undefined);
-                                        setInvestmentDuration(30);
+                                        // Scroll to the plans section above
+                                        const plansSection = document.getElementById('investment-plans-section');
+                                        if (plansSection) {
+                                          plansSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                        }
+                                        toast.success(`${t('copyTraders.copyTrader')}: ${trader.name}`, { description: t('copyTraders.platformUsesTraders'), duration: 4000 });
                                       }}
                                     >
-                                      <Zap className="mr-2 h-4 w-4" /> {t('copyTraders.invest')} — {trader.name}
+                                      <Copy className="mr-2 h-4 w-4" /> {t('copyTraders.copy')} — {trader.name}
                                     </Button>
                                   </div>
                                 </div>
