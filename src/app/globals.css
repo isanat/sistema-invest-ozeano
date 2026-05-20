@@ -121,6 +121,201 @@
   }
 }
 
+/* ============================================================
+   LANDING PAGE - DeFi Futuristic Styles
+   ============================================================ */
+
+/* Glassmorphism card */
+.glass-card {
+  background: rgba(24, 24, 27, 0.6);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.glass-card-light {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* Glow effects */
+.glow-emerald {
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.15), 0 0 60px rgba(16, 185, 129, 0.05);
+}
+
+.glow-cyan {
+  box-shadow: 0 0 20px rgba(6, 182, 212, 0.15), 0 0 60px rgba(6, 182, 212, 0.05);
+}
+
+.glow-green {
+  box-shadow: 0 0 20px rgba(34, 197, 94, 0.15), 0 0 60px rgba(34, 197, 94, 0.05);
+}
+
+/* Gradient borders */
+.gradient-border {
+  position: relative;
+}
+.gradient-border::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.4), rgba(6, 182, 212, 0.1), transparent);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+/* Animated grid background */
+@keyframes grid-move {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(40px); }
+}
+
+.landing-grid {
+  background-image:
+    linear-gradient(rgba(16, 185, 129, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(16, 185, 129, 0.03) 1px, transparent 1px);
+  background-size: 60px 60px;
+  animation: grid-move 20s linear infinite;
+}
+
+/* Floating particles */
+@keyframes float-particle {
+  0%, 100% { transform: translateY(0px) translateX(0px); opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { transform: translateY(-100vh) translateX(50px); opacity: 0; }
+}
+
+.particle {
+  position: absolute;
+  width: 2px;
+  height: 2px;
+  background: rgba(16, 185, 129, 0.6);
+  border-radius: 50%;
+  animation: float-particle linear infinite;
+}
+
+/* Ticker tape */
+@keyframes ticker-scroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.ticker-tape {
+  animation: ticker-scroll 30s linear infinite;
+}
+
+/* Pulse ring */
+@keyframes pulse-ring {
+  0% { transform: scale(0.8); opacity: 1; }
+  100% { transform: scale(2); opacity: 0; }
+}
+
+.animate-pulse-ring {
+  animation: pulse-ring 2s ease-out infinite;
+}
+
+/* Chart line draw */
+@keyframes chart-draw {
+  0% { stroke-dashoffset: 1000; }
+  100% { stroke-dashoffset: 0; }
+}
+
+.chart-line-animated {
+  stroke-dasharray: 1000;
+  animation: chart-draw 3s ease-out forwards;
+}
+
+/* Count up glow */
+@keyframes count-glow {
+  0%, 100% { text-shadow: 0 0 5px rgba(16, 185, 129, 0.3); }
+  50% { text-shadow: 0 0 20px rgba(16, 185, 129, 0.6); }
+}
+
+.animate-count-glow {
+  animation: count-glow 3s ease-in-out infinite;
+}
+
+/* Hero gradient orb animation */
+@keyframes orb-float {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  25% { transform: translate(30px, -50px) scale(1.1); }
+  50% { transform: translate(-20px, -100px) scale(1.05); }
+  75% { transform: translate(50px, -50px) scale(1.15); }
+}
+
+.animate-orb {
+  animation: orb-float 15s ease-in-out infinite;
+}
+
+.animate-orb-delay {
+  animation: orb-float 20s ease-in-out infinite;
+  animation-delay: -5s;
+}
+
+/* Shimmer effect */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.animate-shimmer {
+  background: linear-gradient(90deg, transparent 0%, rgba(16, 185, 129, 0.08) 50%, transparent 100%);
+  background-size: 200% 100%;
+  animation: shimmer 3s ease-in-out infinite;
+}
+
+/* Stat card hover */
+.stat-card-hover {
+  transition: all 0.3s ease;
+}
+.stat-card-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 30px rgba(16, 185, 129, 0.1);
+}
+
+/* Tier card premium shine */
+@keyframes premium-shine {
+  0% { left: -100%; }
+  50%, 100% { left: 100%; }
+}
+
+.tier-card-premium {
+  position: relative;
+  overflow: hidden;
+}
+.tier-card-premium::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.03), transparent);
+  animation: premium-shine 4s ease-in-out infinite;
+}
+
+/* Level connector line */
+.level-connector {
+  position: relative;
+}
+.level-connector::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: -12px;
+  width: 12px;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(16, 185, 129, 0.3), transparent);
+}
+
 /* Custom scrollbar for live trading feed and other scrollable areas */
 .custom-scrollbar::-webkit-scrollbar {
   width: 4px;

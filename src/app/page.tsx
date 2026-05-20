@@ -1826,16 +1826,16 @@ export default function PlataformaROI() {
   }
 
   // ============================================================================
-  // NOT AUTHENTICATED → LANDING PAGE
+  // NOT AUTHENTICATED → LANDING PAGE (DeFi Futuristic Design)
   // ============================================================================
   if (!user) {
     return (
-      <div className="min-h-screen bg-zinc-950 text-white">
-        {/* Auth Dialog */}
+      <div className="min-h-screen flex flex-col bg-[#0a0a0f] text-white">
+        {/* ── Auth Dialog ── */}
         <Dialog open={showAuth} onOpenChange={setShowAuth}>
-          <DialogContent className="bg-zinc-900 border-zinc-800 text-white max-w-md w-[95vw] sm:w-full">
+          <DialogContent className="glass-card border-white/10 text-white max-w-md w-[95vw] sm:w-full">
             <DialogHeader>
-              <DialogTitle className="text-xl">
+              <DialogTitle className="text-xl bg-gradient-to-r from-emerald-400 to-green-400 bg-clip-text text-transparent">
                 {authMode === 'login' ? t('landing.auth.loginTitle') : t('landing.auth.registerTitle')}
               </DialogTitle>
               <DialogDescription className="text-zinc-400">
@@ -1846,30 +1846,30 @@ export default function PlataformaROI() {
               {authMode === 'register' && (
                 <div className="space-y-2">
                   <Label htmlFor="name" className="text-zinc-300">{t('landing.auth.name')}</Label>
-                  <Input id="name" name="name" required minLength={2} className="bg-zinc-800 border-zinc-700 text-white" placeholder={t('landing.auth.namePlaceholder')} />
+                  <Input id="name" name="name" required minLength={2} className="bg-white/5 border-white/10 text-white focus:border-emerald-500/50" placeholder={t('landing.auth.namePlaceholder')} />
                 </div>
               )}
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-zinc-300">{t('landing.auth.email')}</Label>
-                <Input id="email" name="email" type="email" required className="bg-zinc-800 border-zinc-700 text-white" placeholder={t('landing.auth.emailPlaceholder')} />
+                <Input id="email" name="email" type="email" required className="bg-white/5 border-white/10 text-white focus:border-emerald-500/50" placeholder={t('landing.auth.emailPlaceholder')} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="password" className="text-zinc-300">{t('landing.auth.password')}</Label>
-                <Input id="password" name="password" type="password" required minLength={6} className="bg-zinc-800 border-zinc-700 text-white" placeholder={t('landing.auth.minPassword')} />
+                <Input id="password" name="password" type="password" required minLength={6} className="bg-white/5 border-white/10 text-white focus:border-emerald-500/50" placeholder={t('landing.auth.minPassword')} />
               </div>
               {authMode === 'register' && (
                 <>
                   <div className="space-y-2">
                     <Label htmlFor="confirmPassword" className="text-zinc-300">{t('landing.auth.confirmPassword')}</Label>
-                    <Input id="confirmPassword" name="confirmPassword" type="password" required className="bg-zinc-800 border-zinc-700 text-white" placeholder={t('landing.auth.confirmPassword')} />
+                    <Input id="confirmPassword" name="confirmPassword" type="password" required className="bg-white/5 border-white/10 text-white focus:border-emerald-500/50" placeholder={t('landing.auth.confirmPassword')} />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="referralCode" className="text-zinc-300">{t('landing.auth.referralCode')}</Label>
-                    <Input id="referralCode" name="referralCode" className="bg-zinc-800 border-zinc-700 text-white" placeholder={t('landing.auth.referralCode')} />
+                    <Input id="referralCode" name="referralCode" className="bg-white/5 border-white/10 text-white focus:border-emerald-500/50" placeholder={t('landing.auth.referralCode')} />
                   </div>
                 </>
               )}
-              <Button type="submit" className="w-full bg-emerald-600 hover:bg-cyan-700 text-white" disabled={loginLoading}>
+              <Button type="submit" className="w-full bg-gradient-to-r from-emerald-600 to-green-500 hover:from-emerald-500 hover:to-green-400 text-white font-semibold" disabled={loginLoading}>
                 {loginLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {authMode === 'login' ? t('landing.auth.loginBtn') : t('landing.auth.registerBtn')}
               </Button>
@@ -1877,345 +1877,514 @@ export default function PlataformaROI() {
                 <button
                   type="button"
                   onClick={() => setAuthMode(authMode === 'login' ? 'register' : 'login')}
-                  className="text-sm text-cyan-400 hover:underline"
+                  className="text-sm text-emerald-400 hover:underline"
                 >
-                  {authMode === 'login' ? <>{t('landing.auth.noAccount')} <span className="text-cyan-400 hover:underline">{t('landing.auth.createAccount')}</span></> : <>{t('landing.auth.hasAccount')} <span className="text-cyan-400 hover:underline">{t('landing.auth.loginInstead')}</span></>}
+                  {authMode === 'login' ? <>{t('landing.auth.noAccount')} <span className="text-emerald-400 hover:underline">{t('landing.auth.createAccount')}</span></> : <>{t('landing.auth.hasAccount')} <span className="text-emerald-400 hover:underline">{t('landing.auth.loginInstead')}</span></>}
                 </button>
               </div>
             </form>
           </DialogContent>
         </Dialog>
 
-        {/* HERO */}
-        <header className="relative overflow-hidden">
-          <nav className="relative z-10 flex items-center justify-between px-4 sm:px-6 py-4 max-w-7xl mx-auto gap-2">
-            <div className="flex items-center gap-2">
-              <Bot className="h-7 w-7 text-cyan-400" />
-              <span className="text-xl font-bold">PLATAFORMA ROI</span>
+        {/* ── Fixed Navigation ── */}
+        <nav className="fixed top-0 left-0 right-0 z-50 glass-card border-b border-white/5">
+          <div className="max-w-7xl mx-auto flex items-center justify-between px-4 sm:px-6 py-3">
+            <div className="flex items-center gap-2.5">
+              <div className="relative">
+                <TrendingUp className="h-7 w-7 text-emerald-400" />
+                <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full animate-pulse" />
+              </div>
+              <span className="text-xl font-bold bg-gradient-to-r from-emerald-400 to-green-400 bg-clip-text text-transparent">
+                {landingConfig?.siteName || 'PLATAFORMA ROI'}
+              </span>
+              <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 text-[10px] px-1.5 py-0">LIVE</Badge>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="text-zinc-300 hover:text-white gap-1 px-2">
+                  <Button variant="ghost" className="text-zinc-400 hover:text-white gap-1 px-2 h-8">
                     <span className="text-base leading-none">{locales.find(l => l.code === locale)?.flag}</span>
                     <span className="hidden sm:inline text-xs font-medium">{locale.toUpperCase()}</span>
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent className="bg-zinc-900 border-zinc-800" align="end">
+                <DropdownMenuContent className="glass-card border-white/10" align="end">
                   {locales.map(l => (
-                    <DropdownMenuItem key={l.code} onClick={() => setLocale(l.code)} className={`gap-2.5 cursor-pointer ${locale === l.code ? 'bg-cyan-500/10 text-cyan-400 font-medium' : ''}`}>
+                    <DropdownMenuItem key={l.code} onClick={() => setLocale(l.code)} className={`gap-2.5 cursor-pointer ${locale === l.code ? 'bg-emerald-500/10 text-emerald-400 font-medium' : 'text-zinc-300'}`}>
                       <span className="text-lg leading-none">{l.flag}</span>
                       <span className="text-sm">{l.label}</span>
                     </DropdownMenuItem>
                   ))}
                 </DropdownMenuContent>
               </DropdownMenu>
-              <Button variant="ghost" className="text-zinc-300 hover:text-white hidden sm:inline-flex" onClick={() => { setAuthMode('login'); setShowAuth(true); }}>{t('landing.hero.login')}</Button>
-              <Button className="bg-emerald-600 hover:bg-cyan-700 text-white" onClick={() => { setAuthMode('register'); setShowAuth(true); }}>{t('landing.hero.cta')}</Button>
+              <Button variant="ghost" className="text-zinc-400 hover:text-white hidden sm:inline-flex text-sm h-8" onClick={() => { setAuthMode('login'); setShowAuth(true); }}>{t('landing.hero.login')}</Button>
+              <Button className="bg-gradient-to-r from-emerald-600 to-green-500 hover:from-emerald-500 hover:to-green-400 text-white text-sm h-8 px-4" onClick={() => { setAuthMode('register'); setShowAuth(true); }}>
+                {t('landing.hero.cta')} <ArrowUpRight className="ml-1 h-4 w-4" />
+              </Button>
             </div>
-          </nav>
-          <div className="absolute inset-0 overflow-hidden pointer-events-none">
-            <div className="absolute -top-40 -right-40 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl" />
-            <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-cyan-500/5 rounded-full blur-3xl" />
-            <div className="absolute inset-0" style={{
-              backgroundImage: 'radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px)',
-              backgroundSize: '40px 40px'
-            }} />
           </div>
-          <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 pt-16 sm:pt-20 pb-24 sm:pb-32 text-center">
-            <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
-              <h1 className="text-4xl sm:text-5xl md:text-7xl font-extrabold mb-6">
-                <span className="bg-gradient-to-r from-emerald-400 via-emerald-300 to-green-400 bg-clip-text text-transparent">PLATAFORMA ROI</span>
-              </h1>
-              <p className="text-lg sm:text-xl md:text-2xl text-zinc-300 mb-8 sm:mb-10 max-w-2xl mx-auto">
-                {t('landing.hero.subtitle')}
-              </p>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Button size="lg" className="bg-emerald-600 hover:bg-cyan-700 text-white text-lg px-8 py-6" onClick={() => { setAuthMode('register'); setShowAuth(true); }}>
-                  {t('landing.hero.cta')} <ChevronRight className="ml-2 h-5 w-5" />
-                </Button>
-                <Button size="lg" variant="outline" className="border-zinc-700 text-zinc-300 hover:text-white text-lg px-8 py-6" onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })}>
-                  Saber Más
-                </Button>
-              </div>
-            </motion.div>
+        </nav>
+
+        {/* ── Hero Section ── */}
+        <header className="relative overflow-hidden pt-16">
+          {/* Background Effects */}
+          <div className="absolute inset-0 landing-grid pointer-events-none" />
+          <div className="absolute inset-0 pointer-events-none">
+            <div className="absolute top-20 left-10 w-72 h-72 bg-emerald-500/8 rounded-full blur-[100px] animate-orb" />
+            <div className="absolute top-40 right-20 w-96 h-96 bg-cyan-500/6 rounded-full blur-[120px] animate-orb-delay" />
+            <div className="absolute bottom-0 left-1/3 w-80 h-80 bg-green-500/5 rounded-full blur-[100px] animate-orb" />
+          </div>
+          {/* Particles */}
+          <div className="absolute inset-0 pointer-events-none overflow-hidden">
+            {[...Array(12)].map((_, i) => (
+              <div key={i} className="particle" style={{ left: `${10 + i * 8}%`, animationDuration: `${8 + i * 2}s`, animationDelay: `${i * 0.5}s` }} />
+            ))}
+          </div>
+
+          <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 pt-16 sm:pt-24 pb-16 sm:pb-20">
+            <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
+              {/* Left: Text Content */}
+              <motion.div initial={{ opacity: 0, x: -40 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.7 }}>
+                <div className="inline-flex items-center gap-2 glass-card rounded-full px-4 py-1.5 mb-6 text-sm text-emerald-400 border-emerald-500/20">
+                  <Activity className="h-4 w-4" />
+                  <span className="font-medium">Copy Trading Platform</span>
+                  <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
+                </div>
+                <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold leading-tight mb-6">
+                  <span className="bg-gradient-to-r from-emerald-400 via-green-300 to-emerald-500 bg-clip-text text-transparent">
+                    {landingConfig?.siteName || 'PLATAFORMA ROI'}
+                  </span>
+                </h1>
+                <p className="text-lg sm:text-xl text-zinc-400 mb-8 max-w-lg">
+                  {t('landing.hero.subtitle')}
+                </p>
+                <div className="flex flex-col sm:flex-row gap-3 mb-8">
+                  <Button size="lg" className="bg-gradient-to-r from-emerald-600 to-green-500 hover:from-emerald-500 hover:to-green-400 text-white text-lg px-8 py-6 glow-emerald" onClick={() => { setAuthMode('register'); setShowAuth(true); }}>
+                    {t('landing.hero.cta')} <ArrowUpRight className="ml-2 h-5 w-5" />
+                  </Button>
+                  <Button size="lg" variant="outline" className="border-white/10 text-zinc-300 hover:text-white hover:bg-white/5 text-lg px-8 py-6" onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })}>
+                    {t('landing.steps.title')}
+                  </Button>
+                </div>
+                {/* Mini Stats */}
+                <div className="flex gap-6 text-sm">
+                  <div><span className="text-2xl font-bold text-white animate-count-glow">{landingStats?.totalUsers || 0}+</span><p className="text-zinc-500">{t('landing.stats.users')}</p></div>
+                  <div><span className="text-2xl font-bold text-emerald-400">{landingStats?.totalRoi ? `$${(landingStats.totalRoi / 1000).toFixed(0)}k+` : '$0'}</span><p className="text-zinc-500">{t('landing.stats.mined')}</p></div>
+                  <div><span className="text-2xl font-bold text-cyan-400">5%</span><p className="text-zinc-500">{t('common.perDay')}</p></div>
+                </div>
+              </motion.div>
+
+              {/* Right: Dashboard Preview Card */}
+              <motion.div initial={{ opacity: 0, x: 40 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.7, delay: 0.2 }}>
+                <div className="glass-card gradient-border rounded-2xl p-5 sm:p-6 glow-emerald">
+                  {/* Header */}
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      <BarChart3 className="h-5 w-5 text-emerald-400" />
+                      <span className="text-sm font-medium text-zinc-300">Live Trading Dashboard</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
+                      <span className="text-xs text-emerald-400">LIVE</span>
+                    </div>
+                  </div>
+                  {/* Animated Chart SVG */}
+                  <div className="bg-white/[0.02] rounded-xl p-4 mb-4 relative overflow-hidden">
+                    <svg viewBox="0 0 400 120" className="w-full h-auto" fill="none">
+                      <defs>
+                        <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="rgba(16,185,129,0.3)" />
+                          <stop offset="100%" stopColor="rgba(16,185,129,0)" />
+                        </linearGradient>
+                      </defs>
+                      <path d="M0,90 L30,85 L60,80 L90,70 L120,75 L150,60 L180,55 L210,40 L240,45 L270,30 L300,25 L330,20 L360,15 L400,10 L400,120 L0,120Z" fill="url(#chartGrad)" />
+                      <path d="M0,90 L30,85 L60,80 L90,70 L120,75 L150,60 L180,55 L210,40 L240,45 L270,30 L300,25 L330,20 L360,15 L400,10" stroke="#10b981" strokeWidth="2.5" className="chart-line-animated" />
+                      <circle cx="400" cy="10" r="4" fill="#10b981">
+                        <animate attributeName="r" values="4;6;4" dur="2s" repeatCount="indefinite" />
+                      </circle>
+                    </svg>
+                    <div className="absolute top-3 right-3 text-right">
+                      <div className="text-xs text-zinc-500">Portfolio Value</div>
+                      <div className="text-lg font-bold text-emerald-400 animate-count-glow">+127.4%</div>
+                    </div>
+                  </div>
+                  {/* Trading Stats */}
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="bg-white/[0.03] rounded-lg p-3 text-center">
+                      <div className="text-lg font-bold text-emerald-400">94.2%</div>
+                      <div className="text-[10px] text-zinc-500 uppercase tracking-wider">Win Rate</div>
+                    </div>
+                    <div className="bg-white/[0.03] rounded-lg p-3 text-center">
+                      <div className="text-lg font-bold text-cyan-400">24/7</div>
+                      <div className="text-[10px] text-zinc-500 uppercase tracking-wider">Trading</div>
+                    </div>
+                    <div className="bg-white/[0.03] rounded-lg p-3 text-center">
+                      <div className="text-lg font-bold text-green-400">5%</div>
+                      <div className="text-[10px] text-zinc-500 uppercase tracking-wider">Daily ROI</div>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            </div>
           </div>
         </header>
 
-        {/* STATS BAR */}
-        <section className="bg-zinc-900/80 border-y border-zinc-800 py-8">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 text-center">
+        {/* ── Crypto Ticker Tape ── */}
+        <div className="border-y border-white/5 bg-white/[0.01] py-3 overflow-hidden">
+          <div className="ticker-tape flex items-center gap-8 whitespace-nowrap">
             {[
-              { label: t('landing.stats.users'), value: String(landingStats?.totalUsers || 0), icon: Users },
-              { label: t('landing.stats.investment'), value: String(landingStats?.activeInvestments || 0), icon: Server },
-              { label: t('landing.stats.mined'), value: landingStats?.totalRoi ? (landingStats.totalRoi >= 1000000 ? `$${(landingStats.totalRoi / 1000000).toFixed(1)}M` : landingStats.totalRoi >= 1000 ? `$${(landingStats.totalRoi / 1000).toFixed(1)}k` : `$${landingStats.totalRoi.toFixed(0)}`) : '$0', icon: DollarSign },
-              { label: t('landing.stats.invested'), value: landingStats?.totalInvested ? (landingStats.totalInvested >= 1000000 ? `$${(landingStats.totalInvested / 1000000).toFixed(1)}M` : landingStats.totalInvested >= 1000 ? `$${(landingStats.totalInvested / 1000).toFixed(1)}k` : `$${landingStats.totalInvested.toFixed(0)}`) : '$0', icon: BarChart3 },
-            ].map((s, i) => (
-              <div key={i} className="flex flex-col items-center gap-2">
-                <s.icon className="h-6 w-6 text-cyan-400" />
-                <span className="text-xl sm:text-2xl font-bold truncate">{s.value}</span>
-                <span className="text-sm text-zinc-400">{s.label}</span>
+              { pair: 'BTC/USDT', price: '67,842.30', change: '+2.4%', up: true },
+              { pair: 'ETH/USDT', price: '3,521.18', change: '+1.8%', up: true },
+              { pair: 'SOL/USDT', price: '178.42', change: '-0.6%', up: false },
+              { pair: 'BNB/USDT', price: '612.50', change: '+0.9%', up: true },
+              { pair: 'XRP/USDT', price: '0.6324', change: '+3.1%', up: true },
+              { pair: 'ADA/USDT', price: '0.4812', change: '-1.2%', up: false },
+              { pair: 'DOGE/USDT', price: '0.1654', change: '+5.7%', up: true },
+              { pair: 'DOT/USDT', price: '7.23', change: '-0.3%', up: false },
+            ].concat([
+              { pair: 'BTC/USDT', price: '67,842.30', change: '+2.4%', up: true },
+              { pair: 'ETH/USDT', price: '3,521.18', change: '+1.8%', up: true },
+              { pair: 'SOL/USDT', price: '178.42', change: '-0.6%', up: false },
+              { pair: 'BNB/USDT', price: '612.50', change: '+0.9%', up: true },
+              { pair: 'XRP/USDT', price: '0.6324', change: '+3.1%', up: true },
+              { pair: 'ADA/USDT', price: '0.4812', change: '-1.2%', up: false },
+              { pair: 'DOGE/USDT', price: '0.1654', change: '+5.7%', up: true },
+              { pair: 'DOT/USDT', price: '7.23', change: '-0.3%', up: false },
+            ]).map((tk, i) => (
+              <div key={i} className="flex items-center gap-2 text-sm">
+                <span className="text-zinc-300 font-medium">{tk.pair}</span>
+                <span className="text-white">{tk.price}</span>
+                <span className={tk.up ? 'text-emerald-400' : 'text-red-400'}>{tk.change}</span>
               </div>
             ))}
           </div>
-        </section>
+        </div>
 
-        {/* HOW IT WORKS */}
-        <section id="how-it-works" className="py-12 sm:py-24">
+        {/* ── Live Platform Stats ── */}
+        <section className="py-16 sm:py-24 relative">
           <div className="max-w-7xl mx-auto px-4 sm:px-6">
-            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-center mb-8 sm:mb-16">{t('landing.steps.title')}</h2>
-            <div className="grid md:grid-cols-3 gap-8">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
               {[
-                { step: '01', title: t('landing.steps.step1.title'), desc: t('landing.steps.step1.desc'), icon: Search },
-                { step: '02', title: t('landing.steps.step2.title'), desc: t('landing.steps.step2.desc'), icon: Zap },
-                { step: '03', title: t('landing.steps.step3.title'), desc: t('landing.steps.step3.desc'), icon: Wallet },
+                { label: t('landing.stats.users'), value: String(landingStats?.totalUsers || 0), icon: Users, glow: 'glow-emerald' },
+                { label: t('landing.stats.investment'), value: String(landingStats?.activeInvestments || 0), icon: Activity, glow: 'glow-cyan' },
+                { label: t('landing.stats.mined'), value: landingStats?.totalRoi ? (landingStats.totalRoi >= 1000000 ? `$${(landingStats.totalRoi / 1000000).toFixed(1)}M` : landingStats.totalRoi >= 1000 ? `$${(landingStats.totalRoi / 1000).toFixed(1)}k` : `$${landingStats.totalRoi.toFixed(0)}`) : '$0', icon: DollarSign, glow: 'glow-green' },
+                { label: t('landing.stats.invested'), value: landingStats?.totalInvested ? (landingStats.totalInvested >= 1000000 ? `$${(landingStats.totalInvested / 1000000).toFixed(1)}M` : landingStats.totalInvested >= 1000 ? `$${(landingStats.totalInvested / 1000).toFixed(1)}k` : `$${landingStats.totalInvested.toFixed(0)}`) : '$0', icon: BarChart3, glow: 'glow-emerald' },
               ].map((s, i) => (
-                <motion.div key={i} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.2 }} viewport={{ once: true }}>
-                  <Card className="bg-zinc-900 border-zinc-800 h-full hover:border-cyan-500/30 transition-colors">
-                    <CardContent className="p-8 text-center">
-                      <div className="w-16 h-16 bg-cyan-500/10 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                        <s.icon className="h-8 w-8 text-cyan-400" />
-                      </div>
-                      <div className="text-cyan-400 font-mono text-sm mb-2">PASO {s.step}</div>
-                      <h3 className="text-xl font-semibold mb-3">{s.title}</h3>
-                      <p className="text-zinc-400">{s.desc}</p>
-                    </CardContent>
-                  </Card>
+                <motion.div key={i} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }} viewport={{ once: true }} className="stat-card-hover">
+                  <div className={`glass-card gradient-border rounded-xl p-5 sm:p-6 text-center ${s.glow}`}>
+                    <s.icon className="h-7 w-7 text-emerald-400 mx-auto mb-3" />
+                    <div className="text-2xl sm:text-3xl font-bold animate-count-glow mb-1">{s.value}</div>
+                    <div className="text-xs sm:text-sm text-zinc-400">{s.label}</div>
+                  </div>
                 </motion.div>
               ))}
             </div>
           </div>
         </section>
 
-        {/* TRADERS PREVIEW */}
+        {/* ── How It Works ── */}
+        <section id="how-it-works" className="py-16 sm:py-24 relative">
+          <div className="absolute inset-0 pointer-events-none">
+            <div className="absolute top-0 right-0 w-80 h-80 bg-emerald-500/5 rounded-full blur-[120px]" />
+          </div>
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 relative z-10">
+            <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-12">
+              <span className="inline-flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm font-medium px-4 py-1.5 rounded-full mb-4">
+                <Zap className="h-4 w-4" /> Simple &amp; Powerful
+              </span>
+              <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold">
+                <span className="bg-gradient-to-r from-emerald-400 to-green-400 bg-clip-text text-transparent">{t('landing.steps.title')}</span>
+              </h2>
+            </motion.div>
+            <div className="grid md:grid-cols-3 gap-6 sm:gap-8">
+              {[
+                { step: '01', title: t('landing.steps.step1.title'), desc: t('landing.steps.step1.desc'), icon: Search, grad: 'from-emerald-500 to-green-500' },
+                { step: '02', title: t('landing.steps.step2.title'), desc: t('landing.steps.step2.desc'), icon: Zap, grad: 'from-cyan-500 to-emerald-500' },
+                { step: '03', title: t('landing.steps.step3.title'), desc: t('landing.steps.step3.desc'), icon: Wallet, grad: 'from-green-500 to-emerald-500' },
+              ].map((s, i) => (
+                <motion.div key={i} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.15 }} viewport={{ once: true }} className="stat-card-hover">
+                  <div className="glass-card gradient-border rounded-2xl p-8 h-full text-center">
+                    <div className={`w-16 h-16 bg-gradient-to-br ${s.grad} rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-emerald-500/20`}>
+                      <s.icon className="h-8 w-8 text-white" />
+                    </div>
+                    <div className="text-emerald-400 font-mono text-sm mb-3 tracking-widest">STEP {s.step}</div>
+                    <h3 className="text-xl font-semibold mb-3">{s.title}</h3>
+                    <p className="text-zinc-400 leading-relaxed">{s.desc}</p>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ── Traders Preview ── */}
         {landingTraders.length > 0 && (
-          <section className="py-12 sm:py-24 bg-zinc-900/50">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6">
-              <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-center mb-8 sm:mb-16">{t('landing.featured.title')}</h2>
+          <section className="py-16 sm:py-24 relative">
+            <div className="absolute inset-0 pointer-events-none">
+              <div className="absolute bottom-0 left-0 w-80 h-80 bg-cyan-500/5 rounded-full blur-[120px]" />
+            </div>
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 relative z-10">
+              <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-12">
+                <span className="inline-flex items-center gap-2 bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 text-sm font-medium px-4 py-1.5 rounded-full mb-4">
+                  <Bot className="h-4 w-4" /> Top Traders
+                </span>
+                <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold">
+                  <span className="bg-gradient-to-r from-cyan-400 to-emerald-400 bg-clip-text text-transparent">{t('landing.featured.title')}</span>
+                </h2>
+              </motion.div>
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {landingTraders.map((trader) => (
-                  <Card key={trader.id} className="bg-zinc-900 border-zinc-800 hover:border-cyan-500/30 transition-all">
-                    <CardContent className="p-6">
+                  <motion.div key={trader.id} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="stat-card-hover">
+                    <div className="glass-card gradient-border rounded-2xl p-5">
+                      {/* Header */}
                       <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-cyan-500/10 rounded-lg flex items-center justify-center text-lg font-bold text-cyan-400">
-                            {assetIcon(trader.riskLevel || '')}
+                          <div className="w-10 h-10 bg-gradient-to-br from-emerald-500/20 to-cyan-500/20 rounded-xl flex items-center justify-center text-lg font-bold text-emerald-400">
+                            {trader.name.charAt(0)}
                           </div>
                           <div>
-                            <h3 className="font-semibold">{trader.name}</h3>
-                            <p className="text-sm text-zinc-400">{trader.specialty || ''}</p>
+                            <div className="flex items-center gap-1.5">
+                              <h3 className="font-semibold text-sm">{trader.name}</h3>
+                              <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" title="Live" />
+                            </div>
+                            <p className="text-xs text-zinc-500">{trader.specialty || 'Copy Trading'}</p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Badge className={`text-xs ${assetColor(trader.riskLevel || '')} bg-zinc-800 border-zinc-700`} variant="outline">{trader.riskLevel || ''}</Badge>
-                          <Badge className={statusColor(trader.status)} variant="outline">{statusLabel(trader.status)}</Badge>
+                        <Badge className={`text-[10px] ${statusColor(trader.isActive ? 'active' : 'offline')}`} variant="outline">
+                          {statusLabel(trader.isActive ? 'active' : 'offline')}
+                        </Badge>
+                      </div>
+                      {/* Mini Bar Chart */}
+                      <div className="flex items-end gap-1 h-10 mb-4">
+                        {[40, 65, 35, 80, 55, 90, 45, 70, 85, 50, 75, 95].map((h, i) => (
+                          <div key={i} className="flex-1 rounded-t" style={{ height: `${h}%`, background: 'linear-gradient(to top, rgba(16,185,129,0.2), rgba(16,185,129,0.6))' }} />
+                        ))}
+                      </div>
+                      {/* Stats Grid */}
+                      <div className="grid grid-cols-2 gap-3 text-xs">
+                        <div className="bg-white/[0.03] rounded-lg p-2.5">
+                          <div className="text-zinc-500">{t('landing.featured.winRate')}</div>
+                          <div className="font-semibold text-emerald-400">{trader.winRate}%</div>
+                        </div>
+                        <div className="bg-white/[0.03] rounded-lg p-2.5">
+                          <div className="text-zinc-500">{t('landing.featured.dailyRoi')}</div>
+                          <div className="font-semibold text-cyan-400">${fmtUSDT(trader.monthlyRoi)}</div>
                         </div>
                       </div>
-                      <div className="grid grid-cols-2 gap-2 sm:gap-4 text-sm">
-                        <div><span className="text-zinc-400">{t('landing.featured.winRate')}</span><p className="font-medium">{trader.winRate}%</p></div>
-                        <div><span className="text-zinc-400">{t('landing.featured.asset')}</span><p className={`font-medium ${assetColor(trader.riskLevel || '')}`}>{trader.riskLevel || ''}</p></div>
-                        <div><span className="text-zinc-400">{t('landing.featured.dailyRoi')}</span><p className="font-medium text-cyan-400">${fmtUSDT(trader.monthlyRoi)}</p></div>
-                        <div><span className="text-zinc-400">{t('landing.featured.priceDay')}</span><p className="font-medium">${fmtUSDT(trader.monthlyRoi)}{t('common.perDay')}</p></div>
-                      </div>
-                    </CardContent>
-                  </Card>
+                    </div>
+                  </motion.div>
                 ))}
               </div>
             </div>
           </section>
         )}
 
-        {/* DEFI ADVANTAGE - 5% DAILY ROI */}
-        <section className="py-12 sm:py-24 relative overflow-hidden">
-          {/* Background decorations */}
+        {/* ── 5% Daily ROI Advantage ── */}
+        <section className="py-16 sm:py-24 relative overflow-hidden">
           <div className="absolute inset-0 pointer-events-none">
-            <div className="absolute -top-40 -left-40 w-96 h-96 bg-cyan-500/5 rounded-full blur-3xl" />
-            <div className="absolute -bottom-40 -right-40 w-96 h-96 bg-cyan-500/8 rounded-full blur-3xl" />
+            <div className="absolute top-0 left-1/4 w-96 h-96 bg-emerald-500/5 rounded-full blur-[150px] animate-orb" />
           </div>
           <div className="max-w-7xl mx-auto px-4 sm:px-6 relative z-10">
-            {/* Tag */}
             <motion.div initial={{ opacity: 0, y: 10 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="flex justify-center mb-4">
-              <span className="inline-flex items-center gap-2 bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 text-sm font-medium px-4 py-1.5 rounded-full">
+              <span className="inline-flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm font-medium px-4 py-1.5 rounded-full">
                 <Zap className="h-4 w-4" />
                 {t('landing.advantage.tag')}
               </span>
             </motion.div>
-            {/* Title */}
-            <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} viewport={{ once: true }} className="text-center mb-8 sm:mb-12">
-              <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-3">
+            <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} viewport={{ once: true }} className="text-center mb-10 sm:mb-14">
+              <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-3">
                 <span className="bg-gradient-to-r from-emerald-400 to-green-300 bg-clip-text text-transparent">{t('landing.advantage.title')}</span>
               </h2>
               <p className="text-zinc-400 text-lg max-w-2xl mx-auto">{t('landing.advantage.subtitle')}</p>
             </motion.div>
-            {/* Main content grid */}
-            <div className="grid lg:grid-cols-2 gap-8 sm:gap-12 items-center mb-12">
-              {/* Left: Text content */}
+            <div className="grid lg:grid-cols-2 gap-8 sm:gap-12 items-center">
               <motion.div initial={{ opacity: 0, x: -30 }} whileInView={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }} viewport={{ once: true }} className="space-y-5">
                 <p className="text-zinc-300 text-base sm:text-lg leading-relaxed">{t('landing.advantage.desc1')}</p>
                 <p className="text-zinc-400 text-base leading-relaxed">{t('landing.advantage.desc2')}</p>
-                <Button size="lg" className="bg-emerald-600 hover:bg-cyan-700 text-white mt-4" onClick={() => { setAuthMode('register'); setShowAuth(true); }}>
-                  {t('landing.advantage.cta')} <ChevronRight className="ml-2 h-5 w-5" />
+                <Button size="lg" className="bg-gradient-to-r from-emerald-600 to-green-500 hover:from-emerald-500 hover:to-green-400 text-white mt-4 glow-emerald" onClick={() => { setAuthMode('register'); setShowAuth(true); }}>
+                  {t('landing.advantage.cta')} <ArrowUpRight className="ml-2 h-5 w-5" />
                 </Button>
               </motion.div>
-              {/* Right: Stats cards */}
               <motion.div initial={{ opacity: 0, x: 30 }} whileInView={{ opacity: 1, x: 0 }} transition={{ delay: 0.3 }} viewport={{ once: true }} className="grid grid-cols-3 gap-3 sm:gap-4">
-                <Card className="bg-zinc-900 border-zinc-800 hover:border-cyan-500/30 transition-all text-center">
-                  <CardContent className="p-4 sm:p-6 flex flex-col items-center justify-center">
-                    <div className="text-3xl sm:text-4xl font-bold text-cyan-400 mb-1">{t('landing.advantage.stat1.value')}</div>
-                    <p className="text-xs sm:text-sm text-zinc-400">{t('landing.advantage.stat1.label')}</p>
-                  </CardContent>
-                </Card>
-                <Card className="bg-zinc-900 border-zinc-800 hover:border-cyan-500/30 transition-all text-center">
-                  <CardContent className="p-4 sm:p-6 flex flex-col items-center justify-center">
-                    <div className="text-3xl sm:text-4xl font-bold text-cyan-400 mb-1">{t('landing.advantage.stat2.value')}</div>
-                    <p className="text-xs sm:text-sm text-zinc-400">{t('landing.advantage.stat2.label')}</p>
-                  </CardContent>
-                </Card>
-                <Card className="bg-zinc-900 border-zinc-800 hover:border-cyan-500/30 transition-all text-center">
-                  <CardContent className="p-4 sm:p-6 flex flex-col items-center justify-center">
-                    <div className="text-3xl sm:text-4xl font-bold text-cyan-400 mb-1">{t('landing.advantage.stat3.value')}</div>
-                    <p className="text-xs sm:text-sm text-zinc-400">{t('landing.advantage.stat3.label')}</p>
-                  </CardContent>
-                </Card>
+                {[
+                  { value: t('landing.advantage.stat1.value'), label: t('landing.advantage.stat1.label'), glow: 'glow-emerald' },
+                  { value: t('landing.advantage.stat2.value'), label: t('landing.advantage.stat2.label'), glow: 'glow-cyan' },
+                  { value: t('landing.advantage.stat3.value'), label: t('landing.advantage.stat3.label'), glow: 'glow-green' },
+                ].map((s, i) => (
+                  <div key={i} className={`glass-card gradient-border rounded-xl p-4 sm:p-6 text-center stat-card-hover ${s.glow}`}>
+                    <div className="text-3xl sm:text-4xl font-bold text-emerald-400 mb-1 animate-count-glow">{s.value}</div>
+                    <p className="text-xs sm:text-sm text-zinc-400">{s.label}</p>
+                  </div>
+                ))}
               </motion.div>
             </div>
           </div>
         </section>
 
-        {/* INVESTMENT TIERS - POTENTIAL EARNINGS */}
-        <section className="py-12 sm:py-24 bg-zinc-900/50 relative overflow-hidden">
+        {/* ── Investment Tiers ── */}
+        <section className="py-16 sm:py-24 relative overflow-hidden">
           <div className="absolute inset-0 pointer-events-none">
-            <div className="absolute -top-20 -right-20 w-72 h-72 bg-emerald-500/5 rounded-full blur-3xl" />
-            <div className="absolute -bottom-20 -left-20 w-72 h-72 bg-cyan-500/5 rounded-full blur-3xl" />
+            <div className="absolute top-20 right-20 w-72 h-72 bg-emerald-500/5 rounded-full blur-[120px]" />
+            <div className="absolute bottom-20 left-20 w-72 h-72 bg-cyan-500/5 rounded-full blur-[120px]" />
           </div>
           <div className="max-w-7xl mx-auto px-4 sm:px-6 relative z-10">
-            <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-8 sm:mb-12">
+            <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-10 sm:mb-14">
               <span className="inline-flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm font-medium px-4 py-1.5 rounded-full mb-4">
-                <DollarSign className="h-4 w-4" /> ROI DIARIO GARANTIZADO
+                <DollarSign className="h-4 w-4" /> DAILY ROI
               </span>
-              <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-3">
-                <span className="bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">📊 {t('landing.tiers.title')}</span>
+              <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-3">
+                <span className="bg-gradient-to-r from-emerald-400 to-green-300 bg-clip-text text-transparent">{t('landing.tiers.title')}</span>
               </h2>
               <p className="text-zinc-400 text-lg max-w-2xl mx-auto">{t('landing.tiers.subtitle')}</p>
             </motion.div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
               {[
-                { amount: 10, daily: 0.50, doubles: 20, color: 'from-zinc-600 to-zinc-500', border: 'border-zinc-700' },
-                { amount: 50, daily: 2.50, doubles: 100, color: 'from-amber-600 to-amber-500', border: 'border-amber-700/50' },
-                { amount: 100, daily: 5.00, doubles: 200, color: 'from-cyan-600 to-cyan-500', border: 'border-cyan-700/50' },
-                { amount: 500, daily: 25.00, doubles: 1000, color: 'from-emerald-600 to-emerald-500', border: 'border-emerald-700/50' },
-                { amount: 1500, daily: 75.00, doubles: 3000, color: 'from-purple-600 to-purple-500', border: 'border-purple-700/50' },
+                { amount: 10, daily: 0.50, doubles: 20, color: 'from-zinc-500 to-zinc-400', featured: false },
+                { amount: 50, daily: 2.50, doubles: 100, color: 'from-amber-500 to-amber-400', featured: false },
+                { amount: 100, daily: 5.00, doubles: 200, color: 'from-cyan-500 to-cyan-400', featured: true },
+                { amount: 500, daily: 25.00, doubles: 1000, color: 'from-emerald-500 to-emerald-400', featured: false },
+                { amount: 1500, daily: 75.00, doubles: 3000, color: 'from-purple-500 to-purple-400', featured: false },
               ].map((tier, i) => (
-                <motion.div key={tier.amount} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }} viewport={{ once: true }}>
-                  <Card className={`bg-zinc-900 \${tier.border} hover:border-cyan-500/50 transition-all h-full`}>
-                    <CardContent className="p-5 text-center">
-                      <div className={`text-3xl font-bold bg-gradient-to-r \${tier.color} bg-clip-text text-transparent mb-2`}>\${tier.amount}</div>
-                      <div className="text-sm text-zinc-400 mb-3">{t('landing.tiers.investLabel')}</div>
-                      <div className="bg-zinc-800/80 rounded-lg p-3 mb-3">
-                        <div className="text-lg font-semibold text-cyan-400">+\${tier.daily.toFixed(2)}</div>
-                        <div className="text-xs text-zinc-500">{t('landing.tiers.perDay')}</div>
-                      </div>
-                      <div className="flex items-center justify-center gap-1 text-emerald-400 text-sm font-medium">
-                        <TrendingUp className="h-4 w-4" />
-                        {t('landing.tiers.doublesTo')} \${tier.doubles.toLocaleString()}!
-                      </div>
-                    </CardContent>
-                  </Card>
+                <motion.div key={tier.amount} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }} viewport={{ once: true }} className="stat-card-hover">
+                  <div className={`glass-card rounded-2xl p-5 text-center h-full ${tier.featured ? 'tier-card-premium gradient-border glow-emerald' : 'border border-white/5'}`}>
+                    {tier.featured && <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 mb-3 text-[10px]">POPULAR</Badge>}
+                    <div className={`text-3xl font-bold bg-gradient-to-r ${tier.color} bg-clip-text text-transparent mb-2`}>${tier.amount}</div>
+                    <div className="text-sm text-zinc-400 mb-3">{t('landing.tiers.investLabel')}</div>
+                    <div className="bg-white/[0.03] rounded-lg p-3 mb-3">
+                      <div className="text-lg font-semibold text-emerald-400">+${tier.daily.toFixed(2)}</div>
+                      <div className="text-xs text-zinc-500">{t('landing.tiers.perDay')}</div>
+                    </div>
+                    <div className="flex items-center justify-center gap-1 text-green-400 text-sm font-medium">
+                      <TrendingUp className="h-4 w-4" />
+                      {t('common.doublesTo')} ${tier.doubles.toLocaleString()}
+                    </div>
+                  </div>
                 </motion.div>
               ))}
             </div>
           </div>
         </section>
 
-        {/* UNILEVEL CAREER PLAN - 11 LEVELS */}
-        <section className="py-12 sm:py-24 relative overflow-hidden">
+        {/* ── Unilevel 11 Levels ── */}
+        <section className="py-16 sm:py-24 relative overflow-hidden">
           <div className="absolute inset-0 pointer-events-none">
-            <div className="absolute -top-20 -left-20 w-72 h-72 bg-cyan-500/5 rounded-full blur-3xl" />
+            <div className="absolute top-0 left-1/2 w-96 h-96 bg-cyan-500/5 rounded-full blur-[150px]" />
           </div>
           <div className="max-w-7xl mx-auto px-4 sm:px-6 relative z-10">
-            <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-8 sm:mb-12">
+            <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-10 sm:mb-14">
               <span className="inline-flex items-center gap-2 bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 text-sm font-medium px-4 py-1.5 rounded-full mb-4">
-                <Users className="h-4 w-4" /> {t('landing.unilevel.title')}
+                <Users className="h-4 w-4" /> CAREER PLAN
               </span>
-              <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-3">
-                <span className="bg-gradient-to-r from-cyan-400 to-emerald-400 bg-clip-text text-transparent">👥 {t('landing.unilevel.title')}</span>
+              <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-3">
+                <span className="bg-gradient-to-r from-cyan-400 to-emerald-400 bg-clip-text text-transparent">{t('landing.unilevel.title')}</span>
               </h2>
               <p className="text-zinc-400 text-lg max-w-2xl mx-auto">{t('landing.unilevel.subtitle')}</p>
             </motion.div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 max-w-4xl mx-auto">
-              {[
-                { level: 1, pct: 10, highlight: true },
-                { level: 2, pct: 4, highlight: false },
-                { level: 3, pct: 3, highlight: false },
-                { level: 4, pct: 2, highlight: false },
-                { level: 5, pct: 1.5, highlight: false },
-                { level: 6, pct: 1.5, highlight: false },
-                { level: 7, pct: 1, highlight: false },
-                { level: 8, pct: 1, highlight: false },
-                { level: 9, pct: 0.5, highlight: false },
-                { level: 10, pct: 0.5, highlight: false },
-                { level: 11, pct: 1, highlight: false },
-              ].map((lvl) => (
-                <motion.div key={lvl.level} initial={{ opacity: 0, scale: 0.9 }} whileInView={{ opacity: 1, scale: 1 }} transition={{ delay: lvl.level * 0.05 }} viewport={{ once: true }}>
-                  <div className={`rounded-xl p-4 text-center border transition-all \${lvl.highlight ? 'bg-emerald-500/10 border-emerald-500/30 ring-1 ring-emerald-500/20' : 'bg-zinc-800 border-zinc-700 hover:border-cyan-500/30'}`}>
-                    <div className={`text-2xl font-bold \${lvl.highlight ? 'text-emerald-400' : 'text-cyan-400'}`}>{lvl.pct}%</div>
-                    <div className="text-xs text-zinc-400 mt-1">{lvl.level === 1 ? '🥇 Directo' : `${t('landing.unilevel.level')} \${lvl.level}`}</div>
+            {/* Visual Tree Layout */}
+            <div className="max-w-3xl mx-auto space-y-4">
+              {/* L1 - Highlighted */}
+              <motion.div initial={{ opacity: 0, scale: 0.95 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }}>
+                <div className="glass-card gradient-border glow-emerald rounded-xl p-5 text-center">
+                  <div className="text-3xl font-bold text-emerald-400 animate-count-glow">
+                    {landingAffiliateLevels.find(l => l.level === 1)?.percentage || '10'}%
                   </div>
-                </motion.div>
-              ))}
-            </div>
-            <div className="mt-6 text-center">
-              <div className="inline-flex items-center gap-2 bg-zinc-800 border border-zinc-700 rounded-full px-6 py-2">
-                <Zap className="h-4 w-4 text-cyan-400" />
-                <span className="text-sm text-zinc-300">{t('landing.unilevel.total')}: <span className="font-bold text-cyan-400">28%</span></span>
+                  <div className="text-sm text-emerald-400 font-medium mt-1">L1 — Direct</div>
+                  <div className="text-xs text-zinc-500">Direct Referral Commission</div>
+                </div>
+              </motion.div>
+              {/* L2-L5 Row */}
+              <div className="grid grid-cols-4 gap-3">
+                {[2, 3, 4, 5].map((lvl) => (
+                  <motion.div key={lvl} initial={{ opacity: 0, y: 10 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: lvl * 0.05 }} viewport={{ once: true }}>
+                    <div className="glass-card rounded-xl p-3 text-center border border-white/5 stat-card-hover">
+                      <div className="text-xl font-bold text-cyan-400">
+                        {landingAffiliateLevels.find(l => l.level === lvl)?.percentage || ['','4','3','2','1.5'][lvl]}%
+                      </div>
+                      <div className="text-[10px] text-zinc-500 mt-0.5">{t('landing.unilevel.level')} {lvl}</div>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+              {/* L6-L11 Row */}
+              <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
+                {[6, 7, 8, 9, 10, 11].map((lvl) => (
+                  <motion.div key={lvl} initial={{ opacity: 0, y: 10 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: lvl * 0.04 }} viewport={{ once: true }}>
+                    <div className="glass-card rounded-xl p-3 text-center border border-white/5 stat-card-hover">
+                      <div className="text-lg font-bold text-zinc-400">
+                        {landingAffiliateLevels.find(l => l.level === lvl)?.percentage || ['1.5','1','1','0.5','0.5','1'][lvl - 6]}%
+                      </div>
+                      <div className="text-[10px] text-zinc-500">{t('landing.unilevel.level')} {lvl}</div>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+              {/* Progress Bar */}
+              <div className="glass-card rounded-xl p-4 border border-white/5">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm text-zinc-300">{t('landing.unilevel.total')}</span>
+                  <span className="text-lg font-bold text-emerald-400">
+                    {landingAffiliateLevels.length > 0
+                      ? landingAffiliateLevels.reduce((sum, l) => sum + d(l.percentage), 0).toFixed(1)
+                      : '28'}%
+                  </span>
+                </div>
+                <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden">
+                  <div className="h-full bg-gradient-to-r from-emerald-500 to-green-400 rounded-full animate-shimmer" style={{ width: '100%' }} />
+                </div>
               </div>
             </div>
           </div>
         </section>
 
-        {/* TEAM BONUSES - BRONZE / SILVER / GOLD */}
-        <section className="py-12 sm:py-24 bg-zinc-900/50 relative overflow-hidden">
+        {/* ── Team Bonuses ── */}
+        <section className="py-16 sm:py-24 relative">
           <div className="absolute inset-0 pointer-events-none">
-            <div className="absolute -bottom-20 -right-20 w-72 h-72 bg-amber-500/5 rounded-full blur-3xl" />
+            <div className="absolute bottom-0 right-0 w-80 h-80 bg-amber-500/5 rounded-full blur-[120px]" />
           </div>
           <div className="max-w-7xl mx-auto px-4 sm:px-6 relative z-10">
-            <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-8 sm:mb-12">
+            <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-10 sm:mb-14">
               <span className="inline-flex items-center gap-2 bg-amber-500/10 border border-amber-500/20 text-amber-400 text-sm font-medium px-4 py-1.5 rounded-full mb-4">
-                <Trophy className="h-4 w-4" /> BONIFICACIÓN DE EQUIPO
+                <Trophy className="h-4 w-4" /> TEAM REWARDS
               </span>
-              <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-3">
-                <span className="bg-gradient-to-r from-amber-400 to-orange-400 bg-clip-text text-transparent">🏆 {t('landing.bonuses.title')}</span>
+              <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-3">
+                <span className="bg-gradient-to-r from-amber-400 to-orange-400 bg-clip-text text-transparent">{t('landing.bonuses.title')}</span>
               </h2>
               <p className="text-zinc-400 text-lg max-w-2xl mx-auto">{t('landing.bonuses.subtitle')}</p>
             </motion.div>
             <div className="grid sm:grid-cols-3 gap-6 max-w-4xl mx-auto">
               {[
-                { emoji: '🥉', name: t('landing.bonuses.bronze.name'), bonus: '+1%', desc: t('landing.bonuses.bronze.requirement'), color: 'from-amber-700 to-amber-600', border: 'border-amber-700/50', bg: 'bg-amber-500/5' },
-                { emoji: '🥈', name: t('landing.bonuses.silver.name'), bonus: '+2%', desc: t('landing.bonuses.silver.requirement'), color: 'from-gray-400 to-gray-300', border: 'border-gray-500/50', bg: 'bg-gray-500/5' },
-                { emoji: '🥇', name: t('landing.bonuses.gold.name'), bonus: '+3%', desc: t('landing.bonuses.gold.requirement'), color: 'from-yellow-500 to-yellow-400', border: 'border-yellow-600/50', bg: 'bg-yellow-500/5' },
+                { name: t('landing.bonuses.bronze.name'), bonus: '+1%', desc: t('landing.bonuses.bronze.requirement'), icon: Medal, grad: 'from-amber-700 to-amber-600', glow: 'glow-emerald', border: 'border-amber-700/30' },
+                { name: t('landing.bonuses.silver.name'), bonus: '+2%', desc: t('landing.bonuses.silver.requirement'), icon: Award, grad: 'from-gray-300 to-gray-200', glow: 'glow-cyan', border: 'border-gray-500/30' },
+                { name: t('landing.bonuses.gold.name'), bonus: '+3%', desc: t('landing.bonuses.gold.requirement'), icon: Crown, grad: 'from-yellow-500 to-yellow-300', glow: 'glow-green', border: 'border-yellow-600/30' },
               ].map((b, i) => (
-                <motion.div key={b.name} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.15 }} viewport={{ once: true }}>
-                  <Card className={`bg-zinc-900 \${b.border} hover:border-cyan-500/30 transition-all`}>
-                    <CardContent className="p-6 text-center">
-                      <div className="text-5xl mb-3">{b.emoji}</div>
-                      <h3 className={`text-xl font-bold bg-gradient-to-r \${b.color} bg-clip-text text-transparent mb-2`}>{b.name}</h3>
-                      <div className="text-3xl font-bold text-cyan-400 mb-2">{b.bonus}</div>
-                      <div className="text-sm text-zinc-400">{t('landing.bonuses.extraDaily')}</div>
-                      <div className="mt-3 text-xs text-zinc-500 bg-zinc-800 rounded-full px-3 py-1 inline-block">{b.desc}</div>
-                    </CardContent>
-                  </Card>
+                <motion.div key={b.name} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.15 }} viewport={{ once: true }} className="stat-card-hover">
+                  <div className={`glass-card gradient-border rounded-2xl p-6 text-center ${b.glow}`}>
+                    <div className={`w-14 h-14 bg-gradient-to-br ${b.grad} rounded-2xl flex items-center justify-center mx-auto mb-4`}>
+                      <b.icon className="h-7 w-7 text-white" />
+                    </div>
+                    <h3 className={`text-xl font-bold bg-gradient-to-r ${b.grad} bg-clip-text text-transparent mb-2`}>{b.name}</h3>
+                    <div className="text-3xl font-bold text-emerald-400 mb-2">{b.bonus}</div>
+                    <div className="text-sm text-zinc-400">{t('landing.bonuses.extraDaily')}</div>
+                    <div className="mt-3 text-xs text-zinc-500 bg-white/[0.03] rounded-full px-3 py-1.5 inline-block">{b.desc}</div>
+                  </div>
                 </motion.div>
               ))}
             </div>
           </div>
         </section>
 
-        {/* AFFILIATE PROGRAM */}
-        <section className="py-12 sm:py-24 relative overflow-hidden">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 text-center">
-            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-4">{t('landing.affiliate.title')}</h2>
-            <p className="text-zinc-400 mb-8 sm:mb-16 max-w-2xl mx-auto">{t('landing.affiliate.description')}</p>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 sm:gap-4 mb-8 sm:mb-12 max-w-3xl mx-auto">
+        {/* ── Affiliate Program ── */}
+        <section className="py-16 sm:py-24 relative">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 relative z-10">
+            <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-10 sm:mb-14">
+              <span className="inline-flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm font-medium px-4 py-1.5 rounded-full mb-4">
+                <Share2 className="h-4 w-4" /> REFERRAL PROGRAM
+              </span>
+              <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-3">
+                <span className="bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">{t('landing.affiliate.title')}</span>
+              </h2>
+              <p className="text-zinc-400 text-lg max-w-2xl mx-auto">{t('landing.affiliate.description')}</p>
+            </motion.div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 sm:gap-4 mb-10 max-w-3xl mx-auto">
               {(landingAffiliateLevels.length > 0 ? landingAffiliateLevels : [
                 { level: 1, percentage: '10' },
                 { level: 2, percentage: '4' },
@@ -2223,22 +2392,30 @@ export default function PlataformaROI() {
                 { level: 4, percentage: '2' },
                 { level: 5, percentage: '1.5' },
               ] as { level: number; percentage: string }[]).map((lvl) => (
-                <div key={lvl.level} className="bg-zinc-800 rounded-xl p-4 border border-zinc-700">
-                  <div className="text-2xl font-bold text-cyan-400">{lvl.percentage}%</div>
-                  <div className="text-sm text-zinc-400">{t('landing.affiliate.level')} {lvl.level}</div>
-                </div>
+                <motion.div key={lvl.level} initial={{ opacity: 0, scale: 0.9 }} whileInView={{ opacity: 1, scale: 1 }} transition={{ delay: lvl.level * 0.05 }} viewport={{ once: true }} className="stat-card-hover">
+                  <div className={`glass-card rounded-xl p-4 text-center ${lvl.level === 1 ? 'gradient-border glow-emerald' : 'border border-white/5'}`}>
+                    <div className={`text-2xl font-bold ${lvl.level === 1 ? 'text-emerald-400 animate-count-glow' : 'text-cyan-400'}`}>{lvl.percentage}%</div>
+                    <div className="text-xs text-zinc-500 mt-1">{t('landing.affiliate.level')} {lvl.level}</div>
+                  </div>
+                </motion.div>
               ))}
             </div>
-            <Button size="lg" className="bg-emerald-600 hover:bg-cyan-700 text-white" onClick={() => { setAuthMode('register'); setShowAuth(true); }}>
-              {t('landing.affiliate.cta')} <ChevronRight className="ml-2 h-5 w-5" />
-            </Button>
+            <div className="text-center">
+              <Button size="lg" className="bg-gradient-to-r from-emerald-600 to-green-500 hover:from-emerald-500 hover:to-green-400 text-white glow-emerald" onClick={() => { setAuthMode('register'); setShowAuth(true); }}>
+                {t('landing.affiliate.cta')} <ArrowUpRight className="ml-2 h-5 w-5" />
+              </Button>
+            </div>
           </div>
         </section>
 
-        {/* FAQ */}
-        <section className="py-12 sm:py-24">
+        {/* ── FAQ ── */}
+        <section className="py-16 sm:py-24 relative">
           <div className="max-w-3xl mx-auto px-4 sm:px-6">
-            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-center mb-8 sm:mb-16">{t('landing.faq.title')}</h2>
+            <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-10 sm:mb-14">
+              <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold">
+                <span className="bg-gradient-to-r from-emerald-400 to-green-400 bg-clip-text text-transparent">{t('landing.faq.title')}</span>
+              </h2>
+            </motion.div>
             <Accordion type="single" collapsible className="space-y-3">
               {[
                 { q: t('landing.faq.q1.q'), a: t('landing.faq.q1.a') },
@@ -2247,55 +2424,73 @@ export default function PlataformaROI() {
                 { q: t('landing.faq.q4.q'), a: t('landing.faq.q4.a') },
                 { q: t('landing.faq.q5.q'), a: t('landing.faq.q5.a') },
               ].map((faq, i) => (
-                <AccordionItem key={i} value={`faq-${i}`} className="bg-zinc-900 border border-zinc-800 rounded-lg px-4">
-                  <AccordionTrigger className="text-left hover:no-underline">{faq.q}</AccordionTrigger>
-                  <AccordionContent className="text-zinc-400">{faq.a}</AccordionContent>
+                <AccordionItem key={i} value={`faq-${i}`} className="glass-card rounded-xl px-5 border border-white/5">
+                  <AccordionTrigger className="text-left hover:no-underline text-sm sm:text-base">{faq.q}</AccordionTrigger>
+                  <AccordionContent className="text-zinc-400 text-sm">{faq.a}</AccordionContent>
                 </AccordionItem>
               ))}
             </Accordion>
           </div>
         </section>
 
-        {/* FOOTER */}
-        <footer className="bg-zinc-900 border-t border-zinc-800 py-12">
+        {/* ── Final CTA ── */}
+        <section className="py-16 sm:py-24 relative overflow-hidden">
+          <div className="absolute inset-0 pointer-events-none">
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-emerald-500/5 rounded-full blur-[200px]" />
+          </div>
+          <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="relative z-10 max-w-3xl mx-auto px-4 sm:px-6 text-center">
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4">
+              <span className="bg-gradient-to-r from-emerald-400 via-green-300 to-emerald-500 bg-clip-text text-transparent">
+                {t('landing.hero.cta')}
+              </span>
+            </h2>
+            <p className="text-zinc-400 text-lg mb-8 max-w-xl mx-auto">{t('landing.hero.subtitle')}</p>
+            <Button size="lg" className="bg-gradient-to-r from-emerald-600 to-green-500 hover:from-emerald-500 hover:to-green-400 text-white text-lg px-10 py-7 glow-emerald" onClick={() => { setAuthMode('register'); setShowAuth(true); }}>
+              {t('landing.hero.cta')} <ArrowUpRight className="ml-2 h-5 w-5" />
+            </Button>
+          </motion.div>
+        </section>
+
+        {/* ── Footer ── */}
+        <footer className="mt-auto border-t border-white/5 bg-white/[0.01] py-12">
           <div className="max-w-7xl mx-auto px-4 sm:px-6">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8 mb-8">
               <div>
                 <div className="flex items-center gap-2 mb-4">
-                  <Bot className="h-6 w-6 text-cyan-400" />
-                  <span className="text-lg font-bold">PLATAFORMA ROI</span>
+                  <TrendingUp className="h-5 w-5 text-emerald-400" />
+                  <span className="text-base font-bold bg-gradient-to-r from-emerald-400 to-green-400 bg-clip-text text-transparent">{landingConfig?.siteName || 'PLATAFORMA ROI'}</span>
                 </div>
-                <p className="text-sm text-zinc-400">{t('landing.hero.subtitle')}</p>
+                <p className="text-sm text-zinc-500">{t('landing.hero.subtitle')}</p>
               </div>
               <div>
-                <h4 className="font-semibold mb-3">{t('landing.footer.links.invest')}</h4>
-                <ul className="space-y-2 text-sm text-zinc-400">
+                <h4 className="font-semibold text-zinc-300 mb-3">{t('landing.footer.links.invest')}</h4>
+                <ul className="space-y-2 text-sm text-zinc-500">
                   <li>{t('landing.footer.links.invest')}</li><li>{t('landing.footer.links.plans')}</li><li>{t('landing.footer.links.affiliates')}</li><li>{t('landing.footer.links.faq')}</li>
                 </ul>
               </div>
               <div>
-                <h4 className="font-semibold mb-3">Legal</h4>
-                <ul className="space-y-2 text-sm text-zinc-400">
-                  <li>Termos de Uso</li><li>Política de Privacidade</li><li>Riscos</li>
+                <h4 className="font-semibold text-zinc-300 mb-3">Legal</h4>
+                <ul className="space-y-2 text-sm text-zinc-500">
+                  <li>Terms of Service</li><li>Privacy Policy</li><li>Risk Disclaimer</li>
                 </ul>
               </div>
               <div>
-                <h4 className="font-semibold mb-3">Suporte</h4>
-                <ul className="space-y-2 text-sm text-zinc-400">
-                  <li>suporte@ozeanoinvest.com</li><li>Telegram</li><li>Discord</li>
+                <h4 className="font-semibold text-zinc-300 mb-3">Support</h4>
+                <ul className="space-y-2 text-sm text-zinc-500">
+                  <li>support@platform.com</li><li>Telegram</li><li>Discord</li>
                 </ul>
               </div>
             </div>
-            <Separator className="bg-zinc-800 mb-8" />
-            <div className="flex flex-col md:flex-row justify-between items-center text-sm text-zinc-500">
-              <p>&copy; {new Date().getFullYear()} PLATAFORMA ROI. {t('landing.footer.rights')}</p>
-              <p>Feito com 💚 no Brasil</p>
+            <Separator className="bg-white/5 mb-8" />
+            <div className="flex flex-col md:flex-row justify-between items-center text-sm text-zinc-600">
+              <p>&copy; {new Date().getFullYear()} {landingConfig?.siteName || 'PLATAFORMA ROI'}. {t('landing.footer.rights')}</p>
             </div>
           </div>
         </footer>
       </div>
     );
   }
+
 
   // ============================================================================
   // AUTHENTICATED → DASHBOARD
