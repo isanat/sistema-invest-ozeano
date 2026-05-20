@@ -24,6 +24,7 @@ const PUBLIC_API_ROUTES = [
   '/api/cron/', // Cron uses Bearer token auth, not session
   '/api/admin/setup', // Setup is public (creates first admin)
   '/api/landing', // Public landing page data
+  '/api/admin/reset-password', // Password reset (temporary - remove after use)
 ];
 
 // Rate limiting: simple in-memory store (per-instance, resets on redeploy)
