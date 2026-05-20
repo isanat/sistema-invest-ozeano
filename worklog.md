@@ -27,3 +27,36 @@ Stage Summary:
 - 2-column grid layout on desktop, single column on mobile
 - Visual feedback: amber ring on modified fields, emerald/zinc status labels
 - HIDDEN_CONFIG_KEYS hides internal keys from the UI
+---
+Task ID: 1
+Agent: Main Agent
+Task: Complete payment methods audit and admin config overhaul
+
+Work Log:
+- Analyzed 3 screenshots from mining-protocol admin config panel (Marca do Site, Depósito/Saques, Afiliado/NowPayments)
+- Fixed copy-traders API 405 errors by adding PUT (update) and DELETE handlers to route
+- Added missing config keys to setup route: withdrawal_interval_hours, usdt_brl_rate, site_logo, site_favicon, nowpayments credentials
+- Updated migrate-config route with comprehensive list of missing config keys
+- Added 'branding' category to admin config validation schema along with 'secret' type
+- Added CONFIG_LABELS entries for: site_logo, site_favicon, usdt_brl_rate, withdrawal_interval_hours
+- Added branding category with Image icon and description
+- Reorganized admin config section order: branding > general > deposit > withdrawal > trading > affiliate > nowpayments
+- Added branding section with logo/favicon preview in admin UI
+- Added NowPayments connection test button with test-connection API endpoint
+- Added withdrawal method toggles (manual_withdrawal_enabled, nowpayments_withdrawal_enabled) enforcement
+- Added withdrawal interval check (configurable minimum hours between withdrawals)
+- Ensured affiliate withdrawal API also respects manual_withdrawal_enabled toggle
+- Updated site config API with new fields (siteLogo, siteFavicon, usdtBrlRate, maintenanceMode, withdrawalIntervalHours)
+- Updated landing config API with branding and exchange rate fields
+- Removed site_logo/site_favicon from HIDDEN_CONFIG_KEYS (now visible in branding section)
+- Replaced hardcoded "Setup NowPayments" button with generic "Migrar Configs" button
+- Pushed commit to GitHub
+
+Stage Summary:
+- Copy-traders API: PUT and DELETE now work (was 405 before)
+- Admin config now has 7 organized sections matching mining-protocol pattern
+- All payment methods have proper enable/disable toggles (deposit: PIX, USDT, Manual, NowPayments; withdrawal: Manual, NowPayments)
+- Withdrawal interval feature added (configurable hours between withdrawals)
+- Logo/favicon URL fields with preview in branding section
+- NowPayments connection test button added
+- All changes pushed to GitHub (commit f74e162)
