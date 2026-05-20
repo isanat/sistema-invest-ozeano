@@ -18,8 +18,12 @@ export function sanitizePagination(page: number | string, limit: number | string
   return { page: p, limit: l, skip: (p - 1) * l };
 }
 
-export function apiSuccess(data: any, status: number = 200) {
-  return NextResponse.json({ success: true, ...data }, { status });
+export function apiSuccess(data: any, statusOrMessage: number | string = 200) {
+  if (typeof statusOrMessage === 'string') {
+    // If a message string is passed instead of a status code, include it in the data
+    return NextResponse.json({ success: true, message: statusOrMessage, ...data }, { status: 200 });
+  }
+  return NextResponse.json({ success: true, ...data }, { status: statusOrMessage });
 }
 
 export function handleApiError(error: unknown) {

@@ -13,6 +13,7 @@ import {
 export async function GET(request: NextRequest) {
   try {
     await requireAuth();
+    const session = await requireAuth();
 
     const { searchParams } = new URL(request.url);
     const depositId = searchParams.get('depositId');
@@ -44,6 +45,11 @@ export async function GET(request: NextRequest) {
 
       if (!deposit) {
         return apiError('Depósito não encontrado', 404);
+      }
+
+      // Verify user ownership — prevent IDOR
+      if (deposit.userId !== session.userId) {
+        return apiError('Não autorizado', 403);
       }
 
       let remoteStatus: string | null = null;
@@ -113,6 +119,11 @@ export async function GET(request: NextRequest) {
 
       if (!payout) {
         return apiError('Saque não encontrado', 404);
+      }
+
+      // Verify user ownership — prevent IDOR
+      if (payout.userId !== session.userId) {
+        return apiError('Não autorizado', 403);
       }
 
       let remoteStatus: string | null = null;

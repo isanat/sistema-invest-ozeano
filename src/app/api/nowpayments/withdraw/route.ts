@@ -33,12 +33,20 @@ export async function POST(request: NextRequest) {
       'min_withdrawal_usdt',
       'max_withdrawal_usdt',
       'withdrawal_fee_pct',
+      'withdrawal_interval_hours',
       'nowpayments_enabled',
+      'nowpayments_withdrawal_enabled',
+      'manual_withdrawal_enabled',
     ];
     const configs = await db.systemConfig.findMany({
       where: { key: { in: configKeys } },
     });
     const configMap = Object.fromEntries(configs.map((c) => [c.key, c.value]));
+
+    // Check if NowPayments withdrawals are enabled
+    if (configMap.nowpayments_withdrawal_enabled !== 'true') {
+      return apiError('Saques via NowPayments estão desabilitados. Tente o saque manual.');
+    }
 
     const minWithdrawal = d(configMap.min_withdrawal_usdt) || 10;
     const maxWithdrawal = d(configMap.max_withdrawal_usdt) || 50000;
@@ -49,6 +57,50 @@ export async function POST(request: NextRequest) {
     }
     if (amount > maxWithdrawal) {
       return apiError(`Saque máximo: ${dusdt(maxWithdrawal)} USDT`);
+    }
+
+    // ========== WITHDRAWAL INTERVAL CHECK ==========
+    const intervalHours = d(configMap.withdrawal_interval_hours) || 0;
+    if (intervalHours > 0) {
+      const lastWithdrawal = await db.deposit.findFirst({
+        where: {
+          userId: session.userId,
+          type: 'withdrawal',
+          status: { in: ['pending', 'confirmed'] },
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+      if (lastWithdrawal) {
+        const elapsed = (Date.now() - new Date(lastWithdrawal.createdAt).getTime()) / (1000 * 60 * 60);
+        if (elapsed < intervalHours) {
+          const remaining = Math.ceil(intervalHours - elapsed);
+          return apiError(`Aguarde ${remaining}h antes de solicitar outro saque. Intervalo mínimo: ${intervalHours}h.`);
+        }
+      }
+    }
+
+    // ========== VOUCHER WITHDRAWAL LOCK CHECK ==========
+    const activeVouchers = await db.voucher.findMany({
+      where: { userId: session.userId, status: 'active' },
+    });
+    if (activeVouchers.length > 0) {
+      let maxUnlockPct = 0;
+      for (const v of activeVouchers) {
+        const unlockPct = d(v.withdrawalUnlockPct);
+        if (unlockPct > maxUnlockPct) maxUnlockPct = unlockPct;
+      }
+      if (maxUnlockPct === 0) {
+        return apiError('Seus saques estão bloqueados. Você tem vouchers ativos com metas pendentes.');
+      }
+      if (maxUnlockPct < 100) {
+        const userForCheck = await db.user.findUnique({ where: { id: session.userId } });
+        if (userForCheck) {
+          const maxWithdrawable = d(userForCheck.balance) * (maxUnlockPct / 100);
+          if (amount > maxWithdrawable) {
+            return apiError(`Com base no desbloqueio gradual (${maxUnlockPct}%), você pode sacar no máximo ${dusdt(maxWithdrawable)} USDT.`);
+          }
+        }
+      }
     }
 
     // Calculate fee
@@ -71,6 +123,9 @@ export async function POST(request: NextRequest) {
 
     // Atomic transaction: deduct balance and create records
     const result = await db.$transaction(async (tx) => {
+      // Acquire row-level lock to prevent concurrent balance modifications
+      await tx.$queryRaw`SELECT 1 FROM "User" WHERE id = ${session.userId} FOR UPDATE`;
+
       const user = await tx.user.findUnique({ where: { id: session.userId } });
       if (!user) throw new Error('Usuário não encontrado');
 

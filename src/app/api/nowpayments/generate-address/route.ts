@@ -18,6 +18,12 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const currency = String(body.currency || 'usdttrc20');
 
+    // Check admin toggle for NowPayments
+    const npEnabledConfig = await db.systemConfig.findUnique({ where: { key: 'nowpayments_enabled' } });
+    if (npEnabledConfig?.value !== 'true') {
+      return apiError('NowPayments está desabilitado pelo administrador');
+    }
+
     if (!await isNowPaymentsConfigured()) {
       return apiError('NowPayments não está configurado', 503);
     }

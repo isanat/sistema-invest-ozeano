@@ -372,7 +372,7 @@ const CONFIG_LABELS: Record<string, {
   // Affiliate
   affiliate_commission_mode: { label: 'Modo de Comissão', description: 'Como as comissões de afiliados são calculadas', type: 'select', options: [
     { value: 'system_margin', label: 'Margem do Sistema' },
-    { value: 'roi_profit', label: 'Lucro de ROI' },
+    { value: 'investment_profit', label: 'Lucro de Investimento' },
     { value: 'revenue_pool', label: 'Pool de Receita' },
   ] },
   affiliate_system_margin_pct: { label: 'Margem do Sistema (%)', description: 'Percentual da margem do sistema para afiliados', type: 'number', unit: '%' },
@@ -1378,7 +1378,7 @@ export default function PlataformaROI() {
 
   // NowPayments deposit - generate wallet address
   const handleNowPaymentsDeposit = async () => {
-    const minAmount = 20; // NowPayments minimum is ~19.22 for USDT TRC20
+    const minAmount = siteConfig?.minDepositUsdt || 10;
     if (!npDepositAmount || parseFloat(npDepositAmount) < minAmount) {
       toast.error(`Valor mínimo: ${minAmount} USDT`);
       return;
@@ -1641,9 +1641,10 @@ export default function PlataformaROI() {
       const body: any = {
         name: (form.name as HTMLInputElement).value,
         description: (form.description as HTMLInputElement)?.value || undefined,
-        minerId: (form.minerId as HTMLSelectElement).value,
-        days: parseInt((form.days as HTMLInputElement).value),
-        discountPct: (form.discountPct as HTMLInputElement).value || '0',
+        dailyRoiPct: (form.dailyRoiPct as HTMLInputElement)?.value || '5',
+        durationDays: parseInt((form.durationDays as HTMLInputElement)?.value) || 40,
+        minAmount: (form.minAmount as HTMLInputElement)?.value || '10',
+        maxAmount: (form.maxAmount as HTMLInputElement)?.value || undefined,
         isActive: (form.isActive as HTMLInputElement).checked,
         isFeatured: (form.isFeatured as HTMLInputElement).checked,
         sortOrder: parseInt((form.sortOrder as HTMLInputElement).value) || 0,

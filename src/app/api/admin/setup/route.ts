@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
     // Create admin user — require a strong password (no default)
     const adminPassword = body.adminPassword;
     if (!adminPassword || adminPassword.length < 8) {
-      return apiError('Admin password must be at least 8 characters', 400);
+      return apiError('Senha do admin deve ter no mínimo 8 caracteres');
     }
     const hashedPassword = await hashPassword(adminPassword);
     const admin = await db.user.create({

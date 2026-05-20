@@ -88,7 +88,7 @@ export async function PUT(request: NextRequest) {
 
         // Update user total withdrawn
         const user = await tx.user.findUnique({ where: { id: deposit.userId } });
-        if (!user) throw new Error('User not found');
+        if (!user) throw new Error('Usuário não encontrado');
 
         const newTotalWithdrawn = d(user.totalWithdrawn) + d(deposit.amount);
         await tx.user.update({
@@ -122,7 +122,7 @@ export async function PUT(request: NextRequest) {
       const result = await db.$transaction(async (tx) => {
         const deposit = await tx.deposit.findUnique({ where: { id } });
         if (!deposit) throw new Error('Saque não encontrado');
-        if (deposit.status !== 'confirmed') throw new Error('Withdrawal must be approved before completion');
+        if (deposit.status !== 'confirmed') throw new Error('Saque deve ser aprovado antes de ser concluído');
 
         const updated = await tx.deposit.update({
           where: { id },
@@ -161,7 +161,7 @@ export async function PUT(request: NextRequest) {
 
         // Refund user balance
         const user = await tx.user.findUnique({ where: { id: deposit.userId } });
-        if (!user) throw new Error('User not found');
+        if (!user) throw new Error('Usuário não encontrado');
 
         const newBalance = d(user.balance) + d(deposit.amount);
         await tx.user.update({
