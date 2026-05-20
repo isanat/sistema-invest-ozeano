@@ -27,6 +27,7 @@ const PUBLIC_API_ROUTES = [
   '/api/admin/setup', // Setup is public (creates first admin)
   '/api/landing', // Public landing page data
   '/api/nowpayments/currencies', // Public: available currencies for deposit/withdrawal
+  '/api/bitget/', // Public: Bitget trader ranking/search data (no auth needed)
 ];
 
 // Rate limiting: simple in-memory store (per-instance, resets on redeploy)
