@@ -1,5 +1,5 @@
 // ============================================================================
-// PLATAFORMA ROI - COPY TRADING ROI PLATFORM (SQLite)
+// PLATAFORMA ROI - COPY TRADING ROI PLATFORM (PostgreSQL for Vercel)
 // ============================================================================
 // USDT primary currency. All financial values as String (precision-safe).
 // ============================================================================
@@ -9,7 +9,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 

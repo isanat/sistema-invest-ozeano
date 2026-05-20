@@ -32,8 +32,10 @@ export interface SessionPayload {
 
 // ============ Password Hashing ============
 
+const BCRYPT_ROUNDS = process.env.NODE_ENV === 'production' ? 10 : 4;
+
 export async function hashPassword(password: string): Promise<string> {
-  return bcrypt.hash(password, 4);
+  return bcrypt.hash(password, BCRYPT_ROUNDS);
 }
 
 export async function verifyPassword(password: string, hash: string): Promise<boolean> {
