@@ -33,7 +33,7 @@ export interface SessionPayload {
 // ============ Password Hashing ============
 
 export async function hashPassword(password: string): Promise<string> {
-  return bcrypt.hash(password, 12);
+  return bcrypt.hash(password, 4);
 }
 
 export async function verifyPassword(password: string, hash: string): Promise<boolean> {
