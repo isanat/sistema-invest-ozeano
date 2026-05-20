@@ -147,8 +147,8 @@ export const translations: Record<string, any> = {
     // === SIDEBAR ===
     sidebar: {
       home: 'Inicio',
-      invest: 'Invertir',
-      miners: 'Invertir',
+      invest: 'Copy Trade',
+      miners: 'Copy Trade',
       plans: 'Mis Planes',
       history: 'Historial',
       affiliates: 'Afiliados',
@@ -198,6 +198,19 @@ export const translations: Record<string, any> = {
       planBasic: 'Básico',
       planPremium: 'Premium',
       planCustom: 'Personalizado',
+      realData: 'Datos en tiempo real de Bitget',
+      realDataDescription: 'Traders reales con rendimientos verificados en el exchange Bitget',
+      searchPlaceholder: 'Buscar trader por nombre...',
+      filterROI: 'Mayor ROI',
+      filterPnL: 'Mayor PnL',
+      filterFollowers: 'Más Copiados',
+      filterPro: 'Trader Pro',
+      roiLabel: 'ROI',
+      pnlLabel: 'PnL',
+      aumLabel: 'AUM',
+      drawdown: 'Drawdown',
+      followers: 'seguidores',
+      bitgetUnavailable: 'Mostrando traders de la base de datos (datos de Bitget no disponibles temporalmente)',
     },
 
     // === PLANS TAB ===
@@ -828,8 +841,8 @@ export const translations: Record<string, any> = {
 
     sidebar: {
       home: 'Início',
-      invest: 'Investir',
-      miners: 'Investir',
+      invest: 'Copy Trade',
+      miners: 'Copy Trade',
       plans: 'Meus Planos',
       history: 'Histórico',
       affiliates: 'Afiliados',
@@ -877,6 +890,19 @@ export const translations: Record<string, any> = {
       planBasic: 'Básico',
       planPremium: 'Premium',
       planCustom: 'Personalizado',
+      realData: 'Dados em tempo real da Bitget',
+      realDataDescription: 'Traders reais com rendimentos verificados no exchange Bitget',
+      searchPlaceholder: 'Buscar trader por nome...',
+      filterROI: 'Maior ROI',
+      filterPnL: 'Maior PnL',
+      filterFollowers: 'Mais Copiados',
+      filterPro: 'Trader Pro',
+      roiLabel: 'ROI',
+      pnlLabel: 'PnL',
+      aumLabel: 'AUM',
+      drawdown: 'Drawdown',
+      followers: 'seguidores',
+      bitgetUnavailable: 'Mostrando traders do banco de dados (dados da Bitget temporariamente indisponíveis)',
     },
 
     plans: {

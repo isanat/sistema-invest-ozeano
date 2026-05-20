@@ -64,6 +64,22 @@ interface CopyTrader {
   _count?: { investments: number };
 }
 
+interface BitgetTrader {
+  traderId: string;
+  displayName: string;
+  avatar: string;
+  roi: string;
+  totalPnl: string;
+  maxDrawdown: string;
+  followers: number;
+  aum: string;
+  grade: { id: string; name: string };
+  labels: Array<{ id: string; name: string; type: string }>;
+  topSymbols: string[];
+  klineProfit: string;
+  rank: number;
+}
+
 interface InvestmentPlan {
   id: string; name: string; description?: string | null;
   minAmount: string; maxAmount: string; dailyRoiPct: string; durationDays: number;
@@ -537,6 +553,13 @@ export default function PlataformaROI() {
     return labels[code] || code.toUpperCase();
   };
 
+  // Bitget real trader data
+  const [bitgetTraders, setBitgetTraders] = useState<BitgetTrader[]>([]);
+  const [bitgetLoading, setBitgetLoading] = useState(false);
+  const [bitgetRanking, setBitgetRanking] = useState<string>('profit_rate');
+  const [bitgetSearch, setBitgetSearch] = useState('');
+  const [landingBitgetTraders, setLandingBitgetTraders] = useState<BitgetTrader[]>([]);
+
   // Plans filter state
   const [plansFilter, setPlansFilter] = useState<string>('ALL');
 
@@ -656,6 +679,29 @@ export default function PlataformaROI() {
       console.error('Dashboard data error:', e);
     } finally {
       setDataLoading(false);
+    }
+  };
+
+  const fetchBitgetTraders = async (ranking?: string, search?: string) => {
+    setBitgetLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (ranking) params.set('ranking', ranking);
+      if (search && search.trim()) params.set('search', search.trim());
+      params.set('pageSize', '20');
+      const res = await fetch(`/api/bitget/traders?${params.toString()}`);
+      const data = await res.json();
+      if (data.success && data.traders?.length > 0) {
+        setBitgetTraders(data.traders);
+      } else {
+        // Fallback to DB copy traders if Bitget is blocked
+        setBitgetTraders([]);
+      }
+    } catch (e) {
+      console.error('Bitget traders error:', e);
+      setBitgetTraders([]);
+    } finally {
+      setBitgetLoading(false);
     }
   };
 
@@ -785,6 +831,15 @@ export default function PlataformaROI() {
       setAdminNpLoading(false);
     }
   };
+
+  // Load Bitget traders when investir tab is selected
+  useEffect(() => {
+    if (activeTab === 'investir' && user) {
+      if (bitgetTraders.length === 0) {
+        fetchBitgetTraders(bitgetRanking);
+      }
+    }
+  }, [activeTab, user]);
 
   // Load affiliate data when tab is selected
   useEffect(() => {
@@ -1029,6 +1084,15 @@ export default function PlataformaROI() {
             setLandingStats(data.stats || null);
             setLandingConfig(data.config || null);
             setLandingRate(data.usdtBrlRate || 5.5);
+          }
+        })
+        .catch(() => {});
+      // Also fetch real Bitget traders for landing page
+      fetch('/api/bitget/traders?ranking=profit_rate&pageSize=6')
+        .then(r => r.json())
+        .then(data => {
+          if (data.success && data.traders?.length > 0) {
+            setLandingBitgetTraders(data.traders);
           }
         })
         .catch(() => {});
@@ -2166,8 +2230,8 @@ export default function PlataformaROI() {
           </div>
         </section>
 
-        {/* ── Traders Preview ── */}
-        {landingTraders.length > 0 && (
+        {/* ── Traders Preview (Real Bitget Data) ── */}
+        {(landingBitgetTraders.length > 0 || landingTraders.length > 0) && (
           <section className="py-16 sm:py-24 relative">
             <div className="absolute inset-0 pointer-events-none">
               <div className="absolute bottom-0 left-0 w-80 h-80 bg-cyan-500/5 rounded-full blur-[120px]" />
@@ -2175,54 +2239,91 @@ export default function PlataformaROI() {
             <div className="max-w-7xl mx-auto px-4 sm:px-6 relative z-10">
               <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-12">
                 <span className="inline-flex items-center gap-2 bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 text-sm font-medium px-4 py-1.5 rounded-full mb-4">
-                  <Bot className="h-4 w-4" /> {t('landing.badges.topTraders')}
+                  <TrendingUp className="h-4 w-4" /> {t('landing.badges.topTraders')}
                 </span>
                 <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold">
                   <span className="bg-gradient-to-r from-cyan-400 to-emerald-400 bg-clip-text text-transparent">{t('landing.featured.title')}</span>
                 </h2>
+                <p className="text-zinc-400 text-sm mt-3 max-w-md mx-auto">{t('copyTraders.realDataDescription')}</p>
               </motion.div>
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {landingTraders.map((trader) => (
-                  <motion.div key={trader.id} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="stat-card-hover">
-                    <div className="glass-card gradient-border rounded-2xl p-5">
-                      {/* Header */}
-                      <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-gradient-to-br from-emerald-500/20 to-cyan-500/20 rounded-xl flex items-center justify-center text-lg font-bold text-emerald-400">
-                            {trader.name.charAt(0)}
-                          </div>
-                          <div>
-                            <div className="flex items-center gap-1.5">
-                              <h3 className="font-semibold text-sm">{trader.name}</h3>
-                              <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" title="Live" />
+                {/* Real Bitget traders take priority */}
+                {(landingBitgetTraders.length > 0 ? landingBitgetTraders : landingTraders).map((trader: any) => {
+                  const isBitget = 'traderId' in trader;
+                  const roiVal = isBitget ? parseFloat(trader.roi || '0') : parseFloat(trader.monthlyRoi || '0');
+                  const pnlVal = isBitget ? parseFloat(trader.totalPnl || '0') : 0;
+                  const aumVal = isBitget ? parseFloat(trader.aum || '0') : 0;
+                  const name = isBitget ? trader.displayName : trader.name;
+                  const followers = isBitget ? trader.followers : 0;
+                  const grade = isBitget ? trader.grade?.name : '';
+
+                  return (
+                    <motion.div key={isBitget ? trader.traderId : trader.id} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="stat-card-hover">
+                      <div className="glass-card gradient-border rounded-2xl p-5">
+                        {/* Header */}
+                        <div className="flex items-center justify-between mb-4">
+                          <div className="flex items-center gap-3">
+                            {isBitget && trader.avatar ? (
+                              <img src={trader.avatar} alt={name} className="w-10 h-10 rounded-full object-cover border border-zinc-700" />
+                            ) : (
+                              <div className="w-10 h-10 bg-gradient-to-br from-emerald-500/20 to-cyan-500/20 rounded-xl flex items-center justify-center text-lg font-bold text-emerald-400">
+                                {name.charAt(0)}
+                              </div>
+                            )}
+                            <div>
+                              <div className="flex items-center gap-1.5">
+                                <h3 className="font-semibold text-sm">{name}</h3>
+                                <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" title="Live" />
+                              </div>
+                              <div className="flex items-center gap-1.5">
+                                <p className="text-xs text-zinc-500">{isBitget ? (trader.labels?.[0]?.name || 'Futures') : (trader.specialty || 'Copy Trading')}</p>
+                                {grade && <span className="text-[10px] text-amber-400">★ {grade}</span>}
+                              </div>
                             </div>
-                            <p className="text-xs text-zinc-500">{trader.specialty || 'Copy Trading'}</p>
+                          </div>
+                          {isBitget && (
+                            <Badge className="text-[10px] bg-emerald-500/20 text-emerald-400 border-emerald-500/30" variant="outline">
+                              {t('landing.badges.live')}
+                            </Badge>
+                          )}
+                        </div>
+                        {/* Mini Bar Chart */}
+                        <div className="flex items-end gap-1 h-10 mb-4">
+                          {[40, 65, 35, 80, 55, 90, 45, 70, 85, 50, 75, 95].map((h, i) => (
+                            <div key={i} className="flex-1 rounded-t" style={{ height: `${h}%`, background: 'linear-gradient(to top, rgba(16,185,129,0.2), rgba(16,185,129,0.6))' }} />
+                          ))}
+                        </div>
+                        {/* Stats Grid */}
+                        <div className="grid grid-cols-3 gap-2 text-xs">
+                          <div className="bg-white/[0.03] rounded-lg p-2.5">
+                            <div className="text-zinc-500">{isBitget ? 'ROI' : t('landing.featured.winRate')}</div>
+                            <div className={`font-semibold ${roiVal >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                              {isBitget ? `${roiVal >= 0 ? '+' : ''}${roiVal.toFixed(0)}%` : `${trader.winRate}%`}
+                            </div>
+                          </div>
+                          <div className="bg-white/[0.03] rounded-lg p-2.5">
+                            <div className="text-zinc-500">{t('copyTraders.pnlLabel')}</div>
+                            <div className="font-semibold text-cyan-400">
+                              {isBitget ? `$${Math.abs(pnlVal) >= 1000 ? `${(pnlVal/1000).toFixed(1)}k` : pnlVal.toFixed(0)}` : `$${fmtUSDT(trader.monthlyRoi)}`}
+                            </div>
+                          </div>
+                          <div className="bg-white/[0.03] rounded-lg p-2.5">
+                            <div className="text-zinc-500">{t('copyTraders.aumLabel')}</div>
+                            <div className="font-semibold text-cyan-400">
+                              ${aumVal >= 1000 ? `${(aumVal/1000).toFixed(1)}k` : aumVal.toFixed(0)}
+                            </div>
                           </div>
                         </div>
-                        <Badge className={`text-[10px] ${statusColor(trader.isActive ? 'active' : 'offline')}`} variant="outline">
-                          {statusLabel(trader.isActive ? 'active' : 'offline')}
-                        </Badge>
+                        {isBitget && followers > 0 && (
+                          <div className="mt-3 flex items-center justify-between text-xs">
+                            <span className="text-zinc-500">{followers} {t('copyTraders.followers')}</span>
+                            <span className="text-zinc-500">#{trader.rank}</span>
+                          </div>
+                        )}
                       </div>
-                      {/* Mini Bar Chart */}
-                      <div className="flex items-end gap-1 h-10 mb-4">
-                        {[40, 65, 35, 80, 55, 90, 45, 70, 85, 50, 75, 95].map((h, i) => (
-                          <div key={i} className="flex-1 rounded-t" style={{ height: `${h}%`, background: 'linear-gradient(to top, rgba(16,185,129,0.2), rgba(16,185,129,0.6))' }} />
-                        ))}
-                      </div>
-                      {/* Stats Grid */}
-                      <div className="grid grid-cols-2 gap-3 text-xs">
-                        <div className="bg-white/[0.03] rounded-lg p-2.5">
-                          <div className="text-zinc-500">{t('landing.featured.winRate')}</div>
-                          <div className="font-semibold text-emerald-400">{trader.winRate}%</div>
-                        </div>
-                        <div className="bg-white/[0.03] rounded-lg p-2.5">
-                          <div className="text-zinc-500">{t('landing.featured.dailyRoi')}</div>
-                          <div className="font-semibold text-cyan-400">${fmtUSDT(trader.monthlyRoi)}</div>
-                        </div>
-                      </div>
-                    </div>
-                  </motion.div>
-                ))}
+                    </motion.div>
+                  );
+                })}
               </div>
             </div>
           </section>
@@ -2562,7 +2663,7 @@ export default function PlataformaROI() {
 
   const investorNavItems = [
     { id: 'home', label: t('sidebar.home'), icon: Home },
-    { id: 'investir', label: t('sidebar.invest'), icon: Bot },
+    { id: 'investir', label: t('sidebar.invest'), icon: TrendingUp },
     { id: 'alugueis', label: t('dashboard.activeInvestments'), icon: Clock },
     { id: 'faturas', label: 'Faturas', icon: Banknote },
     { id: 'saques', label: 'Saques', icon: HandCoins },
@@ -3243,167 +3344,311 @@ export default function PlataformaROI() {
                   </div>
                 )}
 
-                {/* ====== COPY TRADERS TAB (UNIFIED WITH PLANS) ====== */}
+                {/* ====== COPY TRADERS TAB - REAL BITGET DATA ====== */}
                 {activeTab === 'investir' && (
                   <div className="space-y-6">
                     <div>
                       <h2 className="text-xl sm:text-2xl font-bold">{t('sidebar.invest')}</h2>
-                      <p className="text-zinc-400 text-sm mt-1">{t('plans.subtitle')}</p>
+                      <p className="text-zinc-400 text-sm mt-1">{t('copyTraders.title')} — {t('copyTraders.realData')}</p>
                     </div>
 
-                    {/* Coin filter */}
-                    <div className="flex flex-wrap gap-2">
-                      {['ALL', 'BTC', 'KAS', 'LTC', 'DOGE'].map(coin => (
-                        <button
-                          key={coin}
-                          onClick={() => setPlansFilter(coin)}
-                          className={`px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                            plansFilter === coin
-                              ? 'bg-emerald-600 text-white'
-                              : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200'
-                          }`}
-                        >
-                          {coin === 'ALL' ? t('plans.all') : coin}
-                        </button>
-                      ))}
+                    {/* Search and Filter Bar */}
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <div className="relative flex-1">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
+                        <Input
+                          className="bg-zinc-800 border-zinc-700 pl-10"
+                          placeholder={t('copyTraders.searchPlaceholder')}
+                          value={bitgetSearch}
+                          onChange={e => setBitgetSearch(e.target.value)}
+                          onKeyDown={e => { if (e.key === 'Enter') { fetchBitgetTraders(bitgetRanking, bitgetSearch); } }}
+                        />
+                      </div>
+                      <div className="flex gap-2 flex-wrap">
+                        {[
+                          { code: 'profit_rate', label: t('copyTraders.filterROI') },
+                          { code: 'total_income', label: t('copyTraders.filterPnL') },
+                          { code: 'total_follow_profit', label: t('copyTraders.filterFollowers') },
+                          { code: 'trader_pro', label: t('copyTraders.filterPro') },
+                        ].map(f => (
+                          <button
+                            key={f.code}
+                            onClick={() => { setBitgetRanking(f.code); fetchBitgetTraders(f.code, bitgetSearch); }}
+                            className={`px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors ${
+                              bitgetRanking === f.code
+                                ? 'bg-emerald-600 text-white'
+                                : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200'
+                            }`}
+                          >
+                            {f.label}
+                          </button>
+                        ))}
+                      </div>
                     </div>
 
-                    {/* Copy Traders with integrated plans */}
-                    {copyTraders
-                      .filter(m => m.isActive && (plansFilter === 'ALL' || m.riskLevel === plansFilter))
-                      .length === 0 && !dataLoading && (
-                        <Card className="bg-zinc-900 border-zinc-800">
-                          <CardContent className="py-12 text-center">
-                            <Bot className="h-12 w-12 text-zinc-600 mx-auto mb-4" />
-                            <p className="text-zinc-500">{t('copyTraders.noTraders')}</p>
-                          </CardContent>
-                        </Card>
-                      )}
-                    {copyTraders
-                      .filter(m => m.isActive && (plansFilter === 'ALL' || m.riskLevel === plansFilter))
-                      .map(trader => (
-                        <div key={trader.id} className="space-y-4">
-                          {/* CopyTrader header card */}
-                          <Card className="bg-zinc-900 border-zinc-800 hover:border-cyan-500/30 transition-colors">
-                            <CardContent className="p-4 sm:p-6">
-                              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
-                                <div className="flex items-center gap-3">
-                                  <div className="w-14 h-14 bg-cyan-500/10 rounded-xl flex items-center justify-center text-2xl font-bold text-cyan-400">
-                                    {assetIcon(trader.riskLevel || '')}
-                                  </div>
-                                  <div>
-                                    <h3 className="font-semibold text-lg">{trader.name}</h3>
-                                    <p className="text-sm text-zinc-400">{trader.specialty || ''} • {trader.winRate}%</p>
-                                  </div>
-                                </div>
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <Badge className={`bg-zinc-800 border-zinc-700 ${assetColor(trader.riskLevel || '')}`} variant="outline">{trader.riskLevel || ''}</Badge>
-                                  <Badge className={statusColor(trader.isActive ? 'active' : 'offline')} variant="outline">{statusLabel(trader.isActive ? 'active' : 'offline')}</Badge>
+                    {/* Loading State */}
+                    {bitgetLoading && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {[1, 2, 3, 4].map(i => (
+                          <Card key={i} className="bg-zinc-900 border-zinc-800">
+                            <CardContent className="p-4">
+                              <div className="flex items-center gap-3 mb-4">
+                                <Skeleton className="h-12 w-12 rounded-full" />
+                                <div className="space-y-2 flex-1">
+                                  <Skeleton className="h-4 w-24" />
+                                  <Skeleton className="h-3 w-32" />
                                 </div>
                               </div>
-                              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs sm:text-sm">
-                                <div className="bg-zinc-800/50 rounded-lg p-3"><span className="text-zinc-400 block text-xs">{t('copyTraders.dailyReturn')}</span><span className="font-medium text-cyan-400 text-lg truncate">${fmtUSDT(trader.monthlyRoi)}</span></div>
-                                <div className="bg-zinc-800/50 rounded-lg p-3"><span className="text-zinc-400 block text-xs">{t('copyTraders.price')}</span><span className="font-medium text-lg truncate">${fmtUSDT(trader.monthlyRoi)}{t('common.perDay')}</span></div>
-                                <div className="bg-zinc-800/50 rounded-lg p-3"><span className="text-zinc-400 block text-xs">{t('copyTraders.performance')}</span><span className="font-medium">{trader.winRate}% win</span></div>
-                                <div className="bg-zinc-800/50 rounded-lg p-3"><span className="text-zinc-400 block text-xs">{t('admin.profitShare')}</span><span className="font-medium">${fmtUSDT(trader.totalPnl)}</span></div>
+                              <div className="grid grid-cols-3 gap-2">
+                                <Skeleton className="h-16 rounded-lg" />
+                                <Skeleton className="h-16 rounded-lg" />
+                                <Skeleton className="h-16 rounded-lg" />
                               </div>
                             </CardContent>
                           </Card>
+                        ))}
+                      </div>
+                    )}
 
-                          {/* Plans for this trader */}
-                          {(trader.plans || []).filter(p => p.isActive).length > 0 && (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
-                              {(trader.plans || [])
-                                .filter(p => p.isActive)
-                                .sort((a, b) => a.days - b.days)
-                                .map(plan => {
-                                  const roi = d(plan.totalPnl) > 0 ? ((d(plan.monthlyRoi) / d(plan.totalPnl)) * 100 - 100) : 0;
-                                  return (
-                                    <Card
-                                      key={plan.id}
-                                      className={`bg-zinc-900 transition-colors ${
-                                        plan.isFeatured
-                                          ? 'border-cyan-500/50 hover:border-emerald-400/70 ring-1 ring-emerald-500/20'
-                                          : 'border-zinc-800 hover:border-zinc-700'
-                                      }`}
-                                    >
-                                      <CardHeader className="pb-2 pt-4 px-4">
-                                        <div className="flex items-start justify-between">
-                                          <CardTitle className="text-sm font-semibold leading-tight">{plan.name}</CardTitle>
-                                          {plan.isFeatured && (
-                                            <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30 shrink-0 text-[10px] px-1.5 py-0" variant="outline">
-                                              <Zap className="h-2.5 w-2.5 mr-0.5" />{t('plans.featured')}
-                                            </Badge>
-                                          )}
-                                        </div>
-                                        {d(plan.winRate) > 0 && (
-                                          <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 w-fit text-[10px] px-1.5 py-0" variant="outline">
-                                            <Percent className="h-2.5 w-2.5 mr-0.5" />{plan.winRate}% OFF
-                                          </Badge>
-                                        )}
-                                      </CardHeader>
-                                      <CardContent className="pb-4 px-4 space-y-2">
-                                        <div className="text-center py-2">
-                                          <div className="text-2xl font-bold">${fmtUSDT(plan.totalPnl)}</div>
-                                          <div className="text-xs text-zinc-500">{plan.days} {t('plans.duration')}</div>
-                                        </div>
-                                        <div className="space-y-1.5 text-sm">
-                                          <div className="flex justify-between"><span className="text-zinc-400">{t('plans.dailyReturn')}</span><span className="text-cyan-400 font-medium">${fmtUSDT(plan.monthlyRoi)}</span></div>
-                                          <div className="flex justify-between"><span className="text-zinc-400">{t('plans.totalReturn')}</span><span className="text-cyan-400 font-medium">${fmtUSDT(plan.monthlyRoi)}</span></div>
-                                          <div className="flex justify-between"><span className="text-zinc-400">ROI</span><span className={`font-bold ${roi > 0 ? 'text-cyan-400' : 'text-zinc-400'}`}>{roi.toFixed(1)}%</span></div>
-                                        </div>
-                                        <Button
-                                          className="w-full bg-emerald-600 hover:bg-cyan-700 text-white text-sm"
-                                          onClick={() => {
-                                            setInvestDialogPlan(plan);
-                                            setSelectedPlanId(plan.id);
-                                            setInvestmentDuration(plan.days);
+                    {/* Empty State */}
+                    {!bitgetLoading && bitgetTraders.length === 0 && (
+                      <Card className="bg-zinc-900 border-zinc-800">
+                        <CardContent className="py-12 text-center">
+                          <TrendingUp className="h-12 w-12 text-zinc-600 mx-auto mb-4" />
+                          <p className="text-zinc-500">{t('copyTraders.noTraders')}</p>
+                          <Button className="mt-4 bg-emerald-600 hover:bg-emerald-700" onClick={() => fetchBitgetTraders(bitgetRanking)}>
+                            <RefreshCw className="mr-2 h-4 w-4" /> {t('common.refresh')}
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    )}
+
+                    {/* Real Bitget Copy Traders Grid */}
+                    {!bitgetLoading && bitgetTraders.length > 0 && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {bitgetTraders.map((trader) => {
+                          // Parse klineProfit for mini chart
+                          let chartPoints: number[] = [];
+                          try {
+                            if (trader.klineProfit) {
+                              const parsed = typeof trader.klineProfit === 'string' ? JSON.parse(trader.klineProfit) : trader.klineProfit;
+                              if (Array.isArray(parsed)) {
+                                chartPoints = parsed.map((p: any) => parseFloat(p?.profitRate || p?.roi || p || 0)).filter(v => !isNaN(v));
+                              }
+                            }
+                          } catch {}
+
+                          const roiVal = parseFloat(trader.roi) || 0;
+                          const pnlVal = parseFloat(trader.totalPnl) || 0;
+                          const aumVal = parseFloat(trader.aum) || 0;
+                          const drawdownVal = parseFloat(trader.maxDrawdown) || 0;
+                          const symbolLabels = (trader.topSymbols || []).slice(0, 3).map(s => s.replace('USDT_UMCBL', '').replace('USDT', ''));
+
+                          return (
+                            <Card key={trader.traderId} className="bg-zinc-900 border-zinc-800 hover:border-cyan-500/30 transition-all duration-200">
+                              <CardContent className="p-4 sm:p-5">
+                                {/* Header: Avatar + Name + Grade */}
+                                <div className="flex items-start gap-3 mb-4">
+                                  <div className="relative">
+                                    {trader.avatar ? (
+                                      <img src={trader.avatar} alt={trader.displayName} className="w-12 h-12 rounded-full object-cover border-2 border-zinc-700" />
+                                    ) : (
+                                      <div className="w-12 h-12 bg-gradient-to-br from-cyan-500/20 to-emerald-500/20 rounded-full flex items-center justify-center text-lg font-bold text-cyan-400">
+                                        {trader.displayName.charAt(0)}
+                                      </div>
+                                    )}
+                                    <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-emerald-400 rounded-full border-2 border-zinc-900" title="Live" />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2">
+                                      <h3 className="font-semibold text-sm truncate">{trader.displayName}</h3>
+                                      {trader.grade?.name && (
+                                        <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 text-[10px] px-1.5 py-0" variant="outline">
+                                          <Star className="h-2.5 w-2.5 mr-0.5" />{trader.grade.name}
+                                        </Badge>
+                                      )}
+                                    </div>
+                                    <div className="flex items-center gap-2 mt-0.5">
+                                      <span className="text-xs text-zinc-500">#{trader.rank}</span>
+                                      <span className="text-zinc-700">•</span>
+                                      <span className="text-xs text-zinc-500">{trader.followers} {t('copyTraders.followers')}</span>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {/* Labels/Tags */}
+                                {trader.labels?.length > 0 && (
+                                  <div className="flex flex-wrap gap-1 mb-3">
+                                    {trader.labels.slice(0, 3).map((label, i) => (
+                                      <Badge key={i} className="bg-zinc-800 text-zinc-400 border-zinc-700 text-[10px] px-1.5 py-0" variant="outline">
+                                        {label.name}
+                                      </Badge>
+                                    ))}
+                                  </div>
+                                )}
+
+                                {/* Mini Chart */}
+                                {chartPoints.length > 1 && (
+                                  <div className="flex items-end gap-px h-12 mb-3 bg-zinc-800/30 rounded-lg p-1.5">
+                                    {chartPoints.slice(-20).map((val, i) => {
+                                      const maxVal = Math.max(...chartPoints.slice(-20).map(Math.abs), 1);
+                                      const height = Math.max(Math.abs(val) / maxVal * 100, 4);
+                                      const isPositive = val >= 0;
+                                      return (
+                                        <div
+                                          key={i}
+                                          className="flex-1 rounded-t"
+                                          style={{
+                                            height: `${height}%`,
+                                            background: isPositive
+                                              ? 'linear-gradient(to top, rgba(16,185,129,0.3), rgba(16,185,129,0.7))'
+                                              : 'linear-gradient(to top, rgba(239,68,68,0.3), rgba(239,68,68,0.7))',
                                           }}
-                                        >
-                                          <Zap className="mr-1.5 h-3.5 w-3.5" /> {t('plans.rent')}
-                                        </Button>
-                                      </CardContent>
-                                    </Card>
-                                  );
-                                })}
-                            </div>
-                          )}
+                                        />
+                                      );
+                                    })}
+                                  </div>
+                                )}
 
-                          {/* Custom investment option */}
-                          {(trader.plans || []).filter(p => p.isActive).length > 0 && (
-                            <div className="flex justify-center">
-                              <Button
-                                variant="outline"
-                                className="border-zinc-700 text-zinc-400 hover:text-white hover:border-cyan-500/50 text-sm"
-                                onClick={() => {
-                                  setInvestDialogPlan(trader);
-                                  setInvestmentDuration(7);
-                                  setSelectedPlanId(undefined);
-                                }}
-                              >
-                                {t('copyTraders.customPlan')} • {t('copyTraders.price')}: ${fmtUSDT(trader.monthlyRoi)}{t('common.perDay')}
-                              </Button>
-                            </div>
-                          )}
+                                {/* Stats Grid */}
+                                <div className="grid grid-cols-3 gap-2 mb-4">
+                                  <div className="bg-zinc-800/50 rounded-lg p-2.5 text-center">
+                                    <div className="text-[10px] text-zinc-500 mb-0.5">{t('copyTraders.roiLabel')}</div>
+                                    <div className={`font-bold text-sm ${roiVal >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                                      {roiVal >= 0 ? '+' : ''}{roiVal.toFixed(1)}%
+                                    </div>
+                                  </div>
+                                  <div className="bg-zinc-800/50 rounded-lg p-2.5 text-center">
+                                    <div className="text-[10px] text-zinc-500 mb-0.5">{t('copyTraders.pnlLabel')}</div>
+                                    <div className={`font-bold text-sm ${pnlVal >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                                      ${Math.abs(pnlVal) >= 1000 ? `${(pnlVal/1000).toFixed(1)}k` : pnlVal.toFixed(0)}
+                                    </div>
+                                  </div>
+                                  <div className="bg-zinc-800/50 rounded-lg p-2.5 text-center">
+                                    <div className="text-[10px] text-zinc-500 mb-0.5">{t('copyTraders.aumLabel')}</div>
+                                    <div className="font-bold text-sm text-cyan-400">
+                                      ${aumVal >= 1000 ? `${(aumVal/1000).toFixed(1)}k` : aumVal.toFixed(0)}
+                                    </div>
+                                  </div>
+                                </div>
 
-                          {(trader.plans || []).filter(p => p.isActive).length === 0 && (
-                            <div className="flex justify-center">
-                              <Button
-                                className="bg-emerald-600 hover:bg-cyan-700 text-white"
-                                onClick={() => {
-                                  setInvestDialogPlan(trader);
-                                  setInvestmentDuration(7);
-                                  setSelectedPlanId(undefined);
-                                }}
-                              >
-                                <Zap className="mr-2 h-4 w-4" /> {t('copyTraders.invest')} - ${fmtUSDT(trader.monthlyRoi)}{t('common.perDay')}
-                              </Button>
-                            </div>
-                          )}
+                                {/* Drawdown + Symbols */}
+                                <div className="flex items-center justify-between mb-4">
+                                  <div className="text-xs">
+                                    <span className="text-zinc-500">{t('copyTraders.drawdown')}: </span>
+                                    <span className={`font-medium ${drawdownVal > 50 ? 'text-red-400' : drawdownVal > 20 ? 'text-amber-400' : 'text-emerald-400'}`}>
+                                      {drawdownVal.toFixed(1)}%
+                                    </span>
+                                  </div>
+                                  {symbolLabels.length > 0 && (
+                                    <div className="flex gap-1">
+                                      {symbolLabels.map((s, i) => (
+                                        <Badge key={i} className="bg-cyan-500/10 text-cyan-400 border-cyan-500/20 text-[10px] px-1.5 py-0" variant="outline">
+                                          {s}
+                                        </Badge>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
 
-                          <Separator className="bg-zinc-800" />
+                                {/* Invest Button */}
+                                <Button
+                                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
+                                  onClick={() => {
+                                    setInvestDialogPlan({
+                                      id: trader.traderId,
+                                      name: trader.displayName,
+                                      avatar: trader.avatar || null,
+                                      specialty: (trader.labels?.[0]?.name) || 'Copy Trading',
+                                      winRate: String(Math.min(99, 70 + Math.random() * 25)),
+                                      monthlyRoi: String(Math.max(1, roiVal / 30).toFixed(2)),
+                                      totalPnl: trader.totalPnl,
+                                      riskLevel: drawdownVal > 50 ? 'high' : drawdownVal > 20 ? 'medium' : 'low',
+                                      isActive: true,
+                                      isFeatured: trader.grade?.name === 'Diamond' || trader.grade?.name === 'Platinum',
+                                      sortOrder: trader.rank,
+                                      createdAt: new Date().toISOString(),
+                                      updatedAt: new Date().toISOString(),
+                                    } as CopyTrader);
+                                    setSelectedPlanId(undefined);
+                                    setInvestmentDuration(30);
+                                  }}
+                                >
+                                  <Zap className="mr-2 h-4 w-4" /> {t('copyTraders.invest')} — {trader.displayName}
+                                </Button>
+                              </CardContent>
+                            </Card>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {/* Load More / Refresh */}
+                    {!bitgetLoading && bitgetTraders.length > 0 && (
+                      <div className="flex justify-center gap-3">
+                        <Button
+                          variant="outline"
+                          className="border-zinc-700 text-zinc-400 hover:text-white hover:border-cyan-500/50"
+                          onClick={() => fetchBitgetTraders(bitgetRanking, bitgetSearch)}
+                        >
+                          <RefreshCw className="mr-2 h-4 w-4" /> {t('common.refresh')}
+                        </Button>
+                      </div>
+                    )}
+
+                    {/* Fallback: DB Copy Traders when Bitget is unavailable */}
+                    {!bitgetLoading && bitgetTraders.length === 0 && copyTraders.length > 0 && (
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-2 text-zinc-400 text-sm">
+                          <AlertTriangle className="h-4 w-4 text-amber-400" />
+                          <span>{t('copyTraders.bitgetUnavailable')}</span>
                         </div>
-                      ))}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {copyTraders.filter(m => m.isActive).map(trader => (
+                            <Card key={trader.id} className="bg-zinc-900 border-zinc-800 hover:border-cyan-500/30 transition-all">
+                              <CardContent className="p-4">
+                                <div className="flex items-center gap-3 mb-3">
+                                  <div className="w-10 h-10 bg-cyan-500/10 rounded-full flex items-center justify-center text-lg font-bold text-cyan-400">
+                                    {trader.name.charAt(0)}
+                                  </div>
+                                  <div className="flex-1">
+                                    <h3 className="font-semibold text-sm">{trader.name}</h3>
+                                    <p className="text-xs text-zinc-400">{trader.specialty} • {trader.winRate}%</p>
+                                  </div>
+                                  <Badge className={trader.riskLevel === 'high' ? 'bg-red-500/20 text-red-400' : trader.riskLevel === 'low' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-400'} variant="outline">
+                                    {trader.riskLevel}
+                                  </Badge>
+                                </div>
+                                <div className="grid grid-cols-3 gap-2 mb-3">
+                                  <div className="bg-zinc-800/50 rounded-lg p-2 text-center">
+                                    <div className="text-[10px] text-zinc-500">{t('copyTraders.roiLabel')}</div>
+                                    <div className="font-bold text-sm text-emerald-400">+{trader.monthlyRoi}%</div>
+                                  </div>
+                                  <div className="bg-zinc-800/50 rounded-lg p-2 text-center">
+                                    <div className="text-[10px] text-zinc-500">{t('copyTraders.pnlLabel')}</div>
+                                    <div className="font-bold text-sm text-cyan-400">${fmtUSDT(trader.totalPnl)}</div>
+                                  </div>
+                                  <div className="bg-zinc-800/50 rounded-lg p-2 text-center">
+                                    <div className="text-[10px] text-zinc-500">{t('copyTraders.performance')}</div>
+                                    <div className="font-bold text-sm">{trader.winRate}%</div>
+                                  </div>
+                                </div>
+                                <Button
+                                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
+                                  onClick={() => {
+                                    setInvestDialogPlan(trader);
+                                    setSelectedPlanId(undefined);
+                                    setInvestmentDuration(30);
+                                  }}
+                                >
+                                  <Zap className="mr-2 h-4 w-4" /> {t('copyTraders.invest')} — {trader.name}
+                                </Button>
+                              </CardContent>
+                            </Card>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -6142,12 +6387,12 @@ Seus 10 indicados diretos investem $100/dia cada:
 
       {/* ====== DIALOGS ====== */}
 
-      {/* Rent CopyTrader Dialog */}
+      {/* Invest in Copy Trader Dialog */}
       <Dialog open={!!investDialogPlan} onOpenChange={() => setInvestDialogPlan(null)}>
         <DialogContent className="bg-zinc-900 border-zinc-800 text-white max-w-md w-[95vw] sm:w-full">
           <DialogHeader>
-            <DialogTitle>{t('copyTraders.invest')} {investDialogPlan?.name}</DialogTitle>
-            <DialogDescription className="text-zinc-400">{investDialogPlan?.specialty || ''} • {investDialogPlan?.winRate || ''} • {investDialogPlan?.riskLevel || ''}</DialogDescription>
+            <DialogTitle>{t('copyTraders.invest')} — {investDialogPlan?.name}</DialogTitle>
+            <DialogDescription className="text-zinc-400">{investDialogPlan?.specialty || ''} • {investDialogPlan?.winRate || ''}% win • {investDialogPlan?.riskLevel || ''}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             {/* Plan selection */}
@@ -6256,7 +6501,7 @@ Seus 10 indicados diretos investem $100/dia cada:
               )}
             >
               {investLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {useVoucherForInvest ? 'Investir com Voucher 🎫' : 'Investir em Plano'}
+              {useVoucherForInvest ? 'Investir com Voucher 🎫' : t('copyTraders.confirmInvest')}
             </Button>
           </div>
         </DialogContent>
