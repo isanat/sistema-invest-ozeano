@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { requireAuth } from '@/lib/auth';
-import { apiSuccess, handleApiError } from '@/lib/api-utils';
+import { getSession } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await requireAuth();
+    // Use getSession() instead of requireAuth() to avoid throwing on no session
+    const session = await getSession();
+
+    if (!session || !session.userId) {
+      return NextResponse.json({ success: true, user: null });
+    }
 
     const user = await db.user.findUnique({
       where: { id: session.userId },
@@ -35,18 +39,14 @@ export async function GET(request: NextRequest) {
     });
 
     if (!user) {
-      return apiSuccess({ user: null }, 404);
+      return NextResponse.json({ success: true, user: null });
     }
 
-    return apiSuccess({ user });
+    return NextResponse.json({ success: true, user });
   } catch (error: any) {
-    // If no session / Unauthorized, return a graceful 200 with user: null
-    // instead of a 401/500 so the client can handle it cleanly.
-    const message = error?.message || String(error);
-    if (message === 'Unauthorized' || message.includes('Unauthorized')) {
-      return apiSuccess({ user: null });
-    }
-    // For any other error, still return a proper response instead of crashing with 500
-    return handleApiError(error);
+    // NEVER return 500 for this route — always return a graceful response
+    // This prevents the frontend from crashing when auth check fails
+    console.error('[/api/auth/me] Error:', error?.message || error);
+    return NextResponse.json({ success: true, user: null });
   }
 }

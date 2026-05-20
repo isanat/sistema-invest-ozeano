@@ -31,7 +31,7 @@ import {
   XCircle, Clock4, Server, Database, Globe, Percent, Gift,
   LayoutDashboard, UserCog, Banknote, HandCoins, Link2, ChevronLeft,
   Trophy, Target, Crown, Star, Share2, Medal, Award,
-  Info, MessageSquare, Ticket,
+  Info, MessageSquare, Ticket, LineChart,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
