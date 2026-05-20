@@ -48,6 +48,15 @@ export async function POST(request: NextRequest) {
       return apiError('Data de fim deve ser posterior à data de início');
     }
 
+    const VALID_METRICS = ['referrals', 'earnings', 'active_referrals'];
+    if (metric && !VALID_METRICS.includes(metric)) {
+      return apiError('Métrica inválida. Valores permitidos: ' + VALID_METRICS.join(', '));
+    }
+
+    if (rewardPool !== undefined && isNaN(Number(rewardPool))) {
+      return apiError('Valor do prêmio deve ser um número válido');
+    }
+
     const contest = await db.affiliateContest.create({
       data: {
         name,

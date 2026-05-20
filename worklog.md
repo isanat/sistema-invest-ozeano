@@ -529,3 +529,59 @@ Stage Summary:
 - Deposit record update now atomic with balance credit (prevents double-credit on re-processing)
 - Webhook signature verification rejects unverified webhooks in production
 - Payout FINISHED handler now uses transaction for data consistency
+---
+Task ID: 7
+Agent: Fix Agent
+Task: Fix remaining HIGH priority audit bugs (4 bugs)
+
+Work Log:
+- Read /home/z/my-project/worklog.md for context from previous agents (9 prior tasks documented)
+- Read all 6 target files in full before making changes
+
+**Bug 1: Admin stats OOM risk** — `/home/z/my-project/src/app/api/admin/stats/route.ts`
+- Replaced 5 `findMany` + `.reduce()` patterns with SQL aggregation queries via `db.$queryRaw`
+- Deposits: `findMany({where: {type: 'deposit'}})` + reduce → single SQL query with SUM/COUNT, filtered by status with CASE expressions
+- Withdrawals: Same pattern for type='withdrawal'
+- User financials: `findMany()` + reduce for totalRoi/totalInvested → single SQL SUM with CAST
+- Commissions: `findMany()` + reduce → single SQL SUM/COUNT
+- Investment revenue: `findMany({where: {status: 'active'}})` + reduce → single SQL SUM
+- Parallelized independent queries: counts (users, investments, copy traders, pools) in one Promise.all; all 5 aggregations in another Promise.all; recent activity in a third Promise.all
+- SQL results use `Number()` to convert bigint counts returned by PostgreSQL
+- Response shape preserved exactly (same field names, same nesting)
+
+**Bug 2: Missing validation on admin routes**
+- `/home/z/my-project/src/app/api/admin/affiliate-contests/route.ts` POST:
+  - Added `VALID_METRICS` whitelist: ['referrals', 'earnings', 'active_referrals']
+  - Added validation: `metric` must be in whitelist
+  - Added validation: `rewardPool` must be a valid number
+- `/home/z/my-project/src/app/api/admin/affiliate-milestones/route.ts` POST:
+  - Added validation: `targetCount` must be a positive integer
+  - Added `VALID_REWARD_TYPES` whitelist: ['cash', 'boost', 'badge']
+  - Added validation: `rewardType` must be in whitelist
+  - Added validation: `rewardValue` must be a valid number
+- `/home/z/my-project/src/app/api/admin/vouchers/route.ts` POST:
+  - Added `VALID_VOUCHER_TYPES` whitelist: ['basic', 'premium', 'custom']
+  - Added validation: `type` must be in whitelist
+  - (Other voucher fields already had thorough validation)
+
+**Bug 3: nowpayments/generate-address missing nowpayments_enabled check** — `/home/z/my-project/src/app/api/nowpayments/generate-address/route.ts`
+- NOTE: The `nowpayments_enabled` config check was already present in the code (lines 22-25)
+- Added currency whitelist validation: imported `CURRENCY_MAP` from nowpayments.ts
+- Built `VALID_CURRENCIES` array from both keys and values of CURRENCY_MAP
+- Added validation: `currency` parameter must be in VALID_CURRENCIES before any API calls
+- This prevents arbitrary strings from being sent to the NowPayments API (audit issue #13)
+
+**Bug 4: Admin nowpayments route stats** — `/home/z/my-project/src/app/api/admin/nowpayments/route.ts`
+- Reviewed: stats section already uses `aggregate` and `count` (not findMany + reduce) — no OOM risk
+- Fixed: parallelized 3 sequential `count()` queries into the existing `Promise.all` block
+- `totalDepositRecords`, `totalPayoutRecords`, `totalSubAccounts` now run in parallel with the other 5 aggregate/count queries
+- Reduced 3 sequential DB round-trips to 0 (all 8 queries in single Promise.all)
+
+- Ran `bun run lint` — passes with no errors
+- Checked dev log — no errors from our changes (only Bitget API 403s which are external)
+
+Stage Summary:
+- Admin stats route no longer loads all records into memory — uses SQL aggregation for all financial sums and counts
+- Admin contest/milestone/voucher POST routes now validate enum fields (metric, rewardType, type) and numeric fields (rewardPool, rewardValue, targetCount)
+- NowPayments generate-address route now validates currency against CURRENCY_MAP whitelist
+- Admin nowpayments stats queries fully parallelized (8 queries in one Promise.all instead of 5+3 sequential)

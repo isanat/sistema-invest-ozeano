@@ -1,111 +1,131 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAdmin, d as parseNum } from '@/lib/auth';
 import { apiSuccess, handleApiError } from '@/lib/api-utils';
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await requireAdmin();
+    await requireAdmin();
 
-    // Total users
-    const totalUsers = await db.user.count({ where: { role: 'user' } });
-    const activeUsers = await db.user.count({ where: { role: 'user', isActive: true } });
-    const newUsersToday = await db.user.count({
-      where: {
-        role: 'user',
-        createdAt: { gte: new Date(new Date().setHours(0, 0, 0, 0)) },
-      },
-    });
+    // Run independent count queries in parallel
+    const [
+      totalUsers,
+      activeUsers,
+      newUsersToday,
+      activeInvestments,
+      totalInvestments,
+      activeCopyTraders,
+      activeTradingPools,
+    ] = await Promise.all([
+      db.user.count({ where: { role: 'user' } }),
+      db.user.count({ where: { role: 'user', isActive: true } }),
+      db.user.count({
+        where: {
+          role: 'user',
+          createdAt: { gte: new Date(new Date().setHours(0, 0, 0, 0)) },
+        },
+      }),
+      db.investment.count({ where: { status: 'active' } }),
+      db.investment.count(),
+      db.copyTrader.count({ where: { isActive: true } }),
+      db.tradingPool.count({ where: { status: 'active' } }),
+    ]);
 
-    // Deposits - using Deposit model
-    const allDeposits = await db.deposit.findMany({
-      where: { type: 'deposit' },
-      select: { amount: true, status: true },
-    });
-    const depositTotal = allDeposits.reduce((sum, item) => sum + parseNum(item.amount), 0);
-    const depositConfirmed = allDeposits.filter(d => d.status === 'confirmed').reduce((sum, d) => sum + parseNum(d.amount), 0);
-    const depositPending = allDeposits.filter(d => d.status === 'pending');
-    const depositPendingAmount = depositPending.reduce((sum, d) => sum + parseNum(d.amount), 0);
+    // Deposit aggregation via SQL (amount is String field, Prisma _sum doesn't work on Strings)
+    const [depositStats, withdrawalStats, userFinancialStats, commissionStats, investmentRevenueStats] = await Promise.all([
+      db.$queryRaw<Array<{
+        total_count: bigint;
+        total_amount: number;
+        confirmed_amount: number;
+        pending_count: bigint;
+        pending_amount: number;
+      }>>`
+        SELECT
+          COUNT(*) as total_count,
+          COALESCE(SUM(CAST(amount AS NUMERIC)), 0) as total_amount,
+          COALESCE(SUM(CASE WHEN status = 'confirmed' THEN CAST(amount AS NUMERIC) ELSE 0 END), 0) as confirmed_amount,
+          COALESCE(SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END), 0) as pending_count,
+          COALESCE(SUM(CASE WHEN status = 'pending' THEN CAST(amount AS NUMERIC) ELSE 0 END), 0) as pending_amount
+        FROM "Deposit" WHERE type = 'deposit'
+      `,
+      db.$queryRaw<Array<{
+        total_count: bigint;
+        total_amount: number;
+        confirmed_amount: number;
+        pending_count: bigint;
+        pending_amount: number;
+      }>>`
+        SELECT
+          COUNT(*) as total_count,
+          COALESCE(SUM(CAST(amount AS NUMERIC)), 0) as total_amount,
+          COALESCE(SUM(CASE WHEN status = 'confirmed' THEN CAST(amount AS NUMERIC) ELSE 0 END), 0) as confirmed_amount,
+          COALESCE(SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END), 0) as pending_count,
+          COALESCE(SUM(CASE WHEN status = 'pending' THEN CAST(amount AS NUMERIC) ELSE 0 END), 0) as pending_amount
+        FROM "Deposit" WHERE type = 'withdrawal'
+      `,
+      db.$queryRaw<Array<{ total_roi: number; total_invested: number }>>`
+        SELECT
+          COALESCE(SUM(CAST("totalRoi" AS NUMERIC)), 0) as total_roi,
+          COALESCE(SUM(CAST("totalInvested" AS NUMERIC)), 0) as total_invested
+        FROM "User" WHERE role = 'user'
+      `,
+      db.$queryRaw<Array<{ total_count: bigint; total_amount: number }>>`
+        SELECT
+          COUNT(*) as total_count,
+          COALESCE(SUM(CAST("commissionAmount" AS NUMERIC)), 0) as total_amount
+        FROM "AffiliateCommission"
+      `,
+      db.$queryRaw<Array<{ revenue: number }>>`
+        SELECT COALESCE(SUM(CAST(amount AS NUMERIC)), 0) as revenue
+        FROM "Investment" WHERE status = 'active'
+      `,
+    ]);
 
-    // Withdrawals
-    const allWithdrawals = await db.deposit.findMany({
-      where: { type: 'withdrawal' },
-      select: { amount: true, status: true },
-    });
-    const withdrawalTotal = allWithdrawals.reduce((sum, item) => sum + parseNum(item.amount), 0);
-    const withdrawalConfirmed = allWithdrawals.filter(d => d.status === 'confirmed').reduce((sum, d) => sum + parseNum(d.amount), 0);
-    const withdrawalPending = allWithdrawals.filter(d => d.status === 'pending');
-    const withdrawalPendingAmount = withdrawalPending.reduce((sum, d) => sum + parseNum(d.amount), 0);
+    const ds = depositStats[0];
+    const ws = withdrawalStats[0];
+    const ufs = userFinancialStats[0];
+    const cs = commissionStats[0];
+    const irs = investmentRevenueStats[0];
 
-    // Active investments
-    const activeInvestments = await db.investment.count({ where: { status: 'active' } });
-    const totalInvestments = await db.investment.count();
-
-    // Total ROI/invested - sum String fields manually
-    const users = await db.user.findMany({
-      where: { role: 'user' },
-      select: { totalRoi: true, totalInvested: true },
-    });
-    const totalRoi = users.reduce((sum, u) => sum + parseNum(u.totalRoi), 0);
-    const totalInvested = users.reduce((sum, u) => sum + parseNum(u.totalInvested), 0);
-
-    // Affiliate commissions
-    const allCommissions = await db.affiliateCommission.findMany({
-      select: { commissionAmount: true, status: true },
-    });
-    const totalCommissionAmount = allCommissions.reduce((sum, c) => sum + parseNum(c.commissionAmount), 0);
-
-    // Investment revenue
-    const activeInvestmentRecords = await db.investment.findMany({
-      where: { status: 'active' },
-      select: { amount: true },
-    });
-    const investmentRevenue = activeInvestmentRecords.reduce((sum, i) => sum + parseNum(i.amount), 0);
-
-    // Copy trading stats
-    const activeCopyTraders = await db.copyTrader.count({ where: { isActive: true } });
-    const activeTradingPools = await db.tradingPool.count({ where: { status: 'active' } });
-
-    // Recent activity
-    const recentDeposits = await db.deposit.findMany({
-      where: { type: 'deposit' },
-      take: 5,
-      orderBy: { createdAt: 'desc' },
-      include: {
-        user: { select: { name: true, email: true } },
-      },
-    });
-
-    const recentWithdrawals = await db.deposit.findMany({
-      where: { type: 'withdrawal' },
-      take: 5,
-      orderBy: { createdAt: 'desc' },
-      include: {
-        user: { select: { name: true, email: true } },
-      },
-    });
-
-    const recentInvestments = await db.investment.findMany({
-      take: 5,
-      orderBy: { createdAt: 'desc' },
-      include: {
-        user: { select: { name: true, email: true } },
-        plan: { select: { name: true } },
-      },
-    });
-
-    const recentUsers = await db.user.findMany({
-      where: { role: 'user' },
-      take: 5,
-      orderBy: { createdAt: 'desc' },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        balance: true,
-        createdAt: true,
-      },
-    });
+    // Recent activity - parallel since independent
+    const [recentDeposits, recentWithdrawals, recentInvestments, recentUsers] = await Promise.all([
+      db.deposit.findMany({
+        where: { type: 'deposit' },
+        take: 5,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          user: { select: { name: true, email: true } },
+        },
+      }),
+      db.deposit.findMany({
+        where: { type: 'withdrawal' },
+        take: 5,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          user: { select: { name: true, email: true } },
+        },
+      }),
+      db.investment.findMany({
+        take: 5,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          user: { select: { name: true, email: true } },
+          plan: { select: { name: true } },
+        },
+      }),
+      db.user.findMany({
+        where: { role: 'user' },
+        take: 5,
+        orderBy: { createdAt: 'desc' },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          balance: true,
+          createdAt: true,
+        },
+      }),
+    ]);
 
     return apiSuccess({
       stats: {
@@ -115,33 +135,33 @@ export async function GET(request: NextRequest) {
           newToday: newUsersToday,
         },
         deposits: {
-          total: allDeposits.length,
-          totalAmount: depositTotal,
-          confirmedAmount: depositConfirmed,
-          pendingCount: depositPending.length,
-          pendingAmount: depositPendingAmount,
+          total: Number(ds.total_count),
+          totalAmount: ds.total_amount,
+          confirmedAmount: ds.confirmed_amount,
+          pendingCount: Number(ds.pending_count),
+          pendingAmount: ds.pending_amount,
         },
         withdrawals: {
-          total: allWithdrawals.length,
-          totalAmount: withdrawalTotal,
-          confirmedAmount: withdrawalConfirmed,
-          pendingCount: withdrawalPending.length,
-          pendingAmount: withdrawalPendingAmount,
+          total: Number(ws.total_count),
+          totalAmount: ws.total_amount,
+          confirmedAmount: ws.confirmed_amount,
+          pendingCount: Number(ws.pending_count),
+          pendingAmount: ws.pending_amount,
         },
         investments: {
           active: activeInvestments,
           total: totalInvestments,
-          revenue: investmentRevenue,
+          revenue: irs.revenue,
         },
         trading: {
-          totalRoi,
-          totalInvested,
+          totalRoi: ufs.total_roi,
+          totalInvested: ufs.total_invested,
           activeCopyTraders,
           activeTradingPools,
         },
         affiliates: {
-          totalCommissions: allCommissions.length,
-          totalAmount: totalCommissionAmount,
+          totalCommissions: Number(cs.total_count),
+          totalAmount: cs.total_amount,
         },
       },
       recentActivity: {

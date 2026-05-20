@@ -151,6 +151,9 @@ export async function GET(request: NextRequest) {
           pendingDeposits,
           pendingPayouts,
           totalSplit,
+          totalDepositRecords,
+          totalPayoutRecords,
+          totalSubAccounts,
         ] = await Promise.all([
           db.nowPaymentsDeposit.aggregate({ _sum: { priceAmount: true } }),
           db.nowPaymentsPayout.aggregate({ _sum: { amount: true } }),
@@ -167,6 +170,9 @@ export async function GET(request: NextRequest) {
             },
           }),
           db.nowPaymentsDeposit.aggregate({ _sum: { splitAmount: true } }),
+          db.nowPaymentsDeposit.count(),
+          db.nowPaymentsPayout.count(),
+          db.nowPaymentsSubAccount.count(),
         ]);
 
         result.stats = {
@@ -175,9 +181,9 @@ export async function GET(request: NextRequest) {
           pendingDepositCount: pendingDeposits,
           pendingPayoutCount: pendingPayouts,
           totalSplitReceived: d(totalSplit._sum.splitAmount || '0'),
-          totalDepositRecords: await db.nowPaymentsDeposit.count(),
-          totalPayoutRecords: await db.nowPaymentsPayout.count(),
-          totalSubAccounts: await db.nowPaymentsSubAccount.count(),
+          totalDepositRecords,
+          totalPayoutRecords,
+          totalSubAccounts,
         };
       } catch (e) {
         console.error('NP stats error:', e);

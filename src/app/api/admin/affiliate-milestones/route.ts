@@ -106,6 +106,19 @@ export async function POST(request: NextRequest) {
       return apiError('Quantidade alvo é obrigatória');
     }
 
+    if (typeof targetCount !== 'number' || targetCount <= 0 || !Number.isInteger(targetCount)) {
+      return apiError('Quantidade alvo deve ser um número inteiro positivo');
+    }
+
+    const VALID_REWARD_TYPES = ['cash', 'boost', 'badge'];
+    if (rewardType && !VALID_REWARD_TYPES.includes(rewardType)) {
+      return apiError('Tipo de recompensa inválido. Valores permitidos: ' + VALID_REWARD_TYPES.join(', '));
+    }
+
+    if (rewardValue !== undefined && isNaN(Number(rewardValue))) {
+      return apiError('Valor da recompensa deve ser um número válido');
+    }
+
     const milestone = await db.affiliateMilestone.create({
       data: {
         name,

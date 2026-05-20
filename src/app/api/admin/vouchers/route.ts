@@ -104,6 +104,11 @@ export async function POST(request: NextRequest) {
       return apiError('Selecione um usuário (líder)');
     }
 
+    const VALID_VOUCHER_TYPES = ['basic', 'premium', 'custom'];
+    if (type && !VALID_VOUCHER_TYPES.includes(type)) {
+      return apiError('Tipo de voucher inválido. Valores permitidos: ' + VALID_VOUCHER_TYPES.join(', '));
+    }
+
     // Verify user exists
     const user = await db.user.findUnique({ where: { id: userId } });
     if (!user) {

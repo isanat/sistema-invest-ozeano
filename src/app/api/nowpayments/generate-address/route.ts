@@ -8,15 +8,23 @@ import {
   createSubPartnerDeposit,
   createPayment,
   toNowPaymentsCurrency,
+  CURRENCY_MAP,
   type SubPartnerDepositResponse,
   type PaymentResponse,
 } from '@/lib/nowpayments';
+
+const VALID_CURRENCIES = [...Object.keys(CURRENCY_MAP), ...Object.values(CURRENCY_MAP)];
 
 export async function POST(request: NextRequest) {
   try {
     const session = await requireAuth();
     const body = await request.json();
     const currency = String(body.currency || 'usdttrc20');
+
+    // Validate currency against whitelist
+    if (!VALID_CURRENCIES.includes(currency)) {
+      return apiError('Moeda inválida. Moedas suportadas: ' + Object.keys(CURRENCY_MAP).join(', '));
+    }
 
     // Check admin toggle for NowPayments
     const npEnabledConfig = await db.systemConfig.findUnique({ where: { key: 'nowpayments_enabled' } });
