@@ -13,28 +13,19 @@ export async function GET(request: NextRequest) {
 
     // Get affiliate statistics
     if (action === 'stats') {
+      // Bug 2: Use raw SQL SUM/COUNT aggregation instead of loading all records into memory
       const [
-        allCommissions,
-        paidCommissions,
-        pendingCommissions,
-        allAffiliateWithdrawals,
+        commissionStats,
+        withdrawalStats,
         topAffiliates,
         levels,
       ] = await Promise.all([
-        db.affiliateCommission.findMany({
-          select: { commissionAmount: true, status: true },
-        }),
-        db.affiliateCommission.findMany({
-          where: { status: 'paid' },
-          select: { commissionAmount: true },
-        }),
-        db.affiliateCommission.findMany({
-          where: { status: 'pending' },
-          select: { commissionAmount: true },
-        }),
-        db.affiliateWithdrawal.findMany({
-          select: { amount: true, fee: true },
-        }),
+        db.$queryRaw<
+          Array<{ totalAmount: number; cnt: bigint; status: string }>
+        >`SELECT COALESCE(SUM(CAST("commissionAmount" AS REAL)), 0) as totalAmount, COUNT(*) as cnt, status FROM "AffiliateCommission" GROUP BY status`,
+        db.$queryRaw<
+          Array<{ totalAmount: number; totalFees: number; cnt: bigint }>
+        >`SELECT COALESCE(SUM(CAST(amount AS REAL)), 0) as totalAmount, COALESCE(SUM(CAST(fee AS REAL)), 0) as totalFees, COUNT(*) as cnt FROM "AffiliateWithdrawal"`,
         db.user.findMany({
           where: {
             totalAffiliateEarnings: { not: '0' },
@@ -55,21 +46,25 @@ export async function GET(request: NextRequest) {
         db.affiliateLevel.findMany({ orderBy: { level: 'asc' } }),
       ]);
 
-      const totalCommissionAmount = allCommissions.reduce((s, c) => s + parseNum(c.commissionAmount), 0);
-      const totalPaidAmount = paidCommissions.reduce((s, c) => s + parseNum(c.commissionAmount), 0);
-      const totalPendingAmount = pendingCommissions.reduce((s, c) => s + parseNum(c.commissionAmount), 0);
-      const totalWithdrawalAmount = allAffiliateWithdrawals.reduce((s, w) => s + parseNum(w.amount), 0);
-      const totalWithdrawalFees = allAffiliateWithdrawals.reduce((s, w) => s + parseNum(w.fee), 0);
+      // Aggregate commission stats by status
+      const totalCommissionAmount = commissionStats.reduce((s, r) => s + Number(r.totalAmount), 0);
+      const totalCommissions = commissionStats.reduce((s, r) => s + Number(r.cnt), 0);
+      const totalPaidAmount = Number(commissionStats.find(r => r.status === 'paid')?.totalAmount || 0);
+      const totalPendingAmount = Number(commissionStats.find(r => r.status === 'pending')?.totalAmount || 0);
+
+      const totalWithdrawalAmount = Number(withdrawalStats[0]?.totalAmount || 0);
+      const totalWithdrawalFees = Number(withdrawalStats[0]?.totalFees || 0);
+      const totalWithdrawals = Number(withdrawalStats[0]?.cnt || 0);
 
       const sortedTopAffiliates = topAffiliates.sort((a, b) => parseNum(b.totalAffiliateEarnings) - parseNum(a.totalAffiliateEarnings));
 
       return apiSuccess({
         stats: {
-          totalCommissions: allCommissions.length,
+          totalCommissions,
           totalCommissionAmount,
           totalPaidAmount,
           totalPendingAmount,
-          totalWithdrawals: allAffiliateWithdrawals.length,
+          totalWithdrawals,
           totalWithdrawalAmount,
           totalWithdrawalFees,
           topAffiliates: sortedTopAffiliates,
@@ -86,7 +81,7 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status') || '';
     const level = searchParams.get('level') || '';
 
-    const where: any = {};
+    const where: Record<string, string | number> = {};
     if (status) where.status = status;
     if (level) where.level = parseInt(level);
 
@@ -130,7 +125,7 @@ export async function PUT(request: NextRequest) {
     const session = await requireAdmin();
     const body = await request.json();
 
-    console.log('[Admin/Affiliates] PUT body:', JSON.stringify(body));
+
 
     // Support single or batch update of affiliate levels
     const items = Array.isArray(body) ? body : [body];
@@ -146,11 +141,11 @@ export async function PUT(request: NextRequest) {
         isActive: item.isActive !== undefined ? Boolean(item.isActive) : true,
       };
 
-      console.log('[Admin/Affiliates] Processing level:', JSON.stringify(normalized));
+
 
       const data = adminAffiliateLevelSchema.parse(normalized);
 
-      console.log('[Admin/Affiliates] Parsed data:', JSON.stringify(data));
+
 
       const existing = await db.affiliateLevel.findUnique({
         where: { level: data.level },
@@ -171,7 +166,7 @@ export async function PUT(request: NextRequest) {
         },
       });
 
-      console.log('[Admin/Affiliates] Upserted level:', JSON.stringify(level));
+
 
       // Log
       try {

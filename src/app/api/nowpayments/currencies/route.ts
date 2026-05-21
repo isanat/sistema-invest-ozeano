@@ -19,7 +19,7 @@ export async function GET() {
     const pixEnabled = configMap.has_pix === 'true';
 
     if (!isNpEnabled) {
-      console.log('[/api/nowpayments/currencies] NowPayments not enabled in DB (nowpayments_enabled != "true")');
+      console.info('[/api/nowpayments/currencies] NowPayments not enabled in DB');
       return NextResponse.json({
         success: false,
         currencies: [],
@@ -35,7 +35,7 @@ export async function GET() {
     const configured = isNowPaymentsConfigured();
 
     if (!configured) {
-      console.log('[/api/nowpayments/currencies] NowPayments credentials NOT configured in env vars');
+      console.info('[/api/nowpayments/currencies] NowPayments credentials NOT configured in env vars');
       return NextResponse.json({
         success: false,
         currencies: [],
@@ -55,40 +55,41 @@ export async function GET() {
 
     let merchantCoins: string[] = [];
     try {
-      const merchantResult = await getMerchantCoins() as any;
+      const merchantResult = await getMerchantCoins() as Record<string, unknown>;
 
       // Handle multiple possible response formats from NowPayments API
-      let rawCoins: any[] = [];
+      let rawCoins: unknown[] = [];
 
       if (Array.isArray(merchantResult)) {
         // Direct array format: ["btc", "eth", ...]
         rawCoins = merchantResult;
       } else if (merchantResult?.selectedCurrencies && Array.isArray(merchantResult.selectedCurrencies)) {
         // { selectedCurrencies: [...] } format
-        rawCoins = merchantResult.selectedCurrencies;
+        rawCoins = merchantResult.selectedCurrencies as unknown[];
       } else if (merchantResult?.currencies && Array.isArray(merchantResult.currencies)) {
         // { currencies: [...] } format
-        rawCoins = merchantResult.currencies;
+        rawCoins = merchantResult.currencies as unknown[];
       } else if (merchantResult?.coins && Array.isArray(merchantResult.coins)) {
         // { coins: [...] } format
-        rawCoins = merchantResult.coins;
+        rawCoins = merchantResult.coins as unknown[];
       } else if (merchantResult?.result && Array.isArray(merchantResult.result)) {
         // { result: [...] } format
-        rawCoins = merchantResult.result;
+        rawCoins = merchantResult.result as unknown[];
       } else if (merchantResult?.availableCoins && Array.isArray(merchantResult.availableCoins)) {
         // { availableCoins: [...] } format
-        rawCoins = merchantResult.availableCoins;
+        rawCoins = merchantResult.availableCoins as unknown[];
       } else if (merchantResult?.data && Array.isArray(merchantResult.data)) {
         // { data: [...] } format
-        rawCoins = merchantResult.data;
+        rawCoins = merchantResult.data as unknown[];
       }
 
-      merchantCoins = rawCoins.map((item: any) => {
+      merchantCoins = rawCoins.map((item: unknown) => {
         if (typeof item === 'string') return item.toLowerCase();
-        return (item.currency || item.coin || item.code || item.symbol || '').toLowerCase();
+        const obj = item as Record<string, unknown>;
+        return (String(obj.currency || obj.coin || obj.code || obj.symbol || '')).toLowerCase();
       }).filter(Boolean);
 
-      console.log(`[/api/nowpayments/currencies] Fetched ${merchantCoins.length} merchant coins from NowPayments`);
+      console.info(`[/api/nowpayments/currencies] Fetched ${merchantCoins.length} merchant coins`);
     } catch (err) {
       const errMsg = err instanceof Error ? err.message : 'Unknown error';
       console.error('[/api/nowpayments/currencies] Failed to fetch merchant coins:', errMsg);
@@ -106,7 +107,7 @@ export async function GET() {
 
     // If no coins found, the merchant hasn't configured any currencies in their dashboard
     if (merchantCoins.length === 0) {
-      console.log('[/api/nowpayments/currencies] No merchant coins found - merchant needs to configure currencies in NowPayments dashboard');
+      console.info('[/api/nowpayments/currencies] No merchant coins found');
       return NextResponse.json({
         success: false,
         currencies: [],
@@ -155,8 +156,8 @@ export async function GET() {
       pixEnabled,
       labels,
     });
-  } catch (error: any) {
-    console.error('[/api/nowpayments/currencies] Error:', error?.message || error);
+  } catch (error: unknown) {
+    console.error('[/api/nowpayments/currencies] Error:', error instanceof Error ? error.message : 'Unknown error');
     return NextResponse.json({
       success: false,
       currencies: [],

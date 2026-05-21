@@ -17,102 +17,102 @@ export async function POST(request: NextRequest) {
       return apiError('Confirme a operação enviando { confirm: true }');
     }
 
-    console.log('[RESET-SEED] Starting database reset...');
+    console.info('[RESET-SEED] Starting database reset...');
 
     // ========== ALL OPERATIONS WRAPPED IN A SINGLE TRANSACTION ==========
     await db.$transaction(async (tx) => {
       // ========== STEP 1: Delete all dependent data (order matters for FK constraints) ==========
-      console.log('[RESET-SEED] Step 1: Deleting dependent records...');
+      console.info('[RESET-SEED] Step 1: Deleting dependent records...');
 
       // Affiliate claims and awards
       await tx.affiliateMilestoneClaim.deleteMany();
-      console.log('[RESET-SEED]   - AffiliateMilestoneClaim deleted');
+
 
       await tx.affiliateBadgeAward.deleteMany();
-      console.log('[RESET-SEED]   - AffiliateBadgeAward deleted');
+
 
       // Affiliate commissions and withdrawals
       await tx.affiliateCommission.deleteMany();
-      console.log('[RESET-SEED]   - AffiliateCommission deleted');
+
 
       await tx.affiliateWithdrawal.deleteMany();
-      console.log('[RESET-SEED]   - AffiliateWithdrawal deleted');
+
 
       // NowPayments records
       await tx.nowPaymentsWebhookLog.deleteMany();
-      console.log('[RESET-SEED]   - NowPaymentsWebhookLog deleted');
+
 
       await tx.nowPaymentsPayout.deleteMany();
-      console.log('[RESET-SEED]   - NowPaymentsPayout deleted');
+
 
       await tx.nowPaymentsDeposit.deleteMany();
-      console.log('[RESET-SEED]   - NowPaymentsDeposit deleted');
+
 
       await tx.nowPaymentsSubAccount.deleteMany();
-      console.log('[RESET-SEED]   - NowPaymentsSubAccount deleted');
+
 
       // Voucher usages then vouchers (VoucherUsage has FK to Voucher and Investment)
       await tx.voucherUsage.deleteMany();
-      console.log('[RESET-SEED]   - VoucherUsage deleted');
+
 
       // Transactions
       await tx.transaction.deleteMany();
-      console.log('[RESET-SEED]   - Transaction deleted');
+
 
       // Deposits
       await tx.deposit.deleteMany();
-      console.log('[RESET-SEED]   - Deposit deleted');
+
 
       // ROI History and Investments (RoiHistory cascades from Investment, but delete explicitly)
       await tx.roiHistory.deleteMany();
-      console.log('[RESET-SEED]   - RoiHistory deleted');
+
 
       await tx.investment.deleteMany();
-      console.log('[RESET-SEED]   - Investment deleted');
+
 
       // Vouchers
       await tx.voucher.deleteMany();
-      console.log('[RESET-SEED]   - Voucher deleted');
+
 
       // Admin logs
       await tx.adminLog.deleteMany();
-      console.log('[RESET-SEED]   - AdminLog deleted');
+
 
       // ========== STEP 2: Delete seed/configuration tables ==========
-      console.log('[RESET-SEED] Step 2: Deleting configuration records...');
+      console.info('[RESET-SEED] Step 2: Deleting configuration records...');
 
       await tx.affiliateMilestone.deleteMany();
-      console.log('[RESET-SEED]   - AffiliateMilestone deleted');
+
 
       await tx.affiliateBadge.deleteMany();
-      console.log('[RESET-SEED]   - AffiliateBadge deleted');
+
 
       await tx.affiliateContest.deleteMany();
-      console.log('[RESET-SEED]   - AffiliateContest deleted');
+
 
       await tx.affiliateRank.deleteMany();
-      console.log('[RESET-SEED]   - AffiliateRank deleted');
+
 
       await tx.affiliateLevel.deleteMany();
-      console.log('[RESET-SEED]   - AffiliateLevel deleted');
+
 
       await tx.investmentPlan.deleteMany();
-      console.log('[RESET-SEED]   - InvestmentPlan deleted');
+
 
       await tx.copyTrader.deleteMany();
-      console.log('[RESET-SEED]   - CopyTrader deleted');
+
 
       await tx.tradingPool.deleteMany();
-      console.log('[RESET-SEED]   - TradingPool deleted');
+
 
       await tx.bitgetTraderCache.deleteMany();
-      console.log('[RESET-SEED]   - BitgetTraderCache deleted');
+
 
       await tx.systemConfig.deleteMany();
-      console.log('[RESET-SEED]   - SystemConfig deleted');
+
 
       // ========== STEP 3: Reset user balances but keep user records ==========
-      console.log('[RESET-SEED] Step 3: Resetting user balances...');
+      console.info('[RESET-SEED] Step 3: Resetting user balances...');
 
       await tx.user.updateMany({
         data: {
@@ -128,17 +128,17 @@ export async function POST(request: NextRequest) {
           linkUnlocked: false,
         },
       });
-      console.log('[RESET-SEED]   - User balances reset to 0');
+
 
       // Restore admin users' hasInvested and linkUnlocked so they can manage affiliate system
       await tx.user.updateMany({
         where: { role: 'admin' },
         data: { hasInvested: true, linkUnlocked: true },
       });
-      console.log('[RESET-SEED]   - Admin user flags restored (hasInvested=true, linkUnlocked=true)');
+
 
       // ========== STEP 4: Seed SystemConfig ==========
-      console.log('[RESET-SEED] Step 4: Seeding SystemConfig...');
+      console.info('[RESET-SEED] Step 4: Seeding SystemConfig...');
 
       const configs = [
         // Branding
@@ -183,10 +183,10 @@ export async function POST(request: NextRequest) {
       ];
 
       await tx.systemConfig.createMany({ data: configs });
-      console.log(`[RESET-SEED]   - ${configs.length} SystemConfig entries created`);
+
 
       // ========== STEP 5: Seed Affiliate Levels (11-level unilevel) ==========
-      console.log('[RESET-SEED] Step 5: Seeding Affiliate Levels...');
+      console.info('[RESET-SEED] Step 5: Seeding Affiliate Levels...');
 
       const affiliateLevels = [
         { level: 1, percentage: '10', description: 'Nível 1 - Indicação direta', isActive: true },
@@ -203,10 +203,10 @@ export async function POST(request: NextRequest) {
       ];
 
       await tx.affiliateLevel.createMany({ data: affiliateLevels });
-      console.log(`[RESET-SEED]   - ${affiliateLevels.length} Affiliate Levels created`);
+
 
       // ========== STEP 6: Seed Investment Plans ==========
-      console.log('[RESET-SEED] Step 6: Seeding Investment Plans...');
+      console.info('[RESET-SEED] Step 6: Seeding Investment Plans...');
 
       const plans = [
         {
@@ -267,10 +267,10 @@ export async function POST(request: NextRequest) {
       ];
 
       await tx.investmentPlan.createMany({ data: plans });
-      console.log(`[RESET-SEED]   - ${plans.length} Investment Plans created`);
+
 
       // ========== STEP 7: Seed Affiliate Ranks ==========
-      console.log('[RESET-SEED] Step 7: Seeding Affiliate Ranks...');
+      console.info('[RESET-SEED] Step 7: Seeding Affiliate Ranks...');
 
       const affiliateRanks = [
         {
@@ -312,10 +312,10 @@ export async function POST(request: NextRequest) {
       ];
 
       await tx.affiliateRank.createMany({ data: affiliateRanks });
-      console.log(`[RESET-SEED]   - ${affiliateRanks.length} Affiliate Ranks created`);
+
 
       // ========== STEP 8: Seed Affiliate Badges ==========
-      console.log('[RESET-SEED] Step 8: Seeding Affiliate Badges...');
+      console.info('[RESET-SEED] Step 8: Seeding Affiliate Badges...');
 
       const badges = [
         {
@@ -425,10 +425,10 @@ export async function POST(request: NextRequest) {
       ];
 
       await tx.affiliateBadge.createMany({ data: badges });
-      console.log(`[RESET-SEED]   - ${badges.length} Affiliate Badges created`);
+
 
       // ========== STEP 9: Seed Affiliate Milestones ==========
-      console.log('[RESET-SEED] Step 9: Seeding Affiliate Milestones...');
+      console.info('[RESET-SEED] Step 9: Seeding Affiliate Milestones...');
 
       const milestones = [
         {
@@ -464,10 +464,10 @@ export async function POST(request: NextRequest) {
       ];
 
       await tx.affiliateMilestone.createMany({ data: milestones });
-      console.log(`[RESET-SEED]   - ${milestones.length} Affiliate Milestones created`);
+
 
       // ========== STEP 10: Seed Copy Traders ==========
-      console.log('[RESET-SEED] Step 10: Seeding Copy Traders...');
+      console.info('[RESET-SEED] Step 10: Seeding Copy Traders...');
 
       const copyTraders = [
         {
@@ -521,10 +521,10 @@ export async function POST(request: NextRequest) {
       ];
 
       await tx.copyTrader.createMany({ data: copyTraders });
-      console.log(`[RESET-SEED]   - ${copyTraders.length} Copy Traders created`);
+
 
       // ========== STEP 11: Seed Trading Pools ==========
-      console.log('[RESET-SEED] Step 11: Seeding Trading Pools...');
+      console.info('[RESET-SEED] Step 11: Seeding Trading Pools...');
 
       const tradingPools = [
         {
@@ -551,7 +551,7 @@ export async function POST(request: NextRequest) {
       ];
 
       await tx.tradingPool.createMany({ data: tradingPools });
-      console.log(`[RESET-SEED]   - ${tradingPools.length} Trading Pools created`);
+
 
       // ========== STEP 12: Log the reset action ==========
       await tx.adminLog.create({
@@ -574,7 +574,7 @@ export async function POST(request: NextRequest) {
       });
     }, { timeout: 60000 }); // 60 second timeout for large operations
 
-    console.log('[RESET-SEED] Database reset and seed completed successfully!');
+    console.info('[RESET-SEED] Database reset and seed completed successfully!');
 
     return apiSuccess({
       message: 'Banco de dados resetado e populado com sucesso!',

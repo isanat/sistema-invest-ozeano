@@ -354,9 +354,9 @@ export async function createPayout(withdrawals: PayoutWithdrawal[], description?
       if (verificationCode) {
         const batchWithdrawalId = result.withdrawals[0].batch_withdrawal_id;
         if (batchWithdrawalId) {
-          console.log('[NowPayments] Auto-verifying payout with 2FA...');
+        console.info('[NowPayments] Auto-verifying payout with 2FA...');
           await verifyPayout(batchWithdrawalId, verificationCode);
-          console.log('[NowPayments] Payout verified successfully');
+        console.info('[NowPayments] Payout verified successfully');
         }
       }
     } catch (err) {
@@ -435,16 +435,21 @@ function sortObject(obj: Record<string, unknown>): Record<string, unknown> {
   }, {});
 }
 
-export async function verifyWebhookSignature(body: Record<string, unknown>, signature: string): Promise<boolean> {
+export interface WebhookVerificationResult {
+  valid: boolean;
+  skipped: boolean;
+}
+
+export async function verifyWebhookSignature(body: Record<string, unknown>, signature: string): Promise<WebhookVerificationResult> {
   const config = getConfig();
 
   if (!config.ipnSecret) {
     if (process.env.NODE_ENV === 'production') {
       console.error('[NowPayments] CRITICAL: IPN_SECRET not configured in production - webhook REJECTED');
-      return false;
+      return { valid: false, skipped: false };
     }
-    console.warn('[NowPayments] IPN_SECRET not configured, skipping webhook verification (development only)');
-    return true;
+    console.error('[NowPayments] SECURITY WARNING: IPN_SECRET not configured - webhook verification SKIPPED (development only)');
+    return { valid: true, skipped: true };
   }
 
   try {
@@ -454,14 +459,15 @@ export async function verifyWebhookSignature(body: Record<string, unknown>, sign
     const computed = hmac.digest('hex');
 
     // Constant-time comparison to prevent timing attacks
-    if (computed.length !== signature.length) return false;
-    return crypto.timingSafeEqual(
+    if (computed.length !== signature.length) return { valid: false, skipped: false };
+    const isValid = crypto.timingSafeEqual(
       Buffer.from(computed, 'hex'),
       Buffer.from(signature, 'hex')
     );
+    return { valid: isValid, skipped: false };
   } catch (error) {
     console.error('[NowPayments] Webhook signature verification failed:', error);
-    return false;
+    return { valid: false, skipped: false };
   }
 }
 
@@ -714,7 +720,7 @@ export async function testConnection(): Promise<{
 
   // Test merchant coins endpoint (this is what the deposit modal uses)
   try {
-    const coinsResult = await getMerchantCoins() as any;
+    const coinsResult = await getMerchantCoins() as Record<string, unknown>;
     if (Array.isArray(coinsResult) || coinsResult?.currencies || coinsResult?.coins || coinsResult?.selectedCurrencies) {
       result.merchantCoinsWorks = true;
     } else {

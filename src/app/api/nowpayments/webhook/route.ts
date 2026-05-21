@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
     const signature = request.headers.get('x-nowpayments-sig') || '';
 
     // Verify webhook signature
-    const signatureValid = await verifyWebhookSignature(body, signature);
+    const verification = await verifyWebhookSignature(body, signature);
 
     // Extract key fields from webhook payload
     const paymentId = body.payment_id ? String(body.payment_id) : null;
@@ -44,19 +44,21 @@ export async function POST(request: NextRequest) {
         payoutId,
         payload: bodyText,
         signature,
-        signatureValid,
+        signatureValid: verification.valid,
         processed: false,
       },
     });
 
     // If signature is invalid, reject (but still log)
-    if (!signatureValid) {
+    if (!verification.valid) {
       console.warn('[NowPayments Webhook] Invalid signature - ignoring payload');
       await db.nowPaymentsWebhookLog.update({
         where: { id: webhookLog.id },
         data: { processingError: 'Invalid signature', processed: true },
       });
-      return NextResponse.json({ received: true, warning: 'Invalid signature' }, { status: 200 });
+      const headers: Record<string, string> = {};
+      if (verification.skipped) headers['x-verification-status'] = 'skipped';
+      return NextResponse.json({ received: true, warning: 'Invalid signature' }, { status: 200, headers });
     }
 
     // Process within 3 seconds — return 200 immediately and process in background if needed
@@ -84,13 +86,17 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    // Build response headers (include verification status if skipped)
+    const responseHeaders: Record<string, string> = {};
+    if (verification.skipped) responseHeaders['x-verification-status'] = 'skipped';
+
     // Ensure we respond within 3 seconds
     const elapsed = Date.now() - startTime;
     if (elapsed > 2500) {
       console.warn(`[NowPayments Webhook] Processing took ${elapsed}ms`);
     }
 
-    return NextResponse.json({ received: true }, { status: 200 });
+    return NextResponse.json({ received: true }, { status: 200, headers: responseHeaders });
   } catch (error) {
     console.error('[NowPayments Webhook] Fatal error:', error);
     return NextResponse.json({ received: true }, { status: 200 });

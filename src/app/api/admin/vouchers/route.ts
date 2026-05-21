@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAdmin, d, dusdt } from '@/lib/auth';
-import { apiError, apiSuccess, handleApiError } from '@/lib/api-utils';
+import { apiError, apiSuccess, handleApiError, sanitizePagination } from '@/lib/api-utils';
 
 // Type defaults based on voucher type
 const VOUCHER_DEFAULTS: Record<string, {
@@ -34,24 +34,35 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status');
 
+    // Bug 4: Add pagination with take/skip (default limit 50)
+    const { page, limit, skip } = sanitizePagination(
+      searchParams.get('page') || '1',
+      searchParams.get('limit') || '50'
+    );
+
     const where: Record<string, unknown> = {};
     if (status && status !== 'all') {
       where.status = status;
     }
 
-    const vouchers = await db.voucher.findMany({
-      where,
-      orderBy: { createdAt: 'desc' },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
+    const [vouchers, total] = await Promise.all([
+      db.voucher.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        take: limit,
+        skip,
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
           },
         },
-      },
-    });
+      }),
+      db.voucher.count({ where }),
+    ]);
 
     // Calculate progress for each voucher
     const vouchersWithProgress = vouchers.map((v) => {
@@ -78,7 +89,15 @@ export async function GET(request: NextRequest) {
       };
     });
 
-    return apiSuccess({ vouchers: vouchersWithProgress });
+    return apiSuccess({
+      vouchers: vouchersWithProgress,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    });
   } catch (error) {
     return handleApiError(error);
   }
@@ -143,7 +162,7 @@ export async function POST(request: NextRequest) {
     const deadline = new Date();
     deadline.setDate(deadline.getDate() + goalDays);
 
-    // Use transaction for atomicity
+    // Use transaction for atomicity (admin log inside to ensure audit trail is not lost)
     const voucher = await db.$transaction(async (tx) => {
       // Add voucherBalance to user (PostgreSQL: CAST AS NUMERIC)
       await tx.$executeRaw`UPDATE "User" SET "voucherBalance" = (CAST("voucherBalance" AS NUMERIC) + ${d(amount)})::text WHERE id = ${userId}`;
@@ -174,19 +193,19 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      return v;
-    });
+      // Create admin log INSIDE transaction for atomicity
+      await tx.adminLog.create({
+        data: {
+          adminId: session.userId,
+          action: 'create',
+          entity: 'voucher',
+          entityId: v.id,
+          newValue: JSON.stringify({ userId, amount, type, goalDirectReferrals, goalMinReferralInvest, goalNetworkMultiple, goalDays }),
+          description: `Voucher criado: ${dusdt(amount)} USDT para ${user.name} (${user.email})`,
+        },
+      });
 
-    // Create admin log
-    await db.adminLog.create({
-      data: {
-        adminId: session.userId,
-        action: 'create',
-        entity: 'voucher',
-        entityId: voucher.id,
-        newValue: JSON.stringify({ userId, amount, type, goalDirectReferrals, goalMinReferralInvest, goalNetworkMultiple, goalDays }),
-        description: `Voucher criado: ${dusdt(amount)} USDT para ${user.name} (${user.email})`,
-      },
+      return v;
     });
 
     return apiSuccess({ voucher }, 201);

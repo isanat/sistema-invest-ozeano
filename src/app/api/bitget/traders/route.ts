@@ -91,7 +91,7 @@ async function saveTradersToCache(traders: TransformedTrader[], ranking: string)
         },
       });
     }
-    console.log(`[Bitget] Cached ${traders.length} traders for ranking: ${ranking}`);
+    console.info(`[Bitget] Cached ${traders.length} traders for ranking: ${ranking}`);
   } catch (dbError) {
     console.error('[Bitget] Failed to save cache:', dbError);
   }
@@ -177,7 +177,7 @@ export async function GET(request: NextRequest) {
           });
         }
         source = 'bitget_v2';
-        console.log(`[Bitget] V2 API success: ${traders.length} traders fetched`);
+        console.info(`[Bitget] V2 API success: ${traders.length} traders fetched`);
       } catch (v2Error) {
         const msg = v2Error instanceof Error ? v2Error.message : 'V2 API error';
         console.warn(`[Bitget] V2 API failed: ${msg}, trying V1 fallback...`);
@@ -193,7 +193,7 @@ export async function GET(request: NextRequest) {
             traders = await fetchV1PublicTraders(rankingCode, page, pageSize);
           }
           source = 'bitget_v1';
-          console.log(`[Bitget] V1 API fallback: ${traders.length} traders fetched`);
+          console.info(`[Bitget] V1 API fallback: ${traders.length} traders fetched`);
         } catch (v1Error) {
           const v1Msg = v1Error instanceof Error ? v1Error.message : 'V1 API error';
           console.warn(`[Bitget] V1 API also failed: ${v1Msg}`);
@@ -204,7 +204,7 @@ export async function GET(request: NextRequest) {
       // =========================================================================
       // No V2 credentials — try V1 public API
       // =========================================================================
-      console.log('[Bitget] V2 not configured, trying V1 public API...');
+      // V2 not configured, trying V1 public API
       try {
         if (searchParam && searchParam.trim().length > 0) {
           traders = [];
@@ -243,7 +243,7 @@ export async function GET(request: NextRequest) {
     if (!searchParam) {
       const cachedTraders = await loadTradersFromCache(rankingCode, page, pageSize);
       if (cachedTraders.length > 0) {
-        console.log(`[Bitget] Serving ${cachedTraders.length} traders from database cache`);
+        console.info(`[Bitget] Serving ${cachedTraders.length} traders from database cache`);
         return NextResponse.json({
           success: true,
           traders: cachedTraders,
@@ -259,7 +259,7 @@ export async function GET(request: NextRequest) {
     // =========================================================================
     // PRIORITY 4: Demo data (last resort)
     // =========================================================================
-    console.log('[Bitget] No cache available, serving demo data');
+    // No cache available, serving demo data
     const allDemoTraders = generateDemoTraders();
     const startIndex = (page - 1) * pageSize;
     const paginatedDemo = allDemoTraders.slice(startIndex, startIndex + pageSize);

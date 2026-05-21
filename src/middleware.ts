@@ -37,6 +37,16 @@ const RATE_LIMIT_WINDOW = 60_000; // 1 minute
 const RATE_LIMIT_MAX_LOGIN = 10; // 10 login attempts per minute per IP
 const RATE_LIMIT_MAX_REGISTER = 5; // 5 register attempts per minute per IP
 const RATE_LIMIT_MAX_GENERAL = 60; // 60 requests per minute per IP for other auth routes
+const RATE_LIMIT_MAX_FINANCIAL = 10; // 10 requests per minute per IP for sensitive financial endpoints
+
+// Sensitive financial endpoints that need stricter rate limiting
+const FINANCIAL_RATE_LIMIT_ROUTES = [
+  '/api/withdraw',
+  '/api/investments',      // POST only — method checked below
+  '/api/affiliate/withdraw',
+  '/api/vouchers/use',
+  '/api/nowpayments/deposit',
+];
 
 function checkRateLimit(ip: string, pathname: string): { allowed: boolean; retryAfter?: number } {
   const key = `${ip}:${pathname}`;
@@ -45,6 +55,7 @@ function checkRateLimit(ip: string, pathname: string): { allowed: boolean; retry
   let maxRequests = RATE_LIMIT_MAX_GENERAL;
   if (pathname === '/api/auth/login') maxRequests = RATE_LIMIT_MAX_LOGIN;
   else if (pathname === '/api/auth/register') maxRequests = RATE_LIMIT_MAX_REGISTER;
+  else if (FINANCIAL_RATE_LIMIT_ROUTES.some(route => pathname.startsWith(route))) maxRequests = RATE_LIMIT_MAX_FINANCIAL;
 
   const entry = rateLimitMap.get(key);
 
@@ -91,19 +102,37 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // Resolve client IP once for all rate-limit checks
+  const clientIp = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+    || request.headers.get('x-real-ip')
+    || 'unknown';
+
   // Rate limiting for auth-sensitive routes
   if (pathname === '/api/auth/login' || pathname === '/api/auth/register' || pathname === '/api/auth/change-password') {
-    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() 
-      || request.headers.get('x-real-ip') 
-      || 'unknown';
-    
-    const { allowed, retryAfter } = checkRateLimit(ip, pathname);
+    const { allowed, retryAfter } = checkRateLimit(clientIp, pathname);
     if (!allowed) {
       return NextResponse.json(
         { error: 'Muitas tentativas. Tente novamente em alguns segundos.' },
-        { 
-          status: 429, 
-          headers: { 'Retry-After': String(retryAfter || 60) } 
+        {
+          status: 429,
+          headers: { 'Retry-After': String(retryAfter || 60) }
+        }
+      );
+    }
+  }
+
+  // Rate limiting for sensitive financial endpoints
+  const isFinancialRoute = FINANCIAL_RATE_LIMIT_ROUTES.some(route => pathname.startsWith(route));
+  // For /api/investments, only rate-limit POST (create investment)
+  const isInvestmentsPost = pathname.startsWith('/api/investments') && request.method === 'POST';
+  if (isFinancialRoute && (!pathname.startsWith('/api/investments') || isInvestmentsPost)) {
+    const { allowed, retryAfter } = checkRateLimit(clientIp, pathname);
+    if (!allowed) {
+      return NextResponse.json(
+        { error: 'Muitas requisições. Tente novamente em alguns segundos.' },
+        {
+          status: 429,
+          headers: { 'Retry-After': String(retryAfter || 60) }
         }
       );
     }

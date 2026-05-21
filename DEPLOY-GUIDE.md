@@ -46,8 +46,8 @@ curl https://sistema-invest-ozeano.vercel.app/api/admin/setup
 curl -X POST https://sistema-invest-ozeano.vercel.app/api/admin/setup \
   -H "Content-Type: application/json" \
   -d '{
-    "adminEmail": "admin@ozeano.com",
-    "adminPassword": "Ozeano@2026!",
+    "adminEmail": "SEU_EMAIL_ADMIN",
+    "adminPassword": "SUA_SENHA_FORTE",
     "adminName": "Administrator"
   }'
 ```
@@ -55,23 +55,23 @@ curl -X POST https://sistema-invest-ozeano.vercel.app/api/admin/setup \
 ### Opção B: Via Interface
 1. Acesse https://sistema-invest-ozeano.vercel.app
 2. Clique em "Registrarse"
-3. Use: admin@ozeano.com / Ozeano@2026!
+3. Use as credenciais escolhidas no passo anterior
 4. Depois, atualize o role para "admin" no banco de dados
 
 ## 3. Credenciais de Teste
 
 | Tipo | Email | Senha |
 |------|-------|-------|
-| **Admin** | admin@ozeano.com | Ozeano@2026! |
-| **Usuário** | usuario@teste.com | Usuario@2026! |
+| **Admin** | (definido no setup) | (definido no setup) |
+| **Usuário** | (criar via registro) | (senha forte) |
 
 Para criar o usuário de teste:
 ```bash
 curl -X POST https://sistema-invest-ozeano.vercel.app/api/auth/register \
   -H "Content-Type: application/json" \
   -d '{
-    "email": "usuario@teste.com",
-    "password": "Usuario@2026!",
+    "email": "SEU_EMAIL_TESTE",
+    "password": "SUA_SENHA_FORTE",
     "name": "Usuário Teste"
   }'
 ```

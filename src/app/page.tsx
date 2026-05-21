@@ -511,6 +511,7 @@ export default function PlataformaROI() {
   const [userInvestments, setUserInvestments] = useState<UserInvestment[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [affiliateData, setAffiliateData] = useState<AffiliateData | null>(null);
+  const [affiliateLoading, setAffiliateLoading] = useState(false);
   const [affiliateSearch, setAffiliateSearch] = useState('');
   const [usdtBrlRate, setUsdtBrlRate] = useState(5.5);
   const [dataLoading, setDataLoading] = useState(false);
@@ -611,6 +612,7 @@ export default function PlataformaROI() {
   const [voucherActionDialog, setVoucherActionDialog] = useState<{ open: boolean; action: 'revoke' | 'extend' | 'complete'; voucher?: any | null }>({ open: false, action: 'revoke', voucher: null });
   const [voucherFilter, setVoucherFilter] = useState<string>('all');
   const [voucherLoading, setVoucherLoading] = useState(false);
+  const [userVouchersLoading, setUserVouchersLoading] = useState(false);
 
   // Dialog State
   const [loginLoading, setLoginLoading] = useState(false);
@@ -877,6 +879,7 @@ export default function PlataformaROI() {
   };
 
   const fetchAffiliateData = async () => {
+    setAffiliateLoading(true);
     try {
       const data = await api<{ success: boolean; affiliate: AffiliateData; ranks?: AffiliateRank[]; currentRank?: AffiliateRank | null; nextRank?: any; milestones?: AffiliateMilestone[]; contests?: AffiliateContest[]; leaderboard?: AffiliateLeaderboardEntry[]; badges?: AffiliateBadge[]; affiliateLevels?: AffiliateLevel[] }>('/api/affiliate');
       setAffiliateData({
@@ -894,6 +897,8 @@ export default function PlataformaROI() {
       });
     } catch (e) {
       console.error('Affiliate data error:', e);
+    } finally {
+      setAffiliateLoading(false);
     }
   };
 
@@ -1060,9 +1065,12 @@ export default function PlataformaROI() {
     if (activeTab === 'afiliados' && user) {
       fetchAffiliateData();
       // Fetch user vouchers
+      setUserVouchersLoading(true);
       api<{ success: boolean; vouchers: any[] }>('/api/vouchers').then(data => {
         setUserVouchers(data.vouchers || []);
-      }).catch(() => {});
+      }).catch(() => {}).finally(() => {
+        setUserVouchersLoading(false);
+      });
     }
   }, [activeTab, user]);
 
@@ -5403,7 +5411,36 @@ export default function PlataformaROI() {
                     </motion.div>
 
                     {/* ═══════════════ 1. AFFILIATE HERO SECTION ═══════════════ */}
-                    {!affiliateData?.linkUnlocked ? (
+                    {affiliateLoading && !affiliateData ? (
+                      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+                        <div className="glass-card gradient-border rounded-2xl p-5 sm:p-6 glow-emerald relative overflow-hidden">
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-5">
+                            {[1,2,3,4].map(i => (
+                              <div key={i} className="glass-card rounded-xl p-4 text-center border border-white/5">
+                                <div className="animate-pulse bg-zinc-700/50 h-5 w-5 mx-auto mb-2 rounded" />
+                                <div className="animate-pulse bg-zinc-700/50 h-8 w-16 mx-auto mb-1 rounded" />
+                                <div className="animate-pulse bg-zinc-700/50 h-3 w-12 mx-auto rounded" />
+                              </div>
+                            ))}
+                          </div>
+                          <div className="flex flex-col sm:flex-row items-stretch gap-4">
+                            <div className="flex items-center gap-3 glass-card rounded-xl p-3 sm:p-4 border border-white/5 flex-1">
+                              <div className="animate-pulse bg-zinc-700/50 h-12 w-12 rounded-xl" />
+                              <div className="space-y-2">
+                                <div className="animate-pulse bg-zinc-700/50 h-3 w-20 rounded" />
+                                <div className="animate-pulse bg-zinc-700/50 h-5 w-28 rounded" />
+                              </div>
+                            </div>
+                            <div className="flex-1 glass-card rounded-xl p-3 sm:p-4 border border-white/5">
+                              <div className="space-y-2">
+                                <div className="animate-pulse bg-zinc-700/50 h-3 w-24 rounded" />
+                                <div className="animate-pulse bg-zinc-700/50 h-8 w-full rounded" />
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </motion.div>
+                    ) : !affiliateData?.linkUnlocked ? (
                       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
                         <div className="glass-card gradient-border rounded-2xl p-8 text-center glow-emerald">
                           <div className="text-6xl mb-4">🔗</div>
@@ -6026,7 +6063,39 @@ export default function PlataformaROI() {
                     )}
 
                     {/* ═══════════════ VOUCHER DASHBOARD FOR LEADERS ═══════════════ */}
-                    {userVouchers.length > 0 && (
+                    {userVouchersLoading && userVouchers.length === 0 ? (
+                      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <h3 className="text-lg font-semibold flex items-center gap-2"><Ticket className="h-5 w-5 text-purple-400" /> {t('copyTraders.myVouchers')}</h3>
+                              <p className="text-sm text-zinc-500 mt-1">{t('copyTraders.voucherDesc')}</p>
+                            </div>
+                          </div>
+                          {[1,2].map(i => (
+                            <Card key={i} className="border-2 border-purple-500/20 bg-purple-500/5">
+                              <CardContent className="p-5">
+                                <div className="flex items-center justify-between mb-3">
+                                  <div className="flex items-center gap-2">
+                                    <div className="animate-pulse bg-zinc-700/50 h-5 w-16 rounded" />
+                                    <div className="animate-pulse bg-zinc-700/50 h-5 w-20 rounded" />
+                                  </div>
+                                  <div className="animate-pulse bg-zinc-700/50 h-4 w-20 rounded" />
+                                </div>
+                                <div className="grid grid-cols-3 gap-4 mb-4">
+                                  {[1,2,3].map(j => (
+                                    <div key={j} className="text-center p-3 rounded-lg bg-zinc-800/50">
+                                      <div className="animate-pulse bg-zinc-700/50 h-3 w-16 mx-auto rounded mb-1" />
+                                      <div className="animate-pulse bg-zinc-700/50 h-6 w-20 mx-auto rounded" />
+                                    </div>
+                                  ))}
+                                </div>
+                              </CardContent>
+                            </Card>
+                          ))}
+                        </div>
+                      </motion.div>
+                    ) : userVouchers.length > 0 && (
                       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
                         <div className="space-y-4">
                           <div className="flex items-center justify-between">
@@ -6241,7 +6310,35 @@ export default function PlataformaROI() {
                     </div>
 
                     {/* Admin Overview */}
-                    {adminTab === 'overview' && adminStats && (
+                    {adminTab === 'overview' && adminLoading && !adminStats ? (
+                      <div className="space-y-6">
+                        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                          {[1,2,3,4].map(i => (
+                            <Card key={i} className="bg-zinc-900 border-zinc-800">
+                              <CardContent className="p-5">
+                                <div className="flex items-center justify-between mb-2">
+                                  <div className="animate-pulse bg-zinc-700/50 h-4 w-20 rounded" />
+                                  <div className="animate-pulse bg-zinc-700/50 h-5 w-5 rounded" />
+                                </div>
+                                <div className="animate-pulse bg-zinc-700/50 h-7 w-24 rounded mb-1" />
+                                <div className="animate-pulse bg-zinc-700/50 h-3 w-32 rounded" />
+                              </CardContent>
+                            </Card>
+                          ))}
+                        </div>
+                        <div className="grid sm:grid-cols-2 gap-4">
+                          {[1,2].map(i => (
+                            <Card key={i} className="bg-zinc-900 border-zinc-800">
+                              <CardContent className="p-5">
+                                <div className="animate-pulse bg-zinc-700/50 h-4 w-28 rounded mb-2" />
+                                <div className="animate-pulse bg-zinc-700/50 h-7 w-20 rounded mb-1" />
+                                <div className="animate-pulse bg-zinc-700/50 h-3 w-36 rounded" />
+                              </CardContent>
+                            </Card>
+                          ))}
+                        </div>
+                      </div>
+                    ) : adminTab === 'overview' && adminStats && (
                       <div className="space-y-6">
                         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
                           {[
@@ -7199,7 +7296,7 @@ export default function PlataformaROI() {
                             <p className="text-sm text-zinc-500 mt-1">Dê crédito para líderes trazerem redes. Eles só podem usar para investir em planos de copy trading. Saques são desbloqueados gradualmente conforme cumprem metas.</p>
                           </div>
                           <div className="flex gap-2">
-                            <Select value={voucherFilter} onValueChange={setVoucherFilter}>
+                            <Select value={voucherFilter} onValueChange={setVoucherFilter} disabled={adminLoading}>
                               <SelectTrigger className="w-36 bg-zinc-800 border-zinc-700">
                                 <SelectValue />
                               </SelectTrigger>
@@ -7211,41 +7308,77 @@ export default function PlataformaROI() {
                                 <SelectItem value="revoked">Revogados</SelectItem>
                               </SelectContent>
                             </Select>
-                            <Button className="bg-emerald-600 hover:bg-cyan-700 min-h-[44px]" onClick={() => setVoucherDialog({ open: true, voucher: null })}><Plus className="mr-2 h-4 w-4" />Novo Voucher</Button>
+                            <Button className="bg-emerald-600 hover:bg-cyan-700 min-h-[44px]" onClick={() => setVoucherDialog({ open: true, voucher: null })} disabled={adminLoading}><Plus className="mr-2 h-4 w-4" />Novo Voucher</Button>
                           </div>
                         </div>
 
-                        {/* Stats Cards */}
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                          <Card className="bg-zinc-900 border-zinc-800">
-                            <CardContent className="p-4">
-                              <div className="text-sm text-zinc-500">Vouchers Ativos</div>
-                              <div className="text-2xl font-bold text-cyan-400">{adminVouchers.filter(v => v.status === 'active').length}</div>
-                            </CardContent>
-                          </Card>
-                          <Card className="bg-zinc-900 border-zinc-800">
-                            <CardContent className="p-4">
-                              <div className="text-sm text-zinc-500">Total em Vouchers</div>
-                              <div className="text-2xl font-bold text-white">{fmtUSDT(adminVouchers.filter(v => v.status === 'active').reduce((sum: number, v: any) => sum + d(v.amount), 0))} USDT</div>
-                            </CardContent>
-                          </Card>
-                          <Card className="bg-zinc-900 border-zinc-800">
-                            <CardContent className="p-4">
-                              <div className="text-sm text-zinc-500">Já Utilizado</div>
-                              <div className="text-2xl font-bold text-amber-400">{fmtUSDT(adminVouchers.filter(v => v.status === 'active').reduce((sum: number, v: any) => sum + d(v.usedAmount), 0))} USDT</div>
-                            </CardContent>
-                          </Card>
-                          <Card className="bg-zinc-900 border-zinc-800">
-                            <CardContent className="p-4">
-                              <div className="text-sm text-zinc-500">Completos</div>
-                              <div className="text-2xl font-bold text-blue-400">{adminVouchers.filter(v => v.status === 'completed').length}</div>
-                            </CardContent>
-                          </Card>
-                        </div>
+                        {/* Stats Cards — show skeleton while loading */}
+                        {adminLoading && adminVouchers.length === 0 ? (
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            {[1,2,3,4].map(i => (
+                              <Card key={i} className="bg-zinc-900 border-zinc-800">
+                                <CardContent className="p-4">
+                                  <div className="animate-pulse bg-zinc-700/50 h-4 w-24 rounded mb-2" />
+                                  <div className="animate-pulse bg-zinc-700/50 h-7 w-16 rounded" />
+                                </CardContent>
+                              </Card>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <Card className="bg-zinc-900 border-zinc-800">
+                              <CardContent className="p-4">
+                                <div className="text-sm text-zinc-500">Vouchers Ativos</div>
+                                <div className="text-2xl font-bold text-cyan-400">{adminVouchers.filter(v => v.status === 'active').length}</div>
+                              </CardContent>
+                            </Card>
+                            <Card className="bg-zinc-900 border-zinc-800">
+                              <CardContent className="p-4">
+                                <div className="text-sm text-zinc-500">Total em Vouchers</div>
+                                <div className="text-2xl font-bold text-white">{fmtUSDT(adminVouchers.filter(v => v.status === 'active').reduce((sum: number, v: any) => sum + d(v.amount), 0))} USDT</div>
+                              </CardContent>
+                            </Card>
+                            <Card className="bg-zinc-900 border-zinc-800">
+                              <CardContent className="p-4">
+                                <div className="text-sm text-zinc-500">Já Utilizado</div>
+                                <div className="text-2xl font-bold text-amber-400">{fmtUSDT(adminVouchers.filter(v => v.status === 'active').reduce((sum: number, v: any) => sum + d(v.usedAmount), 0))} USDT</div>
+                              </CardContent>
+                            </Card>
+                            <Card className="bg-zinc-900 border-zinc-800">
+                              <CardContent className="p-4">
+                                <div className="text-sm text-zinc-500">Completos</div>
+                                <div className="text-2xl font-bold text-blue-400">{adminVouchers.filter(v => v.status === 'completed').length}</div>
+                              </CardContent>
+                            </Card>
+                          </div>
+                        )}
 
                         {/* Vouchers List */}
                         <div className="space-y-3">
-                          {adminVouchers
+                          {adminLoading && adminVouchers.length === 0 ? (
+                            <>
+                              {[1,2,3].map(i => (
+                                <Card key={i} className="bg-zinc-900 border-zinc-800">
+                                  <CardContent className="p-4">
+                                    <div className="flex flex-col md:flex-row md:items-start gap-4">
+                                      <div className="flex-1 min-w-0 space-y-3">
+                                        <div className="flex items-center gap-2">
+                                          <div className="animate-pulse bg-zinc-700/50 h-5 w-16 rounded" />
+                                          <div className="animate-pulse bg-zinc-700/50 h-5 w-20 rounded" />
+                                        </div>
+                                        <div className="animate-pulse bg-zinc-700/50 h-5 w-32 rounded" />
+                                        <div className="animate-pulse bg-zinc-700/50 h-4 w-48 rounded" />
+                                        <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                                          <div className="animate-pulse bg-zinc-700/50 h-4 w-28 rounded" />
+                                          <div className="animate-pulse bg-zinc-700/50 h-4 w-24 rounded" />
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </CardContent>
+                                </Card>
+                              ))}
+                            </>
+                          ) : adminVouchers
                             .filter(v => voucherFilter === 'all' || v.status === voucherFilter)
                             .map((v: any) => {
                               const available = d(v.amount) - d(v.usedAmount);

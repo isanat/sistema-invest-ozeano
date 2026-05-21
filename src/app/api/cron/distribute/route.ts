@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
       return apiError('Não autorizado', 401);
     }
 
-    console.log('[CRON] Starting daily ROI distribution...', new Date().toISOString());
+    console.info('[CRON] Starting daily ROI distribution...', new Date().toISOString());
 
     // PostgreSQL: acquire advisory lock to prevent concurrent cron execution
     try {
@@ -60,11 +60,11 @@ export async function POST(request: NextRequest) {
     });
 
     if (activeInvestments.length === 0) {
-      console.log('[CRON] No active investments found');
+      // No active investments found
       return apiSuccess({ message: 'Nenhum investimento ativo', processed: 0 });
     }
 
-    console.log(`[CRON] Found ${activeInvestments.length} active investments`);
+
 
     let processed = 0;
     let skipped = 0;
@@ -177,7 +177,7 @@ export async function POST(request: NextRequest) {
     }
 
     const summary = `Processed: ${processed}, Skipped: ${skipped}, Completed: ${completed}, Total: $${totalDistributed.toFixed(2)}`;
-    console.log(`[CRON] Distribution complete: ${summary}`);
+    console.info(`[CRON] Distribution complete: ${summary}`);
 
     // Recalculate team bonus for all users with active investments
     try {
@@ -199,7 +199,7 @@ export async function POST(request: NextRequest) {
           data: { teamBonusPct: teamBonusPct.toString() },
         });
       }
-      console.log(`[CRON] Updated team bonus for ${usersWithInvestments.length} users`);
+      console.info(`[CRON] Updated team bonus for ${usersWithInvestments.length} users`);
     } catch (teamBonusErr) {
       console.error('[CRON] Team bonus update error:', teamBonusErr);
       errors.push('Team bonus update error');
