@@ -28,6 +28,7 @@ export async function GET(request: NextRequest) {
         affiliateBalance: true,
         totalRoi: true,
         totalInvested: true,
+        totalDeposited: true,
         totalWithdrawn: true,
         affiliateCode: true,
         referredBy: true,

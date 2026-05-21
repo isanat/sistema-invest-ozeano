@@ -90,7 +90,8 @@ export async function PUT(request: NextRequest) {
 
         // Credit user balance atomically using raw SQL (PostgreSQL)
         // Only add to balance, NOT to totalInvested (totalInvested tracks plan investments, not deposits)
-        await tx.$executeRaw`UPDATE "User" SET balance = (CAST(balance AS NUMERIC) + ${d(deposit.amount)})::text WHERE id = ${deposit.userId}`;
+        // Also increment totalDeposited to track user's own deposits for withdrawal calculation
+        await tx.$executeRaw`UPDATE "User" SET balance = (CAST(balance AS NUMERIC) + ${d(deposit.amount)})::text, "totalDeposited" = (CAST("totalDeposited" AS NUMERIC) + ${d(deposit.amount)})::text WHERE id = ${deposit.userId}`;
 
         await tx.user.update({
           where: { id: deposit.userId },

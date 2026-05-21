@@ -5,6 +5,125 @@ import { withdrawalSchema } from '@/lib/validations';
 import { apiError, apiSuccess, handleApiError, BusinessError } from '@/lib/api-utils';
 import { getUSDTBRLRate } from '@/lib/market-data';
 
+// ============================================================================
+// WITHDRAWAL ROUTE — Abordagem B (Bloqueio por Origem)
+// ============================================================================
+// Regras:
+// - balance: depósitos próprios + lucros próprios = SEMPRE sacável
+// - balance: lucros de voucher = bloqueado conforme unlockPct do voucher
+// - voucherBalance: NUNCA sacável como dinheiro
+// - affiliateBalance: SEMPRE sacável, independente de voucher
+//
+// Fórmula: maxWithdrawable = ownSourceInBalance + (voucherProfitsInBalance × unlockPct / 100)
+// Sem voucher: maxWithdrawable = balance (tudo liberado)
+// ============================================================================
+
+/**
+ * Calculate withdrawal breakdown for a user (Abordagem B — origin-based locking)
+ * Used by both the withdrawal route and the breakdown endpoint
+ */
+export async function calculateWithdrawalBreakdown(userId: string) {
+  // Get user data
+  const user = await db.user.findUnique({ where: { id: userId } });
+  if (!user) throw new BusinessError('Usuário não encontrado', 404);
+
+  const currentBalance = d(user.balance);
+  const totalDeposited = d(user.totalDeposited);
+  const totalWithdrawn = d(user.totalWithdrawn);
+
+  // Check for active vouchers
+  const activeVouchers = await db.voucher.findMany({
+    where: { userId, status: 'active' },
+  });
+
+  // If no active vouchers → everything is withdrawable
+  if (activeVouchers.length === 0) {
+    return {
+      balance: currentBalance,
+      ownSource: currentBalance, // All balance is own source when no voucher
+      voucherProfits: 0,
+      unlockPct: 100,
+      maxWithdrawable: currentBalance,
+      hasActiveVoucher: false,
+    };
+  }
+
+  // Get the highest unlock percentage from active vouchers (most permissive)
+  const maxUnlockPct = Math.max(...activeVouchers.map(v => d(v.withdrawalUnlockPct)), 0);
+
+  // Calculate total invested from own balance (source='deposit')
+  const ownInvestmentsResult = await db.investment.aggregate({
+    where: { userId, source: 'deposit' },
+    _sum: { amount: true },
+  });
+  const totalInvestedFromBalance = d(ownInvestmentsResult._sum.amount);
+
+  // Calculate profits by source
+  // Own profits: ROI from investments with source='deposit'
+  const depositInvestmentIds = (await db.investment.findMany({
+    where: { userId, source: 'deposit' },
+    select: { id: true },
+  })).map(i => i.id);
+
+  const voucherInvestmentIds = (await db.investment.findMany({
+    where: { userId, source: 'voucher' },
+    select: { id: true },
+  })).map(i => i.id);
+
+  let totalOwnProfits = 0;
+  let totalVoucherProfits = 0;
+
+  if (depositInvestmentIds.length > 0) {
+    const ownProfitsResult = await db.roiHistory.aggregate({
+      where: { userId, investmentId: { in: depositInvestmentIds } },
+      _sum: { totalRoi: true },
+    });
+    totalOwnProfits = d(ownProfitsResult._sum.totalRoi);
+  }
+
+  if (voucherInvestmentIds.length > 0) {
+    const voucherProfitsResult = await db.roiHistory.aggregate({
+      where: { userId, investmentId: { in: voucherInvestmentIds } },
+      _sum: { totalRoi: true },
+    });
+    totalVoucherProfits = d(voucherProfitsResult._sum.totalRoi);
+  }
+
+  // Calculate own sources in balance using FIFO:
+  // Withdrawals first consume own sources, then voucher profits
+  const ownSourceTotal = totalDeposited + totalOwnProfits - totalInvestedFromBalance;
+  const ownSourceInBalance = Math.max(0, ownSourceTotal - totalWithdrawn);
+
+  // Voucher profits in balance (FIFO: withdrawals consume own sources first)
+  const voucherProfitsWithdrawn = Math.max(0, totalWithdrawn - Math.max(0, ownSourceTotal));
+  const voucherProfitsInBalance = Math.max(0, totalVoucherProfits - voucherProfitsWithdrawn);
+
+  // Calculate max withdrawable
+  const maxWithdrawable = Math.min(
+    ownSourceInBalance + (voucherProfitsInBalance * maxUnlockPct / 100),
+    currentBalance
+  );
+
+  return {
+    balance: currentBalance,
+    ownSource: ownSourceInBalance,
+    voucherProfits: voucherProfitsInBalance,
+    unlockPct: maxUnlockPct,
+    maxWithdrawable: Math.max(0, maxWithdrawable),
+    hasActiveVoucher: true,
+    // Detailed breakdown for debugging/admin
+    _debug: {
+      totalDeposited,
+      totalWithdrawn,
+      totalInvestedFromBalance,
+      totalOwnProfits,
+      totalVoucherProfits,
+      ownSourceTotal,
+      voucherProfitsWithdrawn,
+    },
+  };
+}
+
 export async function POST(request: NextRequest) {
   try {
     const session = await requireAuth();
@@ -66,44 +185,21 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // ========== VOUCHER WITHDRAWAL LOCK CHECK ==========
-    // Check if user has active vouchers with withdrawal restrictions
-    const activeVouchers = await db.voucher.findMany({
-      where: { userId: session.userId, status: 'active' },
-    });
+    // ========== VOUCHER WITHDRAWAL LOCK CHECK (Abordagem B — por origem) ==========
+    // Only blocks voucher-sourced profits. Own deposits + own profits are ALWAYS withdrawable.
+    const breakdown = await calculateWithdrawalBreakdown(session.userId);
 
-    if (activeVouchers.length > 0) {
-      // Calculate the maximum withdrawal unlock percentage from all active vouchers
-      // Use the HIGHEST unlock percentage (most permissive)
-      let maxUnlockPct = 0;
-      for (const v of activeVouchers) {
-        const unlockPct = d(v.withdrawalUnlockPct);
-        if (unlockPct > maxUnlockPct) maxUnlockPct = unlockPct;
+    if (data.amount > breakdown.maxWithdrawable) {
+      if (breakdown.hasActiveVoucher) {
+        return apiError(
+          `Saque máximo disponível: ${dusdt(breakdown.maxWithdrawable)} USDT. ` +
+          `Recursos próprios (depósitos + lucros próprios): ${dusdt(breakdown.ownSource)} USDT ✅ sempre liberado. ` +
+          `Lucros de voucher: ${dusdt(breakdown.voucherProfits)} USDT ⚠️ desbloqueado: ${breakdown.unlockPct}%. ` +
+          `Continue cumprindo as metas do voucher para desbloquear mais.`
+        );
       }
-
-      // If unlock is 0%, user cannot withdraw at all
-      if (maxUnlockPct === 0) {
-        return apiError('Seus saques estão bloqueados. Você tem vouchers ativos com metas pendentes. Cumpra as metas para desbloquear gradualmente seus saques.');
-      }
-
-      // If unlock is less than 100%, limit the withdrawal amount
-      if (maxUnlockPct < 100) {
-        // Fetch user balance for the check
-        const userForCheck = await db.user.findUnique({ where: { id: session.userId } });
-        if (userForCheck) {
-          const maxWithdrawable = d(userForCheck.balance) * (maxUnlockPct / 100);
-          if (data.amount > maxWithdrawable) {
-            return apiError(`Com base no desbloqueio gradual (${maxUnlockPct}%), você pode sacar no máximo ${dusdt(maxWithdrawable)} USDT dos seus ${dusdt(d(userForCheck.balance))} USDT de saldo. Continue cumprindo as metas para desbloquear mais.`);
-          }
-        }
-      }
+      return apiError('Saldo insuficiente');
     }
-
-    // Also check if user has a completed voucher but their unlock hasn't been processed yet
-    const completedVouchers = await db.voucher.findMany({
-      where: { userId: session.userId, status: 'completed', withdrawalUnlockPct: '100' },
-    });
-    // Completed vouchers with 100% unlock don't restrict withdrawals
 
     // Use transaction for atomicity - deduct balance immediately with row lock
     const result = await db.$transaction(async (tx) => {

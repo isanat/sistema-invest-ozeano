@@ -29,6 +29,7 @@ model User {
   voucherBalance     String   @default("0")       // USDT voucher balance (from leader vouchers)
   totalRoi           String   @default("0")       // USDT total ROI earned
   totalInvested      String   @default("0")       // USDT total invested
+  totalDeposited     String   @default("0")       // USDT total deposited by user (own money, not voucher)
   totalWithdrawn     String   @default("0")       // USDT total withdrawn
   teamBonusPct       String   @default("0")       // Team bonus % (0, 1, 2, or 3) based on affiliate rank
 
@@ -101,6 +102,7 @@ model Investment {
   status    String  @default("active") // active, completed, cancelled
 
   teamBonusPct String @default("0") // Team bonus % from affiliate rank
+  source       String  @default("deposit") // "deposit" (own balance) or "voucher" (voucher balance)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -113,6 +115,7 @@ model Investment {
   @@index([userId])
   @@index([status])
   @@index([userId, status])
+  @@index([source])
 }
 
 model RoiHistory {

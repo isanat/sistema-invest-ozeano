@@ -10,6 +10,7 @@ import {
   type CreatePayoutResponse,
 } from '@/lib/nowpayments';
 import { getUSDTBRLRate } from '@/lib/market-data';
+import { calculateWithdrawalBreakdown } from '../../withdraw/route';
 
 export async function POST(request: NextRequest) {
   try {
@@ -79,28 +80,19 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // ========== VOUCHER WITHDRAWAL LOCK CHECK ==========
-    const activeVouchers = await db.voucher.findMany({
-      where: { userId: session.userId, status: 'active' },
-    });
-    if (activeVouchers.length > 0) {
-      let maxUnlockPct = 0;
-      for (const v of activeVouchers) {
-        const unlockPct = d(v.withdrawalUnlockPct);
-        if (unlockPct > maxUnlockPct) maxUnlockPct = unlockPct;
+    // ========== VOUCHER WITHDRAWAL LOCK CHECK (Abordagem B — por origem) ==========
+    // Only blocks voucher-sourced profits. Own deposits + own profits are ALWAYS withdrawable.
+    const breakdown = await calculateWithdrawalBreakdown(session.userId);
+
+    if (amount > breakdown.maxWithdrawable) {
+      if (breakdown.hasActiveVoucher) {
+        return apiError(
+          `Saque máximo disponível: ${dusdt(breakdown.maxWithdrawable)} USDT. ` +
+          `Recursos próprios: ${dusdt(breakdown.ownSource)} USDT ✅ sempre liberado. ` +
+          `Lucros de voucher: ${dusdt(breakdown.voucherProfits)} USDT ⚠️ desbloqueado: ${breakdown.unlockPct}%.`
+        );
       }
-      if (maxUnlockPct === 0) {
-        return apiError('Seus saques estão bloqueados. Você tem vouchers ativos com metas pendentes.');
-      }
-      if (maxUnlockPct < 100) {
-        const userForCheck = await db.user.findUnique({ where: { id: session.userId } });
-        if (userForCheck) {
-          const maxWithdrawable = d(userForCheck.balance) * (maxUnlockPct / 100);
-          if (amount > maxWithdrawable) {
-            return apiError(`Com base no desbloqueio gradual (${maxUnlockPct}%), você pode sacar no máximo ${dusdt(maxWithdrawable)} USDT.`);
-          }
-        }
-      }
+      return apiError('Saldo insuficiente');
     }
 
     // Calculate fee

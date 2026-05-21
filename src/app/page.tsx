@@ -47,7 +47,7 @@ interface User {
   id: string; email: string; name: string; role: string; isActive: boolean;
   walletAddress?: string | null; pixKey?: string | null;
   balance: string; affiliateBalance: string; totalRoi: string;
-  totalInvested: string; totalWithdrawn: string;
+  totalInvested: string; totalDeposited: string; totalWithdrawn: string;
   affiliateCode?: string | null; referredBy?: string | null;
   referralLevel: number; totalAffiliateEarnings: string;
   hasInvested: boolean; linkUnlocked: boolean;
@@ -626,7 +626,7 @@ export default function PlataformaROI() {
   const [withdrawDialog, setWithdrawDialog] = useState(false);
   const [depositLoading, setDepositLoading] = useState(false);
   const [withdrawLoading, setWithdrawLoading] = useState(false);
-  const [withdrawVoucherInfo, setWithdrawVoucherInfo] = useState<{ hasActiveVouchers: boolean; unlockPct: number; maxWithdrawable: number } | null>(null);
+  const [withdrawVoucherInfo, setWithdrawVoucherInfo] = useState<{ hasActiveVoucher: boolean; unlockPct: number; maxWithdrawable: number; ownSource: number; voucherProfits: number; balance: number } | null>(null);
 
   // NowPayments deposit state
   const [npDepositAddress, setNpDepositAddress] = useState<string | null>(null);
@@ -832,6 +832,24 @@ export default function PlataformaROI() {
       console.error('Dashboard data error:', e);
     } finally {
       setDataLoading(false);
+    }
+  };
+
+  // Fetch withdrawal breakdown (Abordagem B — origin-based locking)
+  const fetchWithdrawalBreakdown = async () => {
+    try {
+      const data = await api<{ success: boolean; balance: string; ownSource: string; voucherProfits: string; unlockPct: number; maxWithdrawable: string; hasActiveVoucher: boolean }>('/api/withdraw/breakdown');
+      setWithdrawVoucherInfo({
+        balance: d(data.balance),
+        ownSource: d(data.ownSource),
+        voucherProfits: d(data.voucherProfits),
+        unlockPct: data.unlockPct,
+        maxWithdrawable: d(data.maxWithdrawable),
+        hasActiveVoucher: data.hasActiveVoucher,
+      });
+    } catch {
+      // If breakdown fails, user can still withdraw — just won't have detailed info
+      setWithdrawVoucherInfo(null);
     }
   };
 
@@ -3547,7 +3565,7 @@ export default function PlataformaROI() {
                         </button>
 
                         <button
-                          onClick={() => setWithdrawDialog(true)}
+                          onClick={() => { setWithdrawDialog(true); fetchWithdrawalBreakdown(); }}
                           className="glass-card rounded-xl p-4 stat-card-hover flex items-center gap-3 border border-white/[0.06] group cursor-pointer"
                         >
                           <div className="w-10 h-10 bg-white/[0.05] rounded-lg flex items-center justify-center border border-white/[0.08]">
@@ -4974,7 +4992,7 @@ export default function PlataformaROI() {
                             <SelectItem value="rejected">Rejeitados</SelectItem>
                           </SelectContent>
                         </Select>
-                        <Button className="bg-emerald-600 hover:bg-cyan-700" onClick={() => setWithdrawDialog(true)} disabled={d(user?.balance || '0') < 10}>
+                        <Button className="bg-emerald-600 hover:bg-cyan-700" onClick={() => { setWithdrawDialog(true); fetchWithdrawalBreakdown(); }} disabled={d(user?.balance || '0') < 10}>
                           <ArrowUpRight className="h-4 w-4 mr-2" /> Solicitar Saque
                         </Button>
                       </div>
@@ -6101,15 +6119,15 @@ export default function PlataformaROI() {
                                       </div>
 
                                       {unlockPct === 0 && (
-                                        <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20">
-                                          <div className="text-sm text-red-400 font-medium">⛔ {t('copyTraders.blockedWithdrawals')}</div>
-                                          <div className="text-xs text-zinc-400 mt-1">{t('copyTraders.blockedWithdrawalsDesc')}</div>
+                                        <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                                          <div className="text-sm text-amber-400 font-medium">⚠️ Lucros de voucher bloqueados</div>
+                                          <div className="text-xs text-zinc-400 mt-1">Seus recursos próprios (depósitos + lucros próprios) estão sempre liberados para saque. Apenas os lucros de investimentos feitos com voucher ficam bloqueados até cumprir as metas.</div>
                                         </div>
                                       )}
                                       {unlockPct > 0 && unlockPct < 100 && (
                                         <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
-                                          <div className="text-sm text-amber-400 font-medium">⚠️ Saques parcialmente desbloqueados ({unlockPct}%)</div>
-                                          <div className="text-xs text-zinc-400 mt-1">Você pode sacar até {unlockPct}% do seu saldo normal. Continue cumprindo as metas para desbloquear mais.</div>
+                                          <div className="text-sm text-amber-400 font-medium">⚠️ Lucros de voucher parcialmente desbloqueados ({unlockPct}%)</div>
+                                          <div className="text-xs text-zinc-400 mt-1">Recursos próprios sempre liberados. Lucros de voucher desbloqueados: {unlockPct}%. Continue cumprindo as metas para desbloquear mais.</div>
                                         </div>
                                       )}
                                       {unlockPct >= 100 && (
@@ -8339,35 +8357,47 @@ Seus 10 indicados diretos investem $100/dia cada:
             </div>
           ) : (
           <form onSubmit={handleWithdraw} className="space-y-4">
-                        {/* Voucher Withdrawal Warning */}
-                        {userVouchers.filter(v => v.status === 'active').length > 0 && (
-                          <div className={`p-3 rounded-lg border ${
-                            Math.max(...userVouchers.filter(v => v.status === 'active').map(v => d(v.withdrawalUnlockPct))) === 0
+                        {/* Withdrawal Breakdown — Abordagem B (Bloqueio por Origem) */}
+                        {withdrawVoucherInfo && withdrawVoucherInfo.hasActiveVoucher ? (
+                          <div className={`p-4 rounded-lg border ${
+                            withdrawVoucherInfo.unlockPct === 0 && withdrawVoucherInfo.voucherProfits > 0
                               ? 'bg-red-500/10 border-red-500/20'
-                              : Math.max(...userVouchers.filter(v => v.status === 'active').map(v => d(v.withdrawalUnlockPct))) < 100
+                              : withdrawVoucherInfo.unlockPct < 100
                                 ? 'bg-amber-500/10 border-amber-500/20'
                                 : 'bg-cyan-500/10 border-cyan-500/20'
                           }`}>
-                            {Math.max(...userVouchers.filter(v => v.status === 'active').map(v => d(v.withdrawalUnlockPct))) === 0 ? (
-                              <>
-                                <div className="text-sm text-red-400 font-medium">⛔ {t('withdrawal.blocked')}</div>
-                                <div className="text-xs text-zinc-400 mt-1">{t('withdrawal.blockedDesc')}</div>
-                              </>
-                            ) : Math.max(...userVouchers.filter(v => v.status === 'active').map(v => d(v.withdrawalUnlockPct))) < 100 ? (
-                              <>
-                                <div className="text-sm text-amber-400 font-medium">⚠️ {t('withdrawal.partiallyUnlocked', { pct: Math.max(...userVouchers.filter(v => v.status === 'active').map(v => d(v.withdrawalUnlockPct))) })}</div>
-                                <div className="text-xs text-zinc-400 mt-1">{t('copyTraders.needDeposit', { amount: fmtUSDT(d(user?.balance || '0') * Math.max(...userVouchers.filter(v => v.status === 'active').map(v => d(v.withdrawalUnlockPct))) / 100) })}</div>
-                              </>
-                            ) : (
-                              <>
-                                <div className="text-sm text-cyan-400 font-medium">✅ {t('withdrawal.fullyUnlocked')}</div>
-                                <div className="text-xs text-zinc-400 mt-1">{t('withdrawal.fullyUnlockedDesc')}</div>
-                              </>
+                            <div className="text-sm font-semibold mb-2 text-white">💰 Composição do Saldo</div>
+                            <div className="space-y-1.5 text-xs">
+                              <div className="flex justify-between items-center">
+                                <span className="text-zinc-300">💵 Recursos próprios</span>
+                                <span className="text-emerald-400 font-medium">${fmtUSDT(withdrawVoucherInfo.ownSource)} ✅</span>
+                              </div>
+                              <div className="flex justify-between items-center">
+                                <span className="text-zinc-300">📈 Lucros de voucher</span>
+                                <span className={withdrawVoucherInfo.unlockPct >= 100 ? 'text-cyan-400' : withdrawVoucherInfo.unlockPct > 0 ? 'text-amber-400' : 'text-red-400'}>
+                                  ${fmtUSDT(withdrawVoucherInfo.voucherProfits)} {withdrawVoucherInfo.unlockPct >= 100 ? '✅' : `⚠️ ${withdrawVoucherInfo.unlockPct}%`}
+                                </span>
+                              </div>
+                              <div className="border-t border-zinc-700 pt-1.5 mt-1.5 flex justify-between items-center">
+                                <span className="text-zinc-200 font-medium">🎯 Máximo sacável</span>
+                                <span className="text-cyan-400 font-bold">${fmtUSDT(withdrawVoucherInfo.maxWithdrawable)} USDT</span>
+                              </div>
+                            </div>
+                            {withdrawVoucherInfo.unlockPct < 100 && withdrawVoucherInfo.voucherProfits > 0 && (
+                              <div className="text-xs text-zinc-400 mt-2 pt-2 border-t border-zinc-700/50">
+                                💡 Recursos próprios (depósitos + lucros próprios) são sempre liberados. Apenas lucros de voucher são bloqueados pelas metas.
+                              </div>
                             )}
                           </div>
+                        ) : (
+                          <div className="p-3 rounded-lg border bg-cyan-500/10 border-cyan-500/20">
+                            <div className="text-xs text-zinc-300">
+                              💰 Saldo disponível: <span className="text-cyan-400 font-medium">${fmtUSDT(user?.balance || '0')} USDT</span> — 100% liberado
+                            </div>
+                          </div>
                         )}
-            <div><Label className="text-zinc-300">{t('withdrawal.amount')}</Label><Input name="amount" type="number" step="0.01" min={siteConfig.minWithdrawalUsdt} max={d(user?.balance)} required className="bg-zinc-800 border-zinc-700 mt-1" placeholder={String(siteConfig.minWithdrawalUsdt)} />
-              <div className="text-xs text-zinc-500 mt-1">{t('withdrawal.availableBalance')}: ${fmtUSDT(user?.balance || '0')} USDT · {t('withdrawal.minimum')}: {siteConfig.minWithdrawalUsdt} USDT{siteConfig.withdrawalFeePct > 0 ? ` · ${t('withdrawal.fee')}: ${siteConfig.withdrawalFeePct}%` : ''}</div>
+            <div><Label className="text-zinc-300">{t('withdrawal.amount')}</Label><Input name="amount" type="number" step="0.01" min={siteConfig.minWithdrawalUsdt} max={withdrawVoucherInfo?.hasActiveVoucher ? withdrawVoucherInfo.maxWithdrawable : d(user?.balance)} required className="bg-zinc-800 border-zinc-700 mt-1" placeholder={String(siteConfig.minWithdrawalUsdt)} />
+              <div className="text-xs text-zinc-500 mt-1">{t('withdrawal.availableBalance')}: ${fmtUSDT(withdrawVoucherInfo?.hasActiveVoucher ? withdrawVoucherInfo.maxWithdrawable : d(user?.balance || '0'))} USDT · {t('withdrawal.minimum')}: {siteConfig.minWithdrawalUsdt} USDT{siteConfig.withdrawalFeePct > 0 ? ` · ${t('withdrawal.fee')}: ${siteConfig.withdrawalFeePct}%` : ''}</div>
             </div>
             {siteConfig.nowpaymentsWithdrawalEnabled && (
               <>

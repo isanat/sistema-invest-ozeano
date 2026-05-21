@@ -26,6 +26,7 @@ export async function GET(request: NextRequest) {
         voucherBalance: true,
         totalRoi: true,
         totalInvested: true,
+        totalDeposited: true,
         totalWithdrawn: true,
         affiliateCode: true,
         referredBy: true,

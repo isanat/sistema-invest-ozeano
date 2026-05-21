@@ -204,8 +204,8 @@ async function processPaymentWebhook(
         }
       }
 
-      // Add to user balance (totalInvested only increases on plan investment, not deposit)
-      await tx.$executeRaw`UPDATE "User" SET balance = (CAST(balance AS NUMERIC) + ${userAmount})::text, "hasInvested" = true WHERE id = ${deposit.userId}`;
+      // Add to user balance and totalDeposited (totalInvested only increases on plan investment, not deposit)
+      await tx.$executeRaw`UPDATE "User" SET balance = (CAST(balance AS NUMERIC) + ${userAmount})::text, "totalDeposited" = (CAST("totalDeposited" AS NUMERIC) + ${userAmount})::text, "hasInvested" = true WHERE id = ${deposit.userId}`;
 
       // Update deposit status if linked
       if (deposit.depositId) {

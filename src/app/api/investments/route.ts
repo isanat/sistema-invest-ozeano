@@ -172,6 +172,7 @@ export async function POST(request: NextRequest) {
             endDate,
             teamBonusPct: ds(rankBonusPct),
             status: 'active',
+            source: 'voucher', // Investment funded by voucher
           },
           include: {
             plan: { select: { id: true, name: true, dailyRoiPct: true, durationDays: true } },
@@ -234,6 +235,7 @@ export async function POST(request: NextRequest) {
             endDate,
             teamBonusPct: ds(rankBonusPct),
             status: 'active',
+            source: 'deposit', // Investment funded by own balance
           },
           include: {
             plan: { select: { id: true, name: true, dailyRoiPct: true, durationDays: true } },
