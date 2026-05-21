@@ -241,3 +241,25 @@ Stage Summary:
 - NowPayments webhook handles all edge cases correctly
 - Dashboard shows all 3 balances: Main, Affiliate, Voucher
 - Lint passes, dev server running
+
+---
+Task ID: 8
+Agent: Main
+Task: Comprehensive 7-agent audit — 106 bugs found, 25 CRITICAL/HIGH/MEDIUM fixed
+
+Work Log:
+- Launched 7 parallel audit agents covering all system areas
+- Total bugs found: 106 (across users, investments, withdrawals, vouchers, affiliates, admin, ROI cron, NowPayments)
+- Fixed 12 CRITICAL/HIGH bugs (commit 34c62b6)
+- Fixed 13 MEDIUM bugs (commit ea22223)
+- All financial integrity issues resolved
+- All race conditions addressed with FOR UPDATE locks
+- All atomicity issues wrapped in transactions
+
+Stage Summary:
+- 25 bugs fixed across 2 commits, 22+ files changed
+- Voucher-funded investments no longer generate affiliate commissions
+- Rank bonusAmount now credited on first achievement
+- All webhook deduplication guards fixed
+- All admin safety guards added (last admin, completed status)
+- All validations strengthened (method, config type, deposit txHash)
