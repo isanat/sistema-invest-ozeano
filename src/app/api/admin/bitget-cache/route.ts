@@ -200,3 +200,96 @@ export async function DELETE(request: NextRequest) {
     return handleApiError(error);
   }
 }
+
+// PUT: Import trader data directly (for when Bitget API is blocked on server but works elsewhere)
+export async function PUT(request: NextRequest) {
+  try {
+    const session = await requireAdmin();
+
+    const body = await request.json();
+    const traders: Array<{
+      traderId: string;
+      displayName: string;
+      avatar?: string;
+      roi?: string;
+      totalPnl?: string;
+      maxDrawdown?: string;
+      followers?: number;
+      aum?: string;
+      grade?: { id: string; name: string };
+      labels?: Array<{ id: string; name: string; type: string }>;
+      topSymbols?: string[];
+      klineProfit?: string;
+      ranking?: string;
+      rank?: number;
+    }> = body.traders || [];
+
+    if (!Array.isArray(traders) || traders.length === 0) {
+      return apiError('Array de traders é obrigatório');
+    }
+
+    const ranking = body.ranking || 'profit_rate';
+    let saved = 0;
+
+    for (const trader of traders) {
+      if (!trader.traderId) continue;
+
+      await db.bitgetTraderCache.upsert({
+        where: { traderId: trader.traderId },
+        create: {
+          traderId: trader.traderId,
+          displayName: trader.displayName || 'Unknown',
+          avatar: trader.avatar || '',
+          roi: trader.roi || '0',
+          totalPnl: trader.totalPnl || '0',
+          maxDrawdown: trader.maxDrawdown || '0',
+          followers: trader.followers || 0,
+          aum: trader.aum || '0',
+          grade: JSON.stringify(trader.grade || {}),
+          labels: JSON.stringify(trader.labels || []),
+          topSymbols: JSON.stringify(trader.topSymbols || []),
+          klineProfit: trader.klineProfit || '',
+          ranking,
+          rank: trader.rank || (saved + 1),
+          isActive: true,
+        },
+        update: {
+          displayName: trader.displayName || 'Unknown',
+          avatar: trader.avatar || '',
+          roi: trader.roi || '0',
+          totalPnl: trader.totalPnl || '0',
+          maxDrawdown: trader.maxDrawdown || '0',
+          followers: trader.followers || 0,
+          aum: trader.aum || '0',
+          grade: JSON.stringify(trader.grade || {}),
+          labels: JSON.stringify(trader.labels || []),
+          topSymbols: JSON.stringify(trader.topSymbols || []),
+          klineProfit: trader.klineProfit || '',
+          ranking,
+          rank: trader.rank || (saved + 1),
+          isActive: true,
+        },
+      });
+      saved++;
+    }
+
+    // Log
+    await db.adminLog.create({
+      data: {
+        adminId: session.userId,
+        action: 'update',
+        entity: 'bitget_cache',
+        description: `Bitget trader cache imported: ${saved} traders for ranking ${ranking}`,
+        newValue: JSON.stringify({ count: saved, ranking }),
+      },
+    });
+
+    return apiSuccess({
+      message: `${saved} traders importados para o cache (ranking: ${ranking})`,
+      saved,
+      ranking,
+    });
+  } catch (error) {
+    return handleApiError(error);
+  }
+}
