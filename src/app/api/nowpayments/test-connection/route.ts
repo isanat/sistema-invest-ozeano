@@ -1,13 +1,13 @@
 import { NextRequest } from 'next/server';
-import { requireAdmin, apiSuccess, handleApiError } from '@/lib/api-utils';
+import { requireAdmin } from '@/lib/auth';
+import { apiSuccess, handleApiError } from '@/lib/api-utils';
 import { testConnection, isNowPaymentsConfigured } from '@/lib/nowpayments';
 
 // Test NowPayments API connection — admin only
 // Uses environment variables ONLY (never reads credentials from database)
 export async function POST(request: NextRequest) {
   try {
-    const adminId = await requireAdmin();
-    if (!adminId) return apiSuccess({ connected: false, status: 'not_authorized' });
+    await requireAdmin();
 
     // Check if NowPayments is configured via environment variables
     const configured = isNowPaymentsConfigured();

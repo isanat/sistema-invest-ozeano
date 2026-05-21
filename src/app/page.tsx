@@ -400,6 +400,8 @@ const CONFIG_LABELS: Record<string, {
 
 // Keys hidden from the generic config list (managed via dedicated UI sections)
 const HIDDEN_CONFIG_KEYS = new Set<string>([
+  'nowpayments_split_pct',    // Managed via NowPayments → Sócios & Split
+  'nowpayments_split_wallet', // Managed via NowPayments → Sócios & Split
 ]);
 
 const categoryIcon = (cat: string) => {
@@ -417,7 +419,7 @@ const categoryDescription: Record<string, string> = {
   withdrawal: 'Regras para saques e taxas',
   trading: 'Configurações de ROI e investimentos',
   affiliate: 'Comissões e configurações de afiliados',
-  nowpayments: 'Credenciais e integração com NowPayments',
+  nowpayments: 'Configurações NowPayments — o split é gerenciado na aba NowPayments → Sócios & Split',
 };
 
 // ============================================================================
@@ -469,7 +471,7 @@ export default function PlataformaROI() {
   const categoryLabel = (cat: string): string => {
     const labels: Record<string, string> = {
       branding: 'Marca do Site', general: t('category.general'), deposit: t('category.deposit'), withdrawal: t('category.withdrawal'),
-      trading: t('category.trading'), affiliate: t('category.affiliate'), nowpayments: 'NowPayments (Credenciais)',
+      trading: t('category.trading'), affiliate: t('category.affiliate'), nowpayments: 'NowPayments',
     };
     return labels[cat] || cat;
   };
@@ -6898,7 +6900,7 @@ export default function PlataformaROI() {
                                   <CardTitle className="text-base">Adicionar Sócio</CardTitle>
                                   <Button size="sm" className="bg-emerald-600 hover:bg-cyan-700" onClick={async () => {
                                     if (!splitNewRecipient.name || !splitNewRecipient.walletAddress || !splitNewRecipient.percentage) {
-                                      toast({ title: 'Preencha nome, carteira e percentual', variant: 'destructive' });
+                                      toast.error('Preencha nome, carteira e percentual');
                                       return;
                                     }
                                     try {
@@ -6908,9 +6910,9 @@ export default function PlataformaROI() {
                                       });
                                       setSplitNewRecipient({ name: '', role: 'partner', walletAddress: '', currency: 'usdttrc20', percentage: '', minPayout: '50', autoPayout: true });
                                       fetchSplitData();
-                                      toast({ title: 'Sócio adicionado com sucesso!' });
+                                      toast.success('Sócio adicionado com sucesso!');
                                     } catch (e: any) {
-                                      toast({ title: e.message || 'Erro ao adicionar sócio', variant: 'destructive' });
+                                      toast.error(e.message || 'Erro ao adicionar sócio');
                                     }
                                   }}>+ Adicionar</Button>
                                 </div>
@@ -7002,9 +7004,9 @@ export default function PlataformaROI() {
                                                   try {
                                                     const res = await api('/api/admin/split-payout', { method: 'POST', body: JSON.stringify({ recipientId: r.id, force: true }) });
                                                     fetchSplitData();
-                                                    toast({ title: `Payout forçado: $${res.summary?.totalPaid?.toFixed(2) || '0'}` });
+                                                    toast.success(`Payout forçado: $${res.summary?.totalPaid?.toFixed(2) || '0'}`);
                                                   } catch (e: any) {
-                                                    toast({ title: e.message || 'Erro no payout', variant: 'destructive' });
+                                                    toast.error(e.message || 'Erro no payout');
                                                   } finally {
                                                     setSplitPayoutLoading(false);
                                                   }
@@ -7013,9 +7015,9 @@ export default function PlataformaROI() {
                                                   try {
                                                     await api('/api/admin/split-recipients', { method: 'PUT', body: JSON.stringify({ id: r.id, isActive: !r.isActive }) });
                                                     fetchSplitData();
-                                                    toast({ title: r.isActive ? 'Sócio desativado' : 'Sócio reativado' });
+                                                    toast.success(r.isActive ? 'Sócio desativado' : 'Sócio reativado');
                                                   } catch (e: any) {
-                                                    toast({ title: e.message || 'Erro', variant: 'destructive' });
+                                                    toast.error(e.message || 'Erro');
                                                   }
                                                 }}>{r.isActive ? '❌' : '✅'}</Button>
                                               </div>
@@ -7079,9 +7081,9 @@ export default function PlataformaROI() {
                                 try {
                                   const res = await api('/api/admin/split-payout', { method: 'POST', body: JSON.stringify({}) });
                                   fetchSplitData();
-                                  toast({ title: `${res.summary?.processed || 0} payout(s) processado(s) — $${res.summary?.totalPaid?.toFixed(2) || '0'}` });
+                                  toast.success(`${res.summary?.processed || 0} payout(s) processado(s) — $${res.summary?.totalPaid?.toFixed(2) || '0'}`);
                                 } catch (e: any) {
-                                  toast({ title: e.message || 'Erro', variant: 'destructive' });
+                                  toast.error(e.message || 'Erro');
                                 } finally {
                                   setSplitPayoutLoading(false);
                                 }
@@ -9567,9 +9569,9 @@ Seus 10 indicados diretos investem $100/dia cada:
                 });
                 setSplitEditDialog(false);
                 fetchSplitData();
-                toast({ title: 'Sócio atualizado com sucesso!' });
+                toast.success('Sócio atualizado com sucesso!');
               } catch (e: any) {
-                toast({ title: e.message || 'Erro ao atualizar', variant: 'destructive' });
+                toast.error(e.message || 'Erro ao atualizar');
               }
             }}>Salvar</Button>
           </DialogFooter>
