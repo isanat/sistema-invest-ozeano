@@ -1392,6 +1392,10 @@ export default function PlataformaROI() {
     if (!investDialogPlan) return;
     setInvestLoading(true);
     try {
+      // Get the selected plan details to send with the investment
+      const selectedPlan = selectedPlanId
+        ? investDialogPlan.plans?.find((p: any) => p.id === selectedPlanId)
+        : investDialogPlan.plans?.[0];
       await api('/api/investments', {
         method: 'POST',
         body: JSON.stringify({
@@ -1399,6 +1403,10 @@ export default function PlataformaROI() {
           amount: rentalCalc.totalPrice,
           useVoucher: useVoucherForInvest,
           voucherId: useVoucherForInvest ? selectedVoucherId : undefined,
+          // Send plan params so backend can use them if plan doesn't exist in DB
+          dailyRoiPct: selectedPlan?.dailyRoiPct || '5',
+          durationDays: selectedPlan?.durationDays || selectedPlan?.days || 35,
+          planName: selectedPlan?.name || investDialogPlan.name,
         }),
       });
       toast.success(useVoucherForInvest ? t('toast.voucherInvestSuccess') : t('toast.rentSuccess'));

@@ -57,14 +57,43 @@ export async function POST(request: NextRequest) {
       const user = await tx.user.findUnique({ where: { id: session.userId } });
       if (!user) throw new Error('User not found');
 
-      // Get investment plan
-      const plan = await tx.investmentPlan.findUnique({ where: { id: data.planId } });
-      if (!plan) throw new Error('Plano de investimento não encontrado');
-      if (!plan.isActive) throw new Error('Plano de investimento não está disponível');
+      // Get investment plan (planId is optional in schema — can be null)
+      const plan = data.planId ? await tx.investmentPlan.findUnique({ where: { id: data.planId } }) : null;
 
-      // Validate amount against plan limits
-      const minAmount = d(plan.minAmount);
-      const maxAmount = plan.maxAmount ? d(plan.maxAmount) : Infinity;
+      // If planId provided but plan not found, try to find by name (for default/legacy plans)
+      // or allow investment without plan if planId looks like a default plan ID
+      let effectivePlan = plan;
+      if (!plan && data.planId) {
+        // Try to find by name (e.g., 'starter', 'growth', 'premium', 'elite')
+        const planByName = await tx.investmentPlan.findFirst({ 
+          where: { name: { equals: data.planId, mode: 'insensitive' }, isActive: true } 
+        });
+        if (planByName) {
+          effectivePlan = planByName;
+        }
+      }
+
+      // Validate amount against plan limits (if plan exists)
+      let minAmount = 10; // Default minimum
+      let maxAmount = Infinity;
+      let dailyRoiPct = 5; // Default ROI
+      let durationDays = 35; // Default duration
+      let planName = 'Copy Trading';
+
+      if (effectivePlan) {
+        if (!effectivePlan.isActive) throw new Error('Plano de investimento não está disponível');
+        minAmount = d(effectivePlan.minAmount);
+        maxAmount = effectivePlan.maxAmount ? d(effectivePlan.maxAmount) : Infinity;
+        dailyRoiPct = d(effectivePlan.dailyRoiPct);
+        durationDays = effectivePlan.durationDays;
+        planName = effectivePlan.name;
+      } else if (data.planId) {
+        // PlanId provided but no matching plan in DB — use body params or defaults
+        // This handles default frontend plans (starter, growth, etc.) that don't exist in DB
+        dailyRoiPct = body.dailyRoiPct ? parseFloat(body.dailyRoiPct) : 5;
+        durationDays = body.durationDays ? parseInt(body.durationDays) : 35;
+        planName = body.planName || data.planId;
+      }
 
       if (data.amount < minAmount) {
         throw new Error(`Investimento mínimo para este plano é ${dusdt(minAmount)} USDT`);
@@ -75,9 +104,8 @@ export async function POST(request: NextRequest) {
 
       // Calculate investment parameters
       const amount = data.amount;
-      const dailyRoiPct = d(plan.dailyRoiPct);
       const dailyRoi = amount * (dailyRoiPct / 100);
-      const totalRoi = dailyRoi * plan.durationDays;
+      const totalRoi = dailyRoi * durationDays;
 
       // Get user's rank bonus
       let rankBonusPct = 0;
@@ -127,15 +155,15 @@ export async function POST(request: NextRequest) {
           data: { usedAmount: dusdt(newUsedAmount) },
         });
 
-        // Create investment
+        // Create investment (planId may be null for default/legacy plans)
         const startDate = new Date();
         const endDate = new Date();
-        endDate.setDate(endDate.getDate() + plan.durationDays);
+        endDate.setDate(endDate.getDate() + durationDays);
 
         const investment = await tx.investment.create({
           data: {
             userId: session.userId,
-            planId: plan.id,
+            planId: effectivePlan?.id || null,
             amount: ds(amount),
             dailyRoi: ds(dailyRoi),
             dailyRoiPct: ds(dailyRoiPct),
@@ -166,7 +194,7 @@ export async function POST(request: NextRequest) {
             type: 'investment',
             amount: ds(amount),
             status: 'completed',
-            description: `Investimento ${plan.name} - ${plan.durationDays} dias (Voucher)`,
+            description: `Investimento ${planName} - ${durationDays} dias (Voucher)`,
             referenceId: investment.id,
             referenceType: 'Investment',
           },
@@ -189,15 +217,15 @@ export async function POST(request: NextRequest) {
           throw new Error(`Saldo insuficiente. Necessário: ${dusdt(amount)} USDT`);
         }
 
-        // Create investment
+        // Create investment (planId may be null for default/legacy plans)
         const startDate = new Date();
         const endDate = new Date();
-        endDate.setDate(endDate.getDate() + plan.durationDays);
+        endDate.setDate(endDate.getDate() + durationDays);
 
         const investment = await tx.investment.create({
           data: {
             userId: session.userId,
-            planId: plan.id,
+            planId: effectivePlan?.id || null,
             amount: ds(amount),
             dailyRoi: ds(dailyRoi),
             dailyRoiPct: ds(dailyRoiPct),
@@ -219,7 +247,7 @@ export async function POST(request: NextRequest) {
             type: 'investment',
             amount: ds(amount),
             status: 'completed',
-            description: `Investimento ${plan.name} - ${plan.durationDays} dias`,
+            description: `Investimento ${planName} - ${durationDays} dias`,
             referenceId: investment.id,
             referenceType: 'Investment',
           },
