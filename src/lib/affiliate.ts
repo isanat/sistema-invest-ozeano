@@ -772,9 +772,21 @@ export function getDefaultLevelPercentages(): Record<number, number> {
  * Falls back to Bronze (1+ referrals) = 1%, Prata (5+) = 2%, Ouro (15+) = 3%
  */
 export async function getTeamBonusPct(userId: string): Promise<number> {
+  const user = await db.user.findUnique({
+    where: { id: userId },
+    select: {
+      id: true,
+      totalAffiliateEarnings: true,
+    },
+  });
+
+  if (!user) return 0;
+
   const directReferrals = await db.user.count({
     where: { referredBy: userId, hasInvested: true },
   });
+
+  const userEarnings = d(user.totalAffiliateEarnings);
 
   // Query ranks from DB (same logic as getRankBoost but for team bonus based on referrals)
   const ranks = await db.affiliateRank.findMany({
@@ -783,7 +795,7 @@ export async function getTeamBonusPct(userId: string): Promise<number> {
   });
 
   for (const rank of ranks) {
-    if (directReferrals >= rank.minReferrals) {
+    if (directReferrals >= rank.minReferrals && userEarnings >= d(rank.minEarnings)) {
       return d(rank.commissionBoost);
     }
   }

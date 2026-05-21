@@ -47,8 +47,8 @@ export async function POST(request: NextRequest) {
     const brlAmount = data.method === 'pix' ? data.amount * usdtBrlRate : null;
 
     // Validate method-specific requirements
-    if (data.method === 'usdt_trc20' && !data.txHash) {
-      return apiError('Hash da transação é obrigatório para depósito USDT TRC20');
+    if ((data.method === 'usdt_trc20' || data.method === 'usdt_polygon') && !data.txHash) {
+      return apiError('Hash da transação é obrigatório para depósito USDT');
     }
 
     // Check for duplicate txHash

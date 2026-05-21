@@ -22,7 +22,7 @@ export const registerSchema = z.object({
 
 export const depositSchema = z.object({
   amount: z.number().positive('Valor deve ser positivo'),
-  method: z.string().min(1, 'Método de depósito é obrigatório'),
+  method: z.enum(['pix', 'usdt_trc20', 'usdt_polygon']),
   txHash: z.string().optional(),
   network: z.string().optional(),
 });
@@ -62,6 +62,14 @@ export const adminConfigSchema = z.object({
   type: z.enum(['string', 'number', 'boolean', 'json', 'secret']).default('string'),
   description: z.string().optional(),
   category: z.enum(['general', 'branding', 'affiliate', 'withdrawal', 'trading', 'deposit', 'nowpayments']).default('general'),
+  isActive: z.boolean().optional(),
+}).refine((data) => {
+  if (data.type === 'number' && isNaN(parseFloat(data.value))) return false;
+  if (data.type === 'boolean' && !['true', 'false'].includes(data.value)) return false;
+  return true;
+}, {
+  message: 'Valor não corresponde ao tipo declarado',
+  path: ['value'],
 });
 
 export const adminUserUpdateSchema = z.object({

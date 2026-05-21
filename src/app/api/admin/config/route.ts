@@ -88,48 +88,52 @@ export async function PUT(request: NextRequest) {
       return apiError('Formato inválido: esperado array de configs');
     }
 
-    const results = [];
+    const results = await db.$transaction(async (tx) => {
+      const updated: any[] = [];
 
-    for (const item of body.configs) {
-      const data = adminConfigSchema.parse(item);
+      for (const item of body.configs) {
+        const data = adminConfigSchema.parse(item);
 
-      // Block credential keys — must be configured via Vercel env vars
-      if (BLOCKED_CONFIG_KEYS.has(data.key)) continue;
+        // Block credential keys — must be configured via Vercel env vars
+        if (BLOCKED_CONFIG_KEYS.has(data.key)) continue;
 
-      const oldConfig = await db.systemConfig.findUnique({ where: { key: data.key } });
+        const oldConfig = await tx.systemConfig.findUnique({ where: { key: data.key } });
 
-      const config = await db.systemConfig.upsert({
-        where: { key: data.key },
-        update: {
-          value: data.value,
-          type: data.type,
-          description: data.description,
-          category: data.category,
-        },
-        create: {
-          key: data.key,
-          value: data.value,
-          type: data.type,
-          description: data.description,
-          category: data.category,
-        },
-      });
+        const config = await tx.systemConfig.upsert({
+          where: { key: data.key },
+          update: {
+            value: data.value,
+            type: data.type,
+            description: data.description,
+            category: data.category,
+          },
+          create: {
+            key: data.key,
+            value: data.value,
+            type: data.type,
+            description: data.description,
+            category: data.category,
+          },
+        });
 
-      // Log each change
-      await db.adminLog.create({
-        data: {
-          adminId: session.userId,
-          action: oldConfig ? 'update' : 'create',
-          entity: 'config',
-          entityId: config.id,
-          oldValue: oldConfig ? JSON.stringify({ key: oldConfig.key, value: oldConfig.value }) : undefined,
-          newValue: JSON.stringify({ key: config.key, value: config.value }),
-          description: `Config bulk ${oldConfig ? 'atualizada' : 'criada'}: ${data.key}`,
-        },
-      });
+        // Log each change
+        await tx.adminLog.create({
+          data: {
+            adminId: session.userId,
+            action: oldConfig ? 'update' : 'create',
+            entity: 'config',
+            entityId: config.id,
+            oldValue: oldConfig ? JSON.stringify({ key: oldConfig.key, value: oldConfig.value }) : undefined,
+            newValue: JSON.stringify({ key: config.key, value: config.value }),
+            description: `Config bulk ${oldConfig ? 'atualizada' : 'criada'}: ${data.key}`,
+          },
+        });
 
-      results.push(config);
-    }
+        updated.push(config);
+      }
+
+      return updated;
+    });
 
     return apiSuccess({ configs: results, updated: results.length });
   } catch (error) {

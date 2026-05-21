@@ -157,12 +157,15 @@ export async function POST(request: NextRequest) {
           return roiHistory.id;
         });
 
-        // Process affiliate commissions (outside main transaction to avoid long locks)
-        try {
-          await processCommissions(investment.userId, totalRoiForToday, 'trading', roiHistoryId);
-        } catch (commErr) {
-          console.error('[CRON] Commission error for investment', investment.id, commErr);
-          errors.push(`Commission error: investment ${investment.id}`);
+        // Only process affiliate commissions for deposit-funded investments
+        // Voucher-funded investments don't generate commissions (platform money)
+        if (investment.source !== 'voucher') {
+          try {
+            await processCommissions(investment.userId, totalRoiForToday, 'trading', roiHistoryId);
+          } catch (commErr) {
+            console.error('[CRON] Commission error for investment', investment.id, commErr);
+            errors.push(`Commission error: investment ${investment.id}`);
+          }
         }
 
         totalDistributed += totalRoiForToday;

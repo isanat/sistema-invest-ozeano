@@ -58,7 +58,11 @@ export async function POST(request: NextRequest) {
     // Return user data without password
     const { password: _, ...userWithoutPassword } = user;
     return apiSuccess({ user: userWithoutPassword }, 201);
-  } catch (error) {
+  } catch (error: any) {
+    // Handle Prisma unique constraint violation (P2002) - race condition on email
+    if (error?.code === 'P2002' && error?.meta?.target?.includes('email')) {
+      return apiError('Email já cadastrado no sistema', 409);
+    }
     return handleApiError(error);
   }
 }

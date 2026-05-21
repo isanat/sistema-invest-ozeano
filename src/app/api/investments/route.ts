@@ -255,11 +255,14 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    // Process affiliate commissions (outside transaction to avoid long locks)
-    try {
-      await processCommissions(session.userId, result.amount, 'subscription', result.investment.id);
-    } catch (commError) {
-      console.error('Affiliate commission error:', commError);
+    // Only process affiliate commissions for deposit-funded investments
+    // Voucher-funded investments don't generate commissions (platform money)
+    if (!result.usedVoucher) {
+      try {
+        await processCommissions(session.userId, result.amount, 'subscription', result.investment.id);
+      } catch (commError) {
+        console.error('Affiliate commission error:', commError);
+      }
     }
 
     return apiSuccess({

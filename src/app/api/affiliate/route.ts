@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { requireAuth, d } from '@/lib/auth';
+import { requireAuth, d, ds } from '@/lib/auth';
 import { generateAffiliateCode, getAffiliateModeInfo } from '@/lib/affiliate';
 import { apiError, apiSuccess, handleApiError } from '@/lib/api-utils';
 
@@ -128,6 +128,52 @@ export async function GET(request: NextRequest) {
       }
     } catch (e) {
       console.error('[Affiliate] Error loading ranks:', e);
+    }
+
+    // =====================================================================
+    // RANK UPGRADE BONUS — Credit bonusAmount when user reaches a new rank
+    // =====================================================================
+    if (currentRank && d(currentRank.bonusAmount) > 0) {
+      try {
+        const rankBadgeExists = await db.affiliateBadgeAward.findFirst({
+          where: {
+            userId: session.userId,
+            badge: {
+              name: `rank_${currentRank.name.toLowerCase()}`,
+            },
+          },
+        });
+
+        if (!rankBadgeExists) {
+          // First time reaching this rank — credit bonus
+          const bonus = d(currentRank.bonusAmount);
+          await db.$executeRaw`UPDATE "User" SET "affiliateBalance" = (CAST("affiliateBalance" AS NUMERIC) + ${bonus})::text, "totalAffiliateEarnings" = (CAST("totalAffiliateEarnings" AS NUMERIC) + ${bonus})::text WHERE id = ${session.userId}`;
+
+          // Find or create the rank badge
+          const rankBadge = await db.affiliateBadge.findFirst({
+            where: { name: `rank_${currentRank.name.toLowerCase()}` },
+          });
+
+          if (rankBadge) {
+            await db.affiliateBadgeAward.create({
+              data: { userId: session.userId, badgeId: rankBadge.id },
+            });
+          }
+
+          // Create transaction record
+          await db.transaction.create({
+            data: {
+              userId: session.userId,
+              type: 'affiliate_commission',
+              amount: ds(bonus),
+              status: 'completed',
+              description: `Bônus de rank: ${currentRank.name} (+$${bonus.toFixed(2)} USDT)`,
+            },
+          });
+        }
+      } catch (e) {
+        console.error('[Affiliate] Error crediting rank bonus:', e);
+      }
     }
 
     // =====================================================================
@@ -470,33 +516,37 @@ export async function POST(request: NextRequest) {
         return apiError(`Você precisa de ${milestone.targetCount} indicações para reivindicar este marco. Você tem ${directReferrals}.`, 400);
       }
 
-      // Claim the milestone
-      const claim = await db.affiliateMilestoneClaim.create({
-        data: {
-          userId: session.userId,
-          milestoneId,
-        },
-      });
+      // Claim the milestone and update balance atomically
+      const claim = await db.$transaction(async (tx) => {
+        const claimRecord = await tx.affiliateMilestoneClaim.create({
+          data: {
+            userId: session.userId,
+            milestoneId,
+          },
+        });
 
-      // If reward is cash, add to user balance
-      if (milestone.rewardType === 'cash') {
-        const rewardValue = d(milestone.rewardValue);
-        if (rewardValue > 0) {
-          await db.$executeRaw`UPDATE "User" SET "affiliateBalance" = (CAST("affiliateBalance" AS NUMERIC) + ${rewardValue})::text, "totalAffiliateEarnings" = (CAST("totalAffiliateEarnings" AS NUMERIC) + ${rewardValue})::text WHERE id = ${session.userId}`;
+        // If reward is cash, add to user balance
+        if (milestone.rewardType === 'cash') {
+          const rewardValue = d(milestone.rewardValue);
+          if (rewardValue > 0) {
+            await tx.$executeRaw`UPDATE "User" SET "affiliateBalance" = (CAST("affiliateBalance" AS NUMERIC) + ${rewardValue})::text, "totalAffiliateEarnings" = (CAST("totalAffiliateEarnings" AS NUMERIC) + ${rewardValue})::text WHERE id = ${session.userId}`;
 
-          await db.transaction.create({
-            data: {
-              userId: session.userId,
-              type: 'affiliate_commission',
-              amount: rewardValue.toFixed(8),
-              status: 'completed',
-              description: `Recompensa do marco: ${milestone.name}`,
-              referenceId: milestoneId,
-              referenceType: 'AffiliateMilestone',
-            },
-          });
+            await tx.transaction.create({
+              data: {
+                userId: session.userId,
+                type: 'affiliate_commission',
+                amount: rewardValue.toFixed(8),
+                status: 'completed',
+                description: `Recompensa do marco: ${milestone.name}`,
+                referenceId: milestoneId,
+                referenceType: 'AffiliateMilestone',
+              },
+            });
+          }
         }
-      }
+
+        return claimRecord;
+      });
 
       return apiSuccess({
         claim,

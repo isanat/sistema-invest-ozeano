@@ -142,6 +142,12 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const data = withdrawalSchema.parse(body);
 
+    // Validate withdrawal method against allowlist
+    const VALID_WITHDRAWAL_METHODS = ['pix', 'usdt_trc20', 'usdt_polygon'];
+    if (!VALID_WITHDRAWAL_METHODS.includes(data.method)) {
+      return apiError('Método de saque inválido. Use: pix, usdt_trc20 ou usdt_polygon');
+    }
+
     // Get withdrawal config — includes enable/disable toggles
     const configKeys = [
       'min_withdrawal_usdt', 'max_withdrawal_usdt', 'withdrawal_fee_pct',

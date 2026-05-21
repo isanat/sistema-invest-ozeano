@@ -101,6 +101,14 @@ export async function POST(request: NextRequest) {
 
       // Update the voucher
       await db.$transaction(async (tx) => {
+        // Lock the voucher row inside the transaction
+        await tx.$queryRaw`SELECT 1 FROM "Voucher" WHERE id = ${voucher.id} FOR UPDATE`;
+        // Re-read the voucher status after lock
+        const lockedVoucher = await tx.voucher.findUnique({ where: { id: voucher.id } });
+        if (lockedVoucher?.status !== 'active') {
+          return; // Already processed by another request
+        }
+
         await tx.voucher.update({
           where: { id: voucher.id },
           data: {
@@ -118,9 +126,9 @@ export async function POST(request: NextRequest) {
 
         // If expired, remove remaining voucher balance from user
         if (shouldDeductBalance) {
-          const remainingBalance = voucherAmount - d(voucher.usedAmount);
-          if (remainingBalance > 0) {
-            await tx.$executeRaw`UPDATE "User" SET "voucherBalance" = (CAST("voucherBalance" AS NUMERIC) - ${remainingBalance})::text WHERE id = ${userId}`;
+          const freshRemaining = d(lockedVoucher.amount) - d(lockedVoucher.usedAmount);
+          if (freshRemaining > 0) {
+            await tx.$executeRaw`UPDATE "User" SET "voucherBalance" = GREATEST(0, (CAST("voucherBalance" AS NUMERIC) - ${freshRemaining}))::text WHERE id = ${userId}`;
           }
         }
       });
