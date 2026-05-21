@@ -642,9 +642,6 @@ export default function PlataformaROI() {
   const [npExpirationDate, setNpExpirationDate] = useState<string | null>(null);
   const [npEstimatedFee, setNpEstimatedFee] = useState<number>(0);
   const [npCountdown, setNpCountdown] = useState<string>('');
-  const [npCurrencies, setNpCurrencies] = useState<Array<{ id: string; code: string; symbol: string; name: string; network: string; icon: string; isAvailable: boolean; depositEnabled: boolean; displayName: string; minDeposit: number | null }>>([]);
-  const [npCurrenciesLoading, setNpCurrenciesLoading] = useState(false);
-
   // Dynamic currencies — populated ONLY from NowPayments API (no hardcoded fallbacks)
   const [availableDepositCurrencies, setAvailableDepositCurrencies] = useState<string[]>([]);
   const [availableWithdrawCurrencies, setAvailableWithdrawCurrencies] = useState<string[]>([]);
@@ -1134,13 +1131,6 @@ export default function PlataformaROI() {
     }
   }, [activeTab, isAdminUser]);
 
-  // Fetch NowPayments currencies when deposit dialog opens
-  useEffect(() => {
-    if (depositDialog && user) {
-      fetchNpCurrencies();
-    }
-  }, [depositDialog, user]);
-
   // ==========================================
   // NOTIFICATION SYSTEM: Load from storage + generate from transactions
   // ==========================================
@@ -1516,39 +1506,6 @@ export default function PlataformaROI() {
       toast.error(errorMsg);
     } finally {
       setNpGeneratingAddress(false);
-    }
-  };
-
-  // Fetch NowPayments currencies dynamically
-  const fetchNpCurrencies = async () => {
-    setNpCurrenciesLoading(true);
-    try {
-      const data = await api<{ success: boolean; configured: boolean; currencies: Array<{ id: string; code: string; symbol: string; name: string; network: string; icon: string; isAvailable: boolean; depositEnabled: boolean; displayName: string; minDeposit: number | null }> }>('/api/nowpayments/currencies');
-      if (data.currencies && data.currencies.length > 0) {
-        setNpCurrencies(data.currencies);
-        // Set default currency to first available (USDT TRC20 if available)
-        const defaultCur = data.currencies.find(c => c.code === 'usdttrc20') || data.currencies[0];
-        setNpDepositCurrency(defaultCur.code);
-      } else {
-        // Fallback to hardcoded if API returns empty
-        setNpCurrencies([
-          { id: 'usdttrc20', code: 'usdttrc20', symbol: 'USDT', name: 'Tether', network: 'TRC20', icon: '₮', isAvailable: true, depositEnabled: true, displayName: 'USDT TRC20', minDeposit: null },
-          { id: 'usdtmatic', code: 'usdtmatic', symbol: 'USDT', name: 'Tether', network: 'Polygon', icon: '₮', isAvailable: true, depositEnabled: true, displayName: 'USDT Polygon', minDeposit: null },
-          { id: 'btc', code: 'btc', symbol: 'BTC', name: 'Bitcoin', network: 'Bitcoin', icon: '₿', isAvailable: true, depositEnabled: true, displayName: 'BTC Bitcoin', minDeposit: null },
-          { id: 'eth', code: 'eth', symbol: 'ETH', name: 'Ethereum', network: 'Ethereum', icon: 'Ξ', isAvailable: true, depositEnabled: true, displayName: 'ETH Ethereum', minDeposit: null },
-        ]);
-      }
-    } catch (err) {
-      console.error('[Deposit] Failed to fetch currencies:', err);
-      // Fallback to hardcoded on error
-      setNpCurrencies([
-        { id: 'usdttrc20', code: 'usdttrc20', symbol: 'USDT', name: 'Tether', network: 'TRC20', icon: '₮', isAvailable: true, depositEnabled: true, displayName: 'USDT TRC20', minDeposit: null },
-        { id: 'usdtmatic', code: 'usdtmatic', symbol: 'USDT', name: 'Tether', network: 'Polygon', icon: '₮', isAvailable: true, depositEnabled: true, displayName: 'USDT Polygon', minDeposit: null },
-        { id: 'btc', code: 'btc', symbol: 'BTC', name: 'Bitcoin', network: 'Bitcoin', icon: '₿', isAvailable: true, depositEnabled: true, displayName: 'BTC Bitcoin', minDeposit: null },
-        { id: 'eth', code: 'eth', symbol: 'ETH', name: 'Ethereum', network: 'Ethereum', icon: 'Ξ', isAvailable: true, depositEnabled: true, displayName: 'ETH Ethereum', minDeposit: null },
-      ]);
-    } finally {
-      setNpCurrenciesLoading(false);
     }
   };
 
@@ -8172,23 +8129,29 @@ Seus 10 indicados diretos investem $100/dia cada:
                     <p className="text-zinc-500 text-xs mt-1">{t('deposit.minAmount', { amount: siteConfig.minDepositUsdt })}</p>
                   </div>
                   <div><Label className="text-zinc-300">{t('deposit.payCurrency')}</Label>
-                    <Select value={npDepositCurrency} onValueChange={setNpDepositCurrency}>
-                      <SelectTrigger className="bg-zinc-800 border-zinc-700 mt-1"><SelectValue /></SelectTrigger>
-                      <SelectContent className="bg-zinc-800">
-                        {availableDepositCurrencies.length > 0 ? (
-                          availableDepositCurrencies.map(c => (
+                    {availableDepositCurrencies.length > 0 ? (
+                      <Select value={npDepositCurrency} onValueChange={setNpDepositCurrency}>
+                        <SelectTrigger className="bg-zinc-800 border-zinc-700 mt-1"><SelectValue /></SelectTrigger>
+                        <SelectContent className="bg-zinc-800">
+                          {availableDepositCurrencies.map(c => (
                             <SelectItem key={c} value={c}>{currencyLabel(c)}</SelectItem>
-                          ))
-                        ) : (
-                          <SelectItem value="usdttrc20" disabled>{t('deposit.configuringCurrencies')}</SelectItem>
-                        )}
-                      </SelectContent>
-                    </Select>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4 mt-1 text-center">
+                        <AlertTriangle className="h-8 w-8 text-amber-400 mx-auto mb-2" />
+                        <p className="text-amber-400 font-semibold text-sm">Meios de pagamento em manutenção</p>
+                        <p className="text-zinc-500 text-xs mt-1">Os métodos de depósito estão temporariamente indisponíveis. Tente novamente em alguns instantes.</p>
+                      </div>
+                    )}
                   </div>
+                  {availableDepositCurrencies.length > 0 && (
                   <div className="bg-zinc-800/50 rounded-lg p-3 text-sm">
                     <p className="text-zinc-400">{t('deposit.clickGenerateAddress')}</p>
                     <p className="text-zinc-500 text-xs mt-1">{t('deposit.autoCredit')}</p>
                   </div>
+                  )}
                   <DialogFooter>
                     <Button variant="outline" className="border-zinc-700" onClick={() => setDepositDialog(false)}>{t('common.cancel')}</Button>
                     <Button className="bg-emerald-600 hover:bg-cyan-700" onClick={handleNowPaymentsDeposit} disabled={npGeneratingAddress || !npDepositAmount || parseFloat(npDepositAmount) < siteConfig.minDepositUsdt || availableDepositCurrencies.length === 0}>
@@ -8409,13 +8372,21 @@ Seus 10 indicados diretos investem $100/dia cada:
             {siteConfig.nowpaymentsWithdrawalEnabled && (
               <>
                 <div><Label className="text-zinc-300">{t('withdrawal.currency')}</Label>
-                  <Select name="method" defaultValue={availableWithdrawCurrencies[0] || 'usdt_trc20'}><SelectTrigger className="bg-zinc-800 border-zinc-700 mt-1"><SelectValue /></SelectTrigger>
+                  {availableWithdrawCurrencies.length > 0 ? (
+                  <Select name="method" defaultValue={availableWithdrawCurrencies[0]}><SelectTrigger className="bg-zinc-800 border-zinc-700 mt-1"><SelectValue /></SelectTrigger>
                     <SelectContent className="bg-zinc-800">
                       {availableWithdrawCurrencies.map(c => (
                         <SelectItem key={c} value={c}>{currencyLabel(c)}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
+                  ) : (
+                    <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4 mt-1 text-center">
+                      <AlertTriangle className="h-8 w-8 text-amber-400 mx-auto mb-2" />
+                      <p className="text-amber-400 font-semibold text-sm">Meios de saque em manutenção</p>
+                      <p className="text-zinc-500 text-xs mt-1">Os métodos de saque estão temporariamente indisponíveis. Tente novamente em alguns instantes.</p>
+                    </div>
+                  )}
                 </div>
                 <div><Label className="text-zinc-300">{t('withdrawal.destination')}</Label><Input name="destination" required className="bg-zinc-800 border-zinc-700 mt-1" placeholder={t('withdrawal.walletPlaceholder')} /></div>
                 <div className="bg-zinc-800/50 rounded-lg p-3 text-sm">
