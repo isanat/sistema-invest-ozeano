@@ -86,17 +86,8 @@ export async function PUT(request: NextRequest) {
           },
         });
 
-        // Update user total withdrawn
-        const user = await tx.user.findUnique({ where: { id: deposit.userId } });
-        if (!user) throw new Error('Usuário não encontrado');
-
-        const newTotalWithdrawn = d(user.totalWithdrawn) + d(deposit.amount);
-        await tx.user.update({
-          where: { id: deposit.userId },
-          data: {
-            totalWithdrawn: ds(newTotalWithdrawn),
-          },
-        });
+        // Update user total withdrawn atomically using raw SQL
+        await tx.$executeRaw`UPDATE "User" SET "totalWithdrawn" = (CAST("totalWithdrawn" AS NUMERIC) + ${d(deposit.amount)})::text WHERE id = ${deposit.userId}`;
 
         return updated;
       });
@@ -156,6 +147,7 @@ export async function PUT(request: NextRequest) {
       const result = await db.$transaction(async (tx) => {
         const deposit = await tx.deposit.findUnique({ where: { id } });
         if (!deposit) throw new Error('Saque não encontrado');
+        if (deposit.status === 'completed') throw new Error('Saque já foi concluído e não pode ser rejeitado');
         if (deposit.status === 'confirmed') throw new Error('Saque já foi confirmado');
         if (deposit.status === 'rejected') throw new Error('Saque já foi rejeitado');
 

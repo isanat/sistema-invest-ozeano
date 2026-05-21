@@ -35,6 +35,10 @@ export async function POST(request: NextRequest) {
       return apiError(`Voucher não está ativo (status: ${voucher.status})`);
     }
 
+    if (new Date(voucher.deadline) < new Date()) {
+      return apiError('Voucher expirado (prazo esgotado)');
+    }
+
     // Check remaining balance
     const voucherAmount = d(voucher.amount);
     const usedAmount = d(voucher.usedAmount);

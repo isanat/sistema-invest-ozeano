@@ -44,13 +44,13 @@ export async function POST(request: NextRequest) {
     console.log('[CRON] Starting daily ROI distribution...', new Date().toISOString());
 
     // PostgreSQL: acquire advisory lock to prevent concurrent cron execution
-    let lockReleased = false;
     try {
       await db.$queryRaw`SELECT pg_advisory_lock(12345)`;
     } catch (lockErr) {
-      console.warn('[CRON] Could not acquire advisory lock, proceeding with caution:', lockErr);
+      return apiError('Could not acquire advisory lock - another cron job is running', 423);
     }
 
+    try {
     // Get all active investments
     const activeInvestments = await db.investment.findMany({
       where: { status: 'active' },
@@ -202,16 +202,6 @@ export async function POST(request: NextRequest) {
       errors.push('Team bonus update error');
     }
 
-    // Release PostgreSQL advisory lock
-    if (!lockReleased) {
-      try {
-        await db.$queryRaw`SELECT pg_advisory_unlock(12345)`;
-        lockReleased = true;
-      } catch (unlockErr) {
-        console.warn('[CRON] Could not release advisory lock:', unlockErr);
-      }
-    }
-
     return apiSuccess({
       message: `Distribuição concluída: ${processed} investimentos processados`,
       processed,
@@ -221,14 +211,16 @@ export async function POST(request: NextRequest) {
       errors: errors.length > 0 ? errors : undefined,
       timestamp: new Date().toISOString(),
     });
+    } finally {
+      // Release PostgreSQL advisory lock
+      try {
+        await db.$queryRaw`SELECT pg_advisory_unlock(12345)`;
+      } catch (unlockErr) {
+        console.warn('[CRON] Could not release advisory lock:', unlockErr);
+      }
+    }
   } catch (error) {
     console.error('[CRON] Fatal error:', error);
-    // Release PostgreSQL advisory lock on error
-    try {
-      await db.$queryRaw`SELECT pg_advisory_unlock(12345)`;
-    } catch (unlockErr) {
-      console.warn('[CRON] Could not release advisory lock on error:', unlockErr);
-    }
     return handleApiError(error);
   }
 }

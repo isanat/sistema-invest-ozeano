@@ -31,6 +31,17 @@ export async function calculateWithdrawalBreakdown(userId: string) {
   const totalDeposited = d(user.totalDeposited);
   const totalWithdrawn = d(user.totalWithdrawn);
 
+  // Include pending withdrawals to prevent voucher lock bypass
+  const pendingWithdrawals = await db.deposit.aggregate({
+    where: {
+      userId,
+      type: 'withdrawal',
+      status: { in: ['pending', 'confirmed'] },
+    },
+    _sum: { amount: true },
+  });
+  const effectiveTotalWithdrawn = totalWithdrawn + d(pendingWithdrawals._sum.amount || '0');
+
   // Check for active vouchers
   const activeVouchers = await db.voucher.findMany({
     where: { userId, status: 'active' },
@@ -92,10 +103,10 @@ export async function calculateWithdrawalBreakdown(userId: string) {
   // Calculate own sources in balance using FIFO:
   // Withdrawals first consume own sources, then voucher profits
   const ownSourceTotal = totalDeposited + totalOwnProfits - totalInvestedFromBalance;
-  const ownSourceInBalance = Math.max(0, ownSourceTotal - totalWithdrawn);
+  const ownSourceInBalance = Math.max(0, ownSourceTotal - effectiveTotalWithdrawn);
 
   // Voucher profits in balance (FIFO: withdrawals consume own sources first)
-  const voucherProfitsWithdrawn = Math.max(0, totalWithdrawn - Math.max(0, ownSourceTotal));
+  const voucherProfitsWithdrawn = Math.max(0, effectiveTotalWithdrawn - Math.max(0, ownSourceTotal));
   const voucherProfitsInBalance = Math.max(0, totalVoucherProfits - voucherProfitsWithdrawn);
 
   // Calculate max withdrawable
@@ -115,6 +126,7 @@ export async function calculateWithdrawalBreakdown(userId: string) {
     _debug: {
       totalDeposited,
       totalWithdrawn,
+      effectiveTotalWithdrawn,
       totalInvestedFromBalance,
       totalOwnProfits,
       totalVoucherProfits,

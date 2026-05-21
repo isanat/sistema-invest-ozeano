@@ -117,8 +117,8 @@ async function processPaymentWebhook(
     return;
   }
 
-  // Skip if already processed with a final status
-  if (isPaymentFinal(deposit.paymentStatus) && deposit.splitProcessed) {
+  // Skip if already processed (splitProcessed guards against confirmed→finished double-credit)
+  if (deposit.splitProcessed) {
     return;
   }
 
@@ -196,10 +196,9 @@ async function processPaymentWebhook(
         SELECT id, "paymentStatus", "splitProcessed" FROM "NowPaymentsDeposit" WHERE id = ${deposit.id} FOR UPDATE
       `;
 
-      // Double-check: if already processed with a final status, skip
+      // Double-check: if already processed, skip
       if (lockedDeposit.length > 0) {
-        const currentStatus = lockedDeposit[0].paymentStatus;
-        if (isPaymentFinal(currentStatus) && lockedDeposit[0].splitProcessed) {
+        if (lockedDeposit[0].splitProcessed) {
           return; // Already processed by another webhook
         }
       }
@@ -268,6 +267,12 @@ async function processPaymentWebhook(
         },
       });
     }
+
+    // Update NowPaymentsDeposit record
+    await db.nowPaymentsDeposit.update({
+      where: { id: deposit.id },
+      data: updateData,
+    });
   }
 }
 
@@ -297,7 +302,7 @@ async function processPayoutWebhook(
   }
 
   // Skip if already in a final state
-  if (isPayoutFinal(payout.payoutStatus) && payout.payoutStatus === 'FINISHED') {
+  if (isPayoutFinal(payout.payoutStatus)) {
     return;
   }
 
@@ -313,6 +318,10 @@ async function processPayoutWebhook(
       : payout.txHash;
 
     await db.$transaction(async (tx) => {
+      // Acquire row lock on payout to prevent duplicate webhook processing
+      const lockedPayouts = await tx.$queryRaw<Array<{id: string}>>`SELECT id FROM "NowPaymentsPayout" WHERE id = ${payout.id} FOR UPDATE`;
+      if (lockedPayouts.length === 0) return;
+
       // Check if the linked deposit is already 'confirmed' (admin approved)
       // If so, totalWithdrawn was already incremented by admin — don't double-count
       let depositAlreadyConfirmed = false;
@@ -348,6 +357,12 @@ async function processPayoutWebhook(
       if (!depositAlreadyConfirmed) {
         await tx.$executeRaw`UPDATE "User" SET "totalWithdrawn" = (CAST("totalWithdrawn" AS NUMERIC) + ${d(payout.amount)})::text WHERE id = ${payout.userId}`;
       }
+
+      // Update payout record inside transaction
+      await tx.nowPaymentsPayout.update({
+        where: { id: payout.id },
+        data: updateData,
+      });
     });
 
   } else if (payoutStatus === 'FAILED' || payoutStatus === 'REJECTED') {
@@ -357,6 +372,10 @@ async function processPayoutWebhook(
     const refundAmount = d(payout.amount);
 
     await db.$transaction(async (tx) => {
+      // Acquire row lock on payout to prevent duplicate webhook processing
+      const lockedPayouts = await tx.$queryRaw<Array<{id: string}>>`SELECT id FROM "NowPaymentsPayout" WHERE id = ${payout.id} FOR UPDATE`;
+      if (lockedPayouts.length === 0) return;
+
       // Check if totalWithdrawn was previously incremented for this withdrawal
       // (it's incremented when admin approves or when webhook processes FINISHED)
       let shouldDecrementTotalWithdrawn = false;
@@ -397,12 +416,12 @@ async function processPayoutWebhook(
           referenceType: 'NowPaymentsPayout',
         },
       });
+
+      // Update payout record inside transaction
+      await tx.nowPaymentsPayout.update({
+        where: { id: payout.id },
+        data: updateData,
+      });
     });
   }
-
-  // Update payout record
-  await db.nowPaymentsPayout.update({
-    where: { id: payout.id },
-    data: updateData,
-  });
 }

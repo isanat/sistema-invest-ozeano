@@ -73,9 +73,13 @@ export async function PUT(request: NextRequest) {
     if (data.action === 'approve') {
       // Use transaction for atomicity — status check inside to prevent race conditions
       const result = await db.$transaction(async (tx) => {
+        // Acquire row lock and re-check status to prevent race conditions
+        const lockedDeposit = await tx.$queryRaw<Array<{id: string; status: string}>>`SELECT id, status FROM "Deposit" WHERE id = ${id} FOR UPDATE`;
+        if (lockedDeposit.length === 0) throw new Error('Depósito não encontrado');
+        if (lockedDeposit[0].status !== 'pending') throw new Error('Depósito já foi processado');
+
         const deposit = await tx.deposit.findUnique({ where: { id } });
         if (!deposit) throw new Error('Depósito não encontrado');
-        if (deposit.status !== 'pending') throw new Error('Depósito já foi processado');
 
         // Update deposit status
         const updated = await tx.deposit.update({
@@ -92,13 +96,6 @@ export async function PUT(request: NextRequest) {
         // Only add to balance, NOT to totalInvested (totalInvested tracks plan investments, not deposits)
         // Also increment totalDeposited to track user's own deposits for withdrawal calculation
         await tx.$executeRaw`UPDATE "User" SET balance = (CAST(balance AS NUMERIC) + ${d(deposit.amount)})::text, "totalDeposited" = (CAST("totalDeposited" AS NUMERIC) + ${d(deposit.amount)})::text WHERE id = ${deposit.userId}`;
-
-        await tx.user.update({
-          where: { id: deposit.userId },
-          data: {
-            hasInvested: true,
-          },
-        });
 
         // Create transaction record
         await tx.transaction.create({

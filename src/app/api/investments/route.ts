@@ -87,12 +87,8 @@ export async function POST(request: NextRequest) {
         dailyRoiPct = d(effectivePlan.dailyRoiPct);
         durationDays = effectivePlan.durationDays;
         planName = effectivePlan.name;
-      } else if (data.planId) {
-        // PlanId provided but no matching plan in DB — use body params or defaults
-        // This handles default frontend plans (starter, growth, etc.) that don't exist in DB
-        dailyRoiPct = body.dailyRoiPct ? parseFloat(body.dailyRoiPct) : 5;
-        durationDays = body.durationDays ? parseInt(body.durationDays) : 35;
-        planName = body.planName || data.planId;
+      } else {
+        throw new BusinessError('Plano de investimento inválido. Selecione um plano existente.');
       }
 
       if (data.amount < minAmount) {

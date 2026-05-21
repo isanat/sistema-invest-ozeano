@@ -101,6 +101,22 @@ export async function PUT(request: NextRequest) {
 
     const data = adminUserUpdateSchema.parse(updateData);
 
+    // Guard: admin cannot change their own role
+    if (id === session.userId && data.role !== undefined && data.role !== 'admin') {
+      return apiError('Você não pode alterar seu próprio papel');
+    }
+
+    // Guard: cannot demote the last admin
+    if (data.role !== undefined && data.role !== 'admin') {
+      const existing = await db.user.findUnique({ where: { id } });
+      if (existing?.role === 'admin') {
+        const adminCount = await db.user.count({ where: { role: 'admin' } });
+        if (adminCount <= 1) {
+          return apiError('Não é possível remover o último administrador do sistema');
+        }
+      }
+    }
+
     // Use transaction with row lock for balance changes to create audit trail and prevent race conditions
     const result = await db.$transaction(async (tx) => {
       // PostgreSQL: acquire row-level lock to prevent concurrent modifications
