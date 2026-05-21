@@ -171,3 +171,73 @@ Stage Summary:
 - Debug endpoint available at /api/nowpayments/debug for credential auditing
 - New Bitget credentials: bg_00f173e70aaec3d358db3667f6811539
 - BITGET_PASSPHRASE must be added to Coolify/Vercel environment variables
+
+---
+Task ID: 6
+Agent: Main
+Task: Implement Abordagem B — Origin-based withdrawal locking (3-balance system)
+
+Work Log:
+- Audited entire codebase: Prisma schema, investment/withdrawal/voucher API routes, frontend
+- Created planning document PLANO-SAQUE-VOUCHER.md with Abordagem B specification
+- User approved the plan
+- Added `totalDeposited` field to User model in Prisma schema (tracks user's own deposits)
+- Added `source` field to Investment model ('deposit' or 'voucher') with index
+- Ran db:push to sync schema
+- Updated NowPayments webhook to increment `totalDeposited` on confirmed deposit
+- Updated admin deposit approval to increment `totalDeposited`
+- Updated investment creation: `source: 'voucher'` for voucher-funded investments, `source: 'deposit'` for balance-funded
+- Completely rewrote `/api/withdraw/route.ts`:
+  - New `calculateWithdrawalBreakdown()` function (exported, reused by NowPayments)
+  - FIFO accounting: withdrawals consume own sources first
+  - Only voucher-sourced profits are locked by voucher unlockPct
+  - Own deposits + own profits are ALWAYS withdrawable
+  - Detailed error messages showing breakdown
+- Created `/api/withdraw/breakdown/route.ts` (GET endpoint for frontend)
+- Created `/api/admin/migrate/balance-source/route.ts` (migration for existing users)
+- Updated `/api/nowpayments/withdraw/route.ts` to use same origin-based logic
+- Updated frontend:
+  - Added `totalDeposited` to User interface
+  - New `withdrawVoucherInfo` state with full breakdown (ownSource, voucherProfits, unlockPct, maxWithdrawable)
+  - New `fetchWithdrawalBreakdown()` function called when withdraw dialog opens
+  - New visual breakdown in withdraw dialog showing own sources vs voucher profits
+  - Updated max amount input to use `maxWithdrawable` when voucher active
+  - Updated voucher status messages from "blocked" to "voucher profits locked"
+  - Both withdraw button locations now fetch breakdown
+- Added `totalDeposited` to /api/auth/me, /api/user, /api/admin/users select fields
+- Lint passes, dev server running
+- Committed and pushed to main (04541ba)
+
+Stage Summary:
+- Abordagem B fully implemented: voucher only blocks ITS OWN profits, never own deposits/profits
+- Formula: maxWithdrawable = ownSourceInBalance + (voucherProfitsInBalance × unlockPct / 100)
+- No voucher: maxWithdrawable = balance (everything free)
+- Migration endpoint available at POST /api/admin/migrate/balance-source for existing users
+- 12 files changed, 333 insertions, 90 deletions
+
+---
+Task ID: 7
+Agent: Main
+Task: Bug fixes — Approach B comprehensive audit and corrections
+
+Work Log:
+- Conducted thorough audit of all withdrawal, voucher, and payment flows
+- Found and fixed 7 bugs:
+  1. BUG #3 (CRITICAL): `/api/vouchers/use` — when voucher applied to existing investment paid from balance, investment.source changed to 'voucher' but balance was NOT refunded. User lost money on both sides. FIX: refund balance when changing source from 'deposit' to 'voucher'
+  2. BUG #2 (Medium-High): `/api/vouchers/use` — no FOR UPDATE lock on Voucher row, allowing concurrent over-deduction. FIX: added Voucher row lock + re-check remaining balance inside lock
+  3. BUG #7 (HIGH): `/api/admin/affiliate-withdrawals` — incrementing `totalWithdrawn` on affiliate withdrawal completion. FIX: removed — `totalWithdrawn` should only track main balance withdrawals
+  4. BUG #4 (HIGH): NowPayments webhook — double-counting `totalWithdrawn` when admin approves AND webhook gets FINISHED. FIX: check if deposit is already 'confirmed' before incrementing
+  5. BUG #5 (HIGH): NowPayments webhook — `totalWithdrawn` could go negative on payout failure. FIX: only decrement if previously incremented, use GREATEST(0, ...) guard
+  6. BUG #6 (Medium): NowPayments webhook — over-refund by adding fee to refund amount. FIX: refund only `payout.amount` (original deducted amount)
+  7. Added `voucherBalance` display to dashboard main balance section (was missing from 3-balance display)
+  8. Added `voucherBalance` to User interface in page.tsx
+  9. Added `voucherBalanceBRL` computed value
+  10. Removed incorrect `totalInvested`/`hasInvested`/`linkUnlocked` update from vouchers/use (was double-counting)
+
+Stage Summary:
+- All 7 critical/medium bugs fixed in Approach B implementation
+- `/api/vouchers/use` fully rewritten with proper balance refund, Voucher lock, and transaction records
+- `totalWithdrawn` now only tracks main balance withdrawals (not affiliate)
+- NowPayments webhook handles all edge cases correctly
+- Dashboard shows all 3 balances: Main, Affiliate, Voucher
+- Lint passes, dev server running

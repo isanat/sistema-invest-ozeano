@@ -71,13 +71,26 @@ export async function POST(request: NextRequest) {
       return apiError('Este investimento já foi pago com um voucher');
     }
 
+    // Track whether this investment was originally paid from balance (needs refund)
+    const wasPaidFromBalance = investment.source === 'deposit';
+
     // Execute in a transaction for atomicity
     await db.$transaction(async (tx) => {
+      // Acquire row lock on Voucher to prevent concurrent usage (BUG #2 fix)
+      await tx.$queryRaw`SELECT 1 FROM "Voucher" WHERE id = ${voucherId} FOR UPDATE`;
+
+      // Re-check voucher remaining balance inside lock
+      const lockedVoucher = await tx.voucher.findUnique({ where: { id: voucherId } });
+      const lockedRemaining = d(lockedVoucher!.amount) - d(lockedVoucher!.usedAmount);
+      if (lockedRemaining < amount) {
+        throw new BusinessError(`Saldo insuficiente no voucher. Disponível: ${dusdt(lockedRemaining)} USDT`);
+      }
+
       // Acquire row lock on user (PostgreSQL)
       await tx.$queryRaw`SELECT 1 FROM "User" WHERE id = ${session.userId} FOR UPDATE`;
 
       // Update voucher usedAmount
-      const newUsedAmount = usedAmount + amount;
+      const newUsedAmount = d(lockedVoucher!.usedAmount) + amount;
       await tx.voucher.update({
         where: { id: voucherId },
         data: {
@@ -94,8 +107,29 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      // Subtract from user's voucherBalance
-      await tx.$executeRaw`UPDATE "User" SET "voucherBalance" = (CAST("voucherBalance" AS NUMERIC) - ${amount})::text WHERE id = ${session.userId}`;
+      // Update investment source to 'voucher' so ROI profits are correctly classified
+      await tx.investment.update({
+        where: { id: investmentId },
+        data: { source: 'voucher' },
+      });
+
+      if (wasPaidFromBalance) {
+        // BUG #3 fix: When changing source from 'deposit' to 'voucher',
+        // we must REFUND the balance since the investment was originally paid from balance.
+        // The voucher is now paying for it instead.
+        // Also reduce totalInvestedFromBalance equivalent: we reduce totalInvested
+        // since the breakdown formula uses source='deposit' to calc totalInvestedFromBalance.
+        // totalInvested stays the same (investment still exists, just funded by voucher).
+        await tx.$executeRaw`UPDATE "User" SET 
+          "voucherBalance" = (CAST("voucherBalance" AS NUMERIC) - ${amount})::text,
+          "balance" = (CAST("balance" AS NUMERIC) + ${amount})::text
+          WHERE id = ${session.userId}`;
+      } else {
+        // Investment was already voucher-funded (shouldn't happen due to existingUsage check, but safety)
+        await tx.$executeRaw`UPDATE "User" SET 
+          "voucherBalance" = (CAST("voucherBalance" AS NUMERIC) - ${amount})::text
+          WHERE id = ${session.userId}`;
+      }
 
       // Verify voucher balance doesn't go negative
       const updatedUser = await tx.user.findUnique({ where: { id: session.userId } });
@@ -111,16 +145,34 @@ export async function POST(request: NextRequest) {
         type: 'investment',
         amount: dusdt(amount),
         status: 'completed',
-        description: `Pagamento de investimento com voucher #${voucherId.slice(-8)}`,
+        description: `Pagamento de investimento com voucher #${voucherId.slice(-8)}${wasPaidFromBalance ? ' (reembolso de saldo)' : ''}`,
         referenceId: investmentId,
         referenceType: 'VoucherUsage',
       },
     });
 
+    // If balance was refunded, also create a transaction record for the refund
+    if (wasPaidFromBalance) {
+      await db.transaction.create({
+        data: {
+          userId: session.userId,
+          type: 'deposit',
+          amount: dusdt(amount),
+          status: 'completed',
+          description: `Reembolso de saldo — investimento agora pago por voucher #${voucherId.slice(-8)}`,
+          referenceId: investmentId,
+          referenceType: 'VoucherRefund',
+        },
+      });
+    }
+
     return apiSuccess({
-      message: 'Saldo do voucher utilizado com sucesso!',
+      message: wasPaidFromBalance
+        ? 'Voucher aplicado! Seu saldo foi reembolsado pois o investimento agora é pago pelo voucher.'
+        : 'Saldo do voucher utilizado com sucesso!',
       usedAmount: dusdt(amount),
       remainingBalance: dusdt(remainingBalance - amount),
+      balanceRefunded: wasPaidFromBalance,
     });
   } catch (error) {
     return handleApiError(error);

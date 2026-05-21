@@ -313,12 +313,20 @@ async function processPayoutWebhook(
       : payout.txHash;
 
     await db.$transaction(async (tx) => {
+      // Check if the linked deposit is already 'confirmed' (admin approved)
+      // If so, totalWithdrawn was already incremented by admin — don't double-count
+      let depositAlreadyConfirmed = false;
+      if (payout.depositId) {
+        const linkedDeposit = await tx.deposit.findUnique({ where: { id: payout.depositId } });
+        depositAlreadyConfirmed = linkedDeposit?.status === 'confirmed' || linkedDeposit?.status === 'completed';
+      }
+
       // Update linked deposit
       if (payout.depositId) {
         await tx.deposit.update({
           where: { id: payout.depositId },
           data: {
-            status: 'confirmed',
+            status: 'completed',
             processedAt: new Date(),
           },
         });
@@ -336,17 +344,34 @@ async function processPayoutWebhook(
         });
       }
 
-      // Update user totalWithdrawn
-      await tx.$executeRaw`UPDATE "User" SET "totalWithdrawn" = (CAST("totalWithdrawn" AS NUMERIC) + ${d(payout.amount)})::text WHERE id = ${payout.userId}`;
+      // Only increment totalWithdrawn if admin hasn't already done so
+      if (!depositAlreadyConfirmed) {
+        await tx.$executeRaw`UPDATE "User" SET "totalWithdrawn" = (CAST("totalWithdrawn" AS NUMERIC) + ${d(payout.amount)})::text WHERE id = ${payout.userId}`;
+      }
     });
 
   } else if (payoutStatus === 'FAILED' || payoutStatus === 'REJECTED') {
     // Refund the user's balance since payout failed
-    const refundAmount = d(payout.amount) + d(payout.fee);
+    // BUG #6 fix: refund only the original deducted amount (payout.amount), not amount + fee
+    // The fee was never deducted from the user's balance separately
+    const refundAmount = d(payout.amount);
 
     await db.$transaction(async (tx) => {
+      // Check if totalWithdrawn was previously incremented for this withdrawal
+      // (it's incremented when admin approves or when webhook processes FINISHED)
+      let shouldDecrementTotalWithdrawn = false;
+      if (payout.depositId) {
+        const linkedDeposit = await tx.deposit.findUnique({ where: { id: payout.depositId } });
+        // If deposit was confirmed/completed, totalWithdrawn was already incremented
+        shouldDecrementTotalWithdrawn = linkedDeposit?.status === 'confirmed' || linkedDeposit?.status === 'completed';
+      }
+
       // Refund balance
-      await tx.$executeRaw`UPDATE "User" SET balance = (CAST(balance AS NUMERIC) + ${refundAmount})::text, "totalWithdrawn" = (CAST("totalWithdrawn" AS NUMERIC) - ${d(payout.amount)})::text WHERE id = ${payout.userId}`;
+      if (shouldDecrementTotalWithdrawn) {
+        await tx.$executeRaw`UPDATE "User" SET balance = (CAST(balance AS NUMERIC) + ${refundAmount})::text, "totalWithdrawn" = GREATEST(0, (CAST("totalWithdrawn" AS NUMERIC) - ${d(payout.amount)})::numeric)::text WHERE id = ${payout.userId}`;
+      } else {
+        await tx.$executeRaw`UPDATE "User" SET balance = (CAST(balance AS NUMERIC) + ${refundAmount})::text WHERE id = ${payout.userId}`;
+      }
 
       // Update deposit
       if (payout.depositId) {

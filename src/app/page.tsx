@@ -46,7 +46,7 @@ import { useI18n } from '@/lib/i18n';
 interface User {
   id: string; email: string; name: string; role: string; isActive: boolean;
   walletAddress?: string | null; pixKey?: string | null;
-  balance: string; affiliateBalance: string; totalRoi: string;
+  balance: string; affiliateBalance: string; voucherBalance: string; totalRoi: string;
   totalInvested: string; totalDeposited: string; totalWithdrawn: string;
   affiliateCode?: string | null; referredBy?: string | null;
   referralLevel: number; totalAffiliateEarnings: string;
@@ -2062,6 +2062,7 @@ export default function PlataformaROI() {
   const activeInvestments = useMemo(() => userInvestments.filter(r => r.status === 'active'), [userInvestments]);
   const balanceBRL = d(user?.balance) * usdtBrlRate;
   const affiliateBalanceBRL = d(user?.affiliateBalance) * usdtBrlRate;
+  const voucherBalanceBRL = d(user?.voucherBalance) * usdtBrlRate;
 
   // ==========================================
   // PERSISTED EARNINGS CALCULATION
@@ -3375,6 +3376,11 @@ export default function PlataformaROI() {
                                 <div className="text-[10px] sm:text-xs text-zinc-500 uppercase tracking-wider">{t('dashboard.affiliateBalance')}</div>
                                 <div className="text-base sm:text-lg font-bold truncate">${fmtUSDT(user.affiliateBalance)}</div>
                                 <div className="text-[10px] sm:text-xs text-zinc-500">≈ R$ {fmtBRL(affiliateBalanceBRL)}</div>
+                              </div>
+                              <div className="bg-white/[0.03] rounded-xl p-3 border border-purple-500/10 min-w-[120px]">
+                                <div className="text-[10px] sm:text-xs text-purple-400/70 uppercase tracking-wider flex items-center gap-1">🎫 Voucher</div>
+                                <div className="text-base sm:text-lg font-bold text-purple-400 truncate">${fmtUSDT(user.voucherBalance)}</div>
+                                <div className="text-[10px] sm:text-xs text-zinc-500">≈ R$ {fmtBRL(voucherBalanceBRL)}</div>
                               </div>
                               <div className="bg-white/[0.03] rounded-xl p-3 border border-white/[0.04] min-w-[120px]">
                                 <div className="text-[10px] sm:text-xs text-zinc-500 uppercase tracking-wider">{t('dashboard.totalRoi')}</div>

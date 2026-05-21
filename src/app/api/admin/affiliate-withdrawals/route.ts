@@ -120,8 +120,8 @@ export async function PUT(request: NextRequest) {
           },
         });
 
-        // Update user's totalWithdrawn atomically (PostgreSQL)
-        await tx.$executeRaw`UPDATE "User" SET "totalWithdrawn" = (CAST("totalWithdrawn" AS NUMERIC) + ${d(withdrawal.netAmount)})::text WHERE id = ${withdrawal.userId}`;
+        // NOTE: Do NOT increment totalWithdrawn here — that field tracks main balance withdrawals only.
+        // Affiliate withdrawals deduct from affiliateBalance, not from balance.
 
         return updated;
       });
