@@ -240,7 +240,7 @@ async function saveTradersToCache(traders: TransformedTrader[], ranking: string)
     for (const trader of traders) {
       if (!trader.traderId) continue;
       await db.bitgetTraderCache.upsert({
-        where: { traderId: trader.traderId },
+        where: { traderId_ranking: { traderId: trader.traderId, ranking } },
         create: {
           traderId: trader.traderId,
           displayName: trader.displayName,

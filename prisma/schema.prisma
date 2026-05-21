@@ -600,7 +600,7 @@ model TradingPool {
 
 model BitgetTraderCache {
   id          String   @id @default(cuid())
-  traderId    String   @unique // Bitget trader ID
+  traderId    String   // Bitget trader ID
   displayName String
   avatar      String   @default("")
   roi         String   @default("0")
@@ -618,6 +618,7 @@ model BitgetTraderCache {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  @@unique([traderId, ranking])
   @@index([ranking])
   @@index([rank])
   @@index([isActive])

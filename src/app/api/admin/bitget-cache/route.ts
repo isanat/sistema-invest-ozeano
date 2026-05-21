@@ -70,7 +70,7 @@ async function fetchAndCacheRanking(rankingCode: string, pageSize: number = 50):
     if (!traderId) continue;
 
     await db.bitgetTraderCache.upsert({
-      where: { traderId },
+      where: { traderId_ranking: { traderId, ranking: rankingCode } },
       create: {
         traderId,
         displayName: trader.displayName || trader.nickName || 'Unknown',
@@ -235,7 +235,7 @@ export async function PUT(request: NextRequest) {
       if (!trader.traderId) continue;
 
       await db.bitgetTraderCache.upsert({
-        where: { traderId: trader.traderId },
+        where: { traderId_ranking: { traderId: trader.traderId, ranking } },
         create: {
           traderId: trader.traderId,
           displayName: trader.displayName || 'Unknown',
