@@ -26,11 +26,35 @@ export async function GET() {
 
     // If configured, fetch live data
     if (config.configured) {
+      // Fetch merchant-specific coins (only the ones enabled in NowPayments dashboard)
       try {
-        const currenciesResult = await getAvailableCurrencies();
-        currencies = currenciesResult.currencies || [];
+        const coinsResult = await getMerchantCoins();
+        if (Array.isArray(coinsResult)) {
+          merchantCoins = coinsResult;
+          currencies = coinsResult
+            .filter((c: any) => c.is_available !== false && c.deposit_status !== false)
+            .map((c: any) => c.coin || c.symbol || c.currency)
+            .filter(Boolean);
+        } else if (coinsResult && typeof coinsResult === 'object') {
+          const obj = coinsResult as Record<string, unknown>;
+          const coinList = Array.isArray(obj.result) ? obj.result :
+                         Array.isArray(obj.coins) ? obj.coins :
+                         Array.isArray(obj.currencies) ? obj.currencies : [];
+          merchantCoins = coinList;
+          currencies = coinList
+            .filter((c: any) => c.is_available !== false && c.deposit_status !== false)
+            .map((c: any) => c.coin || c.symbol || c.currency)
+            .filter(Boolean);
+        }
       } catch (err) {
-        console.error('[NowPayments Config] Failed to fetch currencies:', err);
+        console.error('[NowPayments Config] Failed to fetch merchant coins:', err);
+        // Fallback to general currencies endpoint
+        try {
+          const currenciesResult = await getAvailableCurrencies();
+          currencies = currenciesResult.currencies || [];
+        } catch (err2) {
+          console.error('[NowPayments Config] Failed to fetch currencies:', err2);
+        }
       }
 
       try {
@@ -90,6 +114,7 @@ export async function GET() {
       },
       currencies,
       merchantCoins,
+      merchantCoinCount: merchantCoins.length,
       balance,
       connectionTest,
     });

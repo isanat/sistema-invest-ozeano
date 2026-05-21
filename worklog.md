@@ -123,3 +123,25 @@ Stage Summary:
 - Floating mobile CTA bar with big Login/Register buttons on landing page
 - Landing page nav is compact on mobile
 - Hero section responsive improvements
+
+---
+Task ID: 4
+Agent: Main
+Task: Update deposit dialog to fetch currencies dynamically from NowPayments API instead of hardcoded options
+
+Work Log:
+- Added `npCurrencies` and `npCurrenciesLoading` state variables after existing NowPayments deposit state (line ~522-523)
+- Added `fetchNpCurrencies` async function that calls `/api/nowpayments/currencies` API route, with hardcoded fallback on error/empty response
+- Added `useEffect` to trigger `fetchNpCurrencies` when `depositDialog` opens and user is authenticated
+- Replaced hardcoded currency `<SelectItem>` options (usdttrc20, usdtmatic, btc, eth, trx) with dynamic rendering from `npCurrencies` state
+- Added loading indicator ("Carregando...") in SelectTrigger while currencies are being fetched
+- Added warning message when no currencies are available and not loading
+- Updated minimum amount hint to use dynamic `minDeposit` from currency data, falling back to "20 USDT"
+- ESLint passes with no errors
+
+Stage Summary:
+- Deposit dialog now fetches available currencies from `/api/nowpayments/currencies` dynamically
+- Currencies are loaded when the deposit dialog opens
+- Fallback to 4 hardcoded currencies (USDT TRC20, USDT Polygon, BTC, ETH) if API fails
+- Each currency option shows icon + displayName from API data
+- Minimum deposit amount hint is now currency-specific when data is available

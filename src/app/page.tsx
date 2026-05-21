@@ -642,6 +642,8 @@ export default function PlataformaROI() {
   const [npExpirationDate, setNpExpirationDate] = useState<string | null>(null);
   const [npEstimatedFee, setNpEstimatedFee] = useState<number>(0);
   const [npCountdown, setNpCountdown] = useState<string>('');
+  const [npCurrencies, setNpCurrencies] = useState<Array<{ id: string; code: string; symbol: string; name: string; network: string; icon: string; isAvailable: boolean; depositEnabled: boolean; displayName: string; minDeposit: number | null }>>([]);
+  const [npCurrenciesLoading, setNpCurrenciesLoading] = useState(false);
 
   // Dynamic currencies — populated ONLY from NowPayments API (no hardcoded fallbacks)
   const [availableDepositCurrencies, setAvailableDepositCurrencies] = useState<string[]>([]);
@@ -1132,6 +1134,13 @@ export default function PlataformaROI() {
     }
   }, [activeTab, isAdminUser]);
 
+  // Fetch NowPayments currencies when deposit dialog opens
+  useEffect(() => {
+    if (depositDialog && user) {
+      fetchNpCurrencies();
+    }
+  }, [depositDialog, user]);
+
   // ==========================================
   // NOTIFICATION SYSTEM: Load from storage + generate from transactions
   // ==========================================
@@ -1507,6 +1516,39 @@ export default function PlataformaROI() {
       toast.error(errorMsg);
     } finally {
       setNpGeneratingAddress(false);
+    }
+  };
+
+  // Fetch NowPayments currencies dynamically
+  const fetchNpCurrencies = async () => {
+    setNpCurrenciesLoading(true);
+    try {
+      const data = await api<{ success: boolean; configured: boolean; currencies: Array<{ id: string; code: string; symbol: string; name: string; network: string; icon: string; isAvailable: boolean; depositEnabled: boolean; displayName: string; minDeposit: number | null }> }>('/api/nowpayments/currencies');
+      if (data.currencies && data.currencies.length > 0) {
+        setNpCurrencies(data.currencies);
+        // Set default currency to first available (USDT TRC20 if available)
+        const defaultCur = data.currencies.find(c => c.code === 'usdttrc20') || data.currencies[0];
+        setNpDepositCurrency(defaultCur.code);
+      } else {
+        // Fallback to hardcoded if API returns empty
+        setNpCurrencies([
+          { id: 'usdttrc20', code: 'usdttrc20', symbol: 'USDT', name: 'Tether', network: 'TRC20', icon: '₮', isAvailable: true, depositEnabled: true, displayName: 'USDT TRC20', minDeposit: null },
+          { id: 'usdtmatic', code: 'usdtmatic', symbol: 'USDT', name: 'Tether', network: 'Polygon', icon: '₮', isAvailable: true, depositEnabled: true, displayName: 'USDT Polygon', minDeposit: null },
+          { id: 'btc', code: 'btc', symbol: 'BTC', name: 'Bitcoin', network: 'Bitcoin', icon: '₿', isAvailable: true, depositEnabled: true, displayName: 'BTC Bitcoin', minDeposit: null },
+          { id: 'eth', code: 'eth', symbol: 'ETH', name: 'Ethereum', network: 'Ethereum', icon: 'Ξ', isAvailable: true, depositEnabled: true, displayName: 'ETH Ethereum', minDeposit: null },
+        ]);
+      }
+    } catch (err) {
+      console.error('[Deposit] Failed to fetch currencies:', err);
+      // Fallback to hardcoded on error
+      setNpCurrencies([
+        { id: 'usdttrc20', code: 'usdttrc20', symbol: 'USDT', name: 'Tether', network: 'TRC20', icon: '₮', isAvailable: true, depositEnabled: true, displayName: 'USDT TRC20', minDeposit: null },
+        { id: 'usdtmatic', code: 'usdtmatic', symbol: 'USDT', name: 'Tether', network: 'Polygon', icon: '₮', isAvailable: true, depositEnabled: true, displayName: 'USDT Polygon', minDeposit: null },
+        { id: 'btc', code: 'btc', symbol: 'BTC', name: 'Bitcoin', network: 'Bitcoin', icon: '₿', isAvailable: true, depositEnabled: true, displayName: 'BTC Bitcoin', minDeposit: null },
+        { id: 'eth', code: 'eth', symbol: 'ETH', name: 'Ethereum', network: 'Ethereum', icon: 'Ξ', isAvailable: true, depositEnabled: true, displayName: 'ETH Ethereum', minDeposit: null },
+      ]);
+    } finally {
+      setNpCurrenciesLoading(false);
     }
   };
 
