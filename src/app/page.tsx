@@ -149,7 +149,7 @@ interface AffiliateData {
     status: string; createdAt: string;
     user: { id: string; name: string };
   }>;
-  commissionMode?: 'system_margin' | 'roi_profit' | 'revenue_pool';
+  commissionMode?: 'system_margin' | 'investment_profit' | 'revenue_pool';
   systemMarginPct?: number;
   poolRevenuePct?: number;
   investmentBonusPct?: number;
@@ -402,11 +402,14 @@ const CONFIG_LABELS: Record<string, {
 const HIDDEN_CONFIG_KEYS = new Set<string>([
   'nowpayments_split_pct',    // Managed via NowPayments → Sócios & Split
   'nowpayments_split_wallet', // Managed via NowPayments → Sócios & Split
-  // Affiliate keys — managed via Afiliados tab (dedicated UI with mode descriptions)
+  // All affiliate keys — managed via Afiliados tab (dedicated UI with mode descriptions)
   'affiliate_commission_mode',
   'affiliate_system_margin_pct',
   'affiliate_pool_revenue_pct',
   'affiliate_investment_bonus_pct',
+  'affiliate_daily_cap_usd',
+  'min_affiliate_withdrawal',
+  'affiliate_withdrawal_fee_pct',
 ]);
 
 const categoryIcon = (cat: string) => {
@@ -5700,7 +5703,7 @@ export default function PlataformaROI() {
                               <h3 className="text-lg font-bold text-white">Unilevel 11 Níveis</h3>
                               {affiliateData?.commissionMode && (
                                 <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30 ml-auto text-[10px]" variant="outline">
-                                  {affiliateData.commissionMode === 'system_margin' ? 'System Margin' : affiliateData.commissionMode === 'roi_profit' ? 'Trading Profit' : 'Revenue Pool'}
+                                  {affiliateData.commissionMode === 'system_margin' ? 'System Margin' : affiliateData.commissionMode === 'investment_profit' ? 'Trading Profit' : 'Revenue Pool'}
                                 </Badge>
                               )}
                             </div>
@@ -5785,7 +5788,7 @@ export default function PlataformaROI() {
                               </span>
                             </div>
 
-                            {affiliateData?.commissionMode === 'roi_profit' && (
+                            {affiliateData?.commissionMode === 'investment_profit' && (
                               <div className="mt-2 p-3 bg-zinc-800/30 rounded-lg border border-zinc-700/30">
                                 <div className="text-xs text-zinc-400">
                                   <span className="text-cyan-400 font-medium">💡 {t('affiliates.howItWorks')}:</span>{' '}
@@ -7232,9 +7235,9 @@ export default function PlataformaROI() {
                                               <span className="text-xs text-zinc-400">Commission on system profit margin only</span>
                                             </div>
                                           </SelectItem>
-                                          <SelectItem value="roi_profit">
+                                          <SelectItem value="investment_profit">
                                             <div className="flex flex-col items-start">
-                                              <span className="font-medium">{t('admin.modeTradingProfit')}</span>
+                                              <span className="font-medium">{t('admin.modeInvestmentProfit')}</span>
                                               <span className="text-xs text-zinc-400">Commission on ROI profits only</span>
                                             </div>
                                           </SelectItem>
@@ -7266,7 +7269,7 @@ export default function PlataformaROI() {
                                           </div>
                                         </>
                                       )}
-                                      {currentMode === 'roi_profit' && (
+                                      {currentMode === 'investment_profit' && (
                                         <>
                                           <div className="flex items-start gap-2">
                                             <Bot className="h-4 w-4 text-cyan-400 mt-0.5 shrink-0" />
@@ -7302,21 +7305,70 @@ export default function PlataformaROI() {
                                         </>
                                       )}
                                     </div>
+                                    {/* Additional affiliate settings */}
+                                    <div className="border-t border-zinc-700 pt-4 mt-4">
+                                      <h4 className="text-sm font-medium text-zinc-300 mb-3">Limites e Taxas de Saque</h4>
+                                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                        <div>
+                                          <Label className="text-zinc-400 text-xs">{t('admin.affiliateDailyCap')}</Label>
+                                          <div className="flex items-center gap-2 mt-1">
+                                            <Input
+                                              type="number"
+                                              value={configEdits['affiliate_daily_cap_usd'] ?? (adminConfigs.find(c => c.key === 'affiliate_daily_cap_usd')?.value ?? '0')}
+                                              onChange={e => setConfigEdits(prev => ({ ...prev, affiliate_daily_cap_usd: e.target.value }))}
+                                              className="bg-zinc-800 border-zinc-700 h-8"
+                                            />
+                                            <span className="text-xs text-zinc-500 shrink-0">USDT</span>
+                                          </div>
+                                          <div className="text-xs text-zinc-500 mt-1">0 = sem limite</div>
+                                        </div>
+                                        <div>
+                                          <Label className="text-zinc-400 text-xs">{t('admin.minAffiliateWithdrawal')}</Label>
+                                          <div className="flex items-center gap-2 mt-1">
+                                            <Input
+                                              type="number"
+                                              value={configEdits['min_affiliate_withdrawal'] ?? (adminConfigs.find(c => c.key === 'min_affiliate_withdrawal')?.value ?? '10')}
+                                              onChange={e => setConfigEdits(prev => ({ ...prev, min_affiliate_withdrawal: e.target.value }))}
+                                              className="bg-zinc-800 border-zinc-700 h-8"
+                                            />
+                                            <span className="text-xs text-zinc-500 shrink-0">USDT</span>
+                                          </div>
+                                        </div>
+                                        <div>
+                                          <Label className="text-zinc-400 text-xs">{t('admin.affiliateWithdrawalFeePct')}</Label>
+                                          <div className="flex items-center gap-2 mt-1">
+                                            <Input
+                                              type="number"
+                                              value={configEdits['affiliate_withdrawal_fee_pct'] ?? (adminConfigs.find(c => c.key === 'affiliate_withdrawal_fee_pct')?.value ?? '0')}
+                                              onChange={e => setConfigEdits(prev => ({ ...prev, affiliate_withdrawal_fee_pct: e.target.value }))}
+                                              className="bg-zinc-800 border-zinc-700 h-8"
+                                            />
+                                            <span className="text-xs text-zinc-500 shrink-0">%</span>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </div>
                                     {/* Save button */}
                                     <div className="flex justify-end">
                                       <Button
                                         className="bg-emerald-600 hover:bg-cyan-700"
                                         onClick={async () => {
-                                          const modeVal = configEdits['affiliate_commission_mode'] ?? modeConfig?.value ?? 'roi_profit';
+                                          const modeVal = configEdits['affiliate_commission_mode'] ?? modeConfig?.value ?? 'investment_profit';
                                           const marginVal = configEdits['affiliate_system_margin_pct'] ?? marginConfig?.value ?? '30';
                                           const poolVal = configEdits['affiliate_pool_revenue_pct'] ?? poolConfig?.value ?? '5';
                                           const bonusVal = configEdits['affiliate_investment_bonus_pct'] ?? (adminConfigs.find(c => c.key === 'affiliate_investment_bonus_pct')?.value ?? '2');
+                                          const capVal = configEdits['affiliate_daily_cap_usd'] ?? (adminConfigs.find(c => c.key === 'affiliate_daily_cap_usd')?.value ?? '0');
+                                          const minWithdrawVal = configEdits['min_affiliate_withdrawal'] ?? (adminConfigs.find(c => c.key === 'min_affiliate_withdrawal')?.value ?? '10');
+                                          const feeVal = configEdits['affiliate_withdrawal_fee_pct'] ?? (adminConfigs.find(c => c.key === 'affiliate_withdrawal_fee_pct')?.value ?? '0');
                                           try {
                                             const configsToSave = [
-                                              { key: 'affiliate_commission_mode', value: modeVal, type: 'string', description: 'Modo de comissão: system_margin, roi_profit, revenue_pool', category: 'affiliate' },
+                                              { key: 'affiliate_commission_mode', value: modeVal, type: 'string', description: 'Modo de comissão: system_margin, investment_profit, revenue_pool', category: 'affiliate' },
                                               { key: 'affiliate_system_margin_pct', value: marginVal, type: 'number', description: 'Margem do sistema (%) para modo system_margin', category: 'affiliate' },
                                               { key: 'affiliate_pool_revenue_pct', value: poolVal, type: 'number', description: '% da receita para pool de afiliados (modo revenue_pool)', category: 'affiliate' },
-                                              { key: 'affiliate_investment_bonus_pct', value: bonusVal, type: 'number', description: 'Bônus de investimento (%) - comissão imediata quando referido investe (modo roi_profit)', category: 'affiliate' },
+                                              { key: 'affiliate_investment_bonus_pct', value: bonusVal, type: 'number', description: 'Bônus de investimento (%) - comissão imediata quando referido investe (modo investment_profit)', category: 'affiliate' },
+                                              { key: 'affiliate_daily_cap_usd', value: capVal, type: 'number', description: 'Cap diário de comissões em USDT (0 = sem limite)', category: 'affiliate' },
+                                              { key: 'min_affiliate_withdrawal', value: minWithdrawVal, type: 'number', description: 'Valor mínimo para saque de comissões em USDT', category: 'affiliate' },
+                                              { key: 'affiliate_withdrawal_fee_pct', value: feeVal, type: 'number', description: 'Percentual cobrado em saques de afiliado', category: 'affiliate' },
                                             ];
                                             await api('/api/admin/config', {
                                               method: 'PUT',
@@ -7343,13 +7395,13 @@ export default function PlataformaROI() {
                           <CardHeader><CardTitle className="text-lg">{t('admin.affiliateLevels')}</CardTitle></CardHeader>
                           <CardContent>
                             <div className="space-y-4">
-                              {[1, 2, 3, 4, 5].map(level => {
+                              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map(level => {
                                 const existing = affiliateLevels.find(l => l.level === level);
                                 return (
                                   <AffiliateLevelEditor
                                     key={level}
                                     level={level}
-                                    defaultPercentage={existing?.percentage || ['10', '5', '3', '2', '1'][level - 1]}
+                                    defaultPercentage={existing?.percentage || ['10', '4', '3', '2', '1.5', '1', '0.8', '0.5', '0.4', '0.3', '0.5'][level - 1]}
                                     defaultActive={existing?.isActive ?? true}
                                     existingId={existing?.id}
                                     t={t}
@@ -7817,7 +7869,7 @@ export default function PlataformaROI() {
                             <Plus className="mr-2 h-4 w-4" /> Nova Config
                           </Button>
                         </div>
-                        {['branding', 'general', 'deposit', 'withdrawal', 'trading', 'affiliate', 'nowpayments'].map(cat => {
+                        {['branding', 'general', 'deposit', 'withdrawal', 'trading', 'nowpayments'].map(cat => {
                           const catConfigs = adminConfigs.filter(c => c.category === cat && !HIDDEN_CONFIG_KEYS.has(c.key));
                           if (catConfigs.length === 0) return null;
                           const CatIcon = categoryIcon(cat);
@@ -8197,11 +8249,17 @@ Seus 10 indicados diretos investem $100/dia cada:
                                 <h4 className="font-semibold text-cyan-400 mb-3">📊 Níveis de Afiliados (Tabela AffiliateLevel)</h4>
                                 <div className="grid grid-cols-5 gap-2">
                                   {(affiliateLevels.length > 0 ? affiliateLevels : [
-                                    { level: 1, percentage: '8', description: 'Nível 1 - Indicação direta', isActive: true },
-                                    { level: 2, percentage: '3', description: 'Nível 2', isActive: true },
-                                    { level: 3, percentage: '1.5', description: 'Nível 3', isActive: true },
-                                    { level: 4, percentage: '0.5', description: 'Nível 4', isActive: true },
-                                    { level: 5, percentage: '0.25', description: 'Nível 5', isActive: true },
+                                    { level: 1, percentage: '10', description: 'Nível 1 - Indicação direta', isActive: true },
+                                    { level: 2, percentage: '4', description: 'Nível 2', isActive: true },
+                                    { level: 3, percentage: '3', description: 'Nível 3', isActive: true },
+                                    { level: 4, percentage: '2', description: 'Nível 4', isActive: true },
+                                    { level: 5, percentage: '1.5', description: 'Nível 5', isActive: true },
+                                    { level: 6, percentage: '1', description: 'Nível 6', isActive: true },
+                                    { level: 7, percentage: '0.8', description: 'Nível 7', isActive: true },
+                                    { level: 8, percentage: '0.5', description: 'Nível 8', isActive: true },
+                                    { level: 9, percentage: '0.4', description: 'Nível 9', isActive: true },
+                                    { level: 10, percentage: '0.3', description: 'Nível 10', isActive: true },
+                                    { level: 11, percentage: '0.5', description: 'Nível 11', isActive: true },
                                   ]).map((lvl) => (
                                     <div key={lvl.level} className="bg-zinc-900 rounded-lg p-3 text-center border border-zinc-700">
                                       <div className="text-xl font-bold text-cyan-400">{lvl.percentage}%</div>
@@ -8218,18 +8276,18 @@ Seus 10 indicados diretos investem $100/dia cada:
                                 <h4 className="font-semibold text-cyan-400 mb-3">⚙️ Modo de Comissão</h4>
                                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                   <div className={`rounded-lg p-3 border ${adminConfigs.find(c => c.key === 'affiliate_commission_mode')?.value === 'system_margin' ? 'border-cyan-500/50 bg-cyan-500/5' : 'border-zinc-700 bg-zinc-900'}`}>
-                                    <div className="font-semibold text-sm">system_margin</div>
-                                    <div className="text-xs text-zinc-400 mt-1">Comissão sobre margem do sistema (30%). Mais sustentável.</div>
+                                    <div className="font-semibold text-sm">Margem do Sistema</div>
+                                    <div className="text-xs text-zinc-400 mt-1">Comissão sobre a margem de lucro do sistema (30%). Mais sustentável — o dinheiro vem do lucro que o sistema retém, não dos ganhos dos usuários.</div>
                                     {adminConfigs.find(c => c.key === 'affiliate_commission_mode')?.value === 'system_margin' && <Badge className="mt-1 text-[9px] bg-cyan-500/10 text-cyan-400" variant="outline">Ativo</Badge>}
                                   </div>
-                                  <div className={`rounded-lg p-3 border ${adminConfigs.find(c => c.key === 'affiliate_commission_mode')?.value === 'roi_profit' ? 'border-cyan-500/50 bg-cyan-500/5' : 'border-zinc-700 bg-zinc-900'}`}>
-                                    <div className="font-semibold text-sm">roi_profit</div>
-                                    <div className="text-xs text-zinc-400 mt-1">Comissão sobre lucro de ROI + bônus de investimento (2%).</div>
-                                    {adminConfigs.find(c => c.key === 'affiliate_commission_mode')?.value === 'roi_profit' && <Badge className="mt-1 text-[9px] bg-cyan-500/10 text-cyan-400" variant="outline">Ativo</Badge>}
+                                  <div className={`rounded-lg p-3 border ${adminConfigs.find(c => c.key === 'affiliate_commission_mode')?.value === 'investment_profit' ? 'border-cyan-500/50 bg-cyan-500/5' : 'border-zinc-700 bg-zinc-900'}`}>
+                                    <div className="font-semibold text-sm">Lucro de Investimento</div>
+                                    <div className="text-xs text-zinc-400 mt-1">Comissão sobre lucro de ROI + bônus de investimento (2%). O dinheiro vem dos ganhos de trading — mais arriscado.</div>
+                                    {adminConfigs.find(c => c.key === 'affiliate_commission_mode')?.value === 'investment_profit' && <Badge className="mt-1 text-[9px] bg-cyan-500/10 text-cyan-400" variant="outline">Ativo</Badge>}
                                   </div>
                                   <div className={`rounded-lg p-3 border ${adminConfigs.find(c => c.key === 'affiliate_commission_mode')?.value === 'revenue_pool' ? 'border-cyan-500/50 bg-cyan-500/5' : 'border-zinc-700 bg-zinc-900'}`}>
-                                    <div className="font-semibold text-sm">revenue_pool</div>
-                                    <div className="text-xs text-zinc-400 mt-1">5% da receita → pool, distribuído por nível. Previsível.</div>
+                                    <div className="font-semibold text-sm">Pool de Receita</div>
+                                    <div className="text-xs text-zinc-400 mt-1">5% da receita total → pool distribuído por nível. Previsível e limitado — nunca excede X% da receita.</div>
                                     {adminConfigs.find(c => c.key === 'affiliate_commission_mode')?.value === 'revenue_pool' && <Badge className="mt-1 text-[9px] bg-cyan-500/10 text-cyan-400" variant="outline">Ativo</Badge>}
                                   </div>
                                 </div>

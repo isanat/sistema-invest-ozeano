@@ -161,7 +161,11 @@ async function getAffiliateConfig(): Promise<{
   const configMap = Object.fromEntries(configs.map((c) => [c.key, c.value]));
 
   // DEFAULT: system_margin (most sustainable mode)
-  const mode = (configMap.affiliate_commission_mode || 'system_margin') as CommissionMode;
+  let mode = (configMap.affiliate_commission_mode || 'system_margin') as CommissionMode;
+  // Backward compatibility: accept legacy 'roi_profit' as alias for 'investment_profit'
+  if (mode === 'roi_profit' as any) {
+    mode = 'investment_profit';
+  }
   const validModes: CommissionMode[] = ['system_margin', 'investment_profit', 'revenue_pool'];
 
   return {

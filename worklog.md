@@ -505,3 +505,60 @@ Stage Summary:
 - Soft delete (deactivate) for recipients
 - 100% allocation validation (prevents over-allocation)
 - 10+ files modified across backend + frontend
+
+---
+Task ID: 1
+Agent: code-fixer
+Task: Fix affiliate commission mode bugs (roi_profit → investment_profit, missing translations, level editor, config analysis)
+
+Work Log:
+- Fixed commission mode value from roi_profit to investment_profit in page.tsx (lines 7235, 7269, 7310, 7316, 7319) — lines 152, 5703, 5788 were already fixed by previous agent
+- Changed t('admin.modeTradingProfit') to t('admin.modeInvestmentProfit') in page.tsx line 7237
+- Added modeInvestmentProfit translation key to all 8 language sections in translations.ts:
+  - ES affiliates: 'Lucro de Inversión'
+  - ES admin: 'Lucro de Inversión'
+  - PT affiliates: 'Lucro de Investimento'
+  - PT admin: 'Lucro de Investimento'
+  - EN affiliates: 'Investment Profit'
+  - EN admin: 'Investment Profit'
+  - ZH affiliates: '投资利润'
+  - ZH admin: '投资利润'
+- Fixed Config Analysis card comparisons from roi_profit to investment_profit (lines 8225, 8226, 8228)
+- Updated Config Analysis description text for investment_profit mode
+- Expanded level editor from 5 to 11 levels (line 7346)
+- Updated default percentage fallbacks from ['10','5','3','2','1'] to ['10','4','3','2','1.5','1','0.8','0.5','0.4','0.3','0.5'] (line 7352)
+- Fixed hardcoded level percentages in Config Analysis from 5 levels (8,3,1.5,0.5,0.25) to 11 levels (10,4,3,2,1.5,1,0.8,0.5,0.4,0.3,0.5) matching actual defaults
+- Preserved all transaction type roi_profit references (lines 333, 471, 1246, 1307, 3946, 5211, 5338, 5352, 5359, 5412) — these are NOT commission mode references
+- Lint passes with no errors
+
+Stage Summary:
+- All affiliate commission mode references now use investment_profit matching backend
+- Level editor now supports all 11 levels with correct default percentages
+- Config Analysis displays match actual system defaults
+- Translation keys added for all 4 languages (ES, PT, EN, ZH) in both affiliates and admin sections
+
+---
+Task ID: 11
+Agent: Main
+Task: Fix affiliate commission configuration bugs — duplicate UI, roi_profit mismatch, level editor, consolidate settings
+
+Work Log:
+- Fixed BUG 1: Renamed all roi_profit affiliate commission mode references to investment_profit in page.tsx (7 locations)
+- Fixed BUG 2: Consolidated ALL affiliate settings into single "Afiliados" tab:
+  - Added affiliate_daily_cap_usd, min_affiliate_withdrawal, affiliate_withdrawal_fee_pct to HIDDEN_CONFIG_KEYS
+  - Removed 'affiliate' from Config tab category list so no duplicate section appears
+  - Added "Limites e Taxas de Saque" section to Afiliados tab with Cap Diário, Saque Mínimo, Taxa Saque fields
+  - Updated save button to persist all 7 affiliate configs together
+- Fixed BUG 3: Expanded level editor from 5 to 11 levels with correct default percentages
+- Fixed BUG 4: Updated Config Analysis card labels from raw values (system_margin, roi_profit, revenue_pool) to friendly Portuguese names with detailed explanations
+- Added modeInvestmentProfit translation key to all 8 language sections (ES, PT, EN, ZH × affiliates + admin)
+- Added affiliateDailyCap, minAffiliateWithdrawal, affiliateWithdrawalFeePct translation keys to all 4 admin language sections
+- Added backward compatibility in backend: roi_profit accepted as alias for investment_profit in getAffiliateConfig()
+
+Stage Summary:
+- No more duplicate "Modo de Comissão" UI — all affiliate settings now in ONE place (Afiliados tab)
+- Commission mode value matches backend (investment_profit instead of broken roi_profit)
+- Backend has backward compatibility for any existing roi_profit data in production DB
+- All 11 affiliate levels editable with correct defaults
+- Config Analysis shows friendly labels instead of raw internal values
+- 3 files modified: page.tsx, translations.ts, affiliate.ts
