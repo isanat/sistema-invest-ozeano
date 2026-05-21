@@ -4823,6 +4823,7 @@ export default function PlataformaROI() {
                             <SelectItem value="pending">Pendentes</SelectItem>
                             <SelectItem value="confirmed">Confirmadas</SelectItem>
                             <SelectItem value="rejected">Rejeitadas</SelectItem>
+                            <SelectItem value="cancelled">Canceladas</SelectItem>
                           </SelectContent>
                         </Select>
                         <Button className="bg-emerald-600 hover:bg-cyan-700" onClick={() => setDepositDialog(true)}>
@@ -4890,6 +4891,7 @@ export default function PlataformaROI() {
                                       dep.status === 'confirmed' || dep.status === 'approved' ? 'bg-cyan-500/10 text-cyan-400' :
                                       dep.status === 'pending' ? 'bg-amber-500/10 text-amber-400' :
                                       dep.status === 'rejected' ? 'bg-red-500/10 text-red-400' :
+                                      dep.status === 'cancelled' ? 'bg-orange-500/10 text-orange-400' :
                                       'bg-zinc-500/10 text-zinc-400'
                                     }`}>
                                       <ArrowDownLeft className="h-5 w-5" />
@@ -4919,11 +4921,13 @@ export default function PlataformaROI() {
                                       dep.status === 'confirmed' || dep.status === 'approved' ? 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30' :
                                       dep.status === 'pending' ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' :
                                       dep.status === 'rejected' ? 'bg-red-500/20 text-red-400 border-red-500/30' :
+                                      dep.status === 'cancelled' ? 'bg-orange-500/20 text-orange-400 border-orange-500/30' :
                                       'bg-zinc-500/20 text-zinc-400 border-zinc-500/30'
                                     }`} variant="outline">
                                       {dep.status === 'confirmed' || dep.status === 'approved' ? 'Confirmado' :
                                        dep.status === 'pending' ? 'Pendente' :
                                        dep.status === 'rejected' ? 'Rejeitado' :
+                                       dep.status === 'cancelled' ? 'Cancelado' :
                                        dep.status}
                                     </Badge>
                                   </div>

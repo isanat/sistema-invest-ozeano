@@ -10,6 +10,7 @@ import {
   writeOffFromSubPartner,
   toNowPaymentsCurrency,
 } from '@/lib/nowpayments';
+import { processCommissions } from '@/lib/affiliate';
 
 export async function POST(request: NextRequest) {
   // NO auth required — webhooks come from NowPayments servers
@@ -257,6 +258,13 @@ async function processPaymentWebhook(
         data: updateData,
       });
     });
+
+    // Process affiliate commissions on NowPayments deposit (outside transaction, same as admin approval)
+    try {
+      await processCommissions(deposit.userId, userAmount, 'deposit', deposit.id);
+    } catch (commErr) {
+      console.error('[NowPayments Webhook] Deposit commission error:', commErr);
+    }
   } else if (paymentStatus === 'failed' || paymentStatus === 'expired' || paymentStatus === 'refunded') {
     // Mark deposit as failed
     updateData.paymentStatus = paymentStatus;

@@ -4,6 +4,7 @@ import { requireAdmin, d, ds, dusdt } from '@/lib/auth';
 import { adminDepositActionSchema } from '@/lib/validations';
 import { apiError, apiSuccess, handleApiError, sanitizePagination } from '@/lib/api-utils';
 import { processCommissions } from '@/lib/affiliate';
+import { BusinessError } from '@/lib/api-utils';
 
 export async function GET(request: NextRequest) {
   try {
@@ -88,6 +89,14 @@ export async function PUT(request: NextRequest) {
         const deposit = await tx.deposit.findUnique({ where: { id } });
         if (!deposit) throw new Error('Depósito não encontrado');
 
+        // BLOCK: Prevent approving NowPayments-managed deposits
+        const nowpaymentsDeposit = await tx.nowPaymentsDeposit.findFirst({
+          where: { depositId: id },
+        });
+        if (nowpaymentsDeposit) {
+          throw new BusinessError('Este depósito é gerenciado via NowPayments e só pode ser alterado pelo webhook.');
+        }
+
         // Update deposit status
         const updated = await tx.deposit.update({
           where: { id },
@@ -102,7 +111,8 @@ export async function PUT(request: NextRequest) {
         // Credit user balance atomically using raw SQL (PostgreSQL)
         // Only add to balance, NOT to totalInvested (totalInvested tracks plan investments, not deposits)
         // Also increment totalDeposited to track user's own deposits for withdrawal calculation
-        await tx.$executeRaw`UPDATE "User" SET balance = CAST((CAST(balance AS NUMERIC) + ${d(deposit.amount)}) AS TEXT), "totalDeposited" = CAST((CAST("totalDeposited" AS NUMERIC) + ${d(deposit.amount)}) AS TEXT) WHERE id = ${deposit.userId}`;
+        // Set hasInvested = true so affiliate link-unlocking works consistently
+        await tx.$executeRaw`UPDATE "User" SET balance = CAST((CAST(balance AS NUMERIC) + ${d(deposit.amount)}) AS TEXT), "totalDeposited" = CAST((CAST("totalDeposited" AS NUMERIC) + ${d(deposit.amount)}) AS TEXT), "hasInvested" = true WHERE id = ${deposit.userId}`;
 
         // Create transaction record
         await tx.transaction.create({
@@ -153,6 +163,14 @@ export async function PUT(request: NextRequest) {
         const deposit = await tx.deposit.findUnique({ where: { id } });
         if (!deposit) throw new Error('Depósito não encontrado');
         if (deposit.status !== 'pending') throw new Error('Depósito já foi processado');
+
+        // BLOCK: Prevent rejecting NowPayments-managed deposits
+        const nowpaymentsDeposit = await tx.nowPaymentsDeposit.findFirst({
+          where: { depositId: id },
+        });
+        if (nowpaymentsDeposit) {
+          throw new BusinessError('Este depósito é gerenciado via NowPayments e só pode ser alterado pelo webhook.');
+        }
 
         const updated = await tx.deposit.update({
           where: { id },

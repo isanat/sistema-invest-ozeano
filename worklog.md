@@ -426,3 +426,36 @@ Stage Summary:
 - All `CAST(x AS REAL)` replaced with `CAST(x AS NUMERIC)` (works on both databases)
 - Boolean comparisons use `CAST("field" AS INTEGER) = 1` (works on both databases)
 - Lint passes with no new errors
+
+---
+Task ID: 9
+Agent: Main
+Task: Fix 4 deposit system bugs — NowPayments commission, admin double-credit, hasInvested, cancelled filter
+
+Work Log:
+- **Bug 1 (CRITICAL): NowPayments webhook does NOT process affiliate commissions**
+  - Added `import { processCommissions } from '@/lib/affiliate'` to webhook route
+  - Added `processCommissions(deposit.userId, userAmount, 'deposit', deposit.id)` call after successful payment transaction, same pattern as admin approval
+  - Wrapped in try/catch to prevent commission errors from blocking payment processing
+- **Bug 2 (CRITICAL): Admin can approve/reject NowPayments deposits (double-credit risk)**
+  - Added `BusinessError` import from `@/lib/api-utils`
+  - Added check in both approve and reject paths: queries `NowPaymentsDeposit` by `depositId`
+  - If found, throws `BusinessError('Este depósito é gerenciado via NowPayments e só pode ser alterado pelo webhook.')`
+  - This returns HTTP 400 with clear message, preventing double-credit
+- **Bug 3 (MEDIUM): Manual approval doesn't set hasInvested=true**
+  - Added `"hasInvested" = true` to the UPDATE User raw SQL in admin deposit approval
+  - Now consistent with NowPayments webhook which already sets hasInvested=true
+  - Ensures affiliate link-unlocking works the same for both deposit paths
+- **Bug 4 (LOW): Cancelled deposits have no filter in Faturas tab**
+  - Added `<SelectItem value="cancelled">Canceladas</SelectItem>` to deposit filter dropdown
+  - Added "cancelled" status styling: orange icon (bg-orange-500/10 text-orange-400) and orange badge
+  - Added "Cancelado" label in status badge display
+  - API already supports `?status=cancelled` parameter
+
+Stage Summary:
+- 4 bugs fixed across 3 files (webhook/route.ts, admin/deposits/route.ts, page.tsx)
+- NowPayments deposits now process affiliate commissions consistently
+- Admin blocked from approving/rejecting NowPayments-managed deposits (prevents double-credit)
+- hasInvested=true set on both manual and automatic deposit paths
+- Cancelled deposits now visible and filterable in Faturas tab
+- Lint passes clean
