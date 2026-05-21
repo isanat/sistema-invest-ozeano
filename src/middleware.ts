@@ -29,6 +29,7 @@ const PUBLIC_API_ROUTES = [
   '/api/site/config', // Public site configuration (deposit methods, etc.)
   '/api/nowpayments/currencies', // Public: available currencies for deposit/withdrawal
   '/api/bitget/', // Public: Bitget trader ranking/search data (no auth needed)
+  '/api/debug-db', // TEMP: Debug database connection (remove after fixing)
 ];
 
 // Rate limiting: simple in-memory store (per-instance, resets on redeploy)
