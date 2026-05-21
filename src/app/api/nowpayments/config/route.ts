@@ -35,17 +35,24 @@ export async function GET() {
 
       try {
         const merchantResult = await getMerchantCoins() as any;
+        let rawCoins: any[] = [];
         if (Array.isArray(merchantResult)) {
-          merchantCoins = merchantResult.map((item: any) => {
-            if (typeof item === 'string') return item.toLowerCase();
-            return (item.currency || item.coin || item.code || '').toLowerCase();
-          }).filter(Boolean);
+          rawCoins = merchantResult;
+        } else if (merchantResult?.selectedCurrencies && Array.isArray(merchantResult.selectedCurrencies)) {
+          rawCoins = merchantResult.selectedCurrencies;
         } else if (merchantResult?.currencies && Array.isArray(merchantResult.currencies)) {
-          merchantCoins = merchantResult.currencies.map((c: any) => {
-            if (typeof c === 'string') return c.toLowerCase();
-            return (c.currency || c.coin || c.code || '').toLowerCase();
-          }).filter(Boolean);
+          rawCoins = merchantResult.currencies;
+        } else if (merchantResult?.coins && Array.isArray(merchantResult.coins)) {
+          rawCoins = merchantResult.coins;
+        } else if (merchantResult?.result && Array.isArray(merchantResult.result)) {
+          rawCoins = merchantResult.result;
+        } else if (merchantResult?.data && Array.isArray(merchantResult.data)) {
+          rawCoins = merchantResult.data;
         }
+        merchantCoins = rawCoins.map((item: any) => {
+          if (typeof item === 'string') return item.toLowerCase();
+          return (item.currency || item.coin || item.code || item.symbol || '').toLowerCase();
+        }).filter(Boolean);
       } catch (err) {
         console.error('[NowPayments Config] Failed to fetch merchant coins:', err);
       }

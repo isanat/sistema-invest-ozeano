@@ -418,7 +418,7 @@ export async function getFullCurrencies(): Promise<unknown> {
 }
 
 export async function getMerchantCoins(): Promise<unknown> {
-  return apiRequest('/merchant/coins');
+  return apiRequest('/merchant/coins', { requireJwt: true });
 }
 
 // ============================================================================
@@ -675,6 +675,7 @@ export async function testConnection(): Promise<{
   authWorks: boolean;
   apiKeyWorks: boolean;
   subPartnerWorks: boolean;
+  merchantCoinsWorks: boolean;
   error?: string;
 }> {
   const result = {
@@ -682,6 +683,7 @@ export async function testConnection(): Promise<{
     authWorks: false,
     apiKeyWorks: false,
     subPartnerWorks: false,
+    merchantCoinsWorks: false,
     error: undefined as string | undefined,
   };
 
@@ -707,6 +709,23 @@ export async function testConnection(): Promise<{
       result.error = 'API key lacks required permissions. Please generate a full API key from NowPayments dashboard.';
     } else {
       result.error = msg;
+    }
+  }
+
+  // Test merchant coins endpoint (this is what the deposit modal uses)
+  try {
+    const coinsResult = await getMerchantCoins() as any;
+    if (Array.isArray(coinsResult) || coinsResult?.currencies || coinsResult?.coins || coinsResult?.selectedCurrencies) {
+      result.merchantCoinsWorks = true;
+    } else {
+      result.merchantCoinsWorks = true; // Got a response, even if format is unexpected
+    }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Merchant coins failed';
+    console.warn('[NowPayments] Merchant coins test failed:', msg);
+    // Don't overwrite existing error from sub-partner test
+    if (!result.error) {
+      result.error = `Merchant coins: ${msg}`;
     }
   }
 

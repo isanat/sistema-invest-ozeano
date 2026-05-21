@@ -19,12 +19,15 @@ export async function GET() {
     const pixEnabled = configMap.has_pix === 'true';
 
     if (!isNpEnabled) {
+      console.log('[/api/nowpayments/currencies] NowPayments not enabled in DB (nowpayments_enabled != "true")');
       return NextResponse.json({
-        success: true,
+        success: false,
         currencies: [],
         deposit: [],
         withdrawal: [],
         pixEnabled: false,
+        reason: 'nowpayments_not_enabled',
+        message: 'NowPayments não está habilitado. Ative nas configurações do admin.',
       });
     }
 
@@ -32,13 +35,15 @@ export async function GET() {
     const configured = isNowPaymentsConfigured();
 
     if (!configured) {
+      console.log('[/api/nowpayments/currencies] NowPayments credentials NOT configured in env vars');
       return NextResponse.json({
-        success: true,
+        success: false,
         currencies: [],
         deposit: [],
         withdrawal: [],
         pixEnabled,
-        message: 'NowPayments credentials not configured in environment variables',
+        reason: 'credentials_missing',
+        message: 'Credenciais NowPayments não configuradas nas variáveis de ambiente.',
       });
     }
 
@@ -51,32 +56,65 @@ export async function GET() {
     let merchantCoins: string[] = [];
     try {
       const merchantResult = await getMerchantCoins() as any;
+
+      // Handle multiple possible response formats from NowPayments API
+      let rawCoins: any[] = [];
+
       if (Array.isArray(merchantResult)) {
-        merchantCoins = merchantResult.map((item: any) => {
-          if (typeof item === 'string') return item.toLowerCase();
-          return (item.currency || item.coin || item.code || '').toLowerCase();
-        }).filter(Boolean);
+        // Direct array format: ["btc", "eth", ...]
+        rawCoins = merchantResult;
+      } else if (merchantResult?.selectedCurrencies && Array.isArray(merchantResult.selectedCurrencies)) {
+        // { selectedCurrencies: [...] } format
+        rawCoins = merchantResult.selectedCurrencies;
       } else if (merchantResult?.currencies && Array.isArray(merchantResult.currencies)) {
-        merchantCoins = merchantResult.currencies.map((c: any) => {
-          if (typeof c === 'string') return c.toLowerCase();
-          return (c.currency || c.coin || c.code || '').toLowerCase();
-        }).filter(Boolean);
+        // { currencies: [...] } format
+        rawCoins = merchantResult.currencies;
       } else if (merchantResult?.coins && Array.isArray(merchantResult.coins)) {
-        merchantCoins = merchantResult.coins.map((c: any) => {
-          if (typeof c === 'string') return c.toLowerCase();
-          return (c.currency || c.coin || c.code || '').toLowerCase();
-        }).filter(Boolean);
+        // { coins: [...] } format
+        rawCoins = merchantResult.coins;
+      } else if (merchantResult?.result && Array.isArray(merchantResult.result)) {
+        // { result: [...] } format
+        rawCoins = merchantResult.result;
+      } else if (merchantResult?.availableCoins && Array.isArray(merchantResult.availableCoins)) {
+        // { availableCoins: [...] } format
+        rawCoins = merchantResult.availableCoins;
+      } else if (merchantResult?.data && Array.isArray(merchantResult.data)) {
+        // { data: [...] } format
+        rawCoins = merchantResult.data;
       }
+
+      merchantCoins = rawCoins.map((item: any) => {
+        if (typeof item === 'string') return item.toLowerCase();
+        return (item.currency || item.coin || item.code || item.symbol || '').toLowerCase();
+      }).filter(Boolean);
+
+      console.log(`[/api/nowpayments/currencies] Fetched ${merchantCoins.length} merchant coins from NowPayments`);
     } catch (err) {
-      console.error('[/api/nowpayments/currencies] Failed to fetch merchant coins:', err);
+      const errMsg = err instanceof Error ? err.message : 'Unknown error';
+      console.error('[/api/nowpayments/currencies] Failed to fetch merchant coins:', errMsg);
       // NO FALLBACK — return empty if merchant coins cannot be fetched
       return NextResponse.json({
-        success: true,
+        success: false,
         currencies: [],
         deposit: [],
         withdrawal: [],
         pixEnabled,
-        error: 'Failed to fetch merchant coins from NowPayments',
+        reason: 'api_error',
+        message: `Erro ao buscar moedas do NowPayments: ${errMsg}`,
+      });
+    }
+
+    // If no coins found, the merchant hasn't configured any currencies in their dashboard
+    if (merchantCoins.length === 0) {
+      console.log('[/api/nowpayments/currencies] No merchant coins found - merchant needs to configure currencies in NowPayments dashboard');
+      return NextResponse.json({
+        success: false,
+        currencies: [],
+        deposit: [],
+        withdrawal: [],
+        pixEnabled,
+        reason: 'no_coins_configured',
+        message: 'Nenhuma moeda configurada no painel NowPayments. Configure as moedas desejadas no dashboard da NowPayments.',
       });
     }
 
@@ -120,11 +158,13 @@ export async function GET() {
   } catch (error: any) {
     console.error('[/api/nowpayments/currencies] Error:', error?.message || error);
     return NextResponse.json({
-      success: true,
+      success: false,
       currencies: [],
       deposit: [],
       withdrawal: [],
       pixEnabled: false,
+      reason: 'server_error',
+      message: 'Erro interno ao buscar moedas.',
     });
   }
 }

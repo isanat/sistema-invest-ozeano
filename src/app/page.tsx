@@ -799,15 +799,16 @@ export default function PlataformaROI() {
       const res = await fetch('/api/nowpayments/currencies');
       if (res.ok) {
         const data = await res.json();
-        if (data.success) {
+        if (data.success && data.deposit?.length > 0) {
           // Currencies come dynamically from NowPayments GET /merchant/coins API
-          if (data.deposit?.length > 0) {
-            setAvailableDepositCurrencies(data.deposit);
-          }
+          setAvailableDepositCurrencies(data.deposit);
           if (data.withdrawal?.length > 0) setAvailableWithdrawCurrencies(data.withdrawal);
           if (data.pixEnabled !== undefined) setPixEnabled(data.pixEnabled);
           // Store labels from API for dynamic display
           if (data.labels) setCurrencyLabels(data.labels);
+        } else if (!data.success) {
+          // Log the reason for debugging
+          console.warn('[Deposit] Currencies not available:', data.reason, data.message);
         }
       }
     } catch {
@@ -6535,6 +6536,8 @@ export default function PlataformaROI() {
                                 {npConnectionTest.authWorks && <p className="text-xs mt-1">✓ Auth OK</p>}
                                 {npConnectionTest.apiKeyWorks && <p className="text-xs">✓ API Key OK</p>}
                                 {npConnectionTest.subPartnerWorks && <p className="text-xs">✓ Sub-Partner OK</p>}
+                                {npConnectionTest.merchantCoinsWorks && <p className="text-xs">✓ Merchant Coins OK</p>}
+                                {npConnectionTest.connected && !npConnectionTest.merchantCoinsWorks && <p className="text-xs text-amber-400">⚠ Merchant Coins falhou — verifique moedas no painel NowPayments</p>}
                               </div>
                             )}
                           </CardContent>
