@@ -6,7 +6,7 @@ import { isNowPaymentsConfigured } from '@/lib/nowpayments';
 // Public site configuration — no auth required
 // Returns deposit/withdrawal method toggles, min amounts, site name, etc.
 // All boolean values use STRICT === 'true' check: defaults to FALSE if key missing
-// NowPayments booleans also require actual API credentials to be set
+// NowPayments booleans also require actual API credentials to be set (env vars)
 export async function GET() {
   try {
     const configKeys = [
@@ -14,7 +14,6 @@ export async function GET() {
       'has_usdt',
       'manual_deposit_enabled',
       'nowpayments_enabled',
-      'nowpayments_deposit_currencies',
       'manual_withdrawal_enabled',
       'nowpayments_withdrawal_enabled',
       'min_deposit_usdt',
@@ -36,31 +35,17 @@ export async function GET() {
 
     const configMap = Object.fromEntries(configs.map((c) => [c.key, c.value]));
 
-    // Check if NowPayments is actually configured (has API key)
+    // Check if NowPayments is actually configured (has API key in env vars)
     // If admin enabled it but didn't add credentials, it won't work
-    let npActuallyConfigured = false;
-    if (configMap.nowpayments_enabled === 'true') {
-      try {
-        npActuallyConfigured = await isNowPaymentsConfigured();
-      } catch {
-        npActuallyConfigured = false;
-      }
-    }
-
-    // Parse admin-selected deposit currencies (comma-separated)
-    const adminCurrencies = (configMap.nowpayments_deposit_currencies || '')
-      .split(',')
-      .map((c: string) => c.trim().toLowerCase())
-      .filter(Boolean);
+    const npActuallyConfigured = isNowPaymentsConfigured();
 
     return apiSuccess({
       // Deposit settings
       hasPix: configMap.has_pix === 'true',
       hasUsdt: configMap.has_usdt === 'true',
       manualDepositEnabled: configMap.manual_deposit_enabled === 'true',
-      // NowPayments only counts as enabled if admin toggled ON AND credentials are configured
+      // NowPayments only counts as enabled if admin toggled ON AND credentials are in env vars
       nowpaymentsEnabled: configMap.nowpayments_enabled === 'true' && npActuallyConfigured,
-      nowpaymentsDepositCurrencies: adminCurrencies,
       minDepositUsdt: Number(configMap.min_deposit_usdt) || 10,
       maxDepositUsdt: Number(configMap.max_deposit_usdt) || 100000,
       // Withdrawal settings

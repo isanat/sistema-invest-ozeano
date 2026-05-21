@@ -1,15 +1,14 @@
 // ============================================================================
 // NOWPAYMENTS API SERVICE
-// Supports both environment variables and SystemConfig (database) credentials
-// Environment variables take priority, database config is fallback
+// Credentials come ONLY from environment variables (Vercel env vars)
+// Admin panel can only test connection and toggle settings
 // ============================================================================
 
 import crypto from 'crypto';
 import { authenticator } from 'otplib';
-import { db } from '@/lib/db';
 
 // ============================================================================
-// DYNAMIC CONFIGURATION - reads from env vars + database with caching
+// CONFIGURATION - reads from env vars ONLY (no database fallback)
 // ============================================================================
 
 interface NowPaymentsConfig {
@@ -25,13 +24,13 @@ let configCache: NowPaymentsConfig | null = null;
 let configCacheExpiry: number = 0;
 const CONFIG_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
-async function getConfig(): Promise<NowPaymentsConfig> {
+function getConfig(): NowPaymentsConfig {
   // Return cached config if still valid
   if (configCache && Date.now() < configCacheExpiry) {
     return configCache;
   }
 
-  // Start with env vars
+  // Read from environment variables ONLY
   const envConfig: NowPaymentsConfig = {
     baseUrl: process.env.NOWPAYMENTS_BASE_URL || 'https://api.nowpayments.io/v1',
     apiKey: process.env.NOWPAYMENTS_API_KEY || '',
@@ -41,47 +40,9 @@ async function getConfig(): Promise<NowPaymentsConfig> {
     twoFaSecret: process.env.NOWPAYMENTS_2FA_SECRET || '',
   };
 
-  // If all critical env vars are set, use them directly
-  if (envConfig.apiKey && envConfig.email && envConfig.password) {
-    configCache = envConfig;
-    configCacheExpiry = Date.now() + CONFIG_CACHE_TTL;
-    return envConfig;
-  }
-
-  // Otherwise, try to supplement from database (SystemConfig)
-  try {
-    const dbKeys = [
-      'nowpayments_api_key',
-      'nowpayments_email',
-      'nowpayments_password',
-      'nowpayments_ipn_secret',
-      'nowpayments_2fa_secret',
-      'nowpayments_base_url',
-    ];
-    const configs = await db.systemConfig.findMany({
-      where: { key: { in: dbKeys }, isActive: true },
-    });
-    const configMap = Object.fromEntries(configs.map((c) => [c.key, c.value]));
-
-    const merged: NowPaymentsConfig = {
-      baseUrl: envConfig.baseUrl || configMap.nowpayments_base_url || 'https://api.nowpayments.io/v1',
-      apiKey: envConfig.apiKey || configMap.nowpayments_api_key || '',
-      ipnSecret: envConfig.ipnSecret || configMap.nowpayments_ipn_secret || '',
-      email: envConfig.email || configMap.nowpayments_email || '',
-      password: envConfig.password || configMap.nowpayments_password || '',
-      twoFaSecret: envConfig.twoFaSecret || configMap.nowpayments_2fa_secret || '',
-    };
-
-    configCache = merged;
-    configCacheExpiry = Date.now() + CONFIG_CACHE_TTL;
-    return merged;
-  } catch (err) {
-    // If database query fails, just use env vars
-    console.warn('[NowPayments] Failed to load config from database, using env vars only:', err);
-    configCache = envConfig;
-    configCacheExpiry = Date.now() + CONFIG_CACHE_TTL;
-    return envConfig;
-  }
+  configCache = envConfig;
+  configCacheExpiry = Date.now() + CONFIG_CACHE_TTL;
+  return envConfig;
 }
 
 export function clearConfigCache(): void {
@@ -103,7 +64,7 @@ export async function getJwtToken(): Promise<string> {
     return jwtToken;
   }
 
-  const config = await getConfig();
+  const config = getConfig();
 
   // Authenticate with email/password
   const res = await fetch(`${config.baseUrl}/auth`, {
@@ -141,7 +102,7 @@ async function apiRequest(
   } = {}
 ): Promise<unknown> {
   const { method = 'GET', body, requireJwt = false } = options;
-  const config = await getConfig();
+  const config = getConfig();
 
   const headers: Record<string, string> = {
     'x-api-key': config.apiKey,
@@ -378,7 +339,7 @@ export async function createPayout(withdrawals: PayoutWithdrawal[], description?
   const body: Record<string, unknown> = { withdrawals };
   if (description) body.payout_description = description;
 
-  const config = await getConfig();
+  const config = getConfig();
 
   const result = await apiRequest('/payout', {
     method: 'POST',
@@ -475,7 +436,7 @@ function sortObject(obj: Record<string, unknown>): Record<string, unknown> {
 }
 
 export async function verifyWebhookSignature(body: Record<string, unknown>, signature: string): Promise<boolean> {
-  const config = await getConfig();
+  const config = getConfig();
 
   if (!config.ipnSecret) {
     if (process.env.NODE_ENV === 'production') {
@@ -610,12 +571,12 @@ export function validate2FACode(code: string, secret?: string): boolean {
 // CONFIGURATION CHECK
 // ============================================================================
 
-export async function isNowPaymentsConfigured(): Promise<boolean> {
-  const config = await getConfig();
+export function isNowPaymentsConfigured(): boolean {
+  const config = getConfig();
   return !!(config.apiKey && config.email && config.password);
 }
 
-export async function getNowPaymentsConfig(): Promise<{
+export function getNowPaymentsConfig(): {
   configured: boolean;
   hasApiKey: boolean;
   hasEmail: boolean;
@@ -623,8 +584,8 @@ export async function getNowPaymentsConfig(): Promise<{
   hasIpnSecret: boolean;
   has2FA: boolean;
   baseUrl: string;
-}> {
-  const config = await getConfig();
+} {
+  const config = getConfig();
   return {
     configured: !!(config.apiKey && config.email && config.password),
     hasApiKey: !!config.apiKey,

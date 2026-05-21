@@ -1,23 +1,26 @@
 import { NextRequest } from 'next/server';
 import { db } from '@/lib/db';
-import { requireAdmin, d, ds } from '@/lib/auth';
+import { requireAdmin, d } from '@/lib/auth';
 import { apiError, apiSuccess, handleApiError } from '@/lib/api-utils';
 import {
   isNowPaymentsConfigured,
   getNowPaymentsConfig,
   getAvailableCurrencies,
+  getMerchantCoins,
   getBalance,
   clearConfigCache,
   testConnection,
 } from '@/lib/nowpayments';
 
 // GET - Return NowPayments configuration status
+// Credentials are read from env vars only — never from database
 export async function GET() {
   try {
     await requireAdmin();
 
-    const config = await getNowPaymentsConfig();
+    const config = getNowPaymentsConfig();
     let currencies: string[] = [];
+    let merchantCoins: string[] = [];
     let balance: Record<string, number> = {};
     let connectionTest: Awaited<ReturnType<typeof testConnection>> | null = null;
 
@@ -31,20 +34,37 @@ export async function GET() {
       }
 
       try {
+        const merchantResult = await getMerchantCoins() as any;
+        if (Array.isArray(merchantResult)) {
+          merchantCoins = merchantResult.map((item: any) => {
+            if (typeof item === 'string') return item.toLowerCase();
+            return (item.currency || item.coin || item.code || '').toLowerCase();
+          }).filter(Boolean);
+        } else if (merchantResult?.currencies && Array.isArray(merchantResult.currencies)) {
+          merchantCoins = merchantResult.currencies.map((c: any) => {
+            if (typeof c === 'string') return c.toLowerCase();
+            return (c.currency || c.coin || c.code || '').toLowerCase();
+          }).filter(Boolean);
+        }
+      } catch (err) {
+        console.error('[NowPayments Config] Failed to fetch merchant coins:', err);
+      }
+
+      try {
         balance = await getBalance();
       } catch (err) {
         console.error('[NowPayments Config] Failed to fetch balance:', err);
       }
     }
 
-    // Get internal NowPayments config from SystemConfig
-    const configKeys = [
+    // Get internal NowPayments settings from SystemConfig
+    const settingKeys = [
       'nowpayments_enabled',
       'nowpayments_split_pct',
       'nowpayments_split_wallet',
     ];
     const configs = await db.systemConfig.findMany({
-      where: { key: { in: configKeys } },
+      where: { key: { in: settingKeys } },
     });
     const configMap = Object.fromEntries(configs.map((c) => [c.key, c.value]));
 
@@ -62,6 +82,7 @@ export async function GET() {
         splitWallet: configMap.nowpayments_split_wallet || '',
       },
       currencies,
+      merchantCoins,
       balance,
       connectionTest,
     });
@@ -70,49 +91,33 @@ export async function GET() {
   }
 }
 
-// POST - Update NowPayments configuration (credentials + settings)
+// POST - Update NowPayments settings ONLY (enabled, split_pct, split_wallet)
+// Credentials (API key, email, password, etc.) must be set via Vercel environment variables
 export async function POST(request: NextRequest) {
   try {
     const session = await requireAdmin();
     const body = await request.json();
 
-    // Allow updating both credentials and settings
-    const credentialKeys = [
-      'nowpayments_api_key',
-      'nowpayments_email',
-      'nowpayments_password',
-      'nowpayments_ipn_secret',
-      'nowpayments_2fa_secret',
-      'nowpayments_base_url',
-    ];
-
+    // Only allow updating settings — NOT credentials
     const settingKeys = [
       'nowpayments_enabled',
       'nowpayments_split_pct',
       'nowpayments_split_wallet',
     ];
 
-    const allAllowedKeys = [...credentialKeys, ...settingKeys];
-
     const updates: Record<string, string> = {};
-    for (const key of allAllowedKeys) {
+    for (const key of settingKeys) {
       if (body[key] !== undefined) {
         updates[key] = String(body[key]);
       }
     }
 
     if (Object.keys(updates).length === 0) {
-      return apiError('Nenhuma configuração válida fornecida');
+      return apiError('Nenhuma configuração válida fornecida. Credenciais NowPayments devem ser configuradas nas variáveis de ambiente do Vercel.');
     }
 
-    // Determine category and type for each key
+    // Key metadata for upsert
     const keyMeta: Record<string, { type: string; description: string; category: string }> = {
-      nowpayments_api_key: { type: 'string', description: 'NowPayments API Key', category: 'nowpayments' },
-      nowpayments_email: { type: 'string', description: 'NowPayments account email', category: 'nowpayments' },
-      nowpayments_password: { type: 'string', description: 'NowPayments account password', category: 'nowpayments' },
-      nowpayments_ipn_secret: { type: 'string', description: 'NowPayments IPN secret for webhook verification', category: 'nowpayments' },
-      nowpayments_2fa_secret: { type: 'string', description: 'NowPayments 2FA TOTP secret for payout verification', category: 'nowpayments' },
-      nowpayments_base_url: { type: 'string', description: 'NowPayments API base URL', category: 'nowpayments' },
       nowpayments_enabled: { type: 'boolean', description: 'Enable/disable NowPayments integration', category: 'nowpayments' },
       nowpayments_split_pct: { type: 'number', description: 'Percentage of deposits to split to platform wallet', category: 'nowpayments' },
       nowpayments_split_wallet: { type: 'string', description: 'Platform wallet address for deposit splits', category: 'nowpayments' },
@@ -144,26 +149,32 @@ export async function POST(request: NextRequest) {
         adminId: session.userId,
         action: 'update',
         entity: 'config',
-        description: `Updated NowPayments config: ${Object.keys(updates).join(', ')}`,
+        description: `Updated NowPayments settings: ${Object.keys(updates).join(', ')}`,
         newValue: JSON.stringify(Object.keys(updates)), // Don't log sensitive values
       },
     });
 
-    // If credentials were updated, test the connection
-    let connectionTest: Awaited<ReturnType<typeof testConnection>> | null = null;
-    const hasCredentialUpdate = Object.keys(updates).some(k => credentialKeys.includes(k));
-    if (hasCredentialUpdate) {
-      try {
-        connectionTest = await testConnection();
-      } catch {
-        // Connection test failed, but config was saved
-      }
-    }
-
     return apiSuccess({
       updated: Object.keys(updates),
-      connectionTest,
       message: 'Configurações NowPayments atualizadas',
+    });
+  } catch (error) {
+    return handleApiError(error);
+  }
+}
+
+// PUT - Test NowPayments API connection
+export async function PUT() {
+  try {
+    await requireAdmin();
+
+    const connectionTest = await testConnection();
+
+    return apiSuccess({
+      connectionTest,
+      message: connectionTest.connected
+        ? 'Conexão com NowPayments bem-sucedida!'
+        : `Falha na conexão: ${connectionTest.error || 'Credenciais não configuradas nas variáveis de ambiente'}`,
     });
   } catch (error) {
     return handleApiError(error);

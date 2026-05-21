@@ -383,22 +383,12 @@ const CONFIG_LABELS: Record<string, {
   affiliate_daily_cap_usd: { label: 'Cap Diário Afiliado', description: 'Cap diário de comissões em USDT (0 = sem limite)', type: 'number', unit: 'USDT' },
   // NowPayments
   nowpayments_enabled: { label: 'NowPayments Habilitado', description: 'Ativar integração com NowPayments para depósitos automáticos', type: 'boolean' },
-  nowpayments_deposit_currencies: { label: 'Moedas para Depósito', description: 'Moedas aceitas separadas por vírgula (ex: usdttrc20,usdtmatic,btc)' },
-  nowpayments_api_key: { label: 'Chave de API', description: 'Chave de API do painel NowPayments', type: 'secret' },
-  nowpayments_email: { label: 'E-mail da Conta', description: 'E-mail da conta NowPayments' },
-  nowpayments_password: { label: 'Senha da Conta', description: 'Senha da conta NowPayments', type: 'secret' },
-  nowpayments_ipn_secret: { label: 'Segredo IPN (Webhook)', description: 'Chave secreta para verificação de webhooks', type: 'secret' },
-  nowpayments_2fa_secret: { label: 'Segredo 2FA (TOTP)', description: 'Chave TOTP para verificação automática de payouts', type: 'secret' },
-  nowpayments_base_url: { label: 'URL da API', description: 'URL base da API NowPayments (não alterar)' },
   nowpayments_split_pct: { label: 'Split da Plataforma (%)', description: 'Percentual do depósito direcionado para carteira da plataforma (0 = desativado)', type: 'number', unit: '%' },
   nowpayments_split_wallet: { label: 'Carteira de Split', description: 'Endereço da carteira para recebimento do split' },
 };
 
 // Keys hidden from the generic config list (managed via dedicated UI sections)
-const HIDDEN_CONFIG_KEYS = new Set([
-  'nowpayments_split_pct',
-  'nowpayments_split_wallet',
-  'nowpayments_2fa_secret',
+const HIDDEN_CONFIG_KEYS = new Set<string>([
 ]);
 
 const categoryIcon = (cat: string) => {
@@ -547,14 +537,14 @@ export default function PlataformaROI() {
   // All booleans default to FALSE — only enable what admin explicitly sets to 'true'
   const [siteConfig, setSiteConfig] = useState<{
     hasPix: boolean; hasUsdt: boolean;
-    manualDepositEnabled: boolean; nowpaymentsEnabled: boolean; nowpaymentsDepositCurrencies: string[];
+    manualDepositEnabled: boolean; nowpaymentsEnabled: boolean;
     manualWithdrawalEnabled: boolean; nowpaymentsWithdrawalEnabled: boolean;
     minDepositUsdt: number; maxDepositUsdt: number;
     minWithdrawalUsdt: number; maxWithdrawalUsdt: number; withdrawalFeePct: number;
     siteName: string;
   }>({
     hasPix: false, hasUsdt: false,
-    manualDepositEnabled: false, nowpaymentsEnabled: false, nowpaymentsDepositCurrencies: [],
+    manualDepositEnabled: false, nowpaymentsEnabled: false,
     manualWithdrawalEnabled: false, nowpaymentsWithdrawalEnabled: false,
     minDepositUsdt: 10, maxDepositUsdt: 100000,
     minWithdrawalUsdt: 10, maxWithdrawalUsdt: 50000, withdrawalFeePct: 0,
@@ -616,6 +606,7 @@ export default function PlataformaROI() {
   const [selectedPlanId, setSelectedPlanId] = useState<string | undefined>(undefined);
   const [investLoading, setInvestLoading] = useState(false);
   const [simulatorAmount, setSimulatorAmount] = useState<string>('100');
+  const [investAmount, setInvestAmount] = useState<string>('');
   const [useVoucherForInvest, setUseVoucherForInvest] = useState(false);
   const [selectedVoucherId, setSelectedVoucherId] = useState<string>('');
   const [depositDialog, setDepositDialog] = useState(false);
@@ -707,6 +698,8 @@ export default function PlataformaROI() {
   const [adminNpStats, setAdminNpStats] = useState<any>(null);
   const [adminNpLoading, setAdminNpLoading] = useState(false);
   const [adminNpSection, setAdminNpSection] = useState<string>('deposits');
+  const [npConnectionTest, setNpConnectionTest] = useState<any>(null);
+  const [npTestingConnection, setNpTestingConnection] = useState(false);
 
   // Hydration guard: set mounted after first client render
   useEffect(() => {
@@ -757,14 +750,12 @@ export default function PlataformaROI() {
       .then(r => r.json())
       .then(data => {
         if (data.success) {
-          const adminCurrencies: string[] = data.nowpaymentsDepositCurrencies || [];
           setSiteConfig(prev => ({
             ...prev,
             hasPix: data.hasPix ?? false,
             hasUsdt: data.hasUsdt ?? false,
             manualDepositEnabled: data.manualDepositEnabled ?? false,
             nowpaymentsEnabled: data.nowpaymentsEnabled ?? false,
-            nowpaymentsDepositCurrencies: adminCurrencies,
             manualWithdrawalEnabled: data.manualWithdrawalEnabled ?? false,
             nowpaymentsWithdrawalEnabled: data.nowpaymentsWithdrawalEnabled ?? false,
             minDepositUsdt: data.minDepositUsdt ?? 10,
@@ -774,10 +765,6 @@ export default function PlataformaROI() {
             withdrawalFeePct: data.withdrawalFeePct ?? 0,
             siteName: data.siteName ?? 'PLATAFORMA ROI',
           }));
-          // If admin has configured specific currencies, use those exclusively (no API fallback)
-          if (adminCurrencies.length > 0) {
-            setAvailableDepositCurrencies(adminCurrencies);
-          }
         }
       })
       .catch(() => {});
@@ -789,11 +776,8 @@ export default function PlataformaROI() {
       if (res.ok) {
         const data = await res.json();
         if (data.success) {
-          // Admin-configured currencies take priority — never override with API results
-          if (siteConfig.nowpaymentsDepositCurrencies.length > 0) {
-            // Already set from site config, keep those (no API fallback)
-          } else if (data.deposit?.length > 0) {
-            // No admin config — use what NowPayments API returns
+          // Currencies come dynamically from NowPayments merchant/coins API
+          if (data.deposit?.length > 0) {
             setAvailableDepositCurrencies(data.deposit);
           }
           if (data.withdrawal?.length > 0) setAvailableWithdrawCurrencies(data.withdrawal);
@@ -989,6 +973,20 @@ export default function PlataformaROI() {
       console.error('Admin NP data error:', e);
     } finally {
       setAdminNpLoading(false);
+    }
+  };
+
+  const testNpConnection = async () => {
+    setNpTestingConnection(true);
+    try {
+      const data = await api<{ success: boolean; connectionTest: any; message: string }>('/api/nowpayments/config', { method: 'PUT' });
+      setNpConnectionTest(data.connectionTest);
+      toast.success(data.message || 'Conexão testada');
+    } catch (err: any) {
+      toast.error(err.message || 'Erro ao testar conexão');
+      setNpConnectionTest({ connected: false, error: err.message });
+    } finally {
+      setNpTestingConnection(false);
     }
   };
 
@@ -1331,11 +1329,12 @@ export default function PlataformaROI() {
           voucherId: useVoucherForInvest ? selectedVoucherId : undefined,
         }),
       });
-      toast.success(useVoucherForInvest ? 'Locação criada com saldo de voucher!' : t('toast.rentSuccess'));
+      toast.success(useVoucherForInvest ? t('toast.voucherInvestSuccess') : t('toast.rentSuccess'));
       setInvestDialogPlan(null);
       setSelectedPlanId(undefined);
       setUseVoucherForInvest(false);
       setSelectedVoucherId('');
+      setInvestAmount('');
       fetchDashboardData();
       checkAuth();
       // Refresh voucher data if on affiliates tab
@@ -2070,13 +2069,22 @@ export default function PlataformaROI() {
     return () => clearInterval(liveInterval);
   }, [mounted, user?.id, activeInvestments.length, accumulatedEarnings]);
 
-  // Rental calculation
+  // Rental/investment calculation
   const rentalCalc = useMemo(() => {
     if (!investDialogPlan) return { totalPrice: 0, dailyReturn: 0, totalReturn: 0 };
     const selectedPlan = selectedPlanId ? investDialogPlan.plans?.find((p: any) => p.id === selectedPlanId) : null;
-    if (selectedPlan) {
-      return { totalPrice: d(selectedPlan?.totalPrice), dailyReturn: d(selectedPlan?.dailyReturn), totalReturn: d(selectedPlan?.totalReturn) };
+    
+    // InvestmentPlan mode: user enters amount, plan has dailyRoiPct + durationDays
+    if (selectedPlan && selectedPlan.dailyRoiPct !== undefined) {
+      const amount = parseFloat(investAmount) || 0;
+      const dailyRoiPct = d(selectedPlan.dailyRoiPct);
+      const durationDays = selectedPlan.durationDays || selectedPlan.days || 35;
+      const dailyReturn = amount * (dailyRoiPct / 100);
+      const totalReturn = dailyReturn * durationDays;
+      return { totalPrice: amount, dailyReturn, totalReturn };
     }
+    
+    // CopyTrader rental mode (legacy): pricePerDay * days
     const pricePerDay = d((investDialogPlan as any).pricePerDay);
     const dailyRevenue = d((investDialogPlan as any).dailyRevenue);
     const profitShare = d((investDialogPlan as any).profitSharePct);
@@ -2085,7 +2093,7 @@ export default function PlataformaROI() {
       dailyReturn: dailyRevenue * (profitShare / 100),
       totalReturn: dailyRevenue * (profitShare / 100) * investmentDuration,
     };
-  }, [investDialogPlan, investmentDuration, selectedPlanId]);
+  }, [investDialogPlan, investmentDuration, selectedPlanId, investAmount]);
 
   // ============================================================================
   // LOADING SKELETON
@@ -4036,6 +4044,7 @@ export default function PlataformaROI() {
                                           } as CopyTrader);
                                           setSelectedPlanId(plan.id);
                                           setInvestmentDuration(plan.durationDays);
+                                          setInvestAmount(String(d(plan.minAmount) || 10));
                                         }}
                                       >
                                         <Zap className="mr-2 h-4 w-4" /> Investir Agora
@@ -6251,11 +6260,64 @@ export default function PlataformaROI() {
                     {adminTab === 'nowpayments' && (
                       <div className="space-y-6">
                         <div className="flex items-center justify-between">
-                          <h3 className="text-lg font-bold">NowPayments</h3>
+                          <h3 className="text-lg font-bold">{t('nowpayments.title')}</h3>
                           <Button variant="ghost" size="sm" onClick={fetchAdminNpData} disabled={adminNpLoading}>
                             <RefreshCw className={`h-4 w-4 ${adminNpLoading ? 'animate-spin' : ''}`} />
                           </Button>
                         </div>
+
+                        {/* Connection Status & Test */}
+                        <Card className="bg-zinc-900 border-zinc-800">
+                          <CardHeader className="pb-3">
+                            <CardTitle className="text-sm">{t('nowpayments.credentialsEnv')}</CardTitle>
+                          </CardHeader>
+                          <CardContent className="space-y-3">
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                              <div className="flex items-center gap-1.5">
+                                <div className={`w-2 h-2 rounded-full ${process.env.NODE_ENV === 'development' ? 'bg-amber-400' : 'bg-zinc-600'}`} />
+                                <span className="text-zinc-400">API Key</span>
+                              </div>
+                              <div className="flex items-center gap-1.5">
+                                <div className={`w-2 h-2 rounded-full bg-zinc-600`} />
+                                <span className="text-zinc-400">E-mail</span>
+                              </div>
+                              <div className="flex items-center gap-1.5">
+                                <div className={`w-2 h-2 rounded-full bg-zinc-600`} />
+                                <span className="text-zinc-400">Senha</span>
+                              </div>
+                              <div className="flex items-center gap-1.5">
+                                <div className={`w-2 h-2 rounded-full bg-zinc-600`} />
+                                <span className="text-zinc-400">IPN Secret</span>
+                              </div>
+                            </div>
+                            <p className="text-zinc-500 text-xs">
+                              {t('nowpayments.notConfigured')}
+                            </p>
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                className="bg-emerald-600 hover:bg-cyan-700"
+                                onClick={testNpConnection}
+                                disabled={npTestingConnection}
+                              >
+                                {npTestingConnection && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                {t('nowpayments.testConnection')}
+                              </Button>
+                            </div>
+                            {npConnectionTest && (
+                              <div className={`p-3 rounded-lg text-sm ${npConnectionTest.connected ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400' : 'bg-red-500/10 border border-red-500/20 text-red-400'}`}>
+                                <div className="flex items-center gap-2 font-medium">
+                                  {npConnectionTest.connected ? <CheckCircle2 className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
+                                  {npConnectionTest.connected ? t('nowpayments.connectionOk') : t('nowpayments.connectionFailed')}
+                                </div>
+                                {npConnectionTest.error && <p className="text-xs mt-1 opacity-80">{npConnectionTest.error}</p>}
+                                {npConnectionTest.authWorks && <p className="text-xs mt-1">✓ Auth OK</p>}
+                                {npConnectionTest.apiKeyWorks && <p className="text-xs">✓ API Key OK</p>}
+                                {npConnectionTest.subPartnerWorks && <p className="text-xs">✓ Sub-Partner OK</p>}
+                              </div>
+                            )}
+                          </CardContent>
+                        </Card>
 
                         {/* Stats Cards */}
                         {adminNpStats && (
@@ -7645,36 +7707,56 @@ Seus 10 indicados diretos investem $100/dia cada:
       {/* ====== DIALOGS ====== */}
 
       {/* Invest in Plan Dialog */}
-      <Dialog open={!!investDialogPlan} onOpenChange={() => setInvestDialogPlan(null)}>
+      <Dialog open={!!investDialogPlan} onOpenChange={() => { setInvestDialogPlan(null); setInvestAmount(''); setUseVoucherForInvest(false); setSelectedVoucherId(''); }}>
         <DialogContent className="bg-zinc-900 border-zinc-800 text-white max-w-md w-[95vw] sm:w-full">
           <DialogHeader>
             <DialogTitle>{t('copyTraders.invest')} — {investDialogPlan?.name}</DialogTitle>
-            <DialogDescription className="text-zinc-400">{investDialogPlan?.specialty || 'Plano de Investimento'} • 5% ROI/dia</DialogDescription>
+            <DialogDescription className="text-zinc-400">
+              {investDialogPlan?.specialty || t('copyTraders.copyTrader')} • {investDialogPlan?.plans?.[0]?.dailyRoiPct || 5}% {t('landing.badges.dailyRoi')}/{t('copyTraders.days').replace('dias','dia').replace('días','día')}
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            {/* Plan selection */}
-            {investDialogPlan && (investDialogPlan.plans || []).length > 0 && (
+            {/* Plan selection (if multiple plans) */}
+            {investDialogPlan && (investDialogPlan.plans || []).length > 1 && (
               <div>
                 <Label className="text-zinc-300 text-sm">{t('copyTraders.selectPlan')}</Label>
-                <Select value={selectedPlanId || 'custom'} onValueChange={v => { if (v === 'custom') { setSelectedPlanId(undefined); } else { setSelectedPlanId(v); const p = (investDialogPlan.plans || []).find(pp => pp.id === v); if (p) setInvestmentDuration(p.days); } }}>
-                  <SelectTrigger className="bg-zinc-800 border-zinc-700 mt-1"><SelectValue placeholder={t('copyTraders.customPlan')} /></SelectTrigger>
+                <Select value={selectedPlanId || ''} onValueChange={v => { setSelectedPlanId(v); const p = (investDialogPlan.plans || []).find(pp => pp.id === v); if (p) { setInvestmentDuration(p.days || p.durationDays); setInvestAmount(String(d(p.minAmount) || 10)); } }}>
+                  <SelectTrigger className="bg-zinc-800 border-zinc-700 mt-1"><SelectValue placeholder={t('copyTraders.selectPlan')} /></SelectTrigger>
                   <SelectContent className="bg-zinc-800">
-                    <SelectItem value="custom">{t('copyTraders.customPlan')}</SelectItem>
                     {(investDialogPlan.plans || []).map(p => (
-                      <SelectItem key={p.id} value={p.id}>{p.name} - {p.durationDays || (p as any).days || '?'} {t('copyTraders.days')} ({(p as any).discountPct || 0}% {t('copyTraders.off')})</SelectItem>
+                      <SelectItem key={p.id} value={p.id}>{p.name} - {p.durationDays || p.days || '?'} {t('copyTraders.days')}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
             )}
-            {/* Days */}
-            {!selectedPlanId && (
-              <div>
-                <Label className="text-zinc-300 text-sm">{t('copyTraders.period')}</Label>
-                <Input type="number" min={(investDialogPlan as any)?.minRentalDays || 7} max={(investDialogPlan as any)?.maxRentalDays || 365} value={investmentDuration} onChange={e => setInvestmentDuration(parseInt(e.target.value) || 7)} className="bg-zinc-800 border-zinc-700 mt-1" />
-                <div className="text-xs text-zinc-500 mt-1">{t('copyTraders.minMax', { min: String((investDialogPlan as any)?.minRentalDays || 7), max: String((investDialogPlan as any)?.maxRentalDays || 365) })}</div>
-              </div>
-            )}
+
+            {/* Investment Amount Input */}
+            {(() => {
+              const plan = selectedPlanId ? investDialogPlan?.plans?.find((p: any) => p.id === selectedPlanId) : investDialogPlan?.plans?.[0];
+              const minAmt = d(plan?.minAmount) || 10;
+              const maxAmt = d(plan?.maxAmount) || 100000;
+              const durationDays = plan?.durationDays || plan?.days || 35;
+              return (
+                <div>
+                  <Label className="text-zinc-300 text-sm">{t('copyTraders.totalInvestment')} (USDT)</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min={minAmt}
+                    max={maxAmt}
+                    value={investAmount}
+                    onChange={e => setInvestAmount(e.target.value)}
+                    className="bg-zinc-800 border-zinc-700 mt-1"
+                    placeholder={`${minAmt} - ${maxAmt}`}
+                  />
+                  <div className="text-xs text-zinc-500 mt-1">
+                    {t('copyTraders.minMax', { min: String(minAmt), max: String(maxAmt) })} • {durationDays} {t('copyTraders.days')}
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* Summary */}
             <div className="bg-zinc-800 rounded-lg p-4 space-y-2 text-sm">
               <div className="flex justify-between"><span className="text-zinc-400">{t('copyTraders.totalInvestment')}</span><span className="font-medium">${fmtUSDT(rentalCalc.totalPrice)} USDT</span></div>
@@ -7683,22 +7765,24 @@ Seus 10 indicados diretos investem $100/dia cada:
               <Separator className="bg-zinc-700" />
               <div className="flex justify-between"><span className="text-zinc-400">{t('copyTraders.yourBalance')}</span><span className={d(user.balance) >= rentalCalc.totalPrice ? 'text-cyan-400' : 'text-red-400'}>${fmtUSDT(user.balance)} USDT</span></div>
             </div>
-            {d(user.balance) < rentalCalc.totalPrice && !useVoucherForInvest && (
+
+            {/* Insufficient balance warning */}
+            {d(user.balance) < rentalCalc.totalPrice && !useVoucherForInvest && rentalCalc.totalPrice > 0 && (
               <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 space-y-3">
                 <div className="flex items-center gap-2 text-red-400 text-sm font-medium">
-                  <AlertTriangle className="h-4 w-4" /> Saldo insuficiente
+                  <AlertTriangle className="h-4 w-4" /> {t('dashboard.insufficientBalance')}
                 </div>
-                <p className="text-zinc-400 text-xs">Você precisa de pelo menos <span className="text-white font-medium">{fmtUSDT(rentalCalc.totalPrice)} USDT</span> para investir neste plano. Deposite agora e comece a ganhar!</p>
+                <p className="text-zinc-400 text-xs">{t('copyTraders.needDeposit', { amount: fmtUSDT(rentalCalc.totalPrice) })}</p>
                 <Button
                   className="w-full bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-white font-semibold rounded-xl shadow-lg shadow-emerald-500/20"
                   onClick={() => { setInvestDialogPlan(null); setDepositDialog(true); }}
                 >
-                  <Wallet className="mr-2 h-4 w-4" /> Depositar Agora
+                  <Wallet className="mr-2 h-4 w-4" /> {t('dashboard.deposit')}
                 </Button>
               </div>
             )}
 
-            {/* Payment Method Selection */}
+            {/* Payment Method Selection - Voucher */}
             {userVouchers.filter(v => v.status === 'active').length > 0 && (
               <div className="space-y-2 p-3 rounded-lg bg-purple-500/10 border border-purple-500/20">
                 <div className="flex items-center gap-2">
@@ -7710,14 +7794,14 @@ Seus 10 indicados diretos investem $100/dia cada:
                     className="rounded accent-purple-500"
                   />
                   <Label htmlFor="useVoucher" className="text-purple-400 text-sm font-medium cursor-pointer">
-                    🎫 Usar saldo de voucher
+                    🎫 {t('copyTraders.useVoucherBalance')}
                   </Label>
                 </div>
                 {useVoucherForInvest && (
                   <div className="space-y-2 pl-6">
                     <Select value={selectedVoucherId} onValueChange={setSelectedVoucherId}>
                       <SelectTrigger className="bg-zinc-800 border-zinc-700 mt-1">
-                        <SelectValue placeholder="Selecione o voucher..." />
+                        <SelectValue placeholder={t('copyTraders.selectVoucher')} />
                       </SelectTrigger>
                       <SelectContent>
                         {userVouchers
@@ -7726,14 +7810,14 @@ Seus 10 indicados diretos investem $100/dia cada:
                             const avail = d(v.amount) - d(v.usedAmount);
                             return (
                               <SelectItem key={v.id} value={v.id} disabled={avail < rentalCalc.totalPrice}>
-                                {v.type === 'basic' ? t('copyTraders.planBasic') : v.type === 'premium' ? t('copyTraders.planPremium') : t('copyTraders.planCustom')} — {fmtUSDT(avail)} USDT disponível
+                                {v.type === 'basic' ? t('copyTraders.planBasic') : v.type === 'premium' ? t('copyTraders.planPremium') : t('copyTraders.planCustom')} — {fmtUSDT(avail)} USDT
                               </SelectItem>
                             );
                           })}
                       </SelectContent>
                     </Select>
                     <div className="text-xs text-zinc-500">
-                      Saldo de voucher só pode ser usado para investir em planos de copy trading. Não pode ser sacado.
+                      {t('copyTraders.voucherOnlyInvest')}
                     </div>
                   </div>
                 )}
@@ -7743,17 +7827,17 @@ Seus 10 indicados diretos investem $100/dia cada:
             {/* Total & Pay Button */}
             <div className="space-y-2 bg-zinc-800/50 p-3 rounded-lg">
               <div className="flex justify-between text-sm">
-                <span className="text-zinc-400">Total:</span>
+                <span className="text-zinc-400">{t('plans.totalPrice')}:</span>
                 <span className="font-medium">{fmtUSDT(rentalCalc.totalPrice)} USDT</span>
               </div>
               {useVoucherForInvest ? (
                 <div className="flex justify-between text-sm">
-                  <span className="text-purple-400">Pagamento via:</span>
-                  <span className="text-purple-400 font-medium">Saldo de Voucher 🎫</span>
+                  <span className="text-purple-400">{t('copyTraders.paymentVia')}:</span>
+                  <span className="text-purple-400 font-medium">{t('copyTraders.voucherBalance')} 🎫</span>
                 </div>
               ) : (
                 <div className="flex justify-between text-sm">
-                  <span className="text-zinc-400">Seu saldo:</span>
+                  <span className="text-zinc-400">{t('copyTraders.yourBalance')}:</span>
                   <span className={d(user?.balance || '0') >= rentalCalc.totalPrice ? 'text-cyan-400' : 'text-red-400'}>{fmtUSDT(user?.balance || '0')} USDT</span>
                 </div>
               )}
@@ -7762,14 +7846,14 @@ Seus 10 indicados diretos investem $100/dia cada:
             <Button 
               className="bg-emerald-600 hover:bg-cyan-700 w-full" 
               onClick={handleRent} 
-              disabled={investLoading || (
+              disabled={investLoading || rentalCalc.totalPrice <= 0 || (
                 useVoucherForInvest 
                   ? (!selectedVoucherId || d(userVouchers.find(v => v.id === selectedVoucherId)?.amount || '0') - d(userVouchers.find(v => v.id === selectedVoucherId)?.usedAmount || '0') < rentalCalc.totalPrice)
                   : d(user?.balance || '0') < rentalCalc.totalPrice
               )}
             >
               {investLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {useVoucherForInvest ? 'Investir com Voucher 🎫' : t('copyTraders.confirmInvest')}
+              {useVoucherForInvest ? t('copyTraders.investWithVoucher') : t('copyTraders.confirmInvest')}
             </Button>
           </div>
         </DialogContent>
@@ -7782,12 +7866,12 @@ Seus 10 indicados diretos investem $100/dia cada:
             <DialogTitle>{t('dashboard.deposit')}</DialogTitle>
             <DialogDescription className="text-zinc-400">
               {siteConfig.nowpaymentsEnabled && siteConfig.manualDepositEnabled
-                ? 'Deposite USDT via NowPayments ou manualmente'
+                ? t('deposit.nowpaymentsOrManual')
                 : siteConfig.nowpaymentsEnabled
-                  ? 'Deposite USDT via NowPayments'
+                  ? t('deposit.nowpaymentsTitle')
                   : siteConfig.manualDepositEnabled
-                    ? 'Deposite USDT manualmente'
-                    : 'Depósitos temporariamente indisponíveis'}
+                    ? t('deposit.manualOnly')
+                    : t('deposit.unavailable')}
             </DialogDescription>
           </DialogHeader>
 
@@ -7796,10 +7880,10 @@ Seus 10 indicados diretos investem $100/dia cada:
               {/* NowPayments Auto Deposit — ONLY if enabled in admin settings */}
               {siteConfig.nowpaymentsEnabled && (
                 <>
-                  <div><Label className="text-zinc-300">Valor (USDT)</Label><Input type="number" step="0.01" min={siteConfig.minDepositUsdt} value={npDepositAmount} onChange={e => setNpDepositAmount(e.target.value)} className="bg-zinc-800 border-zinc-700 mt-1" placeholder={String(siteConfig.minDepositUsdt)} />
-                    <p className="text-zinc-500 text-xs mt-1">Mínimo: {siteConfig.minDepositUsdt} USDT</p>
+                  <div><Label className="text-zinc-300">{t('deposit.amount')}</Label><Input type="number" step="0.01" min={siteConfig.minDepositUsdt} value={npDepositAmount} onChange={e => setNpDepositAmount(e.target.value)} className="bg-zinc-800 border-zinc-700 mt-1" placeholder={String(siteConfig.minDepositUsdt)} />
+                    <p className="text-zinc-500 text-xs mt-1">{t('deposit.minAmount', { amount: siteConfig.minDepositUsdt })}</p>
                   </div>
-                  <div><Label className="text-zinc-300">Moeda de Pagamento</Label>
+                  <div><Label className="text-zinc-300">{t('deposit.payCurrency')}</Label>
                     <Select value={npDepositCurrency} onValueChange={setNpDepositCurrency}>
                       <SelectTrigger className="bg-zinc-800 border-zinc-700 mt-1"><SelectValue /></SelectTrigger>
                       <SelectContent className="bg-zinc-800">
@@ -7808,19 +7892,19 @@ Seus 10 indicados diretos investem $100/dia cada:
                             <SelectItem key={c} value={c}>{currencyLabel(c)}</SelectItem>
                           ))
                         ) : (
-                          <SelectItem value="usdttrc20" disabled>Configurando moedas...</SelectItem>
+                          <SelectItem value="usdttrc20" disabled>{t('deposit.configuringCurrencies')}</SelectItem>
                         )}
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="bg-zinc-800/50 rounded-lg p-3 text-sm">
-                    <p className="text-zinc-400">Clique em &quot;Gerar Endereço&quot; para obter uma carteira de depósito exclusiva via NowPayments.</p>
-                    <p className="text-zinc-500 text-xs mt-1">O saldo será creditado automaticamente após a confirmação na blockchain.</p>
+                    <p className="text-zinc-400">{t('deposit.clickGenerateAddress')}</p>
+                    <p className="text-zinc-500 text-xs mt-1">{t('deposit.autoCredit')}</p>
                   </div>
                   <DialogFooter>
                     <Button variant="outline" className="border-zinc-700" onClick={() => setDepositDialog(false)}>{t('common.cancel')}</Button>
                     <Button className="bg-emerald-600 hover:bg-cyan-700" onClick={handleNowPaymentsDeposit} disabled={npGeneratingAddress || !npDepositAmount || parseFloat(npDepositAmount) < siteConfig.minDepositUsdt || availableDepositCurrencies.length === 0}>
-                      {npGeneratingAddress && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Gerar Endereço
+                      {npGeneratingAddress && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} {t('deposit.generateAddress')}
                     </Button>
                   </DialogFooter>
                 </>
@@ -7987,12 +8071,12 @@ Seus 10 indicados diretos investem $100/dia cada:
             <DialogTitle>{t('dashboard.withdraw')}</DialogTitle>
             <DialogDescription className="text-zinc-400">
               {siteConfig.manualWithdrawalEnabled && siteConfig.nowpaymentsWithdrawalEnabled
-                ? 'Saque manual ou automático via NowPayments'
+                ? t('withdrawal.manualOrAuto')
                 : siteConfig.nowpaymentsWithdrawalEnabled
-                  ? 'Saque automático via NowPayments'
+                  ? t('withdrawal.autoWithdraw')
                   : siteConfig.manualWithdrawalEnabled
-                    ? 'Saque manual (admin aprova)'
-                    : 'Saques temporariamente indisponíveis'}
+                    ? t('withdrawal.manualOnly')
+                    : t('withdrawal.unavailable')}
             </DialogDescription>
           </DialogHeader>
 
@@ -8015,18 +8099,18 @@ Seus 10 indicados diretos investem $100/dia cada:
                           }`}>
                             {Math.max(...userVouchers.filter(v => v.status === 'active').map(v => d(v.withdrawalUnlockPct))) === 0 ? (
                               <>
-                                <div className="text-sm text-red-400 font-medium">⛔ Saques bloqueados</div>
-                                <div className="text-xs text-zinc-400 mt-1">Você tem vouchers ativos com metas pendentes. Cumpra as metas para desbloquear seus saques gradualmente.</div>
+                                <div className="text-sm text-red-400 font-medium">⛔ {t('withdrawal.blocked')}</div>
+                                <div className="text-xs text-zinc-400 mt-1">{t('withdrawal.blockedDesc')}</div>
                               </>
                             ) : Math.max(...userVouchers.filter(v => v.status === 'active').map(v => d(v.withdrawalUnlockPct))) < 100 ? (
                               <>
-                                <div className="text-sm text-amber-400 font-medium">⚠️ Saques parcialmente desbloqueados ({Math.max(...userVouchers.filter(v => v.status === 'active').map(v => d(v.withdrawalUnlockPct)))}%)</div>
-                                <div className="text-xs text-zinc-400 mt-1">Você pode sacar até {fmtUSDT(d(user?.balance || '0') * Math.max(...userVouchers.filter(v => v.status === 'active').map(v => d(v.withdrawalUnlockPct))) / 100)} USDT dos seus {fmtUSDT(user?.balance || '0')} USDT de saldo.</div>
+                                <div className="text-sm text-amber-400 font-medium">⚠️ {t('withdrawal.partiallyUnlocked', { pct: Math.max(...userVouchers.filter(v => v.status === 'active').map(v => d(v.withdrawalUnlockPct))) })}</div>
+                                <div className="text-xs text-zinc-400 mt-1">{t('copyTraders.needDeposit', { amount: fmtUSDT(d(user?.balance || '0') * Math.max(...userVouchers.filter(v => v.status === 'active').map(v => d(v.withdrawalUnlockPct))) / 100) })}</div>
                               </>
                             ) : (
                               <>
-                                <div className="text-sm text-cyan-400 font-medium">✅ Saques desbloqueados</div>
-                                <div className="text-xs text-zinc-400 mt-1">Todas as metas do voucher foram cumpridas. Você pode sacar normalmente.</div>
+                                <div className="text-sm text-cyan-400 font-medium">✅ {t('withdrawal.fullyUnlocked')}</div>
+                                <div className="text-xs text-zinc-400 mt-1">{t('withdrawal.fullyUnlockedDesc')}</div>
                               </>
                             )}
                           </div>

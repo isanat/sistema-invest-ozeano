@@ -1,24 +1,20 @@
 import { NextResponse } from 'next/server';
-import { getAvailableCurrencies, getMerchantCoins, isNowPaymentsConfigured, CURRENCY_MAP, fromNowPaymentsCurrency } from '@/lib/nowpayments';
 import { db } from '@/lib/db';
+import { getAvailableCurrencies, getMerchantCoins, isNowPaymentsConfigured, CURRENCY_MAP, fromNowPaymentsCurrency } from '@/lib/nowpayments';
 
 // GET /api/nowpayments/currencies — Public endpoint for user-facing currency selection
-// STRICT: Only returns currencies that admin has explicitly configured in nowpayments_deposit_currencies
-// Falls back to NowPayments API ONLY if admin has not configured specific currencies
+// Returns currencies that the merchant has ENABLED in their NowPayments dashboard
+// No hardcoded currencies, no admin manual list — fully dynamic from NowPayments API
 export async function GET() {
   try {
-    // Check if NowPayments is enabled — STRICT check (must be exactly "true")
+    // Check if NowPayments is enabled
     const configs = await db.systemConfig.findMany({
-      where: { key: { in: ['nowpayments_enabled', 'has_pix', 'nowpayments_deposit_currencies'] } },
+      where: { key: { in: ['nowpayments_enabled', 'has_pix'] } },
     });
     const configMap = Object.fromEntries(configs.map((c) => [c.key, c.value]));
 
     const isNpEnabled = configMap.nowpayments_enabled === 'true';
     const pixEnabled = configMap.has_pix === 'true';
-    const adminCurrencies = (configMap.nowpayments_deposit_currencies || '')
-      .split(',')
-      .map((c: string) => c.trim().toLowerCase())
-      .filter(Boolean);
 
     if (!isNpEnabled) {
       return NextResponse.json({
@@ -30,50 +26,25 @@ export async function GET() {
       });
     }
 
-    // =========================================================================
-    // PRIORITY 1: Admin-configured currencies (from nowpayments_deposit_currencies)
-    // If the admin has set specific currencies, use ONLY those — no API fallback
-    // =========================================================================
-    if (adminCurrencies.length > 0) {
-      // Map admin codes to deposit/withdrawal format
-      const depositCurrencies = adminCurrencies.map(c => fromNowPaymentsCurrency(c) || c);
-      const withdrawalCurrencies = depositCurrencies.map(c => {
-        if (c === 'usdttrc20') return 'usdt_trc20';
-        if (c === 'usdtmatic') return 'usdt_polygon';
-        if (c === 'usdtbsc') return 'usdt_bsc';
-        if (c === 'usdterc20') return 'usdt_erc20';
-        if (c === 'usdcmatic') return 'usdc_polygon';
-        return c;
-      });
-
-      return NextResponse.json({
-        success: true,
-        currencies: adminCurrencies,
-        deposit: depositCurrencies,
-        withdrawal: pixEnabled ? [...withdrawalCurrencies, 'pix'] : withdrawalCurrencies,
-        pixEnabled,
-      });
-    }
-
-    // =========================================================================
-    // PRIORITY 2: No admin config — try NowPayments API (merchant coins, then available)
-    // This is a fallback for when admin hasn't configured specific currencies
-    // =========================================================================
-    const configured = await isNowPaymentsConfigured();
+    // Check if NowPayments is actually configured (env vars)
+    const configured = isNowPaymentsConfigured();
 
     if (!configured) {
-      // NowPayments not configured - return empty (no fallback)
       return NextResponse.json({
         success: true,
         currencies: [],
         deposit: [],
         withdrawal: [],
         pixEnabled,
-        message: 'NowPayments not configured and no admin currencies set',
+        message: 'NowPayments credentials not configured in environment variables',
       });
     }
 
-    // Try to get MERCHANT-CONFIGURED coins
+    // =========================================================================
+    // Fetch currencies from NowPayments API — what the MERCHANT has enabled
+    // =========================================================================
+
+    // Priority 1: Get merchant-configured coins (these are what the wallet owner has enabled)
     let merchantCoins: string[] = [];
     try {
       const merchantResult = await getMerchantCoins() as any;
@@ -92,7 +63,7 @@ export async function GET() {
       console.warn('[/api/nowpayments/currencies] Failed to fetch merchant coins:', err);
     }
 
-    // Try available currencies as fallback
+    // Priority 2: Get available currencies as broader fallback
     let availableCurrencies: string[] = [];
     try {
       const result = await getAvailableCurrencies();
@@ -102,18 +73,22 @@ export async function GET() {
     }
 
     // Determine effective currencies from API
+    // Use merchant coins if available (these are what the wallet owner has explicitly enabled)
+    // Otherwise fall back to available currencies (what NowPayments supports generally)
     const supportedNpCurrencies = Object.values(CURRENCY_MAP).map(c => c.toLowerCase());
     let effectiveCurrencies: string[] = [];
 
     if (merchantCoins.length > 0) {
+      // Filter to only include currencies our platform knows how to handle
       effectiveCurrencies = merchantCoins.filter(c => supportedNpCurrencies.includes(c));
     }
 
     if (effectiveCurrencies.length === 0 && availableCurrencies.length > 0) {
+      // Fallback: filter available currencies to ones our platform supports
       effectiveCurrencies = availableCurrencies.filter(c => supportedNpCurrencies.includes(c));
     }
 
-    // NO GENERIC FALLBACK — if nothing from API, return empty
+    // NO HARDCODED FALLBACK — if nothing from API, return empty
 
     // Normalize back to CURRENCY_MAP casing
     const normalizedCurrencies = effectiveCurrencies.map(c => {
@@ -121,8 +96,10 @@ export async function GET() {
       return match ? match[1] : c;
     });
 
+    // Build deposit and withdrawal currency lists
     const depositCurrencies = normalizedCurrencies.map(c => fromNowPaymentsCurrency(c));
     const withdrawalCurrencies = depositCurrencies.map(c => {
+      // Normalize internal currency codes
       if (c === 'usdttrc20') return 'usdt_trc20';
       if (c === 'usdtmatic') return 'usdt_polygon';
       if (c === 'usdtbsc') return 'usdt_bsc';

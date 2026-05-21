@@ -28,7 +28,6 @@ export async function POST(request: NextRequest) {
       'min_deposit_usdt',
       'max_deposit_usdt',
       'nowpayments_enabled',
-      'nowpayments_deposit_currencies',
       'nowpayments_split_pct',
       'nowpayments_split_wallet',
     ];
@@ -45,14 +44,8 @@ export async function POST(request: NextRequest) {
       return apiError('Depósitos via NowPayments estão desabilitados', 403);
     }
 
-    // Check if the requested currency is allowed by admin settings
-    const adminCurrencies = (configMap.nowpayments_deposit_currencies || '')
-      .split(',')
-      .map((c: string) => c.trim().toLowerCase())
-      .filter(Boolean);
-    if (adminCurrencies.length > 0 && !adminCurrencies.includes(payCurrency.toLowerCase())) {
-      return apiError(`Moeda ${payCurrency} não está disponível para depósito`);
-    }
+    // Currency validation: check against NowPayments merchant-available currencies
+    // (no hardcoded/admin list - currencies come from the NowPayments API dynamically)
 
     if (amount < minDeposit) {
       return apiError(`Depósito mínimo: ${dusdt(minDeposit)} USDT`);
@@ -62,7 +55,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if NowPayments is configured
-    const npConfigured = await isNowPaymentsConfigured();
+    const npConfigured = isNowPaymentsConfigured();
 
     if (!npConfigured) {
       return apiError('NowPayments não está configurado. Entre em contato com o suporte.', 503);

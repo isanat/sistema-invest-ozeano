@@ -214,6 +214,13 @@ export const translations: Record<string, any> = {
       drawdown: 'Drawdown',
       followers: 'seguidores',
       bitgetUnavailable: 'Mostrando traders de la base de datos (datos de Bitget no disponibles temporalmente)',
+      needDeposit: 'Necesitas al menos {amount} USDT para invertir',
+      useVoucherBalance: 'Usar saldo de voucher',
+      selectVoucher: 'Selecciona el voucher',
+      voucherOnlyInvest: 'El saldo de voucher solo puede usarse para invertir en planes de copy trading. No puede ser retirado.',
+      paymentVia: 'Pago vía',
+      voucherBalance: 'Saldo de Voucher',
+      investWithVoucher: 'Invertir con Voucher 🎫',
     },
 
     // === PLANS TAB ===
@@ -391,6 +398,13 @@ export const translations: Record<string, any> = {
       autoCredit: 'El saldo será acreditado automáticamente tras la confirmación',
       useCorrectNetwork: 'Usa la red correcta para enviar',
       newAddress: 'Generar Nueva Dirección',
+      nowpaymentsOrManual: 'Deposita USDT vía NowPayments o manualmente',
+      manualOnly: 'Deposita USDT manualmente',
+      unavailable: 'Depósitos temporalmente no disponibles',
+      minAmount: 'Mínimo: {amount} USDT',
+      payCurrency: 'Moneda de Pago',
+      configuringCurrencies: 'Configurando monedas...',
+      clickGenerateAddress: 'Haz clic en "Generar Dirección" para obtener una cartera de depósito exclusiva vía NowPayments.',
     },
 
     // === WITHDRAW DIALOG ===
@@ -406,6 +420,14 @@ export const translations: Record<string, any> = {
       nowpaymentsTitle: 'Retiro vía NowPayments',
       autoWithdraw: 'Retiro automático vía NowPayments',
       toWallet: 'El retiro será enviado automáticamente a tu wallet',
+      manualOrAuto: 'Retiro manual o automático vía NowPayments',
+      manualOnly: 'Retiro manual (admin aprueba)',
+      unavailable: 'Retiros temporalmente no disponibles',
+      blocked: 'Retiros bloqueados',
+      blockedDesc: 'Tienes vouchers activos con metas pendientes. Cumple las metas para desbloquear tus retiros gradualmente.',
+      partiallyUnlocked: 'Retiros parcialmente desbloqueados ({pct}%)',
+      fullyUnlocked: 'Retiros desbloqueados',
+      fullyUnlockedDesc: 'Todas las metas del voucher se han cumplido. Puedes retirar normalmente.',
     },
 
     // === ADMIN ===
@@ -623,6 +645,7 @@ export const translations: Record<string, any> = {
       adminWithdrawRejectSuccess: '¡Retiro rechazado!',
       adminAffiliateLevelSuccess: '¡Niveles de afiliado actualizados!',
       copiedToClipboard: 'Copiado al portapapeles',
+      voucherInvestSuccess: '¡Inversión creada con saldo de voucher!',
     },
 
     // === COMMON ===
@@ -693,6 +716,19 @@ export const translations: Record<string, any> = {
       LTC: 'Litecoin',
       DOGE: 'Dogecoin',
       KDA: 'Kadena',
+    },
+
+    // === NOWPAYMENTS ===
+    nowpayments: {
+      title: 'Configuraciones NowPayments',
+      credentialsEnv: 'Credenciales configuradas via variables de entorno (Vercel)',
+      testConnection: 'Probar Conexión',
+      connectionOk: '¡Conexión exitosa!',
+      connectionFailed: 'Conexión fallida',
+      configured: 'Configurado',
+      notConfigured: 'No configurado - configure las variables de entorno en Vercel',
+      merchantCoins: 'Monedas Habilitadas en el Panel',
+      balance: 'Saldo NowPayments',
     },
   },
 
@@ -909,6 +945,13 @@ export const translations: Record<string, any> = {
       drawdown: 'Drawdown',
       followers: 'seguidores',
       bitgetUnavailable: 'Mostrando traders do banco de dados (dados da Bitget temporariamente indisponíveis)',
+      needDeposit: 'Você precisa de pelo menos {amount} USDT para investir',
+      useVoucherBalance: 'Usar saldo de voucher',
+      selectVoucher: 'Selecione o voucher',
+      voucherOnlyInvest: 'Saldo de voucher só pode ser usado para investir em planos de copy trading. Não pode ser sacado.',
+      paymentVia: 'Pagamento via',
+      voucherBalance: 'Saldo de Voucher',
+      investWithVoucher: 'Investir com Voucher 🎫',
     },
 
     plans: {
@@ -1080,6 +1123,13 @@ export const translations: Record<string, any> = {
       autoCredit: 'O saldo será creditado automaticamente após confirmação',
       useCorrectNetwork: 'Use a rede correta para enviar',
       newAddress: 'Gerar Novo Endereço',
+      nowpaymentsOrManual: 'Deposite USDT via NowPayments ou manualmente',
+      manualOnly: 'Deposite USDT manualmente',
+      unavailable: 'Depósitos temporariamente indisponíveis',
+      minAmount: 'Mínimo: {amount} USDT',
+      payCurrency: 'Moeda de Pagamento',
+      configuringCurrencies: 'Configurando moedas...',
+      clickGenerateAddress: 'Clique em "Gerar Endereço" para obter uma carteira de depósito exclusiva via NowPayments.',
     },
 
     withdrawal: {
@@ -1094,6 +1144,14 @@ export const translations: Record<string, any> = {
       nowpaymentsTitle: 'Saque via NowPayments',
       autoWithdraw: 'Saque automático via NowPayments',
       toWallet: 'O saque será enviado automaticamente para sua carteira',
+      manualOrAuto: 'Saque manual ou automático via NowPayments',
+      manualOnly: 'Saque manual (admin aprova)',
+      unavailable: 'Saques temporariamente indisponíveis',
+      blocked: 'Saques bloqueados',
+      blockedDesc: 'Você tem vouchers ativos com metas pendentes. Cumpra as metas para desbloquear seus saques gradualmente.',
+      partiallyUnlocked: 'Saques parcialmente desbloqueados ({pct}%)',
+      fullyUnlocked: 'Saques desbloqueados',
+      fullyUnlockedDesc: 'Todas as metas do voucher foram cumpridas. Você pode sacar normalmente.',
     },
 
     admin: {
@@ -1275,6 +1333,7 @@ export const translations: Record<string, any> = {
       adminWithdrawRejectSuccess: 'Saque rejeitado!',
       adminAffiliateLevelSuccess: 'Níveis de afiliado atualizados!',
       copiedToClipboard: 'Copiado para a área de transferência',
+      voucherInvestSuccess: 'Investimento criado com saldo de voucher!',
     },
 
     common: {
@@ -1303,6 +1362,19 @@ export const translations: Record<string, any> = {
     },
 
     coin: { BTC: 'Bitcoin', KAS: 'Kaspa', LTC: 'Litecoin', DOGE: 'Dogecoin', KDA: 'Kadena' },
+
+    // === NOWPAYMENTS ===
+    nowpayments: {
+      title: 'Configurações NowPayments',
+      credentialsEnv: 'Credenciais configuradas via variáveis de ambiente (Vercel)',
+      testConnection: 'Testar Conexão',
+      connectionOk: 'Conexão bem-sucedida!',
+      connectionFailed: 'Falha na conexão',
+      configured: 'Configurado',
+      notConfigured: 'Não configurado - configure as variáveis de ambiente no Vercel',
+      merchantCoins: 'Moedas Habilitadas no Painel',
+      balance: 'Saldo NowPayments',
+    },
   },
 
   // ============================================================
@@ -1505,6 +1577,13 @@ export const translations: Record<string, any> = {
       planBasic: 'Basic',
       planPremium: 'Premium',
       planCustom: 'Custom',
+      needDeposit: 'You need at least {amount} USDT to invest',
+      useVoucherBalance: 'Use voucher balance',
+      selectVoucher: 'Select voucher',
+      voucherOnlyInvest: 'Voucher balance can only be used to invest in copy trading plans. Cannot be withdrawn.',
+      paymentVia: 'Payment via',
+      voucherBalance: 'Voucher Balance',
+      investWithVoucher: 'Invest with Voucher 🎫',
     },
 
     plans: {
@@ -1676,6 +1755,13 @@ export const translations: Record<string, any> = {
       autoCredit: 'Balance will be credited automatically after confirmation',
       useCorrectNetwork: 'Use the correct network to send',
       newAddress: 'Generate New Address',
+      nowpaymentsOrManual: 'Deposit USDT via NowPayments or manually',
+      manualOnly: 'Deposit USDT manually',
+      unavailable: 'Deposits temporarily unavailable',
+      minAmount: 'Minimum: {amount} USDT',
+      payCurrency: 'Payment Currency',
+      configuringCurrencies: 'Configuring currencies...',
+      clickGenerateAddress: 'Click "Generate Address" to get an exclusive deposit wallet via NowPayments.',
     },
 
     withdrawal: {
@@ -1690,6 +1776,14 @@ export const translations: Record<string, any> = {
       nowpaymentsTitle: 'Withdrawal via NowPayments',
       autoWithdraw: 'Automatic withdrawal via NowPayments',
       toWallet: 'The withdrawal will be sent automatically to your wallet',
+      manualOrAuto: 'Manual or automatic withdrawal via NowPayments',
+      manualOnly: 'Manual withdrawal (admin approves)',
+      unavailable: 'Withdrawals temporarily unavailable',
+      blocked: 'Withdrawals blocked',
+      blockedDesc: 'You have active vouchers with pending goals. Complete the goals to gradually unlock your withdrawals.',
+      partiallyUnlocked: 'Withdrawals partially unlocked ({pct}%)',
+      fullyUnlocked: 'Withdrawals unlocked',
+      fullyUnlockedDesc: 'All voucher goals have been met. You can withdraw normally.',
     },
 
     admin: {
@@ -1871,6 +1965,7 @@ export const translations: Record<string, any> = {
       adminWithdrawRejectSuccess: 'Withdrawal rejected!',
       adminAffiliateLevelSuccess: 'Affiliate levels updated!',
       copiedToClipboard: 'Copied to clipboard',
+      voucherInvestSuccess: 'Investment created with voucher balance!',
     },
 
     common: {
@@ -1899,6 +1994,19 @@ export const translations: Record<string, any> = {
     },
 
     coin: { BTC: 'Bitcoin', KAS: 'Kaspa', LTC: 'Litecoin', DOGE: 'Dogecoin', KDA: 'Kadena' },
+
+    // === NOWPAYMENTS ===
+    nowpayments: {
+      title: 'NowPayments Settings',
+      credentialsEnv: 'Credentials configured via environment variables (Vercel)',
+      testConnection: 'Test Connection',
+      connectionOk: 'Connection successful!',
+      connectionFailed: 'Connection failed',
+      configured: 'Configured',
+      notConfigured: 'Not configured - set environment variables in Vercel',
+      merchantCoins: 'Enabled Coins in Dashboard',
+      balance: 'NowPayments Balance',
+    },
   },
 
   // ============================================================
@@ -2101,6 +2209,13 @@ export const translations: Record<string, any> = {
       planBasic: '基础版',
       planPremium: '高级版',
       planCustom: '自定义版',
+      needDeposit: '您需要至少 {amount} USDT 才能投资',
+      useVoucherBalance: '使用代金券余额',
+      selectVoucher: '选择代金券',
+      voucherOnlyInvest: '代金券余额只能用于投资跟单交易计划。不可提现。',
+      paymentVia: '支付方式',
+      voucherBalance: '代金券余额',
+      investWithVoucher: '使用代金券投资 🎫',
     },
 
     plans: {
@@ -2272,6 +2387,13 @@ export const translations: Record<string, any> = {
       autoCredit: '确认后余额将自动到账',
       useCorrectNetwork: '使用正确的网络发送',
       newAddress: '生成新地址',
+      nowpaymentsOrManual: '通过 NowPayments 或手动存入 USDT',
+      manualOnly: '手动存入 USDT',
+      unavailable: '存款暂时不可用',
+      minAmount: '最低：{amount} USDT',
+      payCurrency: '支付币种',
+      configuringCurrencies: '正在配置币种...',
+      clickGenerateAddress: '点击"生成地址"获取 NowPayments 专属存款钱包。',
     },
 
     withdrawal: {
@@ -2286,6 +2408,14 @@ export const translations: Record<string, any> = {
       nowpaymentsTitle: '通过NowPayments提现',
       autoWithdraw: '通过NowPayments自动提现',
       toWallet: '提现将自动发送到您的钱包',
+      manualOrAuto: '通过 NowPayments 手动或自动提现',
+      manualOnly: '手动提现（管理员审批）',
+      unavailable: '提现暂时不可用',
+      blocked: '提现已锁定',
+      blockedDesc: '您有活跃的代金券有待完成的目标。完成目标以逐步解锁提现。',
+      partiallyUnlocked: '提现已部分解锁 ({pct}%)',
+      fullyUnlocked: '提现已解锁',
+      fullyUnlockedDesc: '所有代金券目标已完成。您可以正常提现。',
     },
 
     admin: {
@@ -2467,6 +2597,7 @@ export const translations: Record<string, any> = {
       adminWithdrawRejectSuccess: '提现已拒绝！',
       adminAffiliateLevelSuccess: '推荐级别已更新！',
       copiedToClipboard: '已复制到剪贴板',
+      voucherInvestSuccess: '已使用代金券余额创建投资！',
     },
 
     common: {
@@ -2495,5 +2626,18 @@ export const translations: Record<string, any> = {
     },
 
     coin: { BTC: '比特币', KAS: 'Kaspa', LTC: '莱特币', DOGE: '狗狗币', KDA: 'Kadena' },
+
+    // === NOWPAYMENTS ===
+    nowpayments: {
+      title: 'NowPayments 设置',
+      credentialsEnv: '通过环境变量配置凭据 (Vercel)',
+      testConnection: '测试连接',
+      connectionOk: '连接成功！',
+      connectionFailed: '连接失败',
+      configured: '已配置',
+      notConfigured: '未配置 - 在 Vercel 中设置环境变量',
+      merchantCoins: '面板中启用的币种',
+      balance: 'NowPayments 余额',
+    },
   },
 };

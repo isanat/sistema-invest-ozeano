@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
       return apiError('Forneça depositId, nowpaymentsPaymentId ou payoutId');
     }
 
-    const npConfigured = await isNowPaymentsConfigured();
+    const npConfigured = isNowPaymentsConfigured();
 
     // Also support lookup by NowPayments payment ID
     const nowpaymentsPaymentId = nowpaymentsPaymentIdParam;

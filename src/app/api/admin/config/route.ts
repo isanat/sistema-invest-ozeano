@@ -4,6 +4,17 @@ import { requireAdmin, d } from '@/lib/auth';
 import { adminConfigSchema } from '@/lib/validations';
 import { apiError, apiSuccess, handleApiError } from '@/lib/api-utils';
 
+// Keys that should NOT be saved via admin config (managed via Vercel env vars)
+const BLOCKED_CONFIG_KEYS = new Set([
+  'nowpayments_api_key',
+  'nowpayments_email',
+  'nowpayments_password',
+  'nowpayments_ipn_secret',
+  'nowpayments_2fa_secret',
+  'nowpayments_base_url',
+  'nowpayments_deposit_currencies',
+]);
+
 export async function GET(request: NextRequest) {
   try {
     const session = await requireAdmin();
@@ -23,6 +34,11 @@ export async function POST(request: NextRequest) {
     const session = await requireAdmin();
     const body = await request.json();
     const data = adminConfigSchema.parse(body);
+
+    // Block credential keys — must be configured via Vercel env vars
+    if (BLOCKED_CONFIG_KEYS.has(data.key)) {
+      return apiError('Esta configuração deve ser definida nas variáveis de ambiente do Vercel, não no painel admin.');
+    }
 
     // Upsert config
     const oldConfig = await db.systemConfig.findUnique({ where: { key: data.key } });
@@ -76,6 +92,9 @@ export async function PUT(request: NextRequest) {
 
     for (const item of body.configs) {
       const data = adminConfigSchema.parse(item);
+
+      // Block credential keys — must be configured via Vercel env vars
+      if (BLOCKED_CONFIG_KEYS.has(data.key)) continue;
 
       const oldConfig = await db.systemConfig.findUnique({ where: { key: data.key } });
 

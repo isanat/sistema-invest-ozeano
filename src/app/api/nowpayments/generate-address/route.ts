@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
       return apiError('NowPayments está desabilitado pelo administrador');
     }
 
-    if (!await isNowPaymentsConfigured()) {
+    if (!isNowPaymentsConfigured()) {
       return apiError('NowPayments não está configurado', 503);
     }
 
