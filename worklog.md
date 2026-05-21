@@ -145,3 +145,29 @@ Stage Summary:
 - Fallback to 4 hardcoded currencies (USDT TRC20, USDT Polygon, BTC, ETH) if API fails
 - Each currency option shows icon + displayName from API data
 - Minimum deposit amount hint is now currency-specific when data is available
+
+---
+Task ID: 5
+Agent: Main
+Task: Fix NowPayments deposit currencies not showing + Bitget API integration with new credentials
+
+Work Log:
+- Created /api/nowpayments/currencies route that fetches from /merchant/coins endpoint (only merchant-enabled coins)
+- Updated frontend deposit dialog to fetch currencies dynamically instead of hardcoded values
+- Added npCurrencies, npCurrenciesLoading state + fetchNpCurrencies function
+- Dynamic currency select with loading indicator and fallback
+- Created /src/lib/bitget-api.ts with HMAC-SHA256 V2 authentication
+- Created /api/bitget/traders route for admin to fetch and sync Bitget traders
+- Updated /api/nowpayments/config to use getMerchantCoins() instead of getAvailableCurrencies()
+- Added /api/nowpayments/debug endpoint for credential verification (admin-only)
+- Updated .env with new Bitget API credentials (API Key + Secret Key)
+- BITGET_PASSPHRASE still needs to be set in Coolify/Vercel env vars
+- Committed and pushed to main (06886c3)
+- Resolved merge conflicts during rebase with origin/main
+
+Stage Summary:
+- NowPayments deposit currencies now come dynamically from /merchant/coins
+- Bitget V2 API integration created (needs BITGET_PASSPHRASE to authenticate)
+- Debug endpoint available at /api/nowpayments/debug for credential auditing
+- New Bitget credentials: bg_00f173e70aaec3d358db3667f6811539
+- BITGET_PASSPHRASE must be added to Coolify/Vercel environment variables
