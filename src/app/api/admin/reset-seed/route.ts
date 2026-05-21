@@ -103,6 +103,9 @@ export async function POST(request: NextRequest) {
     await db.tradingPool.deleteMany();
     console.log('[RESET-SEED]   - TradingPool deleted');
 
+    await db.bitgetTraderCache.deleteMany();
+    console.log('[RESET-SEED]   - BitgetTraderCache deleted');
+
     await db.systemConfig.deleteMany();
     console.log('[RESET-SEED]   - SystemConfig deleted');
 

@@ -593,3 +593,33 @@ model TradingPool {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
+
+// ============================================================================
+// BITGET TRADER CACHE - Stores real Bitget data to serve when API is blocked
+// ============================================================================
+
+model BitgetTraderCache {
+  id          String   @id @default(cuid())
+  traderId    String   @unique // Bitget trader ID
+  displayName String
+  avatar      String   @default("")
+  roi         String   @default("0")
+  totalPnl    String   @default("0")
+  maxDrawdown String   @default("0")
+  followers   Int      @default(0)
+  aum         String   @default("0")
+  grade       String   @default("") // JSON: { id, name }
+  labels      String   @default("[]") // JSON array
+  topSymbols  String   @default("[]") // JSON array
+  klineProfit String   @default("")
+  ranking     String   @default("profit_rate") // Which ranking this trader belongs to
+  rank        Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([ranking])
+  @@index([rank])
+  @@index([isActive])
+  @@index([updatedAt])
+}
