@@ -396,8 +396,6 @@ const CONFIG_LABELS: Record<string, {
   affiliate_daily_cap_usd: { label: 'Cap Diário Afiliado', description: 'Cap diário de comissões em USDT (0 = sem limite)', type: 'number', unit: 'USDT' },
   // NowPayments
   nowpayments_enabled: { label: 'NowPayments Habilitado', description: 'Ativar integração com NowPayments para depósitos automáticos', type: 'boolean' },
-  nowpayments_split_pct: { label: 'Split da Plataforma (%)', description: 'Percentual do depósito direcionado para carteira da plataforma (0 = desativado)', type: 'number', unit: '%' },
-  nowpayments_split_wallet: { label: 'Carteira de Split', description: 'Endereço da carteira para recebimento do split' },
 };
 
 // Keys hidden from the generic config list (managed via dedicated UI sections)
@@ -721,6 +719,16 @@ export default function PlataformaROI() {
   const [adminNpSection, setAdminNpSection] = useState<string>('deposits');
   const [npConnectionTest, setNpConnectionTest] = useState<any>(null);
   const [npTestingConnection, setNpTestingConnection] = useState(false);
+
+  // Split recipients state
+  const [splitRecipients, setSplitRecipients] = useState<any[]>([]);
+  const [splitSummary, setSplitSummary] = useState<any>(null);
+  const [splitLogs, setSplitLogs] = useState<any[]>([]);
+  const [splitLoading, setSplitLoading] = useState(false);
+  const [splitEditRecipient, setSplitEditRecipient] = useState<any>(null);
+  const [splitEditDialog, setSplitEditDialog] = useState(false);
+  const [splitNewRecipient, setSplitNewRecipient] = useState({ name: '', role: 'partner', walletAddress: '', currency: 'usdttrc20', percentage: '', minPayout: '50', autoPayout: true });
+  const [splitPayoutLoading, setSplitPayoutLoading] = useState(false);
 
   // Hydration guard: set mounted after first client render
   useEffect(() => {
@@ -1073,6 +1081,28 @@ export default function PlataformaROI() {
       });
     }
   }, [activeTab, user]);
+
+  // Fetch split recipients
+  const fetchSplitData = async () => {
+    setSplitLoading(true);
+    try {
+      const data = await api<{ success: boolean; recipients: any[]; summary: any; recentLogs: any[] }>('/api/admin/split-recipients');
+      setSplitRecipients(data.recipients || []);
+      setSplitSummary(data.summary || null);
+      setSplitLogs(data.recentLogs || []);
+    } catch (e) {
+      console.error('Split data error:', e);
+    } finally {
+      setSplitLoading(false);
+    }
+  };
+
+  // Load split data when section is selected
+  useEffect(() => {
+    if (adminNpSection === 'split' && user?.role === 'admin' && !splitLoading && splitRecipients.length === 0) {
+      fetchSplitData();
+    }
+  }, [adminNpSection, user]);
 
   // Load deposits/payouts/statement when tabs are selected
   useEffect(() => {
@@ -4948,7 +4978,7 @@ export default function PlataformaROI() {
                                       </Badge>
                                       {dep.nowpayments.splitProcessed && (
                                         <Badge className="text-[10px] px-1.5 py-0 bg-purple-500/20 text-purple-400 border-purple-500/30" variant="outline">
-                                          Split {dep.nowpayments.splitPct}%
+                                          Split {dep.nowpayments.splitTotalPct}%
                                         </Badge>
                                       )}
                                     </div>
@@ -6699,12 +6729,13 @@ export default function PlataformaROI() {
 
                         {/* Section Tabs */}
                         <div className="flex gap-2 flex-wrap">
-                          {['deposits', 'payouts', 'wallets', 'webhooks'].map(section => (
+                          {['deposits', 'payouts', 'split', 'wallets', 'webhooks'].map(section => (
                             <Button key={section} variant={adminNpSection === section ? 'default' : 'outline'} size="sm"
                               className={adminNpSection === section ? 'bg-emerald-600 hover:bg-cyan-700' : 'border-zinc-700'}
                               onClick={() => setAdminNpSection(section)}>
                               {section === 'deposits' ? t('admin.deposits') :
                                section === 'payouts' ? t('admin.withdrawals') :
+                               section === 'split' ? 'Sócios & Split' :
                                section === 'wallets' ? t('admin.walletAddress') : 'Webhooks'}
                             </Button>
                           ))}
@@ -6753,7 +6784,7 @@ export default function PlataformaROI() {
                                           <TableCell className="text-xs font-mono max-w-[120px] truncate">{dep.payAddress || '-'}</TableCell>
                                           <TableCell className="text-xs">
                                             {dep.splitProcessed ? (
-                                              <span className="text-purple-400">{dep.splitPct}% (${fmtUSDT(dep.splitAmount)})</span>
+                                              <span className="text-purple-400">{dep.splitTotalPct}% (${fmtUSDT(dep.splitTotalAmount)})</span>
                                             ) : (
                                               <span className="text-zinc-500">-</span>
                                             )}
@@ -6819,6 +6850,246 @@ export default function PlataformaROI() {
                               )}
                             </CardContent>
                           </Card>
+                        )}
+
+                        {/* Split Section — Sócios & Split */}
+                        {adminNpSection === 'split' && (
+                          <div className="space-y-4">
+                            {/* Summary Cards */}
+                            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                              <Card className="bg-zinc-900 border-zinc-800">
+                                <CardContent className="p-4">
+                                  <p className="text-zinc-400 text-xs">Sócios Ativos</p>
+                                  <p className="text-white font-bold text-lg">{splitSummary?.activeCount || 0}</p>
+                                </CardContent>
+                              </Card>
+                              <Card className="bg-zinc-900 border-zinc-800">
+                                <CardContent className="p-4">
+                                  <p className="text-zinc-400 text-xs">% Total Alocado</p>
+                                  <p className={`font-bold text-lg ${(splitSummary?.totalPctAllocated || 0) > 100 ? 'text-red-400' : 'text-emerald-400'}`}>
+                                    {splitSummary?.totalPctAllocated?.toFixed(1) || 0}%
+                                    {(splitSummary?.totalPctAllocated || 0) > 100 && <span className="text-xs ml-1">⚠️</span>}
+                                  </p>
+                                </CardContent>
+                              </Card>
+                              <Card className="bg-zinc-900 border-zinc-800">
+                                <CardContent className="p-4">
+                                  <p className="text-zinc-400 text-xs">Total Acumulado</p>
+                                  <p className="text-amber-400 font-bold text-lg">${(splitSummary?.totalAccumulated || 0).toFixed(2)}</p>
+                                </CardContent>
+                              </Card>
+                              <Card className="bg-zinc-900 border-zinc-800">
+                                <CardContent className="p-4">
+                                  <p className="text-zinc-400 text-xs">Total Já Enviado</p>
+                                  <p className="text-purple-400 font-bold text-lg">${(splitSummary?.totalSent || 0).toFixed(2)}</p>
+                                </CardContent>
+                              </Card>
+                            </div>
+
+                            {/* Info Banner */}
+                            <div className="p-3 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-xs text-cyan-300">
+                              💡 O investidor SEMPRE recebe 100% do valor no saldo interno. O split sai da conta custódia do NowPayments, não do saldo do usuário.
+                            </div>
+
+                            {/* Add New Recipient */}
+                            <Card className="bg-zinc-900 border-zinc-800">
+                              <CardHeader className="pb-3">
+                                <div className="flex items-center justify-between">
+                                  <CardTitle className="text-base">Adicionar Sócio</CardTitle>
+                                  <Button size="sm" className="bg-emerald-600 hover:bg-cyan-700" onClick={async () => {
+                                    if (!splitNewRecipient.name || !splitNewRecipient.walletAddress || !splitNewRecipient.percentage) {
+                                      toast({ title: 'Preencha nome, carteira e percentual', variant: 'destructive' });
+                                      return;
+                                    }
+                                    try {
+                                      await api('/api/admin/split-recipients', {
+                                        method: 'POST',
+                                        body: JSON.stringify(splitNewRecipient),
+                                      });
+                                      setSplitNewRecipient({ name: '', role: 'partner', walletAddress: '', currency: 'usdttrc20', percentage: '', minPayout: '50', autoPayout: true });
+                                      fetchSplitData();
+                                      toast({ title: 'Sócio adicionado com sucesso!' });
+                                    } catch (e: any) {
+                                      toast({ title: e.message || 'Erro ao adicionar sócio', variant: 'destructive' });
+                                    }
+                                  }}>+ Adicionar</Button>
+                                </div>
+                              </CardHeader>
+                              <CardContent>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                                  <input className="bg-zinc-800 border border-zinc-700 rounded-md px-3 py-2 text-sm text-white placeholder-zinc-500" placeholder="Nome" value={splitNewRecipient.name} onChange={e => setSplitNewRecipient({ ...splitNewRecipient, name: e.target.value })} />
+                                  <input className="bg-zinc-800 border border-zinc-700 rounded-md px-3 py-2 text-sm text-white placeholder-zinc-500 font-mono" placeholder="Carteira (endereço)" value={splitNewRecipient.walletAddress} onChange={e => setSplitNewRecipient({ ...splitNewRecipient, walletAddress: e.target.value })} />
+                                  <input className="bg-zinc-800 border border-zinc-700 rounded-md px-3 py-2 text-sm text-white placeholder-zinc-500" placeholder="Percentual %" type="number" step="0.1" value={splitNewRecipient.percentage} onChange={e => setSplitNewRecipient({ ...splitNewRecipient, percentage: e.target.value })} />
+                                  <select className="bg-zinc-800 border border-zinc-700 rounded-md px-3 py-2 text-sm text-white" value={splitNewRecipient.role} onChange={e => setSplitNewRecipient({ ...splitNewRecipient, role: e.target.value })}>
+                                    <option value="partner">Sócio</option>
+                                    <option value="marketing">Marketing</option>
+                                    <option value="operations">Operações</option>
+                                    <option value="reserve">Reserva</option>
+                                  </select>
+                                </div>
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
+                                  <input className="bg-zinc-800 border border-zinc-700 rounded-md px-3 py-2 text-sm text-white placeholder-zinc-500" placeholder="Mín. Payout USDT" type="number" value={splitNewRecipient.minPayout} onChange={e => setSplitNewRecipient({ ...splitNewRecipient, minPayout: e.target.value })} />
+                                  <select className="bg-zinc-800 border border-zinc-700 rounded-md px-3 py-2 text-sm text-white" value={splitNewRecipient.currency} onChange={e => setSplitNewRecipient({ ...splitNewRecipient, currency: e.target.value })}>
+                                    <option value="usdttrc20">USDT TRC20</option>
+                                    <option value="usdtmatic">USDT Polygon</option>
+                                    <option value="btc">BTC</option>
+                                    <option value="eth">ETH</option>
+                                  </select>
+                                  <label className="flex items-center gap-2 text-sm text-zinc-300 cursor-pointer">
+                                    <input type="checkbox" checked={splitNewRecipient.autoPayout} onChange={e => setSplitNewRecipient({ ...splitNewRecipient, autoPayout: e.target.checked })} className="rounded" />
+                                    Auto-payout ao atingir mínimo
+                                  </label>
+                                </div>
+                              </CardContent>
+                            </Card>
+
+                            {/* Recipients Table */}
+                            <Card className="bg-zinc-900 border-zinc-800">
+                              <CardHeader className="pb-3">
+                                <div className="flex items-center justify-between">
+                                  <CardTitle className="text-base">Sócios ({splitRecipients.length})</CardTitle>
+                                  <Button variant="ghost" size="sm" onClick={fetchSplitData} disabled={splitLoading}>
+                                    <RefreshCw className={`h-4 w-4 ${splitLoading ? 'animate-spin' : ''}`} />
+                                  </Button>
+                                </div>
+                              </CardHeader>
+                              <CardContent className="p-0">
+                                {splitLoading && splitRecipients.length === 0 ? (
+                                  <div className="text-center py-8">
+                                    <div className="animate-spin h-8 w-8 border-2 border-emerald-500 border-t-transparent rounded-full mx-auto"></div>
+                                    <p className="text-zinc-500 mt-2">Carregando sócios...</p>
+                                  </div>
+                                ) : splitRecipients.length === 0 ? (
+                                  <div className="text-center py-8 text-zinc-500">Nenhum sócio configurado. Adicione o primeiro acima.</div>
+                                ) : (
+                                  <div className="overflow-x-auto">
+                                    <Table>
+                                      <TableHeader>
+                                        <TableRow className="border-zinc-800">
+                                          <TableHead className="text-zinc-400">Nome / Função</TableHead>
+                                          <TableHead className="text-zinc-400">Carteira</TableHead>
+                                          <TableHead className="text-zinc-400">%</TableHead>
+                                          <TableHead className="text-zinc-400">Acumulado</TableHead>
+                                          <TableHead className="text-zinc-400">Mín. Payout</TableHead>
+                                          <TableHead className="text-zinc-400">Total Enviado</TableHead>
+                                          <TableHead className="text-zinc-400">Status</TableHead>
+                                          <TableHead className="text-zinc-400">Ações</TableHead>
+                                        </TableRow>
+                                      </TableHeader>
+                                      <TableBody>
+                                        {splitRecipients.map((r: any) => (
+                                          <TableRow key={r.id} className={`border-zinc-800 ${!r.isActive ? 'opacity-50' : ''}`}>
+                                            <TableCell>
+                                              <div className="font-medium text-white">{r.name}</div>
+                                              <div className="text-xs text-zinc-500 capitalize">{r.role === 'partner' ? 'Sócio' : r.role === 'marketing' ? 'Marketing' : r.role === 'operations' ? 'Operações' : 'Reserva'}</div>
+                                            </TableCell>
+                                            <TableCell className="text-xs font-mono max-w-[120px] truncate" title={r.walletAddress}>{r.walletAddress}</TableCell>
+                                            <TableCell className="text-sm font-semibold text-emerald-400">{r.percentage}%</TableCell>
+                                            <TableCell className="text-sm text-amber-400 font-semibold">${fmtUSDT(r.accumulatedBalance)}</TableCell>
+                                            <TableCell className="text-xs text-zinc-400">${fmtUSDT(r.minPayout)}</TableCell>
+                                            <TableCell className="text-sm text-purple-400">${fmtUSDT(r.totalSent)}</TableCell>
+                                            <TableCell>
+                                              <Badge className={`text-[10px] px-1.5 py-0 ${r.isActive ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' : 'bg-red-500/20 text-red-400 border-red-500/30'}`} variant="outline">
+                                                {r.isActive ? 'Ativo' : 'Inativo'}
+                                              </Badge>
+                                              {r.autoPayout && <span className="text-[9px] text-cyan-400 ml-1">🔄</span>}
+                                            </TableCell>
+                                            <TableCell>
+                                              <div className="flex gap-1">
+                                                <Button size="sm" variant="ghost" className="h-7 text-xs text-blue-400 hover:text-blue-300" onClick={() => { setSplitEditRecipient(r); setSplitEditDialog(true); }}>✏️</Button>
+                                                <Button size="sm" variant="ghost" className="h-7 text-xs text-emerald-400 hover:text-emerald-300" disabled={d(r.accumulatedBalance) <= 0} onClick={async () => {
+                                                  setSplitPayoutLoading(true);
+                                                  try {
+                                                    const res = await api('/api/admin/split-payout', { method: 'POST', body: JSON.stringify({ recipientId: r.id, force: true }) });
+                                                    fetchSplitData();
+                                                    toast({ title: `Payout forçado: $${res.summary?.totalPaid?.toFixed(2) || '0'}` });
+                                                  } catch (e: any) {
+                                                    toast({ title: e.message || 'Erro no payout', variant: 'destructive' });
+                                                  } finally {
+                                                    setSplitPayoutLoading(false);
+                                                  }
+                                                }}>💸</Button>
+                                                <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={async () => {
+                                                  try {
+                                                    await api('/api/admin/split-recipients', { method: 'PUT', body: JSON.stringify({ id: r.id, isActive: !r.isActive }) });
+                                                    fetchSplitData();
+                                                    toast({ title: r.isActive ? 'Sócio desativado' : 'Sócio reativado' });
+                                                  } catch (e: any) {
+                                                    toast({ title: e.message || 'Erro', variant: 'destructive' });
+                                                  }
+                                                }}>{r.isActive ? '❌' : '✅'}</Button>
+                                              </div>
+                                            </TableCell>
+                                          </TableRow>
+                                        ))}
+                                      </TableBody>
+                                    </Table>
+                                  </div>
+                                )}
+                              </CardContent>
+                            </Card>
+
+                            {/* Recent Split Logs */}
+                            {splitLogs.length > 0 && (
+                              <Card className="bg-zinc-900 border-zinc-800">
+                                <CardHeader className="pb-3">
+                                  <CardTitle className="text-base">Histórico Recente</CardTitle>
+                                </CardHeader>
+                                <CardContent className="p-0">
+                                  <div className="max-h-64 overflow-y-auto">
+                                    <Table>
+                                      <TableHeader>
+                                        <TableRow className="border-zinc-800">
+                                          <TableHead className="text-zinc-400">Sócio</TableHead>
+                                          <TableHead className="text-zinc-400">Valor</TableHead>
+                                          <TableHead className="text-zinc-400">%</TableHead>
+                                          <TableHead className="text-zinc-400">Status</TableHead>
+                                          <TableHead className="text-zinc-400">Data</TableHead>
+                                        </TableRow>
+                                      </TableHeader>
+                                      <TableBody>
+                                        {splitLogs.map((log: any) => (
+                                          <TableRow key={log.id} className="border-zinc-800">
+                                            <TableCell className="text-xs text-white">{log.recipient?.name || '-'}</TableCell>
+                                            <TableCell className="text-xs text-cyan-400">${fmtUSDT(log.amount)}</TableCell>
+                                            <TableCell className="text-xs text-emerald-400">{log.percentage}%</TableCell>
+                                            <TableCell>
+                                              <Badge className={`text-[10px] px-1.5 py-0 ${
+                                                log.status === 'paid' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' :
+                                                log.status === 'accumulated' ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' :
+                                                'bg-red-500/20 text-red-400 border-red-500/30'
+                                              }`} variant="outline">
+                                                {log.status === 'paid' ? 'Pago' : log.status === 'accumulated' ? 'Acumulado' : 'Falhou'}
+                                              </Badge>
+                                            </TableCell>
+                                            <TableCell className="text-xs text-zinc-500">{fmtDateTime(log.createdAt)}</TableCell>
+                                          </TableRow>
+                                        ))}
+                                      </TableBody>
+                                    </Table>
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            )}
+
+                            {/* Process Auto-Payouts Button */}
+                            <div className="flex justify-end">
+                              <Button className="bg-purple-600 hover:bg-purple-700" disabled={splitPayoutLoading} onClick={async () => {
+                                setSplitPayoutLoading(true);
+                                try {
+                                  const res = await api('/api/admin/split-payout', { method: 'POST', body: JSON.stringify({}) });
+                                  fetchSplitData();
+                                  toast({ title: `${res.summary?.processed || 0} payout(s) processado(s) — $${res.summary?.totalPaid?.toFixed(2) || '0'}` });
+                                } catch (e: any) {
+                                  toast({ title: e.message || 'Erro', variant: 'destructive' });
+                                } finally {
+                                  setSplitPayoutLoading(false);
+                                }
+                              }}>
+                                💸 Processar Auto-Payouts
+                              </Button>
+                            </div>
+                          </div>
                         )}
 
                         {/* Wallets Section */}
@@ -7611,7 +7882,7 @@ export default function PlataformaROI() {
                                     </Button>
                                     <div className="flex items-center gap-2 text-xs text-zinc-400">
                                       <Info className="h-3.5 w-3.5 text-sky-400" />
-                                      <span>O split de pagamentos é gerenciado na aba NowPayments &gt; Sócios &amp; Split</span>
+                                      <span>O split de pagamentos é gerenciado na aba NowPayments → Sócios & Split</span>
                                     </div>
                                   </div>
                                 )}
@@ -9223,6 +9494,85 @@ Seus 10 indicados diretos investem $100/dia cada:
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Split Recipient Dialog */}
+      <Dialog open={splitEditDialog} onOpenChange={setSplitEditDialog}>
+        <DialogContent className="bg-zinc-900 border-zinc-800 max-w-md">
+          <DialogHeader>
+            <DialogTitle>Editar Sócio</DialogTitle>
+          </DialogHeader>
+          {splitEditRecipient && (
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs text-zinc-400">Nome</label>
+                <input className="w-full bg-zinc-800 border border-zinc-700 rounded-md px-3 py-2 text-sm text-white mt-1" value={splitEditRecipient.name} onChange={e => setSplitEditRecipient({ ...splitEditRecipient, name: e.target.value })} />
+              </div>
+              <div>
+                <label className="text-xs text-zinc-400">Função</label>
+                <select className="w-full bg-zinc-800 border border-zinc-700 rounded-md px-3 py-2 text-sm text-white mt-1" value={splitEditRecipient.role} onChange={e => setSplitEditRecipient({ ...splitEditRecipient, role: e.target.value })}>
+                  <option value="partner">Sócio</option>
+                  <option value="marketing">Marketing</option>
+                  <option value="operations">Operações</option>
+                  <option value="reserve">Reserva</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-xs text-zinc-400">Carteira</label>
+                <input className="w-full bg-zinc-800 border border-zinc-700 rounded-md px-3 py-2 text-sm text-white font-mono mt-1" value={splitEditRecipient.walletAddress} onChange={e => setSplitEditRecipient({ ...splitEditRecipient, walletAddress: e.target.value })} />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-zinc-400">Percentual %</label>
+                  <input className="w-full bg-zinc-800 border border-zinc-700 rounded-md px-3 py-2 text-sm text-white mt-1" type="number" step="0.1" value={splitEditRecipient.percentage} onChange={e => setSplitEditRecipient({ ...splitEditRecipient, percentage: e.target.value })} />
+                </div>
+                <div>
+                  <label className="text-xs text-zinc-400">Mín. Payout USDT</label>
+                  <input className="w-full bg-zinc-800 border border-zinc-700 rounded-md px-3 py-2 text-sm text-white mt-1" type="number" value={splitEditRecipient.minPayout} onChange={e => setSplitEditRecipient({ ...splitEditRecipient, minPayout: e.target.value })} />
+                </div>
+              </div>
+              <div>
+                <label className="text-xs text-zinc-400">Moeda</label>
+                <select className="w-full bg-zinc-800 border border-zinc-700 rounded-md px-3 py-2 text-sm text-white mt-1" value={splitEditRecipient.currency} onChange={e => setSplitEditRecipient({ ...splitEditRecipient, currency: e.target.value })}>
+                  <option value="usdttrc20">USDT TRC20</option>
+                  <option value="usdtmatic">USDT Polygon</option>
+                  <option value="btc">BTC</option>
+                  <option value="eth">ETH</option>
+                </select>
+              </div>
+              <label className="flex items-center gap-2 text-sm text-zinc-300 cursor-pointer">
+                <input type="checkbox" checked={splitEditRecipient.autoPayout} onChange={e => setSplitEditRecipient({ ...splitEditRecipient, autoPayout: e.target.checked })} className="rounded" />
+                Auto-payout ao atingir mínimo
+              </label>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" className="border-zinc-700" onClick={() => setSplitEditDialog(false)}>Cancelar</Button>
+            <Button className="bg-emerald-600 hover:bg-cyan-700" onClick={async () => {
+              if (!splitEditRecipient) return;
+              try {
+                await api('/api/admin/split-recipients', {
+                  method: 'PUT',
+                  body: JSON.stringify({
+                    id: splitEditRecipient.id,
+                    name: splitEditRecipient.name,
+                    role: splitEditRecipient.role,
+                    walletAddress: splitEditRecipient.walletAddress,
+                    percentage: splitEditRecipient.percentage,
+                    minPayout: splitEditRecipient.minPayout,
+                    currency: splitEditRecipient.currency,
+                    autoPayout: splitEditRecipient.autoPayout,
+                  }),
+                });
+                setSplitEditDialog(false);
+                fetchSplitData();
+                toast({ title: 'Sócio atualizado com sucesso!' });
+              } catch (e: any) {
+                toast({ title: e.message || 'Erro ao atualizar', variant: 'destructive' });
+              }
+            }}>Salvar</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

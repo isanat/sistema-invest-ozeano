@@ -28,8 +28,6 @@ export async function POST(request: NextRequest) {
       'min_deposit_usdt',
       'max_deposit_usdt',
       'nowpayments_enabled',
-      'nowpayments_split_pct',
-      'nowpayments_split_wallet',
     ];
     const configs = await db.systemConfig.findMany({
       where: { key: { in: configKeys } },
@@ -146,7 +144,6 @@ export async function POST(request: NextRequest) {
         payCurrency: npCurrency,
         payAddress: depositAddress,
         paymentStatus: payment?.payment_status || 'waiting',
-        splitPct: ds(d(configMap.nowpayments_split_pct) || 0),
         purchaseId: payment?.purchase_id || null,
         expiresAt: payment?.expiration_estimate_date
           ? new Date(payment.expiration_estimate_date)

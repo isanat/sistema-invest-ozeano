@@ -427,8 +427,8 @@ model NowPaymentsDeposit {
   
   // Split tracking
   splitProcessed    Boolean @default(false) // Whether the split was processed
-  splitAmount       String  @default("0") // Amount sent to platform wallet
-  splitPct          String  @default("0") // Split percentage used
+  splitTotalAmount  String  @default("0") // Total split amount (sum of all recipients)
+  splitTotalPct     String  @default("0") // Total split percentage applied
   
   // Deposit relation
   depositId         String? // Link to our Deposit record
@@ -636,4 +636,51 @@ model BitgetTraderCache {
   @@index([rank])
   @@index([isActive])
   @@index([updatedAt])
+}
+
+// ============================================================================
+// SPLIT SYSTEM MODELS — Multi-recipient deposit split
+// ============================================================================
+
+// Each active recipient gets their % of every NowPayments deposit
+// The user ALWAYS receives 100% in internal balance — split comes from custody account
+model SplitRecipient {
+  id              String   @id @default(cuid())
+  name            String   // Display name (e.g. "Sócio A", "Marketing")
+  role            String   @default("partner") // partner, marketing, operations, reserve
+  walletAddress   String   // Crypto wallet address for payouts
+  currency        String   @default("usdttrc20") // Payout currency
+  percentage      String   // % of each deposit (e.g. "30" for 30%)
+  accumulatedBalance String @default("0") // USDT accumulated (not yet paid out)
+  totalSent       String   @default("0") // USDT total ever paid out
+  minPayout       String   @default("50") // Minimum USDT to auto-payout
+  isActive        Boolean  @default(true) // Soft delete: false = disabled
+  autoPayout      Boolean  @default(true) // Auto-payout when accumulated >= minPayout
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  splitLogs SplitLog[]
+
+  @@index([isActive])
+  @@index([role])
+}
+
+// Audit log of every split movement
+model SplitLog {
+  id            String   @id @default(cuid())
+  recipientId   String   // Which recipient
+  depositId     String?  // Which NowPaymentsDeposit triggered this
+  amount        String   // USDT amount of this split slice
+  percentage    String   // % applied
+  status        String   @default("accumulated") // accumulated, paid, failed
+  payoutId      String?  // NowPaymentsPayout ID if paid
+  paidAt        DateTime?
+  createdAt     DateTime @default(now())
+
+  recipient SplitRecipient @relation(fields: [recipientId], references: [id], onDelete: Cascade)
+
+  @@index([recipientId])
+  @@index([status])
+  @@index([depositId])
+  @@index([createdAt])
 }

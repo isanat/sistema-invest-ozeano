@@ -459,3 +459,49 @@ Stage Summary:
 - hasInvested=true set on both manual and automatic deposit paths
 - Cancelled deposits now visible and filterable in Faturas tab
 - Lint passes clean
+
+---
+Task ID: 10
+Agent: Main
+Task: Complete Split System Redesign — Multi-recipient deposit split
+
+Work Log:
+- **Prisma Schema**: Created SplitRecipient and SplitLog models
+  - SplitRecipient: name, role (partner/marketing/operations/reserve), walletAddress, currency, percentage, accumulatedBalance, totalSent, minPayout, isActive, autoPayout
+  - SplitLog: recipientId, depositId, amount, percentage, status (accumulated/paid/failed), payoutId, paidAt
+  - Renamed NowPaymentsDeposit fields: splitAmount → splitTotalAmount, splitPct → splitTotalPct
+  - Removed old SystemConfig-based split (nowpayments_split_pct, nowpayments_split_wallet)
+- **API Routes**:
+  - `/api/admin/split-recipients` (GET/POST/PUT/DELETE) — Full CRUD with 100% allocation validation
+  - `/api/admin/split-payout` (GET/POST) — Payout history + auto/force payout processing
+  - Updated `/api/admin/splits` — Redirects to new multi-recipient system
+  - Updated `/api/nowpayments/config` — Removed old split config keys
+  - Updated `/api/nowpayments/user-deposits` — New field names
+  - Updated `/api/nowpayments/status` — New field names
+  - Updated `/api/admin/nowpayments` — Aggregate on splitTotalAmount
+- **Core Engine** (`src/lib/split.ts`):
+  - `processDepositSplit()` — Calculates split per recipient, creates SplitLog entries, accumulates balances
+  - Auto-payout when accumulated >= minPayout
+  - USER ALWAYS RECEIVES 100% — split comes from custody account
+- **Webhook Rewrite**: User now gets 100% of deposit credited. Split processing happens separately after user credit
+- **Frontend**:
+  - New "Sócios & Split" section in admin NowPayments tab
+  - Summary cards: Active count, % total allocated (red if >100%), total accumulated, total sent
+  - Add recipient form with name, wallet, %, role, currency, min payout, auto-payout toggle
+  - Recipients table with all columns + actions (edit, force payout, activate/deactivate)
+  - Recent split logs with status badges
+  - Process auto-payouts button
+  - Edit recipient dialog
+  - Removed old split config from CONFIG_LABELS
+- **Lint passes, build compiles successfully**
+
+Stage Summary:
+- Complete split system redesign: single config → multi-recipient with accumulation
+- User ALWAYS receives 100% of deposit in internal balance (was incorrectly deducted before)
+- Split comes from NowPayments custody account, not user's pocket
+- Full audit trail via SplitLog
+- Auto-payout with configurable minimum threshold
+- Force payout for manual processing
+- Soft delete (deactivate) for recipients
+- 100% allocation validation (prevents over-allocation)
+- 10+ files modified across backend + frontend

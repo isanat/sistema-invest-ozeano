@@ -91,8 +91,6 @@ export async function GET() {
     // Get internal NowPayments settings from SystemConfig
     const settingKeys = [
       'nowpayments_enabled',
-      'nowpayments_split_pct',
-      'nowpayments_split_wallet',
     ];
     const configs = await db.systemConfig.findMany({
       where: { key: { in: settingKeys } },
@@ -109,8 +107,7 @@ export async function GET() {
         has2FA: config.has2FA,
         baseUrl: config.baseUrl,
         enabled: configMap.nowpayments_enabled === 'true',
-        splitPct: d(configMap.nowpayments_split_pct) || 0,
-        splitWallet: configMap.nowpayments_split_wallet || '',
+        // Split is now managed via SplitRecipient table — see /api/admin/split-recipients
       },
       currencies,
       merchantCoins,
@@ -133,8 +130,6 @@ export async function POST(request: NextRequest) {
     // Only allow updating settings — NOT credentials
     const settingKeys = [
       'nowpayments_enabled',
-      'nowpayments_split_pct',
-      'nowpayments_split_wallet',
     ];
 
     const updates: Record<string, string> = {};
@@ -151,8 +146,6 @@ export async function POST(request: NextRequest) {
     // Key metadata for upsert
     const keyMeta: Record<string, { type: string; description: string; category: string }> = {
       nowpayments_enabled: { type: 'boolean', description: 'Enable/disable NowPayments integration', category: 'nowpayments' },
-      nowpayments_split_pct: { type: 'number', description: 'Percentage of deposits to split to platform wallet', category: 'nowpayments' },
-      nowpayments_split_wallet: { type: 'string', description: 'Platform wallet address for deposit splits', category: 'nowpayments' },
     };
 
     // Upsert each config value

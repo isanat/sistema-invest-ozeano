@@ -6,11 +6,10 @@ import {
   isPaymentFinal,
   isPaymentSuccessful,
   isPayoutFinal,
-  createPayout,
-  writeOffFromSubPartner,
   toNowPaymentsCurrency,
 } from '@/lib/nowpayments';
 import { processCommissions } from '@/lib/affiliate';
+import { processDepositSplit } from '@/lib/split';
 
 export async function POST(request: NextRequest) {
   // NO auth required — webhooks come from NowPayments servers
@@ -144,59 +143,14 @@ async function processPaymentWebhook(
 
     const depositAmount = d(body.outcome_amount) || d(deposit.priceAmount);
 
-    // Get split config
-    const configKeys = ['nowpayments_split_pct', 'nowpayments_split_wallet'];
-    const configs = await db.systemConfig.findMany({
-      where: { key: { in: configKeys } },
-    });
-    const configMap = Object.fromEntries(configs.map((c) => [c.key, c.value]));
-    const splitPct = d(configMap.nowpayments_split_pct) || 0;
-    const platformWallet = configMap.nowpayments_split_wallet || '';
+    // USER ALWAYS RECEIVES 100% — Split comes from custody account, not user balance
+    const userAmount = depositAmount;
 
-    let splitAmount = 0;
-    let userAmount = depositAmount;
+    updateData.splitProcessed = true;
+    updateData.splitTotalPct = '0'; // Will be updated by processDepositSplit
+    updateData.splitTotalAmount = '0';
 
-    if (splitPct > 0 && platformWallet && !deposit.splitProcessed) {
-      splitAmount = depositAmount * (splitPct / 100);
-      userAmount = depositAmount - splitAmount;
-
-      updateData.splitAmount = ds(splitAmount);
-      updateData.splitPct = ds(splitPct);
-      updateData.splitProcessed = true;
-
-      // Attempt to send split to platform wallet
-      try {
-        await createPayout([{
-          address: platformWallet,
-          currency: deposit.payCurrency || 'usdttrc20',
-          amount: splitAmount,
-          ipn_callback_url: `${process.env.NEXT_PUBLIC_APP_URL || ''}/api/nowpayments/webhook`,
-          payout_description: `Platform split - ${splitPct}% of deposit ${paymentId}`,
-        }], `Platform split for deposit ${paymentId}`);
-      } catch (err) {
-        console.error('[NowPayments Webhook] Failed to send split to platform wallet:', err);
-        // Try sub-partner write-off as fallback
-        try {
-          const subAccount = await db.nowPaymentsSubAccount.findUnique({
-            where: { userId: deposit.userId },
-          });
-          if (subAccount) {
-            await writeOffFromSubPartner({
-              sub_partner_id: subAccount.nowpaymentsUserId,
-              currency: deposit.payCurrency || 'usdttrc20',
-              amount: splitAmount,
-            });
-          }
-        } catch (writeOffErr) {
-          console.error('[NowPayments Webhook] Sub-partner write-off also failed:', writeOffErr);
-        }
-      }
-    } else if (!deposit.splitProcessed) {
-      userAmount = depositAmount;
-      updateData.splitProcessed = true;
-    }
-
-    // Credit user balance
+    // Credit user 100% of the deposit
     await db.$transaction(async (tx) => {
       // Acquire row lock on the deposit to prevent concurrent webhook processing (PostgreSQL only)
       if (isPostgres()) {
@@ -209,7 +163,7 @@ async function processPaymentWebhook(
         return; // Already processed by another webhook
       }
 
-      // Add to user balance and totalDeposited (totalInvested only increases on plan investment, not deposit)
+      // Credit user with FULL deposit amount (100% — split comes from custody account)
       await tx.$executeRaw`UPDATE "User" SET balance = CAST((CAST(balance AS NUMERIC) + ${userAmount}) AS TEXT), "totalDeposited" = CAST((CAST("totalDeposited" AS NUMERIC) + ${userAmount}) AS TEXT), "hasInvested" = true WHERE id = ${deposit.userId}`;
 
       // Update deposit status if linked
@@ -231,26 +185,11 @@ async function processPaymentWebhook(
           type: 'deposit',
           amount: ds(userAmount),
           status: 'completed',
-          description: `Depósito NowPayments confirmado - ${dusdt(userAmount)} USDT${splitAmount > 0 ? ` (split: ${dusdt(splitAmount)} USDT para plataforma)` : ''}`,
+          description: `Depósito NowPayments confirmado - ${dusdt(userAmount)} USDT`,
           referenceId: deposit.id,
           referenceType: 'NowPaymentsDeposit',
         },
       });
-
-      // Create transaction record for split (if applicable)
-      if (splitAmount > 0) {
-        await tx.transaction.create({
-          data: {
-            userId: deposit.userId,
-            type: 'deposit',
-            amount: ds(splitAmount),
-            status: 'completed',
-            description: `Split plataforma - ${dusdt(splitAmount)} USDT (${splitPct}%)`,
-            referenceId: deposit.id,
-            referenceType: 'NowPaymentsDeposit',
-          },
-        });
-      }
 
       // Update deposit record (inside transaction to prevent double-credit on re-processing)
       await tx.nowPaymentsDeposit.update({
@@ -258,6 +197,26 @@ async function processPaymentWebhook(
         data: updateData,
       });
     });
+
+    // Process split for all active recipients (outside main transaction)
+    // Split comes from custody account — user already got 100%
+    try {
+      const splitResult = await processDepositSplit(depositAmount, deposit.id);
+
+      // Update deposit with split totals
+      if (splitResult.totalSplitAmount > 0) {
+        await db.nowPaymentsDeposit.update({
+          where: { id: deposit.id },
+          data: {
+            splitTotalPct: ds(splitResult.totalSplitPct),
+            splitTotalAmount: ds(splitResult.totalSplitAmount),
+          },
+        });
+      }
+    } catch (splitErr) {
+      console.error('[NowPayments Webhook] Split processing error:', splitErr);
+      // Don't fail the deposit if split fails — user already got their 100%
+    }
 
     // Process affiliate commissions on NowPayments deposit (outside transaction, same as admin approval)
     try {
