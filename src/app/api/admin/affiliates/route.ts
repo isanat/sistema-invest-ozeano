@@ -22,10 +22,10 @@ export async function GET(request: NextRequest) {
       ] = await Promise.all([
         db.$queryRaw<
           Array<{ totalAmount: number; cnt: bigint; status: string }>
-        >`SELECT COALESCE(SUM(CAST("commissionAmount" AS REAL)), 0) as totalAmount, COUNT(*) as cnt, status FROM "AffiliateCommission" GROUP BY status`,
+        >`SELECT COALESCE(SUM(CAST("commissionAmount" AS NUMERIC)), 0) as totalAmount, COUNT(*) as cnt, status FROM "AffiliateCommission" GROUP BY status`,
         db.$queryRaw<
           Array<{ totalAmount: number; totalFees: number; cnt: bigint }>
-        >`SELECT COALESCE(SUM(CAST(amount AS REAL)), 0) as totalAmount, COALESCE(SUM(CAST(fee AS REAL)), 0) as totalFees, COUNT(*) as cnt FROM "AffiliateWithdrawal"`,
+        >`SELECT COALESCE(SUM(CAST(amount AS NUMERIC)), 0) as totalAmount, COALESCE(SUM(CAST(fee AS NUMERIC)), 0) as totalFees, COUNT(*) as cnt FROM "AffiliateWithdrawal"`,
         db.user.findMany({
           where: {
             totalAffiliateEarnings: { not: '0' },

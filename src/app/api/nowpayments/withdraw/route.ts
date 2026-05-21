@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { db } from '@/lib/db';
+import { db, isPostgres } from '@/lib/db';
 import { requireAuth, d, ds, dusdt } from '@/lib/auth';
 import { apiError, apiSuccess, handleApiError } from '@/lib/api-utils';
 import {
@@ -115,8 +115,10 @@ export async function POST(request: NextRequest) {
 
     // Atomic transaction: deduct balance and create records
     const result = await db.$transaction(async (tx) => {
-      // Acquire row-level lock to prevent concurrent balance modifications
-      await tx.$queryRaw`SELECT 1 FROM "User" WHERE id = ${session.userId} FOR UPDATE`;
+      // Acquire row-level lock to prevent concurrent balance modifications (PostgreSQL only)
+      if (isPostgres()) {
+        await tx.$queryRaw`SELECT 1 FROM "User" WHERE id = ${session.userId} FOR UPDATE`;
+      }
 
       const user = await tx.user.findUnique({ where: { id: session.userId } });
       if (!user) throw new Error('Usuário não encontrado');
@@ -127,7 +129,7 @@ export async function POST(request: NextRequest) {
       }
 
       // Deduct balance atomically
-      await tx.$executeRaw`UPDATE "User" SET balance = (CAST(balance AS NUMERIC) - ${amount})::text WHERE id = ${session.userId} AND CAST(balance AS NUMERIC) >= ${amount}`;
+      await tx.$executeRaw`UPDATE "User" SET balance = CAST((CAST(balance AS NUMERIC) - ${amount}) AS TEXT) WHERE id = ${session.userId} AND CAST(balance AS NUMERIC) >= ${amount}`;
 
       // Verify deduction
       const updatedUser = await tx.user.findUnique({ where: { id: session.userId } });

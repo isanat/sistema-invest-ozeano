@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { db, isPostgres } from '@/lib/db';
 import { requireAuth, d, ds, dusdt } from '@/lib/auth';
 import { affiliateWithdrawalSchema } from '@/lib/validations';
 import { apiError, apiSuccess, handleApiError, BusinessError } from '@/lib/api-utils';
@@ -32,7 +32,9 @@ export async function POST(request: NextRequest) {
     // Use transaction for atomicity with row lock
     const result = await db.$transaction(async (tx) => {
       // PostgreSQL: acquire row-level lock to prevent concurrent balance modifications
-      await tx.$queryRaw`SELECT 1 FROM "User" WHERE id = ${session.userId} FOR UPDATE`;
+      if (isPostgres()) {
+        await tx.$queryRaw`SELECT 1 FROM "User" WHERE id = ${session.userId} FOR UPDATE`;
+      }
 
       const user = await tx.user.findUnique({ where: { id: session.userId } });
       if (!user) throw new Error('User not found');
@@ -48,7 +50,7 @@ export async function POST(request: NextRequest) {
       const netAmount = data.amount - fee;
 
       // Deduct from affiliate balance atomically (PostgreSQL)
-      await tx.$executeRaw`UPDATE "User" SET "affiliateBalance" = (CAST("affiliateBalance" AS NUMERIC) - ${data.amount})::text WHERE id = ${session.userId} AND CAST("affiliateBalance" AS NUMERIC) >= ${data.amount}`;
+      await tx.$executeRaw`UPDATE "User" SET "affiliateBalance" = CAST((CAST("affiliateBalance" AS NUMERIC) - ${data.amount}) AS TEXT) WHERE id = ${session.userId} AND CAST("affiliateBalance" AS NUMERIC) >= ${data.amount}`;
       // Verify the deduction actually happened
       const updatedUser = await tx.user.findUnique({ where: { id: session.userId } });
       if (d(updatedUser!.affiliateBalance) === currentBalance) {

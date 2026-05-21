@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { db, isPostgres } from '@/lib/db';
 import { requireAuth, d, ds, dusdt } from '@/lib/auth';
 import { investmentSchema } from '@/lib/validations';
 import { apiError, apiSuccess, handleApiError, BusinessError } from '@/lib/api-utils';
@@ -51,7 +51,9 @@ export async function POST(request: NextRequest) {
     // Use transaction for atomicity with row lock
     const result = await db.$transaction(async (tx) => {
       // PostgreSQL: acquire row-level lock to prevent concurrent balance modifications
-      await tx.$queryRaw`SELECT 1 FROM "User" WHERE id = ${session.userId} FOR UPDATE`;
+      if (isPostgres()) {
+        await tx.$queryRaw`SELECT 1 FROM "User" WHERE id = ${session.userId} FOR UPDATE`;
+      }
 
       // Get user
       const user = await tx.user.findUnique({ where: { id: session.userId } });
@@ -142,7 +144,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Deduct from user's voucherBalance (PostgreSQL)
-        await tx.$executeRaw`UPDATE "User" SET "voucherBalance" = (CAST("voucherBalance" AS NUMERIC) - ${amount})::text, "totalInvested" = (CAST("totalInvested" AS NUMERIC) + ${amount})::text, "hasInvested" = true, "linkUnlocked" = true WHERE id = ${session.userId}`;
+        await tx.$executeRaw`UPDATE "User" SET "voucherBalance" = CAST((CAST("voucherBalance" AS NUMERIC) - ${amount}) AS TEXT), "totalInvested" = CAST((CAST("totalInvested" AS NUMERIC) + ${amount}) AS TEXT), "hasInvested" = true, "linkUnlocked" = true WHERE id = ${session.userId}`;
 
         // Update voucher usedAmount
         const newUsedAmount = usedAmount + amount;
@@ -207,7 +209,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Deduct balance atomically (PostgreSQL)
-        await tx.$executeRaw`UPDATE "User" SET balance = (CAST(balance AS NUMERIC) - ${amount})::text, "totalInvested" = (CAST("totalInvested" AS NUMERIC) + ${amount})::text, "hasInvested" = true, "linkUnlocked" = true WHERE id = ${session.userId} AND CAST(balance AS NUMERIC) >= ${amount}`;
+        await tx.$executeRaw`UPDATE "User" SET balance = CAST((CAST(balance AS NUMERIC) - ${amount}) AS TEXT), "totalInvested" = CAST((CAST("totalInvested" AS NUMERIC) + ${amount}) AS TEXT), "hasInvested" = true, "linkUnlocked" = true WHERE id = ${session.userId} AND CAST(balance AS NUMERIC) >= ${amount}`;
         // Verify the deduction actually happened
         const updatedUser = await tx.user.findUnique({ where: { id: session.userId } });
         if (d(updatedUser!.balance) === currentBalance) {

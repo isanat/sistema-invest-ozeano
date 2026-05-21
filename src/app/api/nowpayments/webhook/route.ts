@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { db, isPostgres } from '@/lib/db';
 import { d, ds, dusdt } from '@/lib/auth';
 import {
   verifyWebhookSignature,
@@ -197,20 +197,19 @@ async function processPaymentWebhook(
 
     // Credit user balance
     await db.$transaction(async (tx) => {
-      // Acquire row lock on the deposit to prevent concurrent webhook processing
-      const lockedDeposit = await tx.$queryRaw<Array<{ id: string; paymentStatus: string; splitProcessed: boolean }>>`
-        SELECT id, "paymentStatus", "splitProcessed" FROM "NowPaymentsDeposit" WHERE id = ${deposit.id} FOR UPDATE
-      `;
+      // Acquire row lock on the deposit to prevent concurrent webhook processing (PostgreSQL only)
+      if (isPostgres()) {
+        await tx.$queryRaw`SELECT id FROM "NowPaymentsDeposit" WHERE id = ${deposit.id} FOR UPDATE`;
+      }
 
-      // Double-check: if already processed, skip
-      if (lockedDeposit.length > 0) {
-        if (lockedDeposit[0].splitProcessed) {
-          return; // Already processed by another webhook
-        }
+      // Double-check: if already processed, skip (re-read inside transaction)
+      const freshDeposit = await tx.nowPaymentsDeposit.findUnique({ where: { id: deposit.id } });
+      if (freshDeposit?.splitProcessed) {
+        return; // Already processed by another webhook
       }
 
       // Add to user balance and totalDeposited (totalInvested only increases on plan investment, not deposit)
-      await tx.$executeRaw`UPDATE "User" SET balance = (CAST(balance AS NUMERIC) + ${userAmount})::text, "totalDeposited" = (CAST("totalDeposited" AS NUMERIC) + ${userAmount})::text, "hasInvested" = true WHERE id = ${deposit.userId}`;
+      await tx.$executeRaw`UPDATE "User" SET balance = CAST((CAST(balance AS NUMERIC) + ${userAmount}) AS TEXT), "totalDeposited" = CAST((CAST("totalDeposited" AS NUMERIC) + ${userAmount}) AS TEXT), "hasInvested" = true WHERE id = ${deposit.userId}`;
 
       // Update deposit status if linked
       if (deposit.depositId) {
@@ -324,9 +323,10 @@ async function processPayoutWebhook(
       : payout.txHash;
 
     await db.$transaction(async (tx) => {
-      // Acquire row lock on payout to prevent duplicate webhook processing
-      const lockedPayouts = await tx.$queryRaw<Array<{id: string}>>`SELECT id FROM "NowPaymentsPayout" WHERE id = ${payout.id} FOR UPDATE`;
-      if (lockedPayouts.length === 0) return;
+      // Acquire row lock on payout to prevent duplicate webhook processing (PostgreSQL only)
+      if (isPostgres()) {
+        await tx.$queryRaw`SELECT id FROM "NowPaymentsPayout" WHERE id = ${payout.id} FOR UPDATE`;
+      }
 
       // Check if the linked deposit is already 'confirmed' (admin approved)
       // If so, totalWithdrawn was already incremented by admin — don't double-count
@@ -361,7 +361,7 @@ async function processPayoutWebhook(
 
       // Only increment totalWithdrawn if admin hasn't already done so
       if (!depositAlreadyConfirmed) {
-        await tx.$executeRaw`UPDATE "User" SET "totalWithdrawn" = (CAST("totalWithdrawn" AS NUMERIC) + ${d(payout.amount)})::text WHERE id = ${payout.userId}`;
+        await tx.$executeRaw`UPDATE "User" SET "totalWithdrawn" = CAST((CAST("totalWithdrawn" AS NUMERIC) + ${d(payout.amount)}) AS TEXT) WHERE id = ${payout.userId}`;
       }
 
       // Update payout record inside transaction
@@ -378,9 +378,10 @@ async function processPayoutWebhook(
     const refundAmount = d(payout.amount);
 
     await db.$transaction(async (tx) => {
-      // Acquire row lock on payout to prevent duplicate webhook processing
-      const lockedPayouts = await tx.$queryRaw<Array<{id: string}>>`SELECT id FROM "NowPaymentsPayout" WHERE id = ${payout.id} FOR UPDATE`;
-      if (lockedPayouts.length === 0) return;
+      // Acquire row lock on payout to prevent duplicate webhook processing (PostgreSQL only)
+      if (isPostgres()) {
+        await tx.$queryRaw`SELECT id FROM "NowPaymentsPayout" WHERE id = ${payout.id} FOR UPDATE`;
+      }
 
       // Check if totalWithdrawn was previously incremented for this withdrawal
       // (it's incremented when admin approves or when webhook processes FINISHED)
@@ -393,9 +394,9 @@ async function processPayoutWebhook(
 
       // Refund balance
       if (shouldDecrementTotalWithdrawn) {
-        await tx.$executeRaw`UPDATE "User" SET balance = (CAST(balance AS NUMERIC) + ${refundAmount})::text, "totalWithdrawn" = GREATEST(0, (CAST("totalWithdrawn" AS NUMERIC) - ${d(payout.amount)})::numeric)::text WHERE id = ${payout.userId}`;
+        await tx.$executeRaw`UPDATE "User" SET balance = CAST((CAST(balance AS NUMERIC) + ${refundAmount}) AS TEXT), "totalWithdrawn" = CAST(GREATEST(0, CAST("totalWithdrawn" AS NUMERIC) - ${d(payout.amount)}) AS TEXT) WHERE id = ${payout.userId}`;
       } else {
-        await tx.$executeRaw`UPDATE "User" SET balance = (CAST(balance AS NUMERIC) + ${refundAmount})::text WHERE id = ${payout.userId}`;
+        await tx.$executeRaw`UPDATE "User" SET balance = CAST((CAST(balance AS NUMERIC) + ${refundAmount}) AS TEXT) WHERE id = ${payout.userId}`;
       }
 
       // Update deposit

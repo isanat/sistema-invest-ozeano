@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { db, isPostgres } from '@/lib/db';
 import { requireAdmin, d, ds, dusdt } from '@/lib/auth';
 import { adminWithdrawalActionSchema } from '@/lib/validations';
 import { apiError, apiSuccess, handleApiError, sanitizePagination } from '@/lib/api-utils';
@@ -87,7 +87,7 @@ export async function PUT(request: NextRequest) {
         });
 
         // Update user total withdrawn atomically using raw SQL
-        await tx.$executeRaw`UPDATE "User" SET "totalWithdrawn" = (CAST("totalWithdrawn" AS NUMERIC) + ${d(deposit.amount)})::text WHERE id = ${deposit.userId}`;
+        await tx.$executeRaw`UPDATE "User" SET "totalWithdrawn" = CAST((CAST("totalWithdrawn" AS NUMERIC) + ${d(deposit.amount)}) AS TEXT) WHERE id = ${deposit.userId}`;
 
         return updated;
       });

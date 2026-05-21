@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { db, isPostgres } from '@/lib/db';
 import { requireAdmin, d, ds, dusdt } from '@/lib/auth';
 import { adminDepositActionSchema } from '@/lib/validations';
 import { apiError, apiSuccess, handleApiError, sanitizePagination } from '@/lib/api-utils';
@@ -73,10 +73,17 @@ export async function PUT(request: NextRequest) {
     if (data.action === 'approve') {
       // Use transaction for atomicity — status check inside to prevent race conditions
       const result = await db.$transaction(async (tx) => {
-        // Acquire row lock and re-check status to prevent race conditions
-        const lockedDeposit = await tx.$queryRaw<Array<{id: string; status: string}>>`SELECT id, status FROM "Deposit" WHERE id = ${id} FOR UPDATE`;
-        if (lockedDeposit.length === 0) throw new Error('Depósito não encontrado');
-        if (lockedDeposit[0].status !== 'pending') throw new Error('Depósito já foi processado');
+        // Acquire row lock and re-check status to prevent race conditions (PostgreSQL only)
+        if (isPostgres()) {
+          const lockedDeposit = await tx.$queryRaw<Array<{id: string; status: string}>>`SELECT id, status FROM "Deposit" WHERE id = ${id} FOR UPDATE`;
+          if (lockedDeposit.length === 0) throw new Error('Depósito não encontrado');
+          if (lockedDeposit[0].status !== 'pending') throw new Error('Depósito já foi processado');
+        } else {
+          // SQLite: re-read without FOR UPDATE
+          const freshDeposit = await tx.deposit.findUnique({ where: { id } });
+          if (!freshDeposit) throw new Error('Depósito não encontrado');
+          if (freshDeposit.status !== 'pending') throw new Error('Depósito já foi processado');
+        }
 
         const deposit = await tx.deposit.findUnique({ where: { id } });
         if (!deposit) throw new Error('Depósito não encontrado');
@@ -95,7 +102,7 @@ export async function PUT(request: NextRequest) {
         // Credit user balance atomically using raw SQL (PostgreSQL)
         // Only add to balance, NOT to totalInvested (totalInvested tracks plan investments, not deposits)
         // Also increment totalDeposited to track user's own deposits for withdrawal calculation
-        await tx.$executeRaw`UPDATE "User" SET balance = (CAST(balance AS NUMERIC) + ${d(deposit.amount)})::text, "totalDeposited" = (CAST("totalDeposited" AS NUMERIC) + ${d(deposit.amount)})::text WHERE id = ${deposit.userId}`;
+        await tx.$executeRaw`UPDATE "User" SET balance = CAST((CAST(balance AS NUMERIC) + ${d(deposit.amount)}) AS TEXT), "totalDeposited" = CAST((CAST("totalDeposited" AS NUMERIC) + ${d(deposit.amount)}) AS TEXT) WHERE id = ${deposit.userId}`;
 
         // Create transaction record
         await tx.transaction.create({

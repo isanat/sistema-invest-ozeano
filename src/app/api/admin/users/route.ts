@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { db, isPostgres } from '@/lib/db';
 import { requireAdmin, d, ds, dusdt } from '@/lib/auth';
 import { adminUserUpdateSchema } from '@/lib/validations';
 import { apiError, apiSuccess, handleApiError, sanitizePagination } from '@/lib/api-utils';
@@ -120,7 +120,9 @@ export async function PUT(request: NextRequest) {
     // Use transaction with row lock for balance changes to create audit trail and prevent race conditions
     const result = await db.$transaction(async (tx) => {
       // PostgreSQL: acquire row-level lock to prevent concurrent modifications
-      await tx.$queryRaw`SELECT 1 FROM "User" WHERE id = ${id} FOR UPDATE`;
+      if (isPostgres()) {
+        await tx.$queryRaw`SELECT 1 FROM "User" WHERE id = ${id} FOR UPDATE`;
+      }
       const lockedUser = await tx.user.findUnique({ where: { id } });
       if (!lockedUser) throw new Error('Usuário não encontrado');
 

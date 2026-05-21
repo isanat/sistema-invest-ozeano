@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { db } from '@/lib/db';
+import { db, isPostgres } from '@/lib/db';
 import { requireAuth, d, ds } from '@/lib/auth';
 import { generateAffiliateCode, getAffiliateModeInfo } from '@/lib/affiliate';
 import { apiError, apiSuccess, handleApiError } from '@/lib/api-utils';
@@ -296,7 +296,7 @@ export async function GET(request: NextRequest) {
           // Use raw SQL for proper numeric sort on String column + LIMIT at DB level
           const topAffiliatesRaw = await db.$queryRaw<
             Array<{ id: string; name: string; totalAffiliateEarnings: string; referralCount: bigint }>
-          >`SELECT u.id, u.name, u."totalAffiliateEarnings", (SELECT COUNT(*) FROM "User" r WHERE r."referredBy" = u.id) as referralCount FROM "User" u WHERE u."totalAffiliateEarnings" != '0' AND u."linkUnlocked" = 1 ORDER BY CAST(u."totalAffiliateEarnings" AS REAL) DESC LIMIT 10`;
+          >`SELECT u.id, u.name, u."totalAffiliateEarnings", (SELECT COUNT(*) FROM "User" r WHERE r."referredBy" = u.id) as referralCount FROM "User" u WHERE u."totalAffiliateEarnings" != '0' AND CAST(u."linkUnlocked" AS INTEGER) = 1 ORDER BY CAST(u."totalAffiliateEarnings" AS NUMERIC) DESC LIMIT 10`;
 
           const allRanksForLeaderboard = await db.affiliateRank.findMany({
             where: { isActive: true },
@@ -394,7 +394,7 @@ export async function GET(request: NextRequest) {
                   if (badge && badge.rewardType === 'cash') {
                     const rewardValue = d(badge.rewardValue);
                     if (rewardValue > 0) {
-                      await tx.$executeRaw`UPDATE "User" SET "affiliateBalance" = (CAST("affiliateBalance" AS NUMERIC) + ${rewardValue})::text, "totalAffiliateEarnings" = (CAST("totalAffiliateEarnings" AS NUMERIC) + ${rewardValue})::text WHERE id = ${session.userId}`;
+                      await tx.$executeRaw`UPDATE "User" SET "affiliateBalance" = CAST((CAST("affiliateBalance" AS NUMERIC) + ${rewardValue}) AS TEXT), "totalAffiliateEarnings" = CAST((CAST("totalAffiliateEarnings" AS NUMERIC) + ${rewardValue}) AS TEXT) WHERE id = ${session.userId}`;
                       await tx.transaction.create({
                         data: {
                           userId: session.userId,
@@ -504,7 +504,7 @@ export async function GET(request: NextRequest) {
 
         if (!rankBadgeExists) {
           const bonus = d(currentRank.bonusAmount);
-          await db.$executeRaw`UPDATE "User" SET "affiliateBalance" = (CAST("affiliateBalance" AS NUMERIC) + ${bonus})::text, "totalAffiliateEarnings" = (CAST("totalAffiliateEarnings" AS NUMERIC) + ${bonus})::text WHERE id = ${session.userId}`;
+          await db.$executeRaw`UPDATE "User" SET "affiliateBalance" = CAST((CAST("affiliateBalance" AS NUMERIC) + ${bonus}) AS TEXT), "totalAffiliateEarnings" = CAST((CAST("totalAffiliateEarnings" AS NUMERIC) + ${bonus}) AS TEXT) WHERE id = ${session.userId}`;
 
           const rankBadge = await db.affiliateBadge.findFirst({
             where: { name: `rank_${currentRank.name.toLowerCase()}` },
@@ -641,7 +641,7 @@ export async function POST(request: NextRequest) {
         if (milestone.rewardType === 'cash') {
           const rewardValue = d(milestone.rewardValue);
           if (rewardValue > 0) {
-            await tx.$executeRaw`UPDATE "User" SET "affiliateBalance" = (CAST("affiliateBalance" AS NUMERIC) + ${rewardValue})::text, "totalAffiliateEarnings" = (CAST("totalAffiliateEarnings" AS NUMERIC) + ${rewardValue})::text WHERE id = ${session.userId}`;
+            await tx.$executeRaw`UPDATE "User" SET "affiliateBalance" = CAST((CAST("affiliateBalance" AS NUMERIC) + ${rewardValue}) AS TEXT), "totalAffiliateEarnings" = CAST((CAST("totalAffiliateEarnings" AS NUMERIC) + ${rewardValue}) AS TEXT) WHERE id = ${session.userId}`;
 
             await tx.transaction.create({
               data: {

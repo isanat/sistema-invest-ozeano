@@ -153,7 +153,7 @@ export async function PUT(request: NextRequest) {
 
       const result = await db.$transaction(async (tx) => {
         // Refund affiliate balance atomically (PostgreSQL)
-        await tx.$executeRaw`UPDATE "User" SET "affiliateBalance" = (CAST("affiliateBalance" AS NUMERIC) + ${d(withdrawal.amount)})::text WHERE id = ${withdrawal.userId}`;
+        await tx.$executeRaw`UPDATE "User" SET "affiliateBalance" = CAST((CAST("affiliateBalance" AS NUMERIC) + ${d(withdrawal.amount)}) AS TEXT) WHERE id = ${withdrawal.userId}`;
 
         // Create refund transaction
         await tx.transaction.create({

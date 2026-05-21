@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { db } from '@/lib/db';
+import { db, isPostgres } from '@/lib/db';
 import { requireAdmin, d, dusdt } from '@/lib/auth';
 import { apiError, apiSuccess, handleApiError } from '@/lib/api-utils';
 
@@ -52,7 +52,7 @@ export async function PATCH(
 
         // Subtract remaining voucher balance from user
         if (remainingBalance > 0) {
-          await tx.$executeRaw`UPDATE "User" SET "voucherBalance" = GREATEST(0, (CAST("voucherBalance" AS NUMERIC) - ${remainingBalance}))::text WHERE id = ${voucher.userId}`;
+          await tx.$executeRaw`UPDATE "User" SET "voucherBalance" = CAST(GREATEST(0, CAST("voucherBalance" AS NUMERIC) - ${remainingBalance}) AS TEXT) WHERE id = ${voucher.userId}`;
         }
       });
 
@@ -176,7 +176,7 @@ export async function DELETE(
     await db.$transaction(async (tx) => {
       // Subtract remaining balance from user's voucherBalance
       if (remainingBalance > 0) {
-        await tx.$executeRaw`UPDATE "User" SET "voucherBalance" = GREATEST(0, (CAST("voucherBalance" AS NUMERIC) - ${remainingBalance}))::text WHERE id = ${voucher.userId}`;
+        await tx.$executeRaw`UPDATE "User" SET "voucherBalance" = CAST(GREATEST(0, CAST("voucherBalance" AS NUMERIC) - ${remainingBalance}) AS TEXT) WHERE id = ${voucher.userId}`;
       }
 
       // Delete voucher usages first (cascade should handle this but explicit is safer)

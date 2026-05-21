@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { db } from '@/lib/db';
+import { db, isPostgres, acquireAdvisoryLock, releaseAdvisoryLock } from '@/lib/db';
 import { d, ds, dusdt } from '@/lib/auth';
 import { processCommissions, getTeamBonusPct } from '@/lib/affiliate';
 import { apiError, apiSuccess, handleApiError } from '@/lib/api-utils';
@@ -44,9 +44,8 @@ export async function POST(request: NextRequest) {
     console.info('[CRON] Starting daily ROI distribution...', new Date().toISOString());
 
     // PostgreSQL: acquire advisory lock to prevent concurrent cron execution
-    try {
-      await db.$queryRaw`SELECT pg_advisory_lock(12345)`;
-    } catch (lockErr) {
+    const lockAcquired = await acquireAdvisoryLock(12345);
+    if (!lockAcquired) {
       return apiError('Could not acquire advisory lock - another cron job is running', 423);
     }
 
@@ -138,7 +137,7 @@ export async function POST(request: NextRequest) {
           });
 
           // Credit user balance atomically using raw SQL (PostgreSQL)
-          await tx.$executeRaw`UPDATE "User" SET balance = (CAST(balance AS NUMERIC) + ${totalRoiForToday})::text, "totalRoi" = (CAST("totalRoi" AS NUMERIC) + ${totalRoiForToday})::text WHERE id = ${investment.userId}`;
+          await tx.$executeRaw`UPDATE "User" SET balance = CAST((CAST(balance AS NUMERIC) + ${totalRoiForToday}) AS TEXT), "totalRoi" = CAST((CAST("totalRoi" AS NUMERIC) + ${totalRoiForToday}) AS TEXT) WHERE id = ${investment.userId}`;
 
           // Create transaction record
           const planName = investment.plan?.name || 'Plano';
@@ -216,11 +215,7 @@ export async function POST(request: NextRequest) {
     });
     } finally {
       // Release PostgreSQL advisory lock
-      try {
-        await db.$queryRaw`SELECT pg_advisory_unlock(12345)`;
-      } catch (unlockErr) {
-        console.warn('[CRON] Could not release advisory lock:', unlockErr);
-      }
+      await releaseAdvisoryLock(12345);
     }
   } catch (error) {
     console.error('[CRON] Fatal error:', error);

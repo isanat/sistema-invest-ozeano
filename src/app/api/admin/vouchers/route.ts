@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { db } from '@/lib/db';
+import { db, isPostgres } from '@/lib/db';
 import { requireAdmin, d, dusdt } from '@/lib/auth';
 import { apiError, apiSuccess, handleApiError, sanitizePagination } from '@/lib/api-utils';
 
@@ -165,7 +165,7 @@ export async function POST(request: NextRequest) {
     // Use transaction for atomicity (admin log inside to ensure audit trail is not lost)
     const voucher = await db.$transaction(async (tx) => {
       // Add voucherBalance to user (PostgreSQL: CAST AS NUMERIC)
-      await tx.$executeRaw`UPDATE "User" SET "voucherBalance" = (CAST("voucherBalance" AS NUMERIC) + ${d(amount)})::text WHERE id = ${userId}`;
+      await tx.$executeRaw`UPDATE "User" SET "voucherBalance" = CAST((CAST("voucherBalance" AS NUMERIC) + ${d(amount)}) AS TEXT) WHERE id = ${userId}`;
 
       // Create voucher
       const v = await tx.voucher.create({

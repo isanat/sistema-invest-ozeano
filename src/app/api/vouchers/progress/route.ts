@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { db } from '@/lib/db';
+import { db, isPostgres } from '@/lib/db';
 import { requireAuth, d, dusdt } from '@/lib/auth';
 import { apiSuccess, handleApiError } from '@/lib/api-utils';
 
@@ -102,7 +102,9 @@ export async function POST(request: NextRequest) {
       // Update the voucher
       await db.$transaction(async (tx) => {
         // Lock the voucher row inside the transaction
-        await tx.$queryRaw`SELECT 1 FROM "Voucher" WHERE id = ${voucher.id} FOR UPDATE`;
+        if (isPostgres()) {
+          await tx.$queryRaw`SELECT 1 FROM "Voucher" WHERE id = ${voucher.id} FOR UPDATE`;
+        }
         // Re-read the voucher status after lock
         const lockedVoucher = await tx.voucher.findUnique({ where: { id: voucher.id } });
         if (lockedVoucher?.status !== 'active') {
@@ -128,7 +130,7 @@ export async function POST(request: NextRequest) {
         if (shouldDeductBalance) {
           const freshRemaining = d(lockedVoucher.amount) - d(lockedVoucher.usedAmount);
           if (freshRemaining > 0) {
-            await tx.$executeRaw`UPDATE "User" SET "voucherBalance" = GREATEST(0, (CAST("voucherBalance" AS NUMERIC) - ${freshRemaining}))::text WHERE id = ${userId}`;
+            await tx.$executeRaw`UPDATE "User" SET "voucherBalance" = CAST(GREATEST(0, CAST("voucherBalance" AS NUMERIC) - ${freshRemaining}) AS TEXT) WHERE id = ${userId}`;
           }
         }
       });

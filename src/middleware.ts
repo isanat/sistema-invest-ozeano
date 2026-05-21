@@ -29,7 +29,6 @@ const PUBLIC_API_ROUTES = [
   '/api/site/config', // Public site configuration (deposit methods, etc.)
   '/api/nowpayments/currencies', // Public: available currencies for deposit/withdrawal
   '/api/bitget/', // Public: Bitget trader ranking/search data (no auth needed)
-  '/api/debug-db', // TEMP: Debug database connection (remove after fixing)
 ];
 
 // Rate limiting: simple in-memory store (per-instance, resets on redeploy)
@@ -50,6 +49,11 @@ const FINANCIAL_RATE_LIMIT_ROUTES = [
 ];
 
 function checkRateLimit(ip: string, pathname: string): { allowed: boolean; retryAfter?: number } {
+  // Lazy cleanup: prune expired entries periodically (roughly every ~100 checks)
+  if (rateLimitMap.size > 200) {
+    cleanupExpiredEntries();
+  }
+
   const key = `${ip}:${pathname}`;
   const now = Date.now();
 
@@ -74,20 +78,14 @@ function checkRateLimit(ip: string, pathname: string): { allowed: boolean; retry
   return { allowed: true };
 }
 
-// Cleanup old entries periodically (every 5 minutes)
-if (typeof globalThis !== 'undefined') {
-  const cleanup = () => {
-    const now = Date.now();
-    for (const [key, entry] of rateLimitMap) {
-      if (now > entry.resetAt + 300_000) { // Remove 5 min after window
-        rateLimitMap.delete(key);
-      }
+// Lazy cleanup: prune expired entries on each rate-limit check
+// This replaces the previous setInterval approach which is incompatible with Edge Runtime
+function cleanupExpiredEntries() {
+  const now = Date.now();
+  for (const [key, entry] of rateLimitMap) {
+    if (now > entry.resetAt + 300_000) { // Remove 5 min after window
+      rateLimitMap.delete(key);
     }
-  };
-  // Run cleanup occasionally
-  if (!globalThis.__rateLimitCleanup) {
-    globalThis.__rateLimitCleanup = true;
-    setInterval(cleanup, 300_000);
   }
 }
 
@@ -186,8 +184,3 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: ['/api/:path*'],
 };
-
-// Extend globalThis for cleanup interval tracking
-declare global {
-  var __rateLimitCleanup: boolean | undefined;
-}

@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { db } from '@/lib/db';
+import { db, isPostgres } from '@/lib/db';
 import { requireAuth, d, dusdt } from '@/lib/auth';
 import { apiError, apiSuccess, handleApiError, BusinessError } from '@/lib/api-utils';
 
@@ -81,7 +81,9 @@ export async function POST(request: NextRequest) {
     // Execute in a transaction for atomicity
     await db.$transaction(async (tx) => {
       // Acquire row lock on Voucher to prevent concurrent usage (BUG #2 fix)
-      await tx.$queryRaw`SELECT 1 FROM "Voucher" WHERE id = ${voucherId} FOR UPDATE`;
+      if (isPostgres()) {
+        await tx.$queryRaw`SELECT 1 FROM "Voucher" WHERE id = ${voucherId} FOR UPDATE`;
+      }
 
       // Re-check voucher remaining balance inside lock
       const lockedVoucher = await tx.voucher.findUnique({ where: { id: voucherId } });
@@ -91,7 +93,9 @@ export async function POST(request: NextRequest) {
       }
 
       // Acquire row lock on user (PostgreSQL)
-      await tx.$queryRaw`SELECT 1 FROM "User" WHERE id = ${session.userId} FOR UPDATE`;
+      if (isPostgres()) {
+        await tx.$queryRaw`SELECT 1 FROM "User" WHERE id = ${session.userId} FOR UPDATE`;
+      }
 
       // Update voucher usedAmount
       const newUsedAmount = d(lockedVoucher!.usedAmount) + amount;
@@ -125,13 +129,13 @@ export async function POST(request: NextRequest) {
         // since the breakdown formula uses source='deposit' to calc totalInvestedFromBalance.
         // totalInvested stays the same (investment still exists, just funded by voucher).
         await tx.$executeRaw`UPDATE "User" SET 
-          "voucherBalance" = (CAST("voucherBalance" AS NUMERIC) - ${amount})::text,
-          "balance" = (CAST("balance" AS NUMERIC) + ${amount})::text
+          "voucherBalance" = CAST((CAST("voucherBalance" AS NUMERIC) - ${amount}) AS TEXT),
+          "balance" = CAST((CAST("balance" AS NUMERIC) + ${amount}) AS TEXT)
           WHERE id = ${session.userId}`;
       } else {
         // Investment was already voucher-funded (shouldn't happen due to existingUsage check, but safety)
         await tx.$executeRaw`UPDATE "User" SET 
-          "voucherBalance" = (CAST("voucherBalance" AS NUMERIC) - ${amount})::text
+          "voucherBalance" = CAST((CAST("voucherBalance" AS NUMERIC) - ${amount}) AS TEXT)
           WHERE id = ${session.userId}`;
       }
 

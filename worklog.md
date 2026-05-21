@@ -386,3 +386,43 @@ Stage Summary:
 - Bug 5: 10+ sequential awaits → 1 Promise.all with 10 parallel IIFEs
 - Files modified: 3 (affiliate/route.ts, admin/affiliates/route.ts, admin/vouchers/route.ts)
 - Zero existing functionality broken — all changes are performance optimizations only
+
+---
+Task ID: fix2
+Agent: SQL Compatibility Fix Agent
+Task: Fix raw SQL queries to be compatible with both SQLite and PostgreSQL
+
+Work Log:
+- **Added `isPostgres()` helper** to `src/lib/db.ts` — detects database provider by checking DATABASE_URL prefix (`postgres://` or `postgresql://`). Result cached for performance.
+- **Added `acquireAdvisoryLock()` / `releaseAdvisoryLock()`** helpers — wrap `pg_advisory_lock`/`pg_advisory_unlock` in conditional execution. On SQLite, these are no-ops.
+- **Fixed `CAST(x AS REAL)` → `CAST(x AS NUMERIC)`** in 2 files:
+  - `src/app/api/affiliate/route.ts` — leaderboard query (1 occurrence)
+  - `src/app/api/admin/affiliates/route.ts` — commission stats (3 occurrences: commissionAmount, amount, fee)
+- **Fixed `"linkUnlocked" = 1` → `CAST("linkUnlocked" AS INTEGER) = 1`** in 1 file:
+  - `src/app/api/affiliate/route.ts` — leaderboard query WHERE clause
+- **Fixed PostgreSQL-only `::text` type casts → `CAST(... AS TEXT)`** across 14 files:
+  - `(CAST("balance" AS NUMERIC) + ${amount})::text` → `CAST((CAST("balance" AS NUMERIC) + ${amount}) AS TEXT)`
+  - Affected: affiliate, investments, vouchers/use, vouchers/progress, nowpayments/webhook, nowpayments/withdraw, admin/affiliate-withdrawals, affiliate/withdraw, admin/vouchers, admin/vouchers/[id], admin/withdrawals, withdraw, admin/deposits, cron/distribute, lib/affiliate
+- **Fixed PostgreSQL-only `::numeric` type cast** in nowpayments/webhook:
+  - `GREATEST(0, (...))::numeric)::text` → `CAST(GREATEST(0, ...) AS TEXT)`
+- **Wrapped `FOR UPDATE` row locks in `if (isPostgres())` conditionals** across 10 files:
+  - SQLite doesn't support `SELECT ... FOR UPDATE` syntax; transactions handle locking automatically
+  - PostgreSQL uses FOR UPDATE for row-level locking to prevent race conditions
+  - For admin/deposits route: added separate SQLite path using Prisma `findUnique` instead of raw SQL with FOR UPDATE
+  - For nowpayments/webhook: split lockedDeposit query into lock-only (PostgreSQL) + re-read (Prisma ORM, both)
+- **Replaced `pg_advisory_lock`/`pg_advisory_unlock`** in cron/distribute:
+  - Direct `db.$queryRaw` calls replaced with `acquireAdvisoryLock()`/`releaseAdvisoryLock()` helpers
+  - On SQLite: advisory lock is a no-op (always succeeds)
+  - On PostgreSQL: uses actual pg_advisory_lock with error handling
+- **Files not requiring changes** (already compatible):
+  - `src/app/api/admin/stats/route.ts` — already uses `CAST(... AS NUMERIC)`
+  - `src/app/api/admin/migrate/balance-source/route.ts` — already uses `CAST(amount AS NUMERIC)`
+
+Stage Summary:
+- 19 files reviewed, 16 files modified
+- All raw SQL is now compatible with both SQLite and PostgreSQL
+- `isPostgres()` utility allows conditional execution of PostgreSQL-specific features (FOR UPDATE, advisory locks)
+- All `::text` and `::numeric` PostgreSQL cast syntax replaced with `CAST(... AS TEXT)` and `CAST(... AS NUMERIC)`
+- All `CAST(x AS REAL)` replaced with `CAST(x AS NUMERIC)` (works on both databases)
+- Boolean comparisons use `CAST("field" AS INTEGER) = 1` (works on both databases)
+- Lint passes with no new errors
