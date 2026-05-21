@@ -562,3 +562,25 @@ Stage Summary:
 - All 11 affiliate levels editable with correct defaults
 - Config Analysis shows friendly labels instead of raw internal values
 - 3 files modified: page.tsx, translations.ts, affiliate.ts
+
+---
+Task ID: 12
+Agent: Main
+Task: Add tooltip with commission mode explanation table to admin affiliate section
+
+Work Log:
+- Added Popover with Info icon button next to "Modo de Comissão de Afiliado" card title
+- Popover shows detailed explanation for each of the 3 commission modes:
+  - Margem do Sistema: explains money comes from system profit, example with $100 investment → $3 commission, safe sustainability
+  - Lucro de Investimento: explains money comes from ROI profits, example with $10 ROI → $1 commission + 2% bonus, risky sustainability
+  - Pool de Receita: explains money comes from total revenue, example with 5% → $0.50 commission, predictable sustainability
+- Active mode is highlighted with colored border and "Ativo" badge in the popover
+- Added recommendation note at bottom: "Use Margem do Sistema para máxima sustentabilidade"
+- Updated Select dropdown items to show emoji indicators (✅/⚠️) and Portuguese descriptions instead of English/Spanish
+- Lint passes, dev server running
+
+Stage Summary:
+- Admin now has clear visual explanation of where affiliate commission money comes from
+- Info icon (ℹ️) in card header opens popover with 3-mode comparison table
+- Active mode is visually highlighted in the explanation
+- Dropdown items now show sustainability indicators

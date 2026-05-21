@@ -7212,7 +7212,64 @@ export default function PlataformaROI() {
                         )}
                         {/* Commission Mode Selector */}
                         <Card className="bg-zinc-900 border-zinc-800">
-                          <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Settings className="h-5 w-5 text-cyan-400" /> {t('admin.affiliateCommissionMode')}</CardTitle></CardHeader>
+                          <CardHeader>
+                            <div className="flex items-center justify-between">
+                              <CardTitle className="text-lg flex items-center gap-2"><Settings className="h-5 w-5 text-cyan-400" /> {t('admin.affiliateCommissionMode')}</CardTitle>
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-zinc-400 hover:text-cyan-400 hover:bg-cyan-500/10">
+                                    <Info className="h-4 w-4" />
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-[520px] bg-zinc-800 border-zinc-700 p-0 z-50" side="left" align="end">
+                                  <div className="p-4">
+                                    <h4 className="font-semibold text-sm text-cyan-400 mb-3 flex items-center gap-2">
+                                      <Activity className="h-4 w-4" />
+                                      De onde sai o dinheiro para pagar afiliados?
+                                    </h4>
+                                    <div className="space-y-3">
+                                      <div className={`rounded-lg p-3 border ${currentMode === 'system_margin' ? 'border-emerald-500/50 bg-emerald-500/5' : 'border-zinc-700 bg-zinc-900'}`}>
+                                        <div className="flex items-center gap-2 mb-1.5">
+                                          <span className="font-semibold text-sm">✅ Margem do Sistema</span>
+                                          {currentMode === 'system_margin' && <Badge className="text-[9px] bg-emerald-500/10 text-emerald-400" variant="outline">Ativo</Badge>}
+                                        </div>
+                                        <div className="text-xs text-zinc-300 space-y-1">
+                                          <p><span className="text-zinc-400 font-medium">De onde vem:</span> Do lucro que o sistema retém</p>
+                                          <p><span className="text-zinc-400 font-medium">Exemplo:</span> Investimento de $100 → margem de 30% = $30 → afiliado N1 ganha 10% de $30 = <span className="text-emerald-400 font-semibold">$3</span></p>
+                                          <p><span className="text-zinc-400 font-medium">Sustentabilidade:</span> <span className="text-emerald-400">Mais seguro</span> — o dinheiro sai do lucro do sistema, não dos ganhos dos usuários</p>
+                                        </div>
+                                      </div>
+                                      <div className={`rounded-lg p-3 border ${currentMode === 'investment_profit' ? 'border-amber-500/50 bg-amber-500/5' : 'border-zinc-700 bg-zinc-900'}`}>
+                                        <div className="flex items-center gap-2 mb-1.5">
+                                          <span className="font-semibold text-sm">⚠️ Lucro de Investimento</span>
+                                          {currentMode === 'investment_profit' && <Badge className="text-[9px] bg-amber-500/10 text-amber-400" variant="outline">Ativo</Badge>}
+                                        </div>
+                                        <div className="text-xs text-zinc-300 space-y-1">
+                                          <p><span className="text-zinc-400 font-medium">De onde vem:</span> Dos ganhos de ROI do referido</p>
+                                          <p><span className="text-zinc-400 font-medium">Exemplo:</span> Referido ganha $10 de ROI → afiliado N1 ganha 10% = <span className="text-amber-400 font-semibold">$1</span> + bônus de 2% no investimento</p>
+                                          <p><span className="text-zinc-400 font-medium">Sustentabilidade:</span> <span className="text-amber-400">Mais arriscado</span> — aumenta o custo do sistema, paga dos ganhos de trading</p>
+                                        </div>
+                                      </div>
+                                      <div className={`rounded-lg p-3 border ${currentMode === 'revenue_pool' ? 'border-cyan-500/50 bg-cyan-500/5' : 'border-zinc-700 bg-zinc-900'}`}>
+                                        <div className="flex items-center gap-2 mb-1.5">
+                                          <span className="font-semibold text-sm">✅ Pool de Receita</span>
+                                          {currentMode === 'revenue_pool' && <Badge className="text-[9px] bg-cyan-500/10 text-cyan-400" variant="outline">Ativo</Badge>}
+                                        </div>
+                                        <div className="text-xs text-zinc-300 space-y-1">
+                                          <p><span className="text-zinc-400 font-medium">De onde vem:</span> Da receita total de investimentos</p>
+                                          <p><span className="text-zinc-400 font-medium">Exemplo:</span> 5% de toda receita → pool dividido por nível. Investimento de $100 → $5 pro pool → N1 ganha 10% de $5 = <span className="text-cyan-400 font-semibold">$0.50</span></p>
+                                          <p><span className="text-zinc-400 font-medium">Sustentabilidade:</span> <span className="text-cyan-400">Previsível</span> — nunca excede X% da receita total</p>
+                                        </div>
+                                      </div>
+                                    </div>
+                                    <div className="mt-3 pt-3 border-t border-zinc-700">
+                                      <p className="text-[10px] text-zinc-500">💡 Recomendação: Use <span className="text-emerald-400">Margem do Sistema</span> para máxima sustentabilidade. O sistema sempre retém 15% de reserva mínima.</p>
+                                    </div>
+                                  </div>
+                                </PopoverContent>
+                              </Popover>
+                            </div>
+                          </CardHeader>
                           <CardContent>
                             <div className="space-y-4">
                               {(() => {
@@ -7231,20 +7288,20 @@ export default function PlataformaROI() {
                                         <SelectContent className="bg-zinc-800">
                                           <SelectItem value="system_margin">
                                             <div className="flex flex-col items-start">
-                                              <span className="font-medium">{t('admin.modeSystemMargin')}</span>
-                                              <span className="text-xs text-zinc-400">Commission on system profit margin only</span>
+                                              <span className="font-medium">✅ {t('admin.modeSystemMargin')}</span>
+                                              <span className="text-xs text-zinc-400">Do lucro do sistema — mais sustentável</span>
                                             </div>
                                           </SelectItem>
                                           <SelectItem value="investment_profit">
                                             <div className="flex flex-col items-start">
-                                              <span className="font-medium">{t('admin.modeInvestmentProfit')}</span>
-                                              <span className="text-xs text-zinc-400">Commission on ROI profits only</span>
+                                              <span className="font-medium">⚠️ {t('admin.modeInvestmentProfit')}</span>
+                                              <span className="text-xs text-zinc-400">Dos ganhos de ROI — mais arriscado</span>
                                             </div>
                                           </SelectItem>
                                           <SelectItem value="revenue_pool">
                                             <div className="flex flex-col items-start">
-                                              <span className="font-medium">{t('admin.modeRevenuePool')}</span>
-                                              <span className="text-xs text-zinc-400">% fijo de ingresos de inversiones al pool de afiliados</span>
+                                              <span className="font-medium">✅ {t('admin.modeRevenuePool')}</span>
+                                              <span className="text-xs text-zinc-400">% fixo da receita — previsível</span>
                                             </div>
                                           </SelectItem>
                                         </SelectContent>
