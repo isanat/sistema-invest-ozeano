@@ -503,19 +503,84 @@ export function isPayoutFinal(status: string): boolean {
 
 // ============================================================================
 // CURRENCY MAPPING - Map our internal currency codes to NowPayments codes
+// Extended map covering all common NowPayments-supported currencies
 // ============================================================================
 
 export const CURRENCY_MAP: Record<string, string> = {
+  // USDT variants (most common for deposits/withdrawals)
   usdt_trc20: 'usdttrc20',
   usdt_polygon: 'usdtmatic',
   usdt_bsc: 'usdtbsc',
   usdt_erc20: 'usdterc20',
+  usdt_avax: 'usdtavax',
+  usdt_sol: 'usdtsol',
+  usdt_trc20_alias: 'usdttrx',
+  // USDC variants
+  usdc_trc20: 'usdctrx',
+  usdc_polygon: 'usdcmatic',
+  usdc_bsc: 'usdcbsc',
+  usdc_erc20: 'usdcerc20',
+  usdc_sol: 'usdcsol',
+  usdc_avax: 'usdcavax',
+  // Major coins
   btc: 'btc',
   eth: 'eth',
   trx: 'trx',
-  usdc_polygon: 'usdcmatic',
   ltc: 'ltc',
   doge: 'doge',
+  bnb: 'bnbbsc',
+  sol: 'sol',
+  matic: 'matic',
+  avax: 'avax',
+  xrp: 'xrp',
+  dai_polygon: 'daimatic',
+  dai_erc20: 'daierc20',
+  // Additional stablecoins
+  busd_bsc: 'busdbsc',
+  tusd_erc20: 'tusderc20',
+};
+
+// Reverse map for NowPayments → internal currency conversion
+const REVERSE_CURRENCY_MAP: Record<string, string> = Object.fromEntries(
+  Object.entries(CURRENCY_MAP).map(([k, v]) => [v, k])
+);
+
+// Human-readable labels for currencies (used in UI)
+export const CURRENCY_LABELS: Record<string, string> = {
+  usdttrc20: 'USDT TRC20',
+  usdtmatic: 'USDT Polygon',
+  usdtbsc: 'USDT BSC',
+  usdterc20: 'USDT ERC20',
+  usdtavax: 'USDT Avalanche',
+  usdtsol: 'USDT Solana',
+  usdttrx: 'USDT TRC20',
+  usdctrx: 'USDC TRC20',
+  usdcmatic: 'USDC Polygon',
+  usdcbsc: 'USDC BSC',
+  usdcerc20: 'USDC ERC20',
+  usdcsol: 'USDC Solana',
+  usdcavax: 'USDC Avalanche',
+  btc: 'Bitcoin',
+  eth: 'Ethereum',
+  trx: 'TRON',
+  ltc: 'Litecoin',
+  doge: 'Dogecoin',
+  bnbbsc: 'BNB',
+  sol: 'Solana',
+  matic: 'Polygon MATIC',
+  avax: 'Avalanche',
+  xrp: 'XRP',
+  daimatic: 'DAI Polygon',
+  daierc20: 'DAI ERC20',
+  busdbsc: 'BUSD BSC',
+  tusderc20: 'TUSD ERC20',
+  // Internal codes also need labels
+  usdt_trc20: 'USDT TRC20',
+  usdt_polygon: 'USDT Polygon',
+  usdt_bsc: 'USDT BSC',
+  usdt_erc20: 'USDT ERC20',
+  usdc_polygon: 'USDC Polygon',
+  pix: 'PIX (BRL)',
 };
 
 export function toNowPaymentsCurrency(internalCurrency: string): string {
@@ -523,10 +588,14 @@ export function toNowPaymentsCurrency(internalCurrency: string): string {
 }
 
 export function fromNowPaymentsCurrency(npCurrency: string): string {
-  const reverse = Object.fromEntries(
-    Object.entries(CURRENCY_MAP).map(([k, v]) => [v, k])
-  );
-  return reverse[npCurrency] || npCurrency;
+  return REVERSE_CURRENCY_MAP[npCurrency] || npCurrency;
+}
+
+/**
+ * Get a human-readable label for any currency code (NowPayments or internal)
+ */
+export function getCurrencyLabel(code: string): string {
+  return CURRENCY_LABELS[code] || code.toUpperCase().replace(/_/g, ' ');
 }
 
 // ============================================================================

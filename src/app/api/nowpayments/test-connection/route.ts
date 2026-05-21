@@ -1,61 +1,41 @@
 import { NextRequest } from 'next/server';
-import { db } from '@/lib/db';
-import { requireAdmin, apiSuccess, apiError, handleApiError } from '@/lib/api-utils';
+import { requireAdmin, apiSuccess, handleApiError } from '@/lib/api-utils';
+import { testConnection, isNowPaymentsConfigured } from '@/lib/nowpayments';
 
 // Test NowPayments API connection — admin only
+// Uses environment variables ONLY (never reads credentials from database)
 export async function POST(request: NextRequest) {
   try {
-    const adminId = await requireAdmin(request);
-    if (!adminId) return apiError('Não autorizado', 401);
+    const adminId = await requireAdmin();
+    if (!adminId) return apiSuccess({ connected: false, status: 'not_authorized' });
 
-    // Get NowPayments credentials
-    const configKeys = ['nowpayments_api_key', 'nowpayments_base_url'];
-    const configs = await db.systemConfig.findMany({
-      where: { key: { in: configKeys } },
-    });
-    const configMap = Object.fromEntries(configs.map((c) => [c.key, c.value]));
+    // Check if NowPayments is configured via environment variables
+    const configured = isNowPaymentsConfigured();
 
-    const apiKey = configMap.nowpayments_api_key;
-    const baseUrl = configMap.nowpayments_base_url || 'https://api.nowpayments.io/v1';
-
-    if (!apiKey) {
+    if (!configured) {
       return apiSuccess({
         connected: false,
         status: 'not_configured',
-        message: 'Chave de API não configurada',
+        message: 'Credenciais NowPayments não configuradas nas variáveis de ambiente do Vercel',
       });
     }
 
-    // Test connection by calling the status endpoint
-    try {
-      const response = await fetch(`${baseUrl}/status`, {
-        method: 'GET',
-        headers: { 'x-api-key': apiKey },
-        signal: AbortSignal.timeout(10000),
-      });
+    // Test connection using the SDK (reads from env vars)
+    const result = await testConnection();
 
-      if (response.ok) {
-        const data = await response.json();
-        return apiSuccess({
-          connected: true,
-          status: 'connected',
-          message: 'Conexão com NowPayments estabelecida com sucesso',
-          details: data,
-        });
-      } else {
-        return apiSuccess({
-          connected: false,
-          status: 'auth_failed',
-          message: `Falha na autenticação: ${response.status} ${response.statusText}`,
-        });
-      }
-    } catch (fetchError: any) {
-      return apiSuccess({
-        connected: false,
-        status: 'connection_error',
-        message: `Erro de conexão: ${fetchError.message}`,
-      });
-    }
+    return apiSuccess({
+      connected: result.connected,
+      status: result.connected ? 'connected' : 'connection_failed',
+      message: result.connected
+        ? 'Conexão com NowPayments estabelecida com sucesso'
+        : `Falha na conexão: ${result.error || 'Erro desconhecido'}`,
+      details: {
+        authWorks: result.authWorks,
+        apiKeyWorks: result.apiKeyWorks,
+        subPartnerWorks: result.subPartnerWorks,
+        error: result.error,
+      },
+    });
   } catch (error) {
     return handleApiError(error);
   }

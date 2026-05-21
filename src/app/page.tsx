@@ -630,21 +630,27 @@ export default function PlataformaROI() {
   const [npEstimatedFee, setNpEstimatedFee] = useState<number>(0);
   const [npCountdown, setNpCountdown] = useState<string>('');
 
-  // Dynamic currencies — populated ONLY from admin settings or NowPayments API (no hardcoded fallbacks)
+  // Dynamic currencies — populated ONLY from NowPayments API (no hardcoded fallbacks)
   const [availableDepositCurrencies, setAvailableDepositCurrencies] = useState<string[]>([]);
   const [availableWithdrawCurrencies, setAvailableWithdrawCurrencies] = useState<string[]>([]);
+  const [currencyLabels, setCurrencyLabels] = useState<Record<string, string>>({});
   const [pixEnabled, setPixEnabled] = useState(false);
 
-  // Currency label helper
+  // Currency label helper — uses dynamic labels from NowPayments API when available
   const currencyLabel = (code: string): string => {
-    const labels: Record<string, string> = {
+    if (currencyLabels[code]) return currencyLabels[code];
+    // Fallback: common known currencies
+    const fallbackLabels: Record<string, string> = {
       usdttrc20: 'USDT TRC20', usdtmatic: 'USDT Polygon', usdtbsc: 'USDT BSC', usdterc20: 'USDT ERC20',
+      usdtavax: 'USDT Avalanche', usdtsol: 'USDT Solana', usdttrx: 'USDT TRC20',
+      usdctrx: 'USDC TRC20', usdcmatic: 'USDC Polygon', usdcbsc: 'USDC BSC', usdcerc20: 'USDC ERC20',
+      usdcsol: 'USDC Solana', usdcavax: 'USDC Avalanche',
       btc: 'Bitcoin', eth: 'Ethereum', trx: 'TRON', ltc: 'Litecoin', doge: 'Dogecoin',
-      usdcmatic: 'USDC Polygon',
+      bnbbsc: 'BNB', sol: 'Solana', matic: 'Polygon MATIC', avax: 'Avalanche', xrp: 'XRP',
       usdt_trc20: 'USDT TRC20', usdt_polygon: 'USDT Polygon', usdt_bsc: 'USDT BSC', usdt_erc20: 'USDT ERC20',
       usdc_polygon: 'USDC Polygon', pix: 'PIX (BRL)',
     };
-    return labels[code] || code.toUpperCase();
+    return fallbackLabels[code] || code.toUpperCase().replace(/_/g, ' ');
   };
 
   // Bitget real trader data
@@ -696,6 +702,7 @@ export default function PlataformaROI() {
   const [adminNpWallets, setAdminNpWallets] = useState<any[]>([]);
   const [adminNpWebhooks, setAdminNpWebhooks] = useState<any[]>([]);
   const [adminNpStats, setAdminNpStats] = useState<any>(null);
+  const [npEnvStatus, setNpEnvStatus] = useState<{ hasApiKey: boolean; hasEmail: boolean; hasPassword: boolean; hasIpnSecret: boolean; has2FA: boolean; configured: boolean } | null>(null);
   const [adminNpLoading, setAdminNpLoading] = useState(false);
   const [adminNpSection, setAdminNpSection] = useState<string>('deposits');
   const [npConnectionTest, setNpConnectionTest] = useState<any>(null);
@@ -776,12 +783,14 @@ export default function PlataformaROI() {
       if (res.ok) {
         const data = await res.json();
         if (data.success) {
-          // Currencies come dynamically from NowPayments merchant/coins API
+          // Currencies come dynamically from NowPayments GET /merchant/coins API
           if (data.deposit?.length > 0) {
             setAvailableDepositCurrencies(data.deposit);
           }
           if (data.withdrawal?.length > 0) setAvailableWithdrawCurrencies(data.withdrawal);
           if (data.pixEnabled !== undefined) setPixEnabled(data.pixEnabled);
+          // Store labels from API for dynamic display
+          if (data.labels) setCurrencyLabels(data.labels);
         }
       }
     } catch {
@@ -979,6 +988,18 @@ export default function PlataformaROI() {
   const testNpConnection = async () => {
     setNpTestingConnection(true);
     try {
+      // First fetch env var status
+      const configData = await api<{ success: boolean; configured: boolean; config: { hasApiKey: boolean; hasEmail: boolean; hasPassword: boolean; hasIpnSecret: boolean; has2FA: boolean } }>('/api/nowpayments/config');
+      setNpEnvStatus({
+        hasApiKey: configData.config?.hasApiKey || false,
+        hasEmail: configData.config?.hasEmail || false,
+        hasPassword: configData.config?.hasPassword || false,
+        hasIpnSecret: configData.config?.hasIpnSecret || false,
+        has2FA: configData.config?.has2FA || false,
+        configured: configData.configured || false,
+      });
+
+      // Then test connection
       const data = await api<{ success: boolean; connectionTest: any; message: string }>('/api/nowpayments/config', { method: 'PUT' });
       setNpConnectionTest(data.connectionTest);
       toast.success(data.message || 'Conexão testada');
@@ -1041,9 +1062,39 @@ export default function PlataformaROI() {
     if (isAdminUser && isAdminTab) fetchAdminData();
   }, [activeTab, isAdminUser]);
 
+  // Initialize investAmount when investment dialog opens or plan changes
+  useEffect(() => {
+    if (investDialogPlan) {
+      const plan = selectedPlanId
+        ? investDialogPlan.plans?.find((p: any) => p.id === selectedPlanId)
+        : investDialogPlan.plans?.[0];
+      if (plan) {
+        const minAmt = d(plan.minAmount) || 10;
+        setInvestAmount(String(minAmt));
+      } else if (investDialogPlan.plans?.length > 0) {
+        setInvestAmount(String(d(investDialogPlan.plans[0].minAmount) || 10));
+      }
+    }
+  }, [investDialogPlan, selectedPlanId]);
+
   // Load admin NowPayments data when that sub-tab is selected
   useEffect(() => {
-    if (isAdminUser && activeTab === 'nowpayments') fetchAdminNpData();
+    if (isAdminUser && activeTab === 'nowpayments') {
+      fetchAdminNpData();
+      // Also fetch env var status on tab open
+      api<{ success: boolean; configured: boolean; config: { hasApiKey: boolean; hasEmail: boolean; hasPassword: boolean; hasIpnSecret: boolean; has2FA: boolean } }>('/api/nowpayments/config')
+        .then(data => {
+          setNpEnvStatus({
+            hasApiKey: data.config?.hasApiKey || false,
+            hasEmail: data.config?.hasEmail || false,
+            hasPassword: data.config?.hasPassword || false,
+            hasIpnSecret: data.config?.hasIpnSecret || false,
+            has2FA: data.config?.has2FA || false,
+            configured: data.configured || false,
+          });
+        })
+        .catch(() => {});
+    }
   }, [activeTab, isAdminUser]);
 
   // ==========================================
@@ -6272,26 +6323,32 @@ export default function PlataformaROI() {
                             <CardTitle className="text-sm">{t('nowpayments.credentialsEnv')}</CardTitle>
                           </CardHeader>
                           <CardContent className="space-y-3">
-                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-xs">
                               <div className="flex items-center gap-1.5">
-                                <div className={`w-2 h-2 rounded-full ${process.env.NODE_ENV === 'development' ? 'bg-amber-400' : 'bg-zinc-600'}`} />
-                                <span className="text-zinc-400">API Key</span>
+                                <div className={`w-2 h-2 rounded-full ${npEnvStatus?.hasApiKey ? 'bg-emerald-400' : 'bg-zinc-600'}`} />
+                                <span className={npEnvStatus?.hasApiKey ? 'text-emerald-400' : 'text-zinc-400'}>API Key</span>
                               </div>
                               <div className="flex items-center gap-1.5">
-                                <div className={`w-2 h-2 rounded-full bg-zinc-600`} />
-                                <span className="text-zinc-400">E-mail</span>
+                                <div className={`w-2 h-2 rounded-full ${npEnvStatus?.hasEmail ? 'bg-emerald-400' : 'bg-zinc-600'}`} />
+                                <span className={npEnvStatus?.hasEmail ? 'text-emerald-400' : 'text-zinc-400'}>E-mail</span>
                               </div>
                               <div className="flex items-center gap-1.5">
-                                <div className={`w-2 h-2 rounded-full bg-zinc-600`} />
-                                <span className="text-zinc-400">Senha</span>
+                                <div className={`w-2 h-2 rounded-full ${npEnvStatus?.hasPassword ? 'bg-emerald-400' : 'bg-zinc-600'}`} />
+                                <span className={npEnvStatus?.hasPassword ? 'text-emerald-400' : 'text-zinc-400'}>Senha</span>
                               </div>
                               <div className="flex items-center gap-1.5">
-                                <div className={`w-2 h-2 rounded-full bg-zinc-600`} />
-                                <span className="text-zinc-400">IPN Secret</span>
+                                <div className={`w-2 h-2 rounded-full ${npEnvStatus?.hasIpnSecret ? 'bg-emerald-400' : 'bg-zinc-600'}`} />
+                                <span className={npEnvStatus?.hasIpnSecret ? 'text-emerald-400' : 'text-zinc-400'}>IPN Secret</span>
+                              </div>
+                              <div className="flex items-center gap-1.5">
+                                <div className={`w-2 h-2 rounded-full ${npEnvStatus?.has2FA ? 'bg-emerald-400' : 'bg-zinc-600'}`} />
+                                <span className={npEnvStatus?.has2FA ? 'text-emerald-400' : 'text-zinc-400'}>2FA TOTP</span>
                               </div>
                             </div>
                             <p className="text-zinc-500 text-xs">
-                              {t('nowpayments.notConfigured')}
+                              {npEnvStatus?.configured
+                                ? t('nowpayments.configured')
+                                : t('nowpayments.notConfigured')}
                             </p>
                             <div className="flex gap-2">
                               <Button
@@ -6324,25 +6381,25 @@ export default function PlataformaROI() {
                           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                             <Card className="bg-zinc-900 border-zinc-800">
                               <CardContent className="p-4">
-                                <p className="text-zinc-400 text-xs">Total Depositado (NP)</p>
+                                <p className="text-zinc-400 text-xs">{t('nowpayments.totalDeposited')}</p>
                                 <p className="text-cyan-400 font-bold text-lg">${(adminNpStats.totalDeposited || 0).toFixed(2)}</p>
                               </CardContent>
                             </Card>
                             <Card className="bg-zinc-900 border-zinc-800">
                               <CardContent className="p-4">
-                                <p className="text-zinc-400 text-xs">Total Pago (NP)</p>
+                                <p className="text-zinc-400 text-xs">{t('nowpayments.totalPaidOut')}</p>
                                 <p className="text-red-400 font-bold text-lg">${(adminNpStats.totalPaidOut || 0).toFixed(2)}</p>
                               </CardContent>
                             </Card>
                             <Card className="bg-zinc-900 border-zinc-800">
                               <CardContent className="p-4">
-                                <p className="text-zinc-400 text-xs">Split Recebido</p>
+                                <p className="text-zinc-400 text-xs">{t('nowpayments.splitReceived')}</p>
                                 <p className="text-purple-400 font-bold text-lg">${(adminNpStats.totalSplitReceived || 0).toFixed(2)}</p>
                               </CardContent>
                             </Card>
                             <Card className="bg-zinc-900 border-zinc-800">
                               <CardContent className="p-4">
-                                <p className="text-zinc-400 text-xs">Pendentes</p>
+                                <p className="text-zinc-400 text-xs">{t('nowpayments.pendingItems')}</p>
                                 <p className="text-amber-400 font-bold text-lg">{adminNpStats.pendingDepositCount || 0} deps / {adminNpStats.pendingPayoutCount || 0} payouts</p>
                               </CardContent>
                             </Card>
@@ -6355,9 +6412,9 @@ export default function PlataformaROI() {
                             <Button key={section} variant={adminNpSection === section ? 'default' : 'outline'} size="sm"
                               className={adminNpSection === section ? 'bg-emerald-600 hover:bg-cyan-700' : 'border-zinc-700'}
                               onClick={() => setAdminNpSection(section)}>
-                              {section === 'deposits' ? 'Depósitos' :
-                               section === 'payouts' ? 'Pagamentos' :
-                               section === 'wallets' ? 'Carteiras' : 'Webhooks'}
+                              {section === 'deposits' ? t('admin.deposits') :
+                               section === 'payouts' ? t('admin.withdrawals') :
+                               section === 'wallets' ? t('admin.walletAddress') : 'Webhooks'}
                             </Button>
                           ))}
                         </div>
@@ -6378,7 +6435,7 @@ export default function PlataformaROI() {
                                       <TableRow className="border-zinc-800">
                                         <TableHead className="text-zinc-400">Usuário</TableHead>
                                         <TableHead className="text-zinc-400">Valor</TableHead>
-                                        <TableHead className="text-zinc-400">Moeda</TableHead>
+                                        <TableHead className="text-zinc-400">{t('withdrawal.currency')}</TableHead>
                                         <TableHead className="text-zinc-400">Status</TableHead>
                                         <TableHead className="text-zinc-400">Endereço</TableHead>
                                         <TableHead className="text-zinc-400">Split</TableHead>
@@ -6437,7 +6494,7 @@ export default function PlataformaROI() {
                                       <TableRow className="border-zinc-800">
                                         <TableHead className="text-zinc-400">Usuário</TableHead>
                                         <TableHead className="text-zinc-400">Valor</TableHead>
-                                        <TableHead className="text-zinc-400">Moeda</TableHead>
+                                        <TableHead className="text-zinc-400">{t('withdrawal.currency')}</TableHead>
                                         <TableHead className="text-zinc-400">Status</TableHead>
                                         <TableHead className="text-zinc-400">Destino</TableHead>
                                         <TableHead className="text-zinc-400">TX Hash</TableHead>
@@ -7914,7 +7971,7 @@ Seus 10 indicados diretos investem $100/dia cada:
               {siteConfig.nowpaymentsEnabled && siteConfig.manualDepositEnabled && (
                 <div className="relative">
                   <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-zinc-700" /></div>
-                  <div className="relative flex justify-center text-xs"><span className="bg-zinc-900 px-2 text-zinc-500">ou depósito manual</span></div>
+                  <div className="relative flex justify-center text-xs"><span className="bg-zinc-900 px-2 text-zinc-500">{t('deposit.orManualDeposit')}</span></div>
                 </div>
               )}
 
@@ -7938,7 +7995,7 @@ Seus 10 indicados diretos investem $100/dia cada:
                     </div>
                     <div><Label className="text-zinc-300 text-xs">{t('deposit.txHash')}</Label><Input name="txHash" className="bg-zinc-800 border-zinc-700 mt-1" placeholder={t('deposit.txHashPlaceholder')} /></div>
                     <Button type="submit" className="w-full bg-zinc-700 hover:bg-zinc-600 text-sm" disabled={depositLoading}>
-                      {depositLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Depósito Manual
+                      {depositLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} {t('deposit.manualDeposit')}
                     </Button>
                   </form>
                 );
@@ -7948,8 +8005,8 @@ Seus 10 indicados diretos investem $100/dia cada:
               {!siteConfig.nowpaymentsEnabled && !siteConfig.manualDepositEnabled && (
                 <div className="text-center py-6">
                   <AlertTriangle className="h-10 w-10 text-amber-400 mx-auto mb-3" />
-                  <p className="text-zinc-400">Depósitos temporariamente indisponíveis</p>
-                  <p className="text-zinc-500 text-xs mt-1">Entre em contato com o suporte para mais informações.</p>
+                  <p className="text-zinc-400">{t('deposit.unavailable')}</p>
+                  <p className="text-zinc-500 text-xs mt-1">{t('deposit.unavailableDesc')}</p>
                 </div>
               )}
             </div>
@@ -7970,13 +8027,13 @@ Seus 10 indicados diretos investem $100/dia cada:
                     npDepositStatus === 'finished' ? 'text-cyan-400' :
                     'text-red-400'
                   }`}>
-                    {npDepositStatus === 'waiting' && 'Aguardando pagamento...'}
-                    {npDepositStatus === 'confirming' && 'Confirmando na blockchain...'}
-                    {npDepositStatus === 'confirmed' && 'Confirmado! Processando...'}
-                    {npDepositStatus === 'sending' && 'Enviando para sua conta...'}
-                    {npDepositStatus === 'finished' && 'Depósito concluído!'}
-                    {npDepositStatus === 'failed' && 'Falha no depósito'}
-                    {npDepositStatus === 'expired' && 'Depósito expirado'}
+                    {npDepositStatus === 'waiting' && t('deposit.waitingPayment')}
+                    {npDepositStatus === 'confirming' && t('deposit.confirming')}
+                    {npDepositStatus === 'confirmed' && t('deposit.confirmedProcessing')}
+                    {npDepositStatus === 'sending' && t('deposit.sendingToAccount')}
+                    {npDepositStatus === 'finished' && t('deposit.depositComplete')}
+                    {npDepositStatus === 'failed' && t('deposit.depositFailed')}
+                    {npDepositStatus === 'expired' && t('deposit.depositExpired')}
                   </span>
                 </div>
               )}
@@ -8083,8 +8140,8 @@ Seus 10 indicados diretos investem $100/dia cada:
           {!siteConfig.manualWithdrawalEnabled && !siteConfig.nowpaymentsWithdrawalEnabled ? (
             <div className="text-center py-6">
               <AlertTriangle className="h-10 w-10 text-amber-400 mx-auto mb-3" />
-              <p className="text-zinc-400">Saques temporariamente indisponíveis</p>
-              <p className="text-zinc-500 text-xs mt-1">Entre em contato com o suporte para mais informações.</p>
+              <p className="text-zinc-400">{t('withdrawal.unavailable')}</p>
+              <p className="text-zinc-500 text-xs mt-1">{t('deposit.unavailableDesc')}</p>
             </div>
           ) : (
           <form onSubmit={handleWithdraw} className="space-y-4">
@@ -8116,11 +8173,11 @@ Seus 10 indicados diretos investem $100/dia cada:
                           </div>
                         )}
             <div><Label className="text-zinc-300">{t('withdrawal.amount')}</Label><Input name="amount" type="number" step="0.01" min={siteConfig.minWithdrawalUsdt} max={d(user?.balance)} required className="bg-zinc-800 border-zinc-700 mt-1" placeholder={String(siteConfig.minWithdrawalUsdt)} />
-              <div className="text-xs text-zinc-500 mt-1">Saldo disponível: ${fmtUSDT(user?.balance || '0')} USDT · Mínimo: {siteConfig.minWithdrawalUsdt} USDT{siteConfig.withdrawalFeePct > 0 ? ` · Taxa: ${siteConfig.withdrawalFeePct}%` : ''}</div>
+              <div className="text-xs text-zinc-500 mt-1">{t('withdrawal.availableBalance')}: ${fmtUSDT(user?.balance || '0')} USDT · {t('withdrawal.minimum')}: {siteConfig.minWithdrawalUsdt} USDT{siteConfig.withdrawalFeePct > 0 ? ` · ${t('withdrawal.fee')}: ${siteConfig.withdrawalFeePct}%` : ''}</div>
             </div>
             {siteConfig.nowpaymentsWithdrawalEnabled && (
               <>
-                <div><Label className="text-zinc-300">Moeda</Label>
+                <div><Label className="text-zinc-300">{t('withdrawal.currency')}</Label>
                   <Select name="method" defaultValue={availableWithdrawCurrencies[0] || 'usdt_trc20'}><SelectTrigger className="bg-zinc-800 border-zinc-700 mt-1"><SelectValue /></SelectTrigger>
                     <SelectContent className="bg-zinc-800">
                       {availableWithdrawCurrencies.map(c => (
@@ -8129,9 +8186,9 @@ Seus 10 indicados diretos investem $100/dia cada:
                     </SelectContent>
                   </Select>
                 </div>
-                <div><Label className="text-zinc-300">{t('withdrawal.destination')}</Label><Input name="destination" required className="bg-zinc-800 border-zinc-700 mt-1" placeholder="Endereço da carteira" /></div>
+                <div><Label className="text-zinc-300">{t('withdrawal.destination')}</Label><Input name="destination" required className="bg-zinc-800 border-zinc-700 mt-1" placeholder={t('withdrawal.walletPlaceholder')} /></div>
                 <div className="bg-zinc-800/50 rounded-lg p-3 text-sm">
-                  <p className="text-zinc-400">O saque será processado automaticamente via NowPayments para sua carteira.</p>
+                  <p className="text-zinc-400">{t('withdrawal.toWallet')}</p>
                 </div>
               </>
             )}
@@ -8152,10 +8209,10 @@ Seus 10 indicados diretos investem $100/dia cada:
                       </SelectContent>
                     </Select>
                   </div>
-                  <div><Label className="text-zinc-300">{t('withdrawal.destination')}</Label><Input name="destination" required className="bg-zinc-800 border-zinc-700 mt-1" placeholder="Chave PIX ou endereço da carteira" /></div>
+                  <div><Label className="text-zinc-300">{t('withdrawal.destination')}</Label><Input name="destination" required className="bg-zinc-800 border-zinc-700 mt-1" placeholder={t('withdrawal.pixOrWalletPlaceholder')} /></div>
                   <div className="bg-zinc-800/50 rounded-lg p-3 text-sm">
-                    <p className="text-zinc-400">Sua solicitação de saque será analisada e processada manualmente pela equipe.</p>
-                    <p className="text-zinc-500 text-xs mt-1">Prazo: até 24h úteis.</p>
+                    <p className="text-zinc-400">{t('withdrawal.manualReviewDesc')}</p>
+                    <p className="text-zinc-500 text-xs mt-1">{t('withdrawal.manualReviewTime')}</p>
                   </div>
                 </>
               );

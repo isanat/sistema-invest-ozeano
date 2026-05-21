@@ -585,3 +585,73 @@ Stage Summary:
 - Admin contest/milestone/voucher POST routes now validate enum fields (metric, rewardType, type) and numeric fields (rewardPool, rewardValue, targetCount)
 - NowPayments generate-address route now validates currency against CURRENCY_MAP whitelist
 - Admin nowpayments stats queries fully parallelized (8 queries in one Promise.all instead of 5+3 sequential)
+---
+Task ID: 5
+Agent: Main Agent
+Task: Fix 4 critical issues: voucher investment 400 error, NowPayments credentials in env vars only, dynamic currencies from NowPayments API, missing i18n translations
+
+Work Log:
+- Analyzed all relevant code: investments route, nowpayments/currencies route, test-connection route, admin config routes, frontend deposit/withdrawal modals, translations file
+- Identified root cause of voucher investment 400 error: investAmount not initialized when investDialogPlan opens (stays as empty string, rentalCalc.totalPrice = 0)
+- Identified NowPayments test-connection reading from DB instead of env vars
+- Identified CURRENCY_MAP limiting available merchant coins (only 10 hardcoded)
+- Identified 20+ hardcoded Portuguese strings in deposit/withdrawal/nowpayments UI without i18n keys
+
+**Fix 1: Voucher Investment Flow (400 error, amount=0.00)**
+- Added useEffect in page.tsx that initializes investAmount to plan's minAmount when investDialogPlan or selectedPlanId changes
+- This ensures rentalCalc.totalPrice is always > 0 when the invest dialog is open
+- The useEffect fires when the dialog opens AND when the user changes the plan selector
+
+**Fix 2: NowPayments test-connection uses env vars instead of DB**
+- Rewrote /api/nowpayments/test-connection/route.ts to use isNowPaymentsConfigured() and testConnection() from lib/nowpayments.ts
+- These functions read credentials from environment variables ONLY, never from the database
+- Previously, the endpoint read nowpayments_api_key from SystemConfig (DB), creating an inconsistency with the main SDK
+
+**Fix 3: Dynamic currency fetching from NowPayments API**
+- Expanded CURRENCY_MAP in lib/nowpayments.ts from 10 to 27 currencies (added USDT Avalanche/Solana, USDC variants, BNB, SOL, MATIC, AVAX, XRP, DAI, etc.)
+- Added CURRENCY_LABELS map with human-readable names for all currencies (both NowPayments and internal codes)
+- Added getCurrencyLabel() helper function for dynamic label resolution
+- Added REVERSE_CURRENCY_MAP for efficient NowPayments→internal conversion
+- Updated /api/nowpayments/currencies/route.ts to accept ALL merchant coins (not just CURRENCY_MAP filtered)
+- Added labels field to API response for frontend dynamic display
+- Updated frontend fetchAvailableCurrencies to store labels from API
+- Updated currencyLabel helper to use dynamic labels from API with fallback
+- Changed Zod validation schemas (depositSchema, withdrawalSchema, affiliateWithdrawalSchema) from z.enum(['pix', 'usdt_trc20', 'usdt_polygon']) to z.string().min(1) — supports any dynamic currency
+
+**Fix 4: NowPayments credentials removed from migrate-config, admin UI dynamic**
+- Removed 7 NowPayments credential entries from migrate-config (api_key, email, password, ipn_secret, 2fa_secret, base_url, deposit_currencies)
+- Only 3 NowPayments settings remain in migrate: nowpayments_enabled, split_pct, split_wallet
+- Added npEnvStatus state variable to frontend
+- Updated testNpConnection to first fetch env var status from /api/nowpayments/config GET
+- Updated admin NowPayments tab to show dynamic env var indicators (5 items: API Key, Email, Senha, IPN Secret, 2FA TOTP) with green/gray dots based on actual configuration
+- Added useEffect to fetch env status when NowPayments admin tab opens
+- Updated "Configured"/"Not Configured" message to be dynamic based on actual status
+
+**Fix 5: i18n translations added for all hardcoded strings**
+- Added 15+ new translation keys to all 4 languages (pt, es, en, zh):
+  - deposit: confirmedProcessing, sendingToAccount, depositComplete, manualDeposit, orManualDeposit, unavailableDesc
+  - withdrawal: manualReviewDesc, manualReviewTime, currency, walletPlaceholder, pixOrWalletPlaceholder, availableBalance, minimum
+  - nowpayments: totalDeposited, totalPaidOut, splitReceived, pendingItems
+- Updated all hardcoded Portuguese strings in page.tsx to use t() function:
+  - Deposit status messages (waiting/confirming/confirmed/sending/finished/failed/expired)
+  - "ou depósito manual" separator
+  - "Depósito Manual" button
+  - "Depósitos temporariamente indisponíveis" + support message
+  - "Saques temporariamente indisponíveis" + support message
+  - "Moeda" label (×3)
+  - "Saldo disponível" / "Mínimo" / "Taxa" balance info
+  - "Endereço da carteira" placeholder
+  - "Chave PIX ou endereço da carteira" placeholder
+  - "O saque será processado automaticamente..." description
+  - "Sua solicitação de saque será analisada..." description
+  - "Prazo: até 24h úteis" time info
+  - Admin NowPayments stats labels (Total Depositado, Total Pago, Split Recebido, Pendentes)
+  - Admin NowPayments section tabs (Depósitos, Pagamentos, Carteiras)
+
+Stage Summary:
+- Voucher investment flow fixed: investAmount now properly initialized to plan minAmount on dialog open
+- NowPayments test-connection uses env vars exclusively (not DB config)
+- Currencies are fully dynamic from NowPayments GET /merchant/coins API, expanded CURRENCY_MAP to 27 currencies
+- NowPayments credentials removed from migrate-config, admin UI shows dynamic env var status with green/gray indicators
+- All hardcoded Portuguese/Spanish strings in deposit/withdrawal/nowpayments UI replaced with i18n t() calls
+- Translation keys added for all 4 languages (pt, es, en, zh)

@@ -22,7 +22,7 @@ export const registerSchema = z.object({
 
 export const depositSchema = z.object({
   amount: z.number().positive('Valor deve ser positivo'),
-  method: z.enum(['pix', 'usdt_trc20', 'usdt_polygon']),
+  method: z.string().min(1, 'Método de depósito é obrigatório'),
   txHash: z.string().optional(),
   network: z.string().optional(),
 });
@@ -31,7 +31,7 @@ export const depositSchema = z.object({
 
 export const withdrawalSchema = z.object({
   amount: z.number().positive('Valor deve ser positivo'),
-  method: z.enum(['pix', 'usdt_trc20', 'usdt_polygon']),
+  method: z.string().min(1, 'Método de saque é obrigatório'),
   destination: z.string().min(1, 'Destino é obrigatório'),
 });
 
@@ -94,7 +94,7 @@ export const adminAffiliateLevelSchema = z.object({
 
 export const affiliateWithdrawalSchema = z.object({
   amount: z.number().positive('Valor deve ser positivo'),
-  method: z.enum(['pix', 'usdt_trc20', 'usdt_polygon']),
+  method: z.string().min(1, 'Método de saque é obrigatório'),
   destination: z.string().min(1, 'Destino é obrigatório'),
 });
 
