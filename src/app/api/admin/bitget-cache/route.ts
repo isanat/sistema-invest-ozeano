@@ -2,107 +2,113 @@ import { NextRequest } from 'next/server';
 import { requireAdmin } from '@/lib/auth';
 import { apiError, apiSuccess, handleApiError } from '@/lib/api-utils';
 import { db } from '@/lib/db';
+import {
+  isBitgetConfigured,
+  fetchV2BrokerTraders,
+  fetchV1PublicTraders,
+  type TransformedTrader,
+} from '@/lib/bitget-api';
 
 // ============================================================================
 // ADMIN BITGET CACHE REFRESH - Force refresh trader data from Bitget API
 // ============================================================================
 
-interface BitgetTraderRow {
-  traderId?: string;
-  displayName?: string;
-  nickName?: string;
-  headPic?: string;
-  header?: string;
-  roi?: string;
-  totalPnl?: string;
-  maxRetracement?: string;
-  followCount?: number;
-  aum?: string;
-  traderGrade?: { gradeId?: number | string; gradeName?: string };
-  labelVos?: Array<{ labelId?: number | string; labelName?: string; labelType?: string }>;
-  topSymbols?: string[];
-  klineProfit?: string;
-  rankingNo?: number;
-  userName?: string;
-}
-
 const RANKING_CODES = ['profit_rate', 'total_income', 'total_follow_profit', 'trader_pro'] as const;
 
-async function fetchAndCacheRanking(rankingCode: string, pageSize: number = 50): Promise<number> {
-  const url = 'https://www.bitget.com/v1/trigger/trace/public/traderRankingList';
+const RANKING_TO_SORT: Record<string, 'Composite' | 'ROI' | 'totalPL' | 'AUM'> = {
+  profit_rate: 'ROI',
+  total_income: 'totalPL',
+  total_follow_profit: 'totalPL',
+  trader_pro: 'Composite',
+};
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 15000);
+async function fetchAndCacheRanking(rankingCode: string, pageSize: number = 20): Promise<number> {
+  let traders: TransformedTrader[] = [];
 
-  let response: Response;
-  try {
-    response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        Origin: 'https://www.bitget.com',
-        Referer: 'https://www.bitget.com/copy-trading/futures',
-        'Accept-Language': 'en-US,en;q=0.9',
-      },
-      body: JSON.stringify({ rankingCode, pageNo: 1, pageSize }),
-      signal: controller.signal,
-    });
-  } finally {
-    clearTimeout(timeout);
+  // Try V2 first, then V1 fallback
+  if (isBitgetConfigured()) {
+    try {
+      const sortRule = RANKING_TO_SORT[rankingCode] || 'ROI';
+      traders = await fetchV2BrokerTraders({
+        sortRule,
+        sortFlag: 'Desc',
+        pageNo: 1,
+        pageSize,
+      });
+      console.log(`[Bitget Cache] V2 API: ${traders.length} traders for ${rankingCode}`);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Unknown error';
+      console.warn(`[Bitget Cache] V2 failed for ${rankingCode}: ${msg}, trying V1...`);
+      try {
+        traders = await fetchV1PublicTraders(rankingCode, 1, pageSize);
+        console.log(`[Bitget Cache] V1 fallback: ${traders.length} traders for ${rankingCode}`);
+      } catch (v1Err) {
+        const v1Msg = v1Err instanceof Error ? v1Err.message : 'Unknown error';
+        console.error(`[Bitget Cache] V1 also failed for ${rankingCode}: ${v1Msg}`);
+        throw new Error(`V2: ${msg}; V1: ${v1Msg}`);
+      }
+    }
+  } else {
+    try {
+      traders = await fetchV1PublicTraders(rankingCode, 1, pageSize);
+      console.log(`[Bitget Cache] V1 only: ${traders.length} traders for ${rankingCode}`);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Unknown error';
+      throw new Error(`V1 failed: ${msg}`);
+    }
   }
 
-  if (!response.ok) {
-    throw new Error(`Bitget API returned ${response.status}`);
-  }
-
-  const data = await response.json();
-  if (data.code !== '00000') {
-    throw new Error(`Bitget API error: ${data.msg || data.code}`);
-  }
-
-  const traders: BitgetTraderRow[] = data.data?.traderRankingList || data.data?.rows || [];
   let saved = 0;
-
   for (const trader of traders) {
-    const traderId = trader.traderId || trader.userName;
-    if (!traderId) continue;
-
+    if (!trader.traderId) continue;
     await db.bitgetTraderCache.upsert({
-      where: { traderId_ranking: { traderId, ranking: rankingCode } },
+      where: { traderId_ranking: { traderId: trader.traderId, ranking: rankingCode } },
       create: {
-        traderId,
-        displayName: trader.displayName || trader.nickName || 'Unknown',
-        avatar: trader.headPic || trader.header || '',
+        traderId: trader.traderId,
+        displayName: trader.displayName || 'Unknown',
+        avatar: trader.avatar || '',
         roi: trader.roi || '0',
         totalPnl: trader.totalPnl || '0',
-        maxDrawdown: trader.maxRetracement || '0',
-        followers: trader.followCount || 0,
+        maxDrawdown: trader.maxDrawdown || '0',
+        followers: trader.followers || 0,
         aum: trader.aum || '0',
-        grade: JSON.stringify(trader.traderGrade || {}),
-        labels: JSON.stringify(trader.labelVos || []),
+        grade: JSON.stringify(trader.grade || {}),
+        labels: JSON.stringify(trader.labels || []),
         topSymbols: JSON.stringify(trader.topSymbols || []),
         klineProfit: trader.klineProfit || '',
         ranking: rankingCode,
-        rank: trader.rankingNo || (saved + 1),
+        rank: trader.rank || (saved + 1),
         isActive: true,
+        winRate: trader.winRate || null,
+        tradeDays: trader.tradeDays ? parseInt(trader.tradeDays, 10) : null,
+        tradeCount: trader.tradeCount ? parseInt(trader.tradeCount, 10) : null,
+        profitCount: trader.profitCount ? parseInt(trader.profitCount, 10) : null,
+        lossCount: trader.lossCount ? parseInt(trader.lossCount, 10) : null,
+        lastTradeTime: trader.lastTradeTime || null,
+        dailyProfitRateList: trader.dailyProfitRateList ? JSON.stringify(trader.dailyProfitRateList) : null,
       },
       update: {
-        displayName: trader.displayName || trader.nickName || 'Unknown',
-        avatar: trader.headPic || trader.header || '',
+        displayName: trader.displayName || 'Unknown',
+        avatar: trader.avatar || '',
         roi: trader.roi || '0',
         totalPnl: trader.totalPnl || '0',
-        maxDrawdown: trader.maxRetracement || '0',
-        followers: trader.followCount || 0,
+        maxDrawdown: trader.maxDrawdown || '0',
+        followers: trader.followers || 0,
         aum: trader.aum || '0',
-        grade: JSON.stringify(trader.traderGrade || {}),
-        labels: JSON.stringify(trader.labelVos || []),
+        grade: JSON.stringify(trader.grade || {}),
+        labels: JSON.stringify(trader.labels || []),
         topSymbols: JSON.stringify(trader.topSymbols || []),
         klineProfit: trader.klineProfit || '',
         ranking: rankingCode,
-        rank: trader.rankingNo || (saved + 1),
+        rank: trader.rank || (saved + 1),
         isActive: true,
+        winRate: trader.winRate || null,
+        tradeDays: trader.tradeDays ? parseInt(trader.tradeDays, 10) : null,
+        tradeCount: trader.tradeCount ? parseInt(trader.tradeCount, 10) : null,
+        profitCount: trader.profitCount ? parseInt(trader.profitCount, 10) : null,
+        lossCount: trader.lossCount ? parseInt(trader.lossCount, 10) : null,
+        lastTradeTime: trader.lastTradeTime || null,
+        dailyProfitRateList: trader.dailyProfitRateList ? JSON.stringify(trader.dailyProfitRateList) : null,
       },
     });
     saved++;
@@ -132,6 +138,7 @@ export async function GET(request: NextRequest) {
       totalCached,
       byRanking: Object.fromEntries(byRanking.map(r => [r.ranking, r._count.id])),
       lastUpdated: lastUpdated?.updatedAt || null,
+      bitgetV2Configured: isBitgetConfigured(),
     });
   } catch (error) {
     return handleApiError(error);
@@ -145,7 +152,7 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json().catch(() => ({}));
     const rankingCodes = body.rankings || RANKING_CODES;
-    const pageSize = body.pageSize || 50;
+    const pageSize = body.pageSize || 20;
 
     const results: Record<string, number> = {};
     const errors: Record<string, string> = {};
@@ -170,7 +177,7 @@ export async function POST(request: NextRequest) {
         adminId: session.userId,
         action: 'update',
         entity: 'bitget_cache',
-        description: `Bitget trader cache refreshed: ${totalCached} traders`,
+        description: `Bitget trader cache refreshed: ${totalCached} traders (V2=${isBitgetConfigured()})`,
         newValue: JSON.stringify({ results, errors }),
       },
     });
@@ -180,6 +187,7 @@ export async function POST(request: NextRequest) {
       results,
       errors: Object.keys(errors).length > 0 ? errors : undefined,
       totalCached,
+      apiVersion: isBitgetConfigured() ? 'v2' : 'v1',
     }, 201);
   } catch (error) {
     return handleApiError(error);
@@ -222,6 +230,13 @@ export async function PUT(request: NextRequest) {
       klineProfit?: string;
       ranking?: string;
       rank?: number;
+      winRate?: string;
+      tradeDays?: string;
+      tradeCount?: string;
+      profitCount?: string;
+      lossCount?: string;
+      lastTradeTime?: string;
+      dailyProfitRateList?: Array<{ rate: string; cTime: string }>;
     }> = body.traders || [];
 
     if (!Array.isArray(traders) || traders.length === 0) {
@@ -252,6 +267,13 @@ export async function PUT(request: NextRequest) {
           ranking,
           rank: trader.rank || (saved + 1),
           isActive: true,
+          winRate: trader.winRate || null,
+          tradeDays: trader.tradeDays ? parseInt(trader.tradeDays, 10) : null,
+          tradeCount: trader.tradeCount ? parseInt(trader.tradeCount, 10) : null,
+          profitCount: trader.profitCount ? parseInt(trader.profitCount, 10) : null,
+          lossCount: trader.lossCount ? parseInt(trader.lossCount, 10) : null,
+          lastTradeTime: trader.lastTradeTime || null,
+          dailyProfitRateList: trader.dailyProfitRateList ? JSON.stringify(trader.dailyProfitRateList) : null,
         },
         update: {
           displayName: trader.displayName || 'Unknown',
@@ -268,6 +290,13 @@ export async function PUT(request: NextRequest) {
           ranking,
           rank: trader.rank || (saved + 1),
           isActive: true,
+          winRate: trader.winRate || null,
+          tradeDays: trader.tradeDays ? parseInt(trader.tradeDays, 10) : null,
+          tradeCount: trader.tradeCount ? parseInt(trader.tradeCount, 10) : null,
+          profitCount: trader.profitCount ? parseInt(trader.profitCount, 10) : null,
+          lossCount: trader.lossCount ? parseInt(trader.lossCount, 10) : null,
+          lastTradeTime: trader.lastTradeTime || null,
+          dailyProfitRateList: trader.dailyProfitRateList ? JSON.stringify(trader.dailyProfitRateList) : null,
         },
       });
       saved++;

@@ -1,88 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import {
+  isBitgetConfigured,
+  fetchV2BrokerTraders,
+  searchV2Traders,
+  fetchV1PublicTraders,
+  generateDemoTraders,
+  type TransformedTrader,
+  type SortRule,
+} from '@/lib/bitget-api';
 
 // ============================================================================
-// TYPES
+// SORT RULE MAPPING: Frontend ranking codes → V2 sortRule values
 // ============================================================================
 
-interface BitgetTraderRow {
-  traderId?: string;
-  displayName?: string;
-  nickName?: string;
-  headPic?: string;
-  header?: string;
-  roi?: string;
-  totalPnl?: string;
-  maxRetracement?: string;
-  followCount?: number;
-  followerTotalPnl?: string;
-  aum?: string;
-  traderGrade?: {
-    gradeId?: number | string;
-    gradeName?: string;
-    lastGradeId?: number | string;
-    lastGradeName?: string;
-  };
-  labelVos?: Array<{
-    labelId?: number | string;
-    labelName?: string;
-    labelType?: string;
-  }>;
-  topSymbols?: string[];
-  klineProfit?: string;
-  rankingNo?: number;
-  userName?: string;
-}
-
-interface BitgetRankingResponse {
-  code: string;
-  msg: string;
-  data: {
-    traderRankingList?: BitgetTraderRow[];
-    rows?: BitgetTraderRow[];
-    totals?: number;
-    nextFlag?: boolean;
-  };
-  success?: boolean;
-}
-
-interface BitgetSearchResponse {
-  code: string;
-  msg: string;
-  data: {
-    traderSearchList?: BitgetTraderRow[];
-    totals?: number;
-  };
-  success?: boolean;
-}
-
-interface TransformedTrader {
-  traderId: string;
-  displayName: string;
-  avatar: string;
-  roi: string;
-  totalPnl: string;
-  maxDrawdown: string;
-  followers: number;
-  aum: string;
-  grade: {
-    id: string;
-    name: string;
-  };
-  labels: Array<{
-    id: string;
-    name: string;
-    type: string;
-  }>;
-  topSymbols: string[];
-  klineProfit: string;
-  rank: number;
-  isDemo?: boolean;
-}
-
-// ============================================================================
-// VALID RANKING CODES
-// ============================================================================
+const RANKING_TO_SORT: Record<string, SortRule> = {
+  profit_rate: 'ROI',
+  total_income: 'totalPL',
+  total_follow_profit: 'totalPL',
+  trader_pro: 'Composite',
+  rookie_trader: 'Composite',
+};
 
 const VALID_RANKING_CODES = [
   'profit_rate',
@@ -95,148 +33,11 @@ const VALID_RANKING_CODES = [
 type RankingCode = (typeof VALID_RANKING_CODES)[number];
 
 // ============================================================================
-// TRANSFORM BITGET DATA
-// ============================================================================
-
-function transformTrader(trader: BitgetTraderRow, rank: number): TransformedTrader {
-  return {
-    traderId: trader.traderId || trader.userName || '',
-    displayName: trader.displayName || trader.nickName || 'Unknown Trader',
-    avatar: trader.headPic || trader.header || '',
-    roi: trader.roi || '0',
-    totalPnl: trader.totalPnl || '0',
-    maxDrawdown: trader.maxRetracement || '0',
-    followers: trader.followCount || 0,
-    aum: trader.aum || '0',
-    grade: {
-      id: String(trader.traderGrade?.gradeId || ''),
-      name: trader.traderGrade?.gradeName || '',
-    },
-    labels: (trader.labelVos || []).map((label) => ({
-      id: String(label.labelId || ''),
-      name: label.labelName || '',
-      type: label.labelType || '',
-    })),
-    topSymbols: trader.topSymbols || [],
-    klineProfit: trader.klineProfit || '',
-    rank,
-  };
-}
-
-// ============================================================================
-// FETCH FROM BITGET API
-// ============================================================================
-
-async function fetchTraderRanking(
-  rankingCode: RankingCode,
-  pageNo: number,
-  pageSize: number
-): Promise<TransformedTrader[]> {
-  const url = 'https://www.bitget.com/v1/trigger/trace/public/traderRankingList';
-
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 10000);
-
-  let response: Response;
-  try {
-    response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        Origin: 'https://www.bitget.com',
-        Referer: 'https://www.bitget.com/copy-trading/futures',
-        'Accept-Language': 'en-US,en;q=0.9',
-      },
-      body: JSON.stringify({
-        rankingCode,
-        pageNo,
-        pageSize,
-      }),
-      signal: controller.signal,
-    });
-  } finally {
-    clearTimeout(timeout);
-  }
-
-  if (!response.ok) {
-    throw new Error(`Bitget API returned ${response.status}: ${response.statusText}`);
-  }
-
-  const data: BitgetRankingResponse = await response.json();
-
-  if (data.code !== '00000') {
-    throw new Error(`Bitget API error: code=${data.code}, msg=${data.msg || 'unknown'}`);
-  }
-
-  // Handle both response formats: traderRankingList (old) and rows (new)
-  const traders = data.data?.traderRankingList || data.data?.rows || [];
-  const offset = (pageNo - 1) * pageSize;
-
-  return traders.map((trader, index) =>
-    transformTrader(trader, trader.rankingNo || (offset + index + 1))
-  );
-}
-
-async function fetchTraderSearch(
-  searchKey: string,
-  pageNo: number,
-  pageSize: number
-): Promise<TransformedTrader[]> {
-  const url = 'https://www.bitget.com/v1/trigger/trace/public/traderSearch';
-
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 10000);
-
-  let response: Response;
-  try {
-    response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        Origin: 'https://www.bitget.com',
-        Referer: 'https://www.bitget.com/copy-trading/futures',
-        'Accept-Language': 'en-US,en;q=0.9',
-      },
-      body: JSON.stringify({
-        searchKey,
-        pageNo,
-        pageSize,
-      }),
-      signal: controller.signal,
-    });
-  } finally {
-    clearTimeout(timeout);
-  }
-
-  if (!response.ok) {
-    throw new Error(`Bitget API returned ${response.status}: ${response.statusText}`);
-  }
-
-  const data: BitgetSearchResponse = await response.json();
-
-  if (data.code !== '00000') {
-    throw new Error(`Bitget API error: code=${data.code}, msg=${data.msg || 'unknown'}`);
-  }
-
-  const traders = data.data?.traderSearchList || [];
-  const offset = (pageNo - 1) * pageSize;
-
-  return traders.map((trader, index) =>
-    transformTrader(trader, offset + index + 1)
-  );
-}
-
-// ============================================================================
 // DATABASE CACHE OPERATIONS
 // ============================================================================
 
 async function saveTradersToCache(traders: TransformedTrader[], ranking: string): Promise<void> {
   try {
-    // Upsert each trader into the cache
     for (const trader of traders) {
       if (!trader.traderId) continue;
       await db.bitgetTraderCache.upsert({
@@ -257,6 +58,13 @@ async function saveTradersToCache(traders: TransformedTrader[], ranking: string)
           ranking,
           rank: trader.rank,
           isActive: true,
+          winRate: trader.winRate || null,
+          tradeDays: trader.tradeDays ? parseInt(trader.tradeDays, 10) : null,
+          tradeCount: trader.tradeCount ? parseInt(trader.tradeCount, 10) : null,
+          profitCount: trader.profitCount ? parseInt(trader.profitCount, 10) : null,
+          lossCount: trader.lossCount ? parseInt(trader.lossCount, 10) : null,
+          lastTradeTime: trader.lastTradeTime || null,
+          dailyProfitRateList: trader.dailyProfitRateList ? JSON.stringify(trader.dailyProfitRateList) : null,
         },
         update: {
           displayName: trader.displayName,
@@ -273,6 +81,13 @@ async function saveTradersToCache(traders: TransformedTrader[], ranking: string)
           ranking,
           rank: trader.rank,
           isActive: true,
+          winRate: trader.winRate || null,
+          tradeDays: trader.tradeDays ? parseInt(trader.tradeDays, 10) : null,
+          tradeCount: trader.tradeCount ? parseInt(trader.tradeCount, 10) : null,
+          profitCount: trader.profitCount ? parseInt(trader.profitCount, 10) : null,
+          lossCount: trader.lossCount ? parseInt(trader.lossCount, 10) : null,
+          lastTradeTime: trader.lastTradeTime || null,
+          dailyProfitRateList: trader.dailyProfitRateList ? JSON.stringify(trader.dailyProfitRateList) : null,
         },
       });
     }
@@ -307,92 +122,20 @@ async function loadTradersFromCache(ranking: string, page: number, pageSize: num
       topSymbols: JSON.parse(row.topSymbols || '[]'),
       klineProfit: row.klineProfit,
       rank: row.rank,
+      winRate: row.winRate || undefined,
+      tradeDays: row.tradeDays?.toString() || undefined,
+      tradeCount: row.tradeCount?.toString() || undefined,
+      profitCount: row.profitCount?.toString() || undefined,
+      lossCount: row.lossCount?.toString() || undefined,
+      lastTradeTime: row.lastTradeTime || undefined,
+      dailyProfitRateList: row.dailyProfitRateList ? JSON.parse(row.dailyProfitRateList) : undefined,
       isCached: true as never,
+      source: 'database_cache',
     }));
   } catch (dbError) {
     console.error('[Bitget] Failed to load cache:', dbError);
     return [];
   }
-}
-
-// ============================================================================
-// DEMO DATA (last resort fallback when no cache exists)
-// ============================================================================
-
-type DemoGrade = 'Diamond' | 'Platinum' | 'Gold' | 'Silver';
-
-interface DemoTraderSeed {
-  traderId: string;
-  displayName: string;
-  roiPct: number;
-  pnlUsd: number;
-  aumUsd: number;
-  drawdownPct: number;
-  followers: number;
-  grade: DemoGrade;
-  labelNames: string[];
-  topSymbols: string[];
-}
-
-const DEMO_TRADER_SEEDS: DemoTraderSeed[] = [
-  { traderId: 'demo-001', displayName: 'Alexei Volkov', roiPct: 582, pnlUsd: 178500, aumUsd: 780000, drawdownPct: 28, followers: 4850, grade: 'Diamond', labelNames: ['Futures', 'Trend Following'], topSymbols: ['BTC', 'ETH', 'SOL'] },
-  { traderId: 'demo-002', displayName: 'Sakura Tanaka', roiPct: 412, pnlUsd: 132000, aumUsd: 520000, drawdownPct: 22, followers: 3200, grade: 'Diamond', labelNames: ['Swing', 'Long-Short'], topSymbols: ['BTC', 'BNB', 'AVAX'] },
-  { traderId: 'demo-003', displayName: 'Marco De Luca', roiPct: 345, pnlUsd: 97500, aumUsd: 410000, drawdownPct: 35, followers: 2100, grade: 'Platinum', labelNames: ['Futures', 'Scalping'], topSymbols: ['ETH', 'SOL', 'DOGE'] },
-  { traderId: 'demo-004', displayName: 'Priya Sharma', roiPct: 298, pnlUsd: 86000, aumUsd: 350000, drawdownPct: 18, followers: 1950, grade: 'Platinum', labelNames: ['DeFi', 'Trend Following'], topSymbols: ['ETH', 'BNB', 'AVAX'] },
-  { traderId: 'demo-005', displayName: 'Chen Wei Ming', roiPct: 245, pnlUsd: 72000, aumUsd: 290000, drawdownPct: 31, followers: 1680, grade: 'Platinum', labelNames: ['High Frequency', 'Arbitrage'], topSymbols: ['BTC', 'ETH', 'XRP'] },
-  { traderId: 'demo-006', displayName: 'Olga Petrova', roiPct: 198, pnlUsd: 58000, aumUsd: 210000, drawdownPct: 25, followers: 1420, grade: 'Gold', labelNames: ['Swing', 'Futures'], topSymbols: ['SOL', 'BNB', 'DOGE'] },
-];
-
-const GRADE_ID_MAP: Record<DemoGrade, string> = {
-  Diamond: 'grade_diamond',
-  Platinum: 'grade_platinum',
-  Gold: 'grade_gold',
-  Silver: 'grade_silver',
-};
-
-const LABEL_ID_MAP: Record<string, string> = {
-  Futures: 'label_futures',
-  'High Frequency': 'label_hf',
-  Swing: 'label_swing',
-  'Trend Following': 'label_trend',
-  Scalping: 'label_scalping',
-  Arbitrage: 'label_arb',
-  DeFi: 'label_defi',
-  'Long-Short': 'label_ls',
-};
-
-const LABEL_TYPE_MAP: Record<string, string> = {
-  Futures: 'strategy',
-  'High Frequency': 'frequency',
-  Swing: 'strategy',
-  'Trend Following': 'strategy',
-  Scalping: 'frequency',
-  Arbitrage: 'strategy',
-  DeFi: 'sector',
-  'Long-Short': 'strategy',
-};
-
-function generateDemoTraders(): TransformedTrader[] {
-  return DEMO_TRADER_SEEDS.map((seed, index) => ({
-    traderId: seed.traderId,
-    displayName: seed.displayName,
-    avatar: '',
-    roi: seed.roiPct.toString(),
-    totalPnl: seed.pnlUsd.toString(),
-    maxDrawdown: seed.drawdownPct.toString(),
-    followers: seed.followers,
-    aum: seed.aumUsd.toString(),
-    grade: { id: GRADE_ID_MAP[seed.grade], name: seed.grade },
-    labels: seed.labelNames.map((name) => ({
-      id: LABEL_ID_MAP[name] || 'label_unknown',
-      name,
-      type: LABEL_TYPE_MAP[name] || 'other',
-    })),
-    topSymbols: seed.topSymbols,
-    klineProfit: '',
-    rank: index + 1,
-    isDemo: true,
-  }));
 }
 
 // ============================================================================
@@ -414,35 +157,89 @@ export async function GET(request: NextRequest) {
   const pageSize = Math.max(1, Math.min(pageSizeParam, 50));
 
   try {
-    // Try fetching from Bitget API
     let traders: TransformedTrader[];
+    let source = 'bitget_v2';
 
-    if (searchParam && searchParam.trim().length > 0) {
-      traders = await fetchTraderSearch(searchParam.trim(), page, pageSize);
+    // =========================================================================
+    // PRIORITY 1: V2 Authenticated API (if credentials configured)
+    // =========================================================================
+    if (isBitgetConfigured()) {
+      try {
+        if (searchParam && searchParam.trim().length > 0) {
+          traders = await searchV2Traders(searchParam.trim(), page, pageSize);
+        } else {
+          const sortRule = RANKING_TO_SORT[rankingCode] || 'ROI';
+          traders = await fetchV2BrokerTraders({
+            sortRule,
+            sortFlag: 'Desc',
+            pageNo: page,
+            pageSize,
+          });
+        }
+        source = 'bitget_v2';
+        console.log(`[Bitget] V2 API success: ${traders.length} traders fetched`);
+      } catch (v2Error) {
+        const msg = v2Error instanceof Error ? v2Error.message : 'V2 API error';
+        console.warn(`[Bitget] V2 API failed: ${msg}, trying V1 fallback...`);
+
+        // =====================================================================
+        // PRIORITY 2: V1 Public API fallback (no auth required)
+        // =====================================================================
+        try {
+          if (searchParam && searchParam.trim().length > 0) {
+            // V1 doesn't have a good search, use V2 with no result
+            traders = [];
+          } else {
+            traders = await fetchV1PublicTraders(rankingCode, page, pageSize);
+          }
+          source = 'bitget_v1';
+          console.log(`[Bitget] V1 API fallback: ${traders.length} traders fetched`);
+        } catch (v1Error) {
+          const v1Msg = v1Error instanceof Error ? v1Error.message : 'V1 API error';
+          console.warn(`[Bitget] V1 API also failed: ${v1Msg}`);
+          traders = [];
+        }
+      }
     } else {
-      traders = await fetchTraderRanking(rankingCode, page, pageSize);
+      // =========================================================================
+      // No V2 credentials — try V1 public API
+      // =========================================================================
+      console.log('[Bitget] V2 not configured, trying V1 public API...');
+      try {
+        if (searchParam && searchParam.trim().length > 0) {
+          traders = [];
+        } else {
+          traders = await fetchV1PublicTraders(rankingCode, page, pageSize);
+        }
+        source = 'bitget_v1';
+      } catch (v1Error) {
+        const v1Msg = v1Error instanceof Error ? v1Error.message : 'V1 API error';
+        console.warn(`[Bitget] V1 API failed: ${v1Msg}`);
+        traders = [];
+      }
     }
 
-    // Save to database cache (non-blocking)
+    // Save to database cache (non-blocking) — only for non-search results
     if (!searchParam && traders.length > 0) {
-      // Use Promise with catch to avoid blocking the response
       saveTradersToCache(traders, rankingCode).catch(() => {});
     }
 
-    return NextResponse.json({
-      success: true,
-      traders,
-      cached: false,
-      source: 'bitget',
-      ranking: rankingCode,
-      page,
-      pageSize,
-    });
-  } catch (error) {
-    const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-    console.error(`[Bitget] API failed: ${errorMsg}`);
+    // Return results if we got traders
+    if (traders.length > 0) {
+      return NextResponse.json({
+        success: true,
+        traders,
+        cached: false,
+        source,
+        ranking: rankingCode,
+        page,
+        pageSize,
+      });
+    }
 
-    // Try loading from database cache
+    // =========================================================================
+    // PRIORITY 3: Database cache
+    // =========================================================================
     if (!searchParam) {
       const cachedTraders = await loadTradersFromCache(rankingCode, page, pageSize);
       if (cachedTraders.length > 0) {
@@ -459,8 +256,48 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Last resort: demo data
+    // =========================================================================
+    // PRIORITY 4: Demo data (last resort)
+    // =========================================================================
     console.log('[Bitget] No cache available, serving demo data');
+    const allDemoTraders = generateDemoTraders();
+    const startIndex = (page - 1) * pageSize;
+    const paginatedDemo = allDemoTraders.slice(startIndex, startIndex + pageSize);
+
+    return NextResponse.json(
+      {
+        success: true,
+        traders: paginatedDemo,
+        isDemo: true,
+        cached: false,
+        source: 'demo_fallback',
+        ranking: rankingCode,
+        page,
+        pageSize,
+      },
+      { status: 200 }
+    );
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+    console.error(`[Bitget] Unexpected error: ${errorMsg}`);
+
+    // Try database cache
+    if (!searchParam) {
+      const cachedTraders = await loadTradersFromCache(rankingCode, page, pageSize);
+      if (cachedTraders.length > 0) {
+        return NextResponse.json({
+          success: true,
+          traders: cachedTraders,
+          cached: true,
+          source: 'database_cache',
+          ranking: rankingCode,
+          page,
+          pageSize,
+        });
+      }
+    }
+
+    // Demo fallback
     const allDemoTraders = generateDemoTraders();
     const startIndex = (page - 1) * pageSize;
     const paginatedDemo = allDemoTraders.slice(startIndex, startIndex + pageSize);

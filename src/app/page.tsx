@@ -79,6 +79,19 @@ interface BitgetTrader {
   topSymbols: string[];
   klineProfit: string;
   rank: number;
+  // V2 enriched fields
+  winRate?: string;
+  tradeDays?: string;
+  tradeCount?: string;
+  profitCount?: string;
+  lossCount?: string;
+  lastTradeTime?: string;
+  dailyProfitRateList?: Array<{ rate: string; cTime: string }>;
+  canTrace?: string;
+  totalEquity?: string;
+  isDemo?: boolean;
+  isCached?: boolean;
+  source?: string;
 }
 
 interface InvestmentPlan {
@@ -4397,7 +4410,10 @@ export default function PlataformaROI() {
                           {bitgetTraders.map((trader, idx) => {
                             let chartPoints: number[] = [];
                             try {
-                              if (trader.klineProfit) {
+                              // V2: Use dailyProfitRateList for chart
+                              if (trader.dailyProfitRateList && Array.isArray(trader.dailyProfitRateList) && trader.dailyProfitRateList.length > 1) {
+                                chartPoints = trader.dailyProfitRateList.map((p: any) => parseFloat(p?.rate || 0)).filter(v => !isNaN(v));
+                              } else if (trader.klineProfit) {
                                 const parsed = typeof trader.klineProfit === 'string' ? JSON.parse(trader.klineProfit) : trader.klineProfit;
                                 if (Array.isArray(parsed)) {
                                   chartPoints = parsed.map((p: any) => parseFloat(p?.profitRate || p?.roi || p || 0)).filter(v => !isNaN(v));
@@ -4409,6 +4425,8 @@ export default function PlataformaROI() {
                             const pnlVal = parseFloat(trader.totalPnl) || 0;
                             const aumVal = parseFloat(trader.aum) || 0;
                             const drawdownVal = parseFloat(trader.maxDrawdown) || 0;
+                            const winRateVal = trader.winRate ? parseFloat(trader.winRate) : null;
+                            const tradeDaysVal = trader.tradeDays ? parseInt(trader.tradeDays, 10) : null;
                             const symbolLabels = (trader.topSymbols || []).slice(0, 3).map(s => s.replace('USDT_UMCBL', '').replace('USDT', ''));
                             const isFeatured = trader.grade?.name === 'Diamond' || trader.grade?.name === 'Platinum';
 
@@ -4447,9 +4465,21 @@ export default function PlataformaROI() {
                                           <span className="text-xs text-zinc-500">#{trader.rank}</span>
                                           <span className="text-zinc-700">•</span>
                                           <span className="text-xs text-zinc-500">{trader.followers} {t('copyTraders.followers')}</span>
-                                          <span className="px-1.5 py-0 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[9px] text-emerald-400 font-medium flex items-center gap-1">
-                                            <div className="w-1 h-1 bg-emerald-400 rounded-full animate-pulse" />LIVE
-                                          </span>
+                                          {trader.source === 'bitget_v2' && (
+                                            <span className="px-1.5 py-0 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[9px] text-emerald-400 font-medium flex items-center gap-1">
+                                              <div className="w-1 h-1 bg-emerald-400 rounded-full animate-pulse" />LIVE
+                                            </span>
+                                          )}
+                                          {trader.isCached && (
+                                            <span className="px-1.5 py-0 rounded-full bg-amber-500/10 border border-amber-500/20 text-[9px] text-amber-400 font-medium">
+                                              CACHE
+                                            </span>
+                                          )}
+                                          {trader.isDemo && (
+                                            <span className="px-1.5 py-0 rounded-full bg-zinc-500/10 border border-zinc-500/20 text-[9px] text-zinc-400 font-medium">
+                                              DEMO
+                                            </span>
+                                          )}
                                         </div>
                                       </div>
                                     </div>
@@ -4488,35 +4518,59 @@ export default function PlataformaROI() {
                                       </div>
                                     )}
 
-                                    {/* Stats Grid */}
-                                    <div className="grid grid-cols-3 gap-2 mb-3">
+                                    {/* Stats Grid - V2 enriched with winRate & tradeDays */}
+                                    <div className={`grid gap-2 mb-3 ${winRateVal !== null || tradeDaysVal !== null ? 'grid-cols-4' : 'grid-cols-3'}`}>
                                       <div className="bg-zinc-800/40 rounded-lg p-2 text-center">
                                         <div className="text-[10px] text-zinc-500 mb-0.5">{t('copyTraders.roiLabel')}</div>
-                                        <div className={`font-bold text-sm ${roiVal >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                                        <div className={`font-bold text-xs ${roiVal >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                                           {roiVal >= 0 ? '+' : ''}{roiVal.toFixed(1)}%
                                         </div>
                                       </div>
                                       <div className="bg-zinc-800/40 rounded-lg p-2 text-center">
                                         <div className="text-[10px] text-zinc-500 mb-0.5">{t('copyTraders.pnlLabel')}</div>
-                                        <div className={`font-bold text-sm ${pnlVal >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                                        <div className={`font-bold text-xs ${pnlVal >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                                           ${Math.abs(pnlVal) >= 1000 ? `${(pnlVal/1000).toFixed(1)}k` : pnlVal.toFixed(0)}
                                         </div>
                                       </div>
                                       <div className="bg-zinc-800/40 rounded-lg p-2 text-center">
                                         <div className="text-[10px] text-zinc-500 mb-0.5">{t('copyTraders.aumLabel')}</div>
-                                        <div className="font-bold text-sm text-cyan-400">
+                                        <div className="font-bold text-xs text-cyan-400">
                                           ${aumVal >= 1000 ? `${(aumVal/1000).toFixed(1)}k` : aumVal.toFixed(0)}
                                         </div>
                                       </div>
+                                      {winRateVal !== null && (
+                                        <div className="bg-zinc-800/40 rounded-lg p-2 text-center">
+                                          <div className="text-[10px] text-zinc-500 mb-0.5">Win%</div>
+                                          <div className={`font-bold text-xs ${winRateVal >= 60 ? 'text-emerald-400' : winRateVal >= 40 ? 'text-amber-400' : 'text-red-400'}`}>
+                                            {winRateVal.toFixed(1)}%
+                                          </div>
+                                        </div>
+                                      )}
+                                      {tradeDaysVal !== null && winRateVal === null && (
+                                        <div className="bg-zinc-800/40 rounded-lg p-2 text-center">
+                                          <div className="text-[10px] text-zinc-500 mb-0.5">Dias</div>
+                                          <div className="font-bold text-xs text-zinc-300">
+                                            {tradeDaysVal}d
+                                          </div>
+                                        </div>
+                                      )}
                                     </div>
 
-                                    {/* Drawdown + Symbols */}
+                                    {/* Drawdown + Symbols + Trade Days */}
                                     <div className="flex items-center justify-between mb-3">
-                                      <div className="text-xs">
-                                        <span className="text-zinc-500">{t('copyTraders.drawdown')}: </span>
-                                        <span className={`font-medium ${drawdownVal > 50 ? 'text-red-400' : drawdownVal > 20 ? 'text-amber-400' : 'text-emerald-400'}`}>
-                                          {drawdownVal.toFixed(1)}%
+                                      <div className="text-xs flex items-center gap-2">
+                                        <span>
+                                          <span className="text-zinc-500">{t('copyTraders.drawdown')}: </span>
+                                          <span className={`font-medium ${drawdownVal > 50 ? 'text-red-400' : drawdownVal > 20 ? 'text-amber-400' : 'text-emerald-400'}`}>
+                                            {drawdownVal.toFixed(1)}%
+                                          </span>
                                         </span>
+                                        {tradeDaysVal !== null && winRateVal !== null && (
+                                          <span>
+                                            <span className="text-zinc-700">•</span>
+                                            <span className="text-zinc-500"> {tradeDaysVal}d</span>
+                                          </span>
+                                        )}
                                       </div>
                                       {symbolLabels.length > 0 && (
                                         <div className="flex gap-1">

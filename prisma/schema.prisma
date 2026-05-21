@@ -615,6 +615,16 @@ model BitgetTraderCache {
   ranking     String   @default("profit_rate") // Which ranking this trader belongs to
   rank        Int      @default(0)
   isActive    Boolean  @default(true)
+
+  // V2 enriched fields
+  winRate              String?  // Average win rate %
+  tradeDays            Int?     // Number of trading days
+  tradeCount           Int?     // Total number of trades
+  profitCount          Int?     // Number of profitable trades
+  lossCount            Int?     // Number of losing trades
+  lastTradeTime        String?  // Last trade timestamp (ms)
+  dailyProfitRateList  String?  // JSON: 30-day profit rates [{rate, cTime}]
+
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
