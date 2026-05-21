@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAuth, d, ds, dusdt } from '@/lib/auth';
 import { withdrawalSchema } from '@/lib/validations';
-import { apiError, apiSuccess, handleApiError } from '@/lib/api-utils';
+import { apiError, apiSuccess, handleApiError, BusinessError } from '@/lib/api-utils';
 import { getUSDTBRLRate } from '@/lib/market-data';
 
 export async function POST(request: NextRequest) {
@@ -116,7 +116,7 @@ export async function POST(request: NextRequest) {
       const currentBalance = d(user.balance);
 
       if (currentBalance < data.amount) {
-        throw new Error('Saldo insuficiente');
+        throw new BusinessError('Saldo insuficiente');
       }
 
       // Calculate fee
@@ -128,7 +128,7 @@ export async function POST(request: NextRequest) {
       // Verify the deduction actually happened (balance was sufficient)
       const updatedUser = await tx.user.findUnique({ where: { id: session.userId } });
       if (d(updatedUser!.balance) === currentBalance) {
-        throw new Error('Saldo insuficiente');
+        throw new BusinessError('Saldo insuficiente');
       }
 
       // Get USDT/BRL rate

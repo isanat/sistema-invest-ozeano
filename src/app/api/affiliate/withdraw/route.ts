@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAuth, d, ds, dusdt } from '@/lib/auth';
 import { affiliateWithdrawalSchema } from '@/lib/validations';
-import { apiError, apiSuccess, handleApiError } from '@/lib/api-utils';
+import { apiError, apiSuccess, handleApiError, BusinessError } from '@/lib/api-utils';
 
 export async function POST(request: NextRequest) {
   try {
@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
       const currentBalance = d(user.affiliateBalance);
 
       if (currentBalance < data.amount) {
-        throw new Error(`Saldo de afiliado insuficiente. Disponível: ${dusdt(currentBalance)} USDT`);
+        throw new BusinessError(`Saldo de afiliado insuficiente. Disponível: ${dusdt(currentBalance)} USDT`);
       }
 
       // Calculate fee
@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
       // Verify the deduction actually happened
       const updatedUser = await tx.user.findUnique({ where: { id: session.userId } });
       if (d(updatedUser!.affiliateBalance) === currentBalance) {
-        throw new Error('Saldo de afiliado insuficiente');
+        throw new BusinessError('Saldo de afiliado insuficiente');
       }
 
       // Create affiliate withdrawal record

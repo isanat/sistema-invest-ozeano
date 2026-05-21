@@ -2,6 +2,20 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ZodError } from 'zod/v4';
 import { verifyToken } from './auth';
 
+// ============================================================================
+// Business Error - for expected business logic errors (400-level)
+// Use this instead of generic Error for user-facing validation failures
+// ============================================================================
+export class BusinessError extends Error {
+  status: number;
+
+  constructor(message: string, status: number = 400) {
+    super(message);
+    this.name = 'BusinessError';
+    this.status = status;
+  }
+}
+
 export function apiError(message: string, status: number = 400) {
   return NextResponse.json({ error: message }, { status });
 }
@@ -32,6 +46,10 @@ export function handleApiError(error: unknown) {
   if (error instanceof ZodError) {
     const firstError = error.issues[0];
     return apiError(firstError?.message ?? 'Validation error', 400);
+  }
+
+  if (error instanceof BusinessError) {
+    return apiError(error.message, error.status);
   }
 
   if (error instanceof Error) {

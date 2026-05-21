@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAuth, d, dusdt } from '@/lib/auth';
-import { apiError, apiSuccess, handleApiError } from '@/lib/api-utils';
+import { apiError, apiSuccess, handleApiError, BusinessError } from '@/lib/api-utils';
 
 export async function POST(request: NextRequest) {
   try {
@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
       // Verify voucher balance doesn't go negative
       const updatedUser = await tx.user.findUnique({ where: { id: session.userId } });
       if (d(updatedUser!.voucherBalance) < 0) {
-        throw new Error('Saldo do voucher ficaria negativo - operação cancelada');
+        throw new BusinessError('Saldo do voucher ficaria negativo - operação cancelada');
       }
     });
 

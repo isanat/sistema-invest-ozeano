@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAuth, d, ds, dusdt } from '@/lib/auth';
 import { investmentSchema } from '@/lib/validations';
-import { apiError, apiSuccess, handleApiError } from '@/lib/api-utils';
+import { apiError, apiSuccess, handleApiError, BusinessError } from '@/lib/api-utils';
 import { processCommissions } from '@/lib/affiliate';
 
 // GET /api/investments — Returns user's active investments
@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
 
       // Get user
       const user = await tx.user.findUnique({ where: { id: session.userId } });
-      if (!user) throw new Error('User not found');
+      if (!user) throw new BusinessError('Usuário não encontrado', 404);
 
       // Get investment plan (planId is optional in schema — can be null)
       const plan = data.planId ? await tx.investmentPlan.findUnique({ where: { id: data.planId } }) : null;
@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
       let planName = 'Copy Trading';
 
       if (effectivePlan) {
-        if (!effectivePlan.isActive) throw new Error('Plano de investimento não está disponível');
+        if (!effectivePlan.isActive) throw new BusinessError('Plano de investimento não está disponível');
         minAmount = d(effectivePlan.minAmount);
         maxAmount = effectivePlan.maxAmount ? d(effectivePlan.maxAmount) : Infinity;
         dailyRoiPct = d(effectivePlan.dailyRoiPct);
@@ -96,10 +96,10 @@ export async function POST(request: NextRequest) {
       }
 
       if (data.amount < minAmount) {
-        throw new Error(`Investimento mínimo para este plano é ${dusdt(minAmount)} USDT`);
+        throw new BusinessError(`Investimento mínimo para este plano é ${dusdt(minAmount)} USDT`);
       }
       if (data.amount > maxAmount) {
-        throw new Error(`Investimento máximo para este plano é ${dusdt(maxAmount)} USDT`);
+        throw new BusinessError(`Investimento máximo para este plano é ${dusdt(maxAmount)} USDT`);
       }
 
       // Calculate investment parameters
@@ -127,26 +127,26 @@ export async function POST(request: NextRequest) {
       if (useVoucher && voucherId) {
         // ========== VOUCHER PAYMENT FLOW ==========
         const voucher = await tx.voucher.findUnique({ where: { id: voucherId } });
-        if (!voucher) throw new Error('Voucher não encontrado');
-        if (voucher.userId !== session.userId) throw new Error('Este voucher não pertence ao seu usuário');
-        if (voucher.status !== 'active') throw new Error(`Voucher não está ativo (status: ${voucher.status})`);
+        if (!voucher) throw new BusinessError('Voucher não encontrado');
+        if (voucher.userId !== session.userId) throw new BusinessError('Este voucher não pertence ao seu usuário');
+        if (voucher.status !== 'active') throw new BusinessError(`Voucher não está ativo (status: ${voucher.status})`);
 
         const voucherAmount = d(voucher.amount);
         const usedAmount = d(voucher.usedAmount);
         const remainingBalance = voucherAmount - usedAmount;
 
         if (remainingBalance < amount) {
-          throw new Error(`Saldo insuficiente no voucher. Disponível: ${dusdt(remainingBalance)} USDT, Necessário: ${dusdt(amount)} USDT`);
+          throw new BusinessError(`Saldo insuficiente no voucher. Disponível: ${dusdt(remainingBalance)} USDT, Necessário: ${dusdt(amount)} USDT`);
         }
 
         // Check user voucher balance matches
         const userVoucherBalance = d(user.voucherBalance);
         if (userVoucherBalance < amount) {
-          throw new Error(`Saldo de voucher insuficiente. Disponível: ${dusdt(userVoucherBalance)} USDT`);
+          throw new BusinessError(`Saldo de voucher insuficiente. Disponível: ${dusdt(userVoucherBalance)} USDT`);
         }
 
         // Deduct from user's voucherBalance (PostgreSQL)
-        await tx.$executeRaw`UPDATE "User" SET "voucherBalance" = (CAST("voucherBalance" AS NUMERIC) - ${amount})::text, "totalInvested" = (CAST("totalInvested" AS NUMERIC) + ${amount})::text, "hasInvested" = true WHERE id = ${session.userId}`;
+        await tx.$executeRaw`UPDATE "User" SET "voucherBalance" = (CAST("voucherBalance" AS NUMERIC) - ${amount})::text, "totalInvested" = (CAST("totalInvested" AS NUMERIC) + ${amount})::text, "hasInvested" = true, "linkUnlocked" = true WHERE id = ${session.userId}`;
 
         // Update voucher usedAmount
         const newUsedAmount = usedAmount + amount;
@@ -206,15 +206,15 @@ export async function POST(request: NextRequest) {
         // ========== REGULAR BALANCE PAYMENT FLOW ==========
         const currentBalance = d(user.balance);
         if (currentBalance < amount) {
-          throw new Error(`Saldo insuficiente. Necessário: ${dusdt(amount)} USDT, Disponível: ${dusdt(currentBalance)} USDT`);
+          throw new BusinessError(`Saldo insuficiente. Necessário: ${dusdt(amount)} USDT, Disponível: ${dusdt(currentBalance)} USDT`);
         }
 
         // Deduct balance atomically (PostgreSQL)
-        await tx.$executeRaw`UPDATE "User" SET balance = (CAST(balance AS NUMERIC) - ${amount})::text, "totalInvested" = (CAST("totalInvested" AS NUMERIC) + ${amount})::text, "hasInvested" = true WHERE id = ${session.userId} AND CAST(balance AS NUMERIC) >= ${amount}`;
+        await tx.$executeRaw`UPDATE "User" SET balance = (CAST(balance AS NUMERIC) - ${amount})::text, "totalInvested" = (CAST("totalInvested" AS NUMERIC) + ${amount})::text, "hasInvested" = true, "linkUnlocked" = true WHERE id = ${session.userId} AND CAST(balance AS NUMERIC) >= ${amount}`;
         // Verify the deduction actually happened
         const updatedUser = await tx.user.findUnique({ where: { id: session.userId } });
         if (d(updatedUser!.balance) === currentBalance) {
-          throw new Error(`Saldo insuficiente. Necessário: ${dusdt(amount)} USDT`);
+          throw new BusinessError(`Saldo insuficiente. Necessário: ${dusdt(amount)} USDT`);
         }
 
         // Create investment (planId may be null for default/legacy plans)
