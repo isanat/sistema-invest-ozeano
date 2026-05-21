@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { getAvailableCurrencies, getMerchantCoins, isNowPaymentsConfigured, CURRENCY_MAP, CURRENCY_LABELS, fromNowPaymentsCurrency } from '@/lib/nowpayments';
+import { getMerchantCoins, isNowPaymentsConfigured, CURRENCY_LABELS, fromNowPaymentsCurrency } from '@/lib/nowpayments';
 
 // GET /api/nowpayments/currencies — Public endpoint for user-facing currency selection
 // Returns currencies that the merchant has ENABLED in their NowPayments dashboard
 // Flow: Frontend → GET /api/nowpayments/currencies → NowPayments API (GET /merchant/coins)
-// The system queries the NowPayments account and returns only the currencies the merchant accepts
+// The system queries the NowPayments account and returns ONLY the currencies the merchant accepts
+// NO FALLBACK — if /merchant/coins fails, return empty (currencies must be configured by merchant)
 export async function GET() {
   try {
     // Check if NowPayments is enabled
@@ -42,8 +43,9 @@ export async function GET() {
     }
 
     // =========================================================================
-    // Fetch currencies from NowPayments API — what the MERCHANT has enabled
-    // Primary: GET /merchant/coins — returns only coins the merchant accepts
+    // Fetch currencies from NowPayments API — ONLY what the MERCHANT has enabled
+    // Uses GET /merchant/coins — returns only coins the merchant accepts
+    // NO FALLBACK to /currencies endpoint — merchant must configure their coins
     // =========================================================================
 
     let merchantCoins: string[] = [];
@@ -59,33 +61,28 @@ export async function GET() {
           if (typeof c === 'string') return c.toLowerCase();
           return (c.currency || c.coin || c.code || '').toLowerCase();
         }).filter(Boolean);
+      } else if (merchantResult?.coins && Array.isArray(merchantResult.coins)) {
+        merchantCoins = merchantResult.coins.map((c: any) => {
+          if (typeof c === 'string') return c.toLowerCase();
+          return (c.currency || c.coin || c.code || '').toLowerCase();
+        }).filter(Boolean);
       }
     } catch (err) {
-      console.warn('[/api/nowpayments/currencies] Failed to fetch merchant coins:', err);
+      console.error('[/api/nowpayments/currencies] Failed to fetch merchant coins:', err);
+      // NO FALLBACK — return empty if merchant coins cannot be fetched
+      return NextResponse.json({
+        success: true,
+        currencies: [],
+        deposit: [],
+        withdrawal: [],
+        pixEnabled,
+        error: 'Failed to fetch merchant coins from NowPayments',
+      });
     }
 
-    // If merchant coins are available, use ONLY those (what the wallet owner has enabled)
-    // If not, try the broader available currencies as fallback
-    let effectiveCurrencies: string[] = [];
-
-    if (merchantCoins.length > 0) {
-      // Use merchant coins directly — these are the currencies the wallet owner has enabled
-      // We accept ALL merchant coins, not just ones in our CURRENCY_MAP
-      effectiveCurrencies = merchantCoins;
-    } else {
-      // Fallback: try getAvailableCurrencies
-      try {
-        const result = await getAvailableCurrencies();
-        const availableCurrencies = (result.currencies || []).map((c: string) => c.toLowerCase());
-        if (availableCurrencies.length > 0) {
-          effectiveCurrencies = availableCurrencies;
-        }
-      } catch (err) {
-        console.warn('[/api/nowpayments/currencies] Failed to fetch available currencies:', err);
-      }
-    }
-
-    // NO HARDCODED FALLBACK — if nothing from API, return empty
+    // Use ONLY merchant coins — these are the currencies the wallet owner has enabled
+    // NO fallback to getAvailableCurrencies (which returns ALL NowPayments-supported currencies)
+    const effectiveCurrencies = merchantCoins;
 
     // Build deposit and withdrawal currency lists
     // Map NowPayments codes to our internal codes where possible

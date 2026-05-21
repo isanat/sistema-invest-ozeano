@@ -747,6 +747,10 @@ export default function PlataformaROI() {
     if (user) {
       fetchDashboardData();
       fetchAvailableCurrencies();
+      // Fetch user vouchers on login so they're available for investment flow
+      api<{ success: boolean; vouchers: any[] }>('/api/vouchers').then(data => {
+        setUserVouchers(data.vouchers || []);
+      }).catch(() => {});
     }
   }, [user]);
 
@@ -1063,6 +1067,7 @@ export default function PlataformaROI() {
   }, [activeTab, isAdminUser]);
 
   // Initialize investAmount when investment dialog opens or plan changes
+  // Also auto-select voucher if user has active vouchers
   useEffect(() => {
     if (investDialogPlan) {
       const plan = selectedPlanId
@@ -1070,12 +1075,28 @@ export default function PlataformaROI() {
         : investDialogPlan.plans?.[0];
       if (plan) {
         const minAmt = d(plan.minAmount) || 10;
-        setInvestAmount(String(minAmt));
+        // If user has active vouchers, auto-check voucher and set amount from voucher/plan
+        const activeVouchers = userVouchers.filter((v: any) => v.status === 'active');
+        if (activeVouchers.length > 0) {
+          const bestVoucher = activeVouchers.sort((a: any, b: any) => (d(b.amount) - d(b.usedAmount)) - (d(a.amount) - d(a.usedAmount)))[0];
+          const voucherAvail = d(bestVoucher.amount) - d(bestVoucher.usedAmount);
+          const investAmt = Math.min(voucherAvail, d(plan.maxAmount) || 100000);
+          // Only auto-set if amount is greater or equal to minAmount
+          if (investAmt >= minAmt) {
+            setInvestAmount(String(minAmt));
+            setUseVoucherForInvest(true);
+            setSelectedVoucherId(bestVoucher.id);
+          } else {
+            setInvestAmount(String(minAmt));
+          }
+        } else {
+          setInvestAmount(String(minAmt));
+        }
       } else if (investDialogPlan.plans?.length > 0) {
         setInvestAmount(String(d(investDialogPlan.plans[0].minAmount) || 10));
       }
     }
-  }, [investDialogPlan, selectedPlanId]);
+  }, [investDialogPlan, selectedPlanId, userVouchers]);
 
   // Load admin NowPayments data when that sub-tab is selected
   useEffect(() => {
@@ -4014,7 +4035,7 @@ export default function PlataformaROI() {
                                     {/* Featured badge */}
                                     {plan.isFeatured && (
                                       <div className="absolute top-0 right-0 bg-gradient-to-l from-emerald-500 to-cyan-500 text-white text-[10px] font-bold px-3 py-1 rounded-bl-xl z-10">
-                                        ⭐ POPULAR
+                                        ⭐ {t('plans.popular')}
                                       </div>
                                     )}
                                     {/* Animated gradient bg */}
@@ -4028,30 +4049,30 @@ export default function PlataformaROI() {
                                         <div className="text-3xl sm:text-4xl font-black text-emerald-400 animate-count-glow">
                                           {d(plan.dailyRoiPct).toFixed(0)}%
                                         </div>
-                                        <div className="text-xs text-zinc-500 mt-1">ROI Diário</div>
+                                        <div className="text-xs text-zinc-500 mt-1">{t('plans.dailyRoi')}</div>
                                       </div>
                                       {/* Plan Details */}
                                       <div className="space-y-2 mb-4">
                                         <div className="flex justify-between text-sm">
-                                          <span className="text-zinc-500">Mínimo</span>
+                                          <span className="text-zinc-500">{t('plans.minimum')}</span>
                                           <span className="text-zinc-300 font-medium">${fmtUSDT(plan.minAmount)}</span>
                                         </div>
                                         <div className="flex justify-between text-sm">
-                                          <span className="text-zinc-500">Máximo</span>
+                                          <span className="text-zinc-500">{t('plans.maximum')}</span>
                                           <span className="text-zinc-300 font-medium">${fmtUSDT(plan.maxAmount)}</span>
                                         </div>
                                         <div className="flex justify-between text-sm">
-                                          <span className="text-zinc-500">Duração</span>
-                                          <span className="text-zinc-300 font-medium">{plan.durationDays} dias</span>
+                                          <span className="text-zinc-500">{t('plans.durationLabel')}</span>
+                                          <span className="text-zinc-300 font-medium">{plan.durationDays} {t('plans.days')}</span>
                                         </div>
                                         <Separator className="bg-zinc-800" />
                                         <div className="flex justify-between text-sm">
-                                          <span className="text-zinc-400">Retorno Total</span>
+                                          <span className="text-zinc-400">{t('plans.totalReturnLabel')}</span>
                                           <span className="text-emerald-400 font-bold">{d(plan.totalReturn).toFixed(0)}%</span>
                                         </div>
                                         <div className="flex justify-between text-sm">
-                                          <span className="text-zinc-400">Capital Dobra em</span>
-                                          <span className="text-amber-400 font-bold">{Math.ceil(100 / d(plan.dailyRoiPct))} dias</span>
+                                          <span className="text-zinc-400">{t('plans.capitalDoublesIn')}</span>
+                                          <span className="text-amber-400 font-bold">{Math.ceil(100 / d(plan.dailyRoiPct))} {t('plans.days')}</span>
                                         </div>
                                       </div>
                                       {/* CTA Button */}
@@ -4098,8 +4119,63 @@ export default function PlataformaROI() {
                                           setInvestAmount(String(d(plan.minAmount) || 10));
                                         }}
                                       >
-                                        <Zap className="mr-2 h-4 w-4" /> Investir Agora
+                                        <Zap className="mr-2 h-4 w-4" /> {t('plans.investNow')}
                                       </Button>
+                                      {/* Voucher activation checkbox — shown if user has active vouchers */}
+                                      {userVouchers.filter((v: any) => v.status === 'active').length > 0 && (
+                                        <div className="mt-2 flex items-center gap-2 p-2 rounded-lg bg-purple-500/10 border border-purple-500/20">
+                                          <input
+                                            type="checkbox"
+                                            id={`voucher-default-${plan.id}`}
+                                            checked={false}
+                                            onChange={(e) => {
+                                              if (e.target.checked) {
+                                                setInvestDialogPlan({
+                                                  id: plan.id,
+                                                  name: plan.name,
+                                                  avatar: null,
+                                                  specialty: plan.description || 'Copy Trading',
+                                                  winRate: '85',
+                                                  monthlyRoi: String(d(plan.dailyRoiPct) * 30),
+                                                  totalPnl: plan.totalReturn,
+                                                  riskLevel: 'low',
+                                                  isActive: true,
+                                                  isFeatured: plan.isFeatured,
+                                                  sortOrder: idx,
+                                                  createdAt: new Date().toISOString(),
+                                                  updatedAt: new Date().toISOString(),
+                                                  plans: [{
+                                                    id: plan.id,
+                                                    name: plan.name,
+                                                    description: plan.description || null,
+                                                    minAmount: plan.minAmount,
+                                                    maxAmount: plan.maxAmount,
+                                                    dailyRoiPct: plan.dailyRoiPct,
+                                                    durationDays: plan.durationDays,
+                                                    days: plan.durationDays,
+                                                    totalReturn: plan.totalReturn,
+                                                    isActive: true,
+                                                    isFeatured: plan.isFeatured,
+                                                    sortOrder: idx,
+                                                    createdAt: new Date().toISOString(),
+                                                    updatedAt: new Date().toISOString(),
+                                                  }],
+                                                } as CopyTrader);
+                                                setSelectedPlanId(plan.id);
+                                                setInvestmentDuration(plan.durationDays);
+                                                setInvestAmount(String(d(plan.minAmount) || 10));
+                                                setUseVoucherForInvest(true);
+                                                const firstActive = userVouchers.find((v: any) => v.status === 'active');
+                                                if (firstActive) setSelectedVoucherId(firstActive.id);
+                                              }
+                                            }}
+                                            className="rounded accent-purple-500"
+                                          />
+                                          <Label htmlFor={`voucher-default-${plan.id}`} className="text-purple-400 text-xs font-medium cursor-pointer">
+                                            🎫 {t('plans.activateWithVoucher')}
+                                          </Label>
+                                        </div>
+                                      )}
                                     </div>
                                   </div>
                                 </motion.div>
@@ -4123,7 +4199,7 @@ export default function PlataformaROI() {
                                   <div className={`glass-card rounded-2xl overflow-hidden stat-card-hover relative plan-card-gradient ${plan.isFeatured ? 'gradient-border plan-card-featured' : 'border border-zinc-800'}`}>
                                     {plan.isFeatured && (
                                       <div className="absolute top-0 right-0 bg-gradient-to-l from-emerald-500 to-cyan-500 text-white text-[10px] font-bold px-3 py-1 rounded-bl-xl z-10">
-                                        ⭐ DESTAQUE
+                                        ⭐ {t('plans.featured')}
                                       </div>
                                     )}
                                     <div className="absolute inset-0 opacity-5 animate-shimmer pointer-events-none" />
@@ -4134,24 +4210,24 @@ export default function PlataformaROI() {
                                         <div className="text-3xl sm:text-4xl font-black text-emerald-400 animate-count-glow">
                                           {d(plan.dailyRoiPct).toFixed(0)}%
                                         </div>
-                                        <div className="text-xs text-zinc-500 mt-1">ROI Diário</div>
+                                        <div className="text-xs text-zinc-500 mt-1">{t('plans.dailyRoi')}</div>
                                       </div>
                                       <div className="space-y-2 mb-4">
                                         <div className="flex justify-between text-sm">
-                                          <span className="text-zinc-500">Mínimo</span>
+                                          <span className="text-zinc-500">{t('plans.minimum')}</span>
                                           <span className="text-zinc-300 font-medium">${fmtUSDT(plan.minAmount)}</span>
                                         </div>
                                         <div className="flex justify-between text-sm">
-                                          <span className="text-zinc-500">Máximo</span>
+                                          <span className="text-zinc-500">{t('plans.maximum')}</span>
                                           <span className="text-zinc-300 font-medium">${fmtUSDT(plan.maxAmount)}</span>
                                         </div>
                                         <div className="flex justify-between text-sm">
-                                          <span className="text-zinc-500">Duração</span>
-                                          <span className="text-zinc-300 font-medium">{plan.durationDays} dias</span>
+                                          <span className="text-zinc-500">{t('plans.durationLabel')}</span>
+                                          <span className="text-zinc-300 font-medium">{plan.durationDays} {t('plans.days')}</span>
                                         </div>
                                         <Separator className="bg-zinc-800" />
                                         <div className="flex justify-between text-sm">
-                                          <span className="text-zinc-400">Retorno Total</span>
+                                          <span className="text-zinc-400">{t('plans.totalReturnLabel')}</span>
                                           <span className="text-emerald-400 font-bold">{d(plan.totalReturn).toFixed(0)}%</span>
                                         </div>
                                       </div>
@@ -4166,11 +4242,37 @@ export default function PlataformaROI() {
                                             setInvestDialogPlan(traderForPlan);
                                             setSelectedPlanId(plan.id);
                                             setInvestmentDuration(plan.durationDays);
+                                            setInvestAmount(String(d(plan.minAmount) || 10));
                                           }
                                         }}
                                       >
-                                        <Zap className="mr-2 h-4 w-4" /> Investir Agora
+                                        <Zap className="mr-2 h-4 w-4" /> {t('plans.investNow')}
                                       </Button>
+                                      {/* Voucher activation checkbox — shown if user has active vouchers */}
+                                      {userVouchers.filter((v: any) => v.status === 'active').length > 0 && (
+                                        <div className="mt-2 flex items-center gap-2 p-2 rounded-lg bg-purple-500/10 border border-purple-500/20">
+                                          <input
+                                            type="checkbox"
+                                            id={`voucher-db-${plan.id}`}
+                                            checked={false}
+                                            onChange={(e) => {
+                                              if (e.target.checked && traderForPlan) {
+                                                setInvestDialogPlan(traderForPlan);
+                                                setSelectedPlanId(plan.id);
+                                                setInvestmentDuration(plan.durationDays);
+                                                setInvestAmount(String(d(plan.minAmount) || 10));
+                                                setUseVoucherForInvest(true);
+                                                const firstActive = userVouchers.find((v: any) => v.status === 'active');
+                                                if (firstActive) setSelectedVoucherId(firstActive.id);
+                                              }
+                                            }}
+                                            className="rounded accent-purple-500"
+                                          />
+                                          <Label htmlFor={`voucher-db-${plan.id}`} className="text-purple-400 text-xs font-medium cursor-pointer">
+                                            🎫 {t('plans.activateWithVoucher')}
+                                          </Label>
+                                        </div>
+                                      )}
                                     </div>
                                   </div>
                                 </motion.div>
@@ -5843,11 +5945,11 @@ export default function PlataformaROI() {
                         <div className="space-y-4">
                           <div className="flex items-center justify-between">
                             <div>
-                              <h3 className="text-lg font-semibold flex items-center gap-2"><Ticket className="h-5 w-5 text-purple-400" /> Meus Vouchers</h3>
-                              <p className="text-sm text-zinc-500 mt-1">Saldo de voucher só pode ser usado para investir em planos de copy trading. Saques desbloqueiam conforme você cumpre as metas.</p>
+                              <h3 className="text-lg font-semibold flex items-center gap-2"><Ticket className="h-5 w-5 text-purple-400" /> {t('copyTraders.myVouchers')}</h3>
+                              <p className="text-sm text-zinc-500 mt-1">{t('copyTraders.voucherDesc')}</p>
                             </div>
                             <Button variant="outline" className="border-zinc-700 text-purple-400 hover:bg-purple-500/10" onClick={recalculateVoucherProgress} disabled={voucherProgressLoading}>
-                              <RefreshCw className={`mr-2 h-4 w-4 ${voucherProgressLoading ? 'animate-spin' : ''}`} /> Atualizar
+                              <RefreshCw className={`mr-2 h-4 w-4 ${voucherProgressLoading ? 'animate-spin' : ''}`} /> {t('copyTraders.refresh')}
                             </Button>
                           </div>
 
@@ -5873,7 +5975,7 @@ export default function PlataformaROI() {
                                     </div>
                                     {v.status === 'active' && (
                                       <div className={`text-sm font-medium ${daysLeft <= 7 ? 'text-red-400' : 'text-zinc-400'}`}>
-                                        ⏰ {daysLeft} dias restantes
+                                        ⏰ {daysLeft} {t('copyTraders.daysRemaining')}
                                       </div>
                                     )}
                                   </div>
@@ -5881,15 +5983,15 @@ export default function PlataformaROI() {
                                   {/* Balance Section */}
                                   <div className="grid grid-cols-3 gap-4 mb-4">
                                     <div className="text-center p-3 rounded-lg bg-zinc-800/50">
-                                      <div className="text-xs text-zinc-500 mb-1">Total do Voucher</div>
+                                      <div className="text-xs text-zinc-500 mb-1">{t('copyTraders.voucherTotal')}</div>
                                       <div className="text-lg font-bold text-white">{fmtUSDT(v.amount)} USDT</div>
                                     </div>
                                     <div className="text-center p-3 rounded-lg bg-zinc-800/50">
-                                      <div className="text-xs text-zinc-500 mb-1">Disponível para Usar</div>
+                                      <div className="text-xs text-zinc-500 mb-1">{t('copyTraders.voucherAvailable')}</div>
                                       <div className="text-lg font-bold text-cyan-400">{fmtUSDT(available)} USDT</div>
                                     </div>
                                     <div className="text-center p-3 rounded-lg bg-zinc-800/50">
-                                      <div className="text-xs text-zinc-500 mb-1">Desbloqueio de Saque</div>
+                                      <div className="text-xs text-zinc-500 mb-1">{t('copyTraders.withdrawalUnlock')}</div>
                                       <div className={`text-lg font-bold ${unlockPct >= 100 ? 'text-cyan-400' : unlockPct > 0 ? 'text-amber-400' : 'text-red-400'}`}>{unlockPct}%</div>
                                     </div>
                                   </div>
@@ -5897,7 +5999,7 @@ export default function PlataformaROI() {
                                   {/* Goals Progress */}
                                   {v.status === 'active' && (
                                     <div className="space-y-3">
-                                      <div className="text-sm font-medium text-zinc-300 mb-2">📊 Progresso das Metas</div>
+                                      <div className="text-sm font-medium text-zinc-300 mb-2">📊 {t('copyTraders.goalsProgress')}</div>
                                       <div>
                                         <div className="flex justify-between text-xs mb-1">
                                           <span className="text-zinc-400">🤝 Indicações qualificadas (que investiram ≥ {fmtUSDT(v.goalMinReferralInvest)} USDT)</span>
@@ -5915,7 +6017,7 @@ export default function PlataformaROI() {
 
                                       {/* Gradual Unlock Timeline */}
                                       <div className="mt-4 p-3 rounded-lg bg-zinc-800/50">
-                                        <div className="text-xs font-medium text-zinc-300 mb-2">🔓 Desbloqueio Gradual de Saque</div>
+                                        <div className="text-xs font-medium text-zinc-300 mb-2">🔓 {t('copyTraders.gradualUnlock')}</div>
                                         <div className="flex items-center gap-1">
                                           <div className={`flex-1 h-3 rounded-l-full ${unlockPct >= 25 ? 'bg-cyan-500' : 'bg-zinc-700'}`} />
                                           <div className={`flex-1 h-3 ${unlockPct >= 50 ? 'bg-cyan-500' : 'bg-zinc-700'}`} />
@@ -5938,8 +6040,8 @@ export default function PlataformaROI() {
 
                                       {unlockPct === 0 && (
                                         <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20">
-                                          <div className="text-sm text-red-400 font-medium">⛔ Saques bloqueados</div>
-                                          <div className="text-xs text-zinc-400 mt-1">Cumpra as metas para desbloquear gradualmente seus saques.</div>
+                                          <div className="text-sm text-red-400 font-medium">⛔ {t('copyTraders.blockedWithdrawals')}</div>
+                                          <div className="text-xs text-zinc-400 mt-1">{t('copyTraders.blockedWithdrawalsDesc')}</div>
                                         </div>
                                       )}
                                       {unlockPct > 0 && unlockPct < 100 && (
@@ -7847,7 +7949,25 @@ Seus 10 indicados diretos investem $100/dia cada:
                     type="checkbox" 
                     id="useVoucher" 
                     checked={useVoucherForInvest} 
-                    onChange={(e) => setUseVoucherForInvest(e.target.checked)} 
+                    onChange={(e) => {
+                      const checked = e.target.checked;
+                      setUseVoucherForInvest(checked);
+                      // Auto-fill amount from plan minAmount if current amount is empty or 0
+                      if (checked && (!investAmount || parseFloat(investAmount) <= 0)) {
+                        const plan = selectedPlanId
+                          ? investDialogPlan?.plans?.find((p: any) => p.id === selectedPlanId)
+                          : investDialogPlan?.plans?.[0];
+                        if (plan) {
+                          const minAmt = d(plan.minAmount) || 10;
+                          setInvestAmount(String(minAmt));
+                        }
+                      }
+                      // Auto-select first available voucher
+                      if (checked && !selectedVoucherId) {
+                        const firstActive = userVouchers.find((v: any) => v.status === 'active');
+                        if (firstActive) setSelectedVoucherId(firstActive.id);
+                      }
+                    }} 
                     className="rounded accent-purple-500"
                   />
                   <Label htmlFor="useVoucher" className="text-purple-400 text-sm font-medium cursor-pointer">
@@ -7865,8 +7985,12 @@ Seus 10 indicados diretos investem $100/dia cada:
                           .filter(v => v.status === 'active')
                           .map(v => {
                             const avail = d(v.amount) - d(v.usedAmount);
+                            const plan = selectedPlanId
+                              ? investDialogPlan?.plans?.find((p: any) => p.id === selectedPlanId)
+                              : investDialogPlan?.plans?.[0];
+                            const minAmt = plan ? d(plan.minAmount) || 10 : 10;
                             return (
-                              <SelectItem key={v.id} value={v.id} disabled={avail < rentalCalc.totalPrice}>
+                              <SelectItem key={v.id} value={v.id} disabled={avail < minAmt}>
                                 {v.type === 'basic' ? t('copyTraders.planBasic') : v.type === 'premium' ? t('copyTraders.planPremium') : t('copyTraders.planCustom')} — {fmtUSDT(avail)} USDT
                               </SelectItem>
                             );

@@ -39,7 +39,7 @@ export const withdrawalSchema = z.object({
 
 export const investmentSchema = z.object({
   planId: z.string().min(1, 'Plano de investimento é obrigatório'),
-  amount: z.number().min(10, 'Investimento mínimo é $10 USDT'),
+  amount: z.number().positive('Valor do investimento deve ser positivo'),
 });
 
 // ============ Admin Schemas ============
