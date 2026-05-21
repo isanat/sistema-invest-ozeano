@@ -402,6 +402,11 @@ const CONFIG_LABELS: Record<string, {
 const HIDDEN_CONFIG_KEYS = new Set<string>([
   'nowpayments_split_pct',    // Managed via NowPayments → Sócios & Split
   'nowpayments_split_wallet', // Managed via NowPayments → Sócios & Split
+  // Affiliate keys — managed via Afiliados tab (dedicated UI with mode descriptions)
+  'affiliate_commission_mode',
+  'affiliate_system_margin_pct',
+  'affiliate_pool_revenue_pct',
+  'affiliate_investment_bonus_pct',
 ]);
 
 const categoryIcon = (cat: string) => {
@@ -7211,7 +7216,7 @@ export default function PlataformaROI() {
                                 const modeConfig = adminConfigs.find(c => c.key === 'affiliate_commission_mode');
                                 const marginConfig = adminConfigs.find(c => c.key === 'affiliate_system_margin_pct');
                                 const poolConfig = adminConfigs.find(c => c.key === 'affiliate_pool_revenue_pct');
-                                const currentMode = configEdits['affiliate_commission_mode'] ?? modeConfig?.value ?? 'roi_profit';
+                                const currentMode = configEdits['affiliate_commission_mode'] ?? modeConfig?.value ?? 'investment_profit';
                                 return (
                                   <>
                                     <div>
