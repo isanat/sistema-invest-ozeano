@@ -7211,6 +7211,12 @@ export default function PlataformaROI() {
                           </div>
                         )}
                         {/* Commission Mode Selector */}
+                        {(() => {
+                          const modeConfig = adminConfigs.find(c => c.key === 'affiliate_commission_mode');
+                          const marginConfig = adminConfigs.find(c => c.key === 'affiliate_system_margin_pct');
+                          const poolConfig = adminConfigs.find(c => c.key === 'affiliate_pool_revenue_pct');
+                          const currentMode = configEdits['affiliate_commission_mode'] ?? modeConfig?.value ?? 'system_margin';
+                          return (
                         <Card className="bg-zinc-900 border-zinc-800">
                           <CardHeader>
                             <div className="flex items-center justify-between">
@@ -7272,13 +7278,7 @@ export default function PlataformaROI() {
                           </CardHeader>
                           <CardContent>
                             <div className="space-y-4">
-                              {(() => {
-                                const modeConfig = adminConfigs.find(c => c.key === 'affiliate_commission_mode');
-                                const marginConfig = adminConfigs.find(c => c.key === 'affiliate_system_margin_pct');
-                                const poolConfig = adminConfigs.find(c => c.key === 'affiliate_pool_revenue_pct');
-                                const currentMode = configEdits['affiliate_commission_mode'] ?? modeConfig?.value ?? 'investment_profit';
-                                return (
-                                  <>
+                              <>
                                     <div>
                                       <Label className="text-zinc-400 mb-2 block">{t('admin.affiliateCommissionMode')}</Label>
                                       <Select value={currentMode} onValueChange={(val) => setConfigEdits(prev => ({ ...prev, affiliate_commission_mode: val }))}>
@@ -7442,11 +7442,11 @@ export default function PlataformaROI() {
                                       </Button>
                                     </div>
                                   </>
-                                );
-                              })()}
                             </div>
                           </CardContent>
                         </Card>
+                          );
+                        })()}
                         {/* Affiliate Levels Management */}
                         <Card className="bg-zinc-900 border-zinc-800">
                           <CardHeader><CardTitle className="text-lg">{t('admin.affiliateLevels')}</CardTitle></CardHeader>
