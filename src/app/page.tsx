@@ -32,7 +32,7 @@ import {
   LayoutDashboard, UserCog, Banknote, HandCoins, Link2, ChevronLeft,
   Trophy, Target, Crown, Star, Share2, Medal, Award,
   Info, MessageSquare, Ticket, LineChart, Calculator,
-  Lock, Image,
+  Lock, Image, Upload, ImagePlus,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -351,13 +351,13 @@ const txTypeIcon = (type: string) => {
 const CONFIG_LABELS: Record<string, {
   label: string;
   description: string;
-  type?: 'boolean' | 'number' | 'string' | 'select' | 'secret';
+  type?: 'boolean' | 'number' | 'string' | 'select' | 'secret' | 'upload';
   unit?: string;
   options?: { value: string; label: string }[];
 }> = {
   // Branding
-  site_logo: { label: 'Logo do Site', description: 'URL da imagem do logo (PNG ou SVG, fundo transparente, 200x60px recomendado)', type: 'string' },
-  site_favicon: { label: 'Favicon (Ícone da Aba)', description: 'URL do favicon (ICO ou PNG, 32x32px ou 64x64px recomendado)', type: 'string' },
+  site_logo: { label: 'Logo do Site', description: 'Faça upload da imagem do logo (PNG ou SVG, fundo transparente, 200x60px recomendado, máx. 2MB)', type: 'upload' },
+  site_favicon: { label: 'Favicon (Ícone da Aba)', description: 'Faça upload do favicon (ICO ou PNG, 32x32px ou 64x64px recomendado, máx. 2MB)', type: 'upload' },
   // General
   site_name: { label: 'Nome do Site', description: 'Nome exibido no site e nos e-mails' },
   maintenance_mode: { label: 'Modo Manutenção', description: 'Ativar para colocar o site em manutenção', type: 'boolean' },
@@ -421,7 +421,7 @@ const categoryIcon = (cat: string) => {
 };
 
 const categoryDescription: Record<string, string> = {
-  branding: 'Logo e favicon exibidos no site. Formatos aceitos: PNG, SVG, JPG, ICO (máx. 2MB)',
+  branding: 'Logo e favicon exibidos no site. Faça upload das imagens (PNG, SVG, JPG, ICO — máx. 2MB)',
   general: 'Configurações gerais do site',
   deposit: 'Opções de depósito e métodos de pagamento',
   withdrawal: 'Regras para saques e taxas',
@@ -7951,33 +7951,7 @@ export default function PlataformaROI() {
                                 </div>
                               </CardHeader>
                               <CardContent>
-                                {/* Branding: Logo preview */}
-                                {cat === 'branding' && (() => {
-                                  const logoVal = configEdits['site_logo'] ?? adminConfigs.find(c => c.key === 'site_logo')?.value ?? '';
-                                  const faviconVal = configEdits['site_favicon'] ?? adminConfigs.find(c => c.key === 'site_favicon')?.value ?? '';
-                                  return (
-                                    <div className="mb-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                      <div className="bg-zinc-800/60 rounded-lg p-4 flex flex-col items-center gap-2 border border-zinc-700">
-                                        <span className="text-xs text-zinc-400">Prévia do Logo</span>
-                                        {logoVal ? (
-                                          <img src={logoVal} alt="Logo" className="max-h-12 object-contain" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-                                        ) : (
-                                          <div className="h-12 w-32 bg-zinc-700/50 rounded flex items-center justify-center text-zinc-500 text-xs">Sem logo</div>
-                                        )}
-                                        <span className="text-[10px] text-zinc-600">Recomendado: PNG ou SVG, fundo transparente, 200×60px</span>
-                                      </div>
-                                      <div className="bg-zinc-800/60 rounded-lg p-4 flex flex-col items-center gap-2 border border-zinc-700">
-                                        <span className="text-xs text-zinc-400">Prévia do Favicon</span>
-                                        {faviconVal ? (
-                                          <img src={faviconVal} alt="Favicon" className="h-8 w-8 object-contain" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-                                        ) : (
-                                          <div className="h-8 w-8 bg-zinc-700/50 rounded flex items-center justify-center text-zinc-500 text-xs">—</div>
-                                        )}
-                                        <span className="text-[10px] text-zinc-600">Recomendado: ICO ou PNG, 32×32px ou 64×64px</span>
-                                      </div>
-                                    </div>
-                                  );
-                                })()}
+                                {/* Branding: Logo & Favicon Upload previews - rendered inline in the upload field UI below */}
                                 {/* NowPayments: Connection test */}
                                 {cat === 'nowpayments' && (
                                   <div className="mb-4 flex items-center gap-3 flex-wrap">
@@ -8054,6 +8028,14 @@ export default function PlataformaROI() {
                                               ))}
                                             </SelectContent>
                                           </Select>
+                                        ) : fieldType === 'upload' ? (
+                                          <ImageUploadField
+                                            cfgKey={cfg.key}
+                                            currentValue={currentValue}
+                                            purpose={cfg.key === 'site_logo' ? 'logo' : cfg.key === 'site_favicon' ? 'favicon' : 'general'}
+                                            onValueChange={(val) => setConfigEdits(prev => ({ ...prev, [cfg.key]: val }))}
+                                            isLogo={cfg.key === 'site_logo'}
+                                          />
                                         ) : fieldType === 'number' ? (
                                           <div className="relative">
                                             <Input
@@ -9704,6 +9686,155 @@ Seus 10 indicados diretos investem $100/dia cada:
 // ============================================================================
 // SUB-COMPONENTS
 // ============================================================================
+
+function ImageUploadField({ cfgKey, currentValue, purpose, onValueChange, isLogo }: {
+  cfgKey: string;
+  currentValue: string;
+  purpose: 'logo' | 'favicon' | 'general';
+  onValueChange: (val: string) => void;
+  isLogo: boolean;
+}) {
+  const [uploading, setUploading] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleFileUpload = async (file: File) => {
+    // Validate file type
+    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml', 'image/x-icon', 'image/vnd.microsoft.icon', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error('Tipo de arquivo não suportado. Use PNG, SVG, JPG, ICO ou WEBP');
+      return;
+    }
+    // Validate file size (2MB max)
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('Arquivo muito grande. Máximo: 2MB');
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('purpose', purpose);
+
+      const res = await fetch('/api/admin/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Erro no upload');
+      }
+
+      onValueChange(data.url);
+      toast.success(isLogo ? 'Logo enviado com sucesso!' : 'Favicon enviado com sucesso!');
+    } catch (err: any) {
+      toast.error(err.message || 'Erro ao fazer upload');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) handleFileUpload(file);
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) handleFileUpload(file);
+    // Reset input so same file can be selected again
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handleRemove = () => {
+    onValueChange('');
+  };
+
+  const acceptTypes = isLogo ? '.png,.svg,.jpg,.jpeg,.webp' : '.ico,.png,.jpg,.jpeg,.webp';
+
+  return (
+    <div className="space-y-3">
+      {/* Current image preview */}
+      {currentValue && (
+        <div className="flex items-center gap-3 bg-zinc-800/60 rounded-lg p-3 border border-zinc-700">
+          <div className={`flex items-center justify-center ${isLogo ? 'h-14 w-36' : 'h-10 w-10'} bg-zinc-700/30 rounded`}>
+            <img
+              src={currentValue}
+              alt={isLogo ? 'Logo' : 'Favicon'}
+              className={`${isLogo ? 'max-h-12 max-w-32' : 'h-8 w-8'} object-contain`}
+              onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+            />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-xs text-zinc-400 truncate">{currentValue}</div>
+            <div className="flex gap-2 mt-1.5">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 text-[10px] text-red-400 hover:text-red-300 hover:bg-red-500/10 px-2"
+                onClick={handleRemove}
+              >
+                <Trash2 className="h-3 w-3 mr-1" /> Remover
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Upload area */}
+      <div
+        className={`relative border-2 border-dashed rounded-lg transition-all cursor-pointer ${
+          dragOver
+            ? 'border-cyan-400 bg-cyan-500/10'
+            : currentValue
+              ? 'border-zinc-700 bg-zinc-800/40 hover:border-zinc-600'
+              : 'border-zinc-600 bg-zinc-800/60 hover:border-cyan-500/50'
+        } ${uploading ? 'pointer-events-none opacity-60' : ''}`}
+        onDragOver={e => { e.preventDefault(); setDragOver(true); }}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={handleDrop}
+        onClick={() => fileInputRef.current?.click()}
+      >
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept={acceptTypes}
+          className="hidden"
+          onChange={handleFileSelect}
+        />
+        <div className="flex flex-col items-center justify-center py-5 px-4 text-center">
+          {uploading ? (
+            <>
+              <Loader2 className="h-8 w-8 text-cyan-400 animate-spin mb-2" />
+              <span className="text-sm text-zinc-300">Enviando...</span>
+            </>
+          ) : currentValue ? (
+            <>
+              <ImagePlus className="h-7 w-7 text-zinc-500 mb-2" />
+              <span className="text-sm text-zinc-400">Arraste ou clique para trocar o arquivo</span>
+              <span className="text-[10px] text-zinc-600 mt-1">
+                {isLogo ? 'PNG, SVG, JPG, WEBP • máx. 2MB' : 'ICO, PNG, JPG, WEBP • máx. 2MB'}
+              </span>
+            </>
+          ) : (
+            <>
+              <Upload className="h-8 w-8 text-zinc-500 mb-2" />
+              <span className="text-sm text-zinc-300">Arraste o arquivo aqui ou clique para selecionar</span>
+              <span className="text-[10px] text-zinc-600 mt-1">
+                {isLogo ? 'PNG ou SVG, fundo transparente, 200×60px recomendado' : 'ICO ou PNG, 32×32px ou 64×64px recomendado'}
+              </span>
+              <span className="text-[10px] text-zinc-600">Máximo 2MB</span>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function CopyButton({ text, t }: { text: string; t: (key: string, params?: Record<string, string | number>) => string }) {
   const [copied, setCopied] = useState(false);
