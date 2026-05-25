@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ActionCash - Explicación de Funcionalidades</title>
+<style>
+  @page {
+    size: A4;
+    margin: 0;
+  }
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: #ffffff;
+    font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+    color: #1a1a2e;
+    line-height: 1.6;
+  }
+
+  .page {
+    width: 210mm;
+    min-height: 297mm;
+    padding: 25mm 22mm 20mm 22mm;
+    box-sizing: border-box;
+    background: #ffffff;
+    position: relative;
+  }
+
+  .page-break {
+    page-break-after: always;
+    break-after: page;
+  }
+
+  /* COVER PAGE */
+  .cover {
+    background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+    color: #ffffff;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    min-height: 297mm;
+    padding: 30mm 25mm;
+  }
+
+  .cover-badge {
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 50px;
+    padding: 8px 28px;
+    font-size: 13pt;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 30px;
+    backdrop-filter: blur(10px);
+  }
+
+  .cover h1 {
+    font-size: 42pt;
+    font-weight: 800;
+    margin: 0 0 10px 0;
+    letter-spacing: -1px;
+    line-height: 1.1;
+  }
+
+  .cover h1 span {
+    background: linear-gradient(90deg, #f7971e, #ffd200);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .cover-subtitle {
+    font-size: 16pt;
+    font-weight: 300;
+    opacity: 0.85;
+    margin-bottom: 40px;
+    max-width: 400px;
+  }
+
+  .cover-divider {
+    width: 80px;
+    height: 3px;
+    background: linear-gradient(90deg, #f7971e, #ffd200);
+    border: none;
+    margin: 0 0 40px 0;
+    border-radius: 2px;
+  }
+
+  .cover-features {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-top: 10px;
+  }
+
+  .cover-feature {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 12px;
+    padding: 16px 22px;
+    font-size: 11pt;
+    backdrop-filter: blur(5px);
+    min-width: 140px;
+  }
+
+  .cover-feature strong {
+    display: block;
+    font-size: 13pt;
+    margin-bottom: 4px;
+    color: #ffd200;
+  }
+
+  /* BODY PAGES */
+  h2 {
+    font-size: 22pt;
+    font-weight: 700;
+    color: #0f0c29;
+    margin: 0 0 8px 0;
+    padding-bottom: 8px;
+    border-bottom: 3px solid #f7971e;
+    display: inline-block;
+  }
+
+  h2 + p.subtitle {
+    color: #666;
+    font-size: 11pt;
+    margin: 0 0 20px 0;
+    font-style: italic;
+  }
+
+  h3 {
+    font-size: 15pt;
+    font-weight: 600;
+    color: #302b63;
+    margin: 20px 0 10px 0;
+  }
+
+  .concept-box {
+    background: linear-gradient(135deg, #f8f9ff 0%, #eef0ff 100%);
+    border-left: 4px solid #302b63;
+    border-radius: 0 10px 10px 0;
+    padding: 18px 22px;
+    margin: 16px 0 24px 0;
+    font-size: 10.5pt;
+    line-height: 1.7;
+  }
+
+  .concept-box strong {
+    color: #302b63;
+  }
+
+  .rule-box {
+    background: #fff8f0;
+    border: 1px solid #f7971e;
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin: 14px 0;
+  }
+
+  .rule-box .rule-title {
+    font-weight: 700;
+    color: #d4760a;
+    font-size: 11pt;
+    margin-bottom: 6px;
+  }
+
+  .example-box {
+    background: #f0fdf4;
+    border: 1px solid #86efac;
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin: 14px 0;
+    font-size: 10.5pt;
+    line-height: 1.8;
+  }
+
+  .example-box .example-title {
+    font-weight: 700;
+    color: #166534;
+    font-size: 11pt;
+    margin-bottom: 6px;
+  }
+
+  .example-box .calc {
+    color: #15803d;
+    font-weight: 600;
+  }
+
+  .example-box .result {
+    color: #166534;
+    font-weight: 700;
+    font-size: 11pt;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 14px 0;
+    font-size: 10pt;
+  }
+
+  thead th {
+    background: #302b63;
+    color: #fff;
+    padding: 10px 14px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 10pt;
+  }
+
+  thead th:first-child {
+    border-radius: 8px 0 0 0;
+  }
+
+  thead th:last-child {
+    border-radius: 0 8px 0 0;
+  }
+
+  tbody td {
+    padding: 9px 14px;
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  tbody tr:nth-child(even) {
+    background: #f9fafb;
+  }
+
+  tbody tr:hover {
+    background: #eef0ff;
+  }
+
+  .highlight-row td {
+    background: #fff8f0 !important;
+    font-weight: 600;
+  }
+
+  .warning-box {
+    background: #fef2f2;
+    border: 1px solid #fca5a5;
+    border-radius: 10px;
+    padding: 14px 18px;
+    margin: 14px 0;
+    font-size: 10pt;
+    color: #991b1b;
+  }
+
+  .warning-box .warning-title {
+    font-weight: 700;
+    margin-bottom: 4px;
+    font-size: 11pt;
+  }
+
+  .questions-box {
+    background: #eff6ff;
+    border: 2px solid #93c5fd;
+    border-radius: 10px;
+    padding: 18px 22px;
+    margin: 20px 0;
+  }
+
+  .questions-box h4 {
+    color: #1e40af;
+    margin: 0 0 10px 0;
+    font-size: 12pt;
+  }
+
+  .questions-box ol {
+    margin: 0;
+    padding-left: 20px;
+  }
+
+  .questions-box li {
+    margin-bottom: 6px;
+    font-size: 10.5pt;
+    line-height: 1.6;
+  }
+
+  .diagram-box {
+    background: #fafbff;
+    border: 1px solid #c7d2fe;
+    border-radius: 12px;
+    padding: 22px;
+    margin: 20px 0;
+    text-align: center;
+  }
+
+  .diagram-levels {
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+    gap: 16px;
+    margin-top: 16px;
+  }
+
+  .diagram-level {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .diagram-bar {
+    width: 80px;
+    border-radius: 8px 8px 0 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: center;
+    padding: 10px 8px;
+    color: #fff;
+    font-weight: 700;
+    font-size: 10pt;
+  }
+
+  .diagram-bar .bar-pct {
+    font-size: 14pt;
+  }
+
+  .diagram-bar .bar-label {
+    font-size: 8pt;
+    opacity: 0.9;
+    margin-top: 2px;
+  }
+
+  .diagram-level .diagram-threshold {
+    font-size: 8.5pt;
+    color: #666;
+    text-align: center;
+  }
+
+  .bar-gold { background: linear-gradient(180deg, #f7971e, #d4760a); height: 130px; }
+  .bar-salary { background: linear-gradient(180deg, #302b63, #1a1640); height: 70px; }
+  .bar-daymond { background: linear-gradient(180deg, #0f0c29, #070614); height: 180px; }
+
+  .tag {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 9pt;
+    font-weight: 600;
+    margin-right: 6px;
+  }
+
+  .tag-ac09 { background: #e0e7ff; color: #3730a3; }
+  .tag-ac10 { background: #fef3c7; color: #92400e; }
+  .tag-ac11 { background: #fce7f3; color: #9d174d; }
+
+  footer {
+    position: absolute;
+    bottom: 15mm;
+    left: 22mm;
+    right: 22mm;
+    text-align: center;
+    font-size: 8pt;
+    color: #999;
+    border-top: 1px solid #e5e7eb;
+    padding-top: 8px;
+  }
+
+  footer .page-num {
+    font-weight: 600;
+    color: #302b63;
+  }
+</style>
+</head>
+<body>
+
+<!-- ==================== PAGE 1: COVER ==================== -->
+<div class="cover page">
+  <div class="cover-badge">Documento Informativo</div>
+  <h1><span>ACTIONCASH</span></h1>
+  <p class="cover-subtitle">Explicación Detallada de las Funcionalidades de Bono de Equipo</p>
+  <hr class="cover-divider">
+  <div class="cover-features">
+    <div class="cover-feature">
+      <strong>AC-09</strong>
+      Salario Semanal<br>0.5% del equipo
+    </div>
+    <div class="cover-feature">
+      <strong>AC-10</strong>
+      Action Gold<br>50% de directos
+    </div>
+    <div class="cover-feature">
+      <strong>AC-11</strong>
+      Action Daymond<br>$1,000/mes
+    </div>
+  </div>
+</div>
+
+<!-- ==================== PAGE 2: CONCEPTO BASE ==================== -->
+<div class="page page-break">
+  <h2>Concepto Base</h2>
+  <p class="subtitle">Lo que necesitas entender antes de conocer los 3 bonos</p>
+
+  <div class="concept-box">
+    <strong>Capital Activo del Equipo</strong> es la suma de todos los inversiones ACTIVOS de las personas que usted indicó (y las que ellas indicaron, y así sucesivamente — toda su red abajo).<br><br>
+    <strong>Ejemplo:</strong><br>
+    &bull; Usted indicó a Maria &rarr; Maria invirtió $500 &rarr; cuenta para su equipo<br>
+    &bull; Maria indicó a João &rarr; João invirtió $300 &rarr; también cuenta para su equipo<br>
+    &bull; João indicó a Ana &rarr; Ana invirtió $1,200 &rarr; también cuenta para su equipo<br><br>
+    <strong>Capital activo de su equipo = $500 + $300 + $1,200 = $2,000</strong>
+  </div>
+
+  <h3>Los 3 bonos son acumulativos</h3>
+  <p style="font-size:10.5pt;">Un usuario puede recibir los 3 bonos al mismo tiempo, siempre que su equipo tenga el capital suficiente para cada nivel:</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Capital del Equipo</th>
+        <th>AC-09 Salario Semanal</th>
+        <th>AC-10 Action Gold</th>
+        <th>AC-11 Action Daymond</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>$0 - $1,999</td>
+        <td style="color:#999;">No</td>
+        <td style="color:#999;">No</td>
+        <td style="color:#999;">No</td>
+      </tr>
+      <tr>
+        <td>$2,000 - $3,999</td>
+        <td style="color:#16a34a;font-weight:600;">Si</td>
+        <td style="color:#999;">No</td>
+        <td style="color:#999;">No</td>
+      </tr>
+      <tr>
+        <td>$4,000 - $19,999</td>
+        <td style="color:#16a34a;font-weight:600;">Si</td>
+        <td style="color:#d97706;font-weight:600;">Si</td>
+        <td style="color:#999;">No</td>
+      </tr>
+      <tr class="highlight-row">
+        <td>$20,000+</td>
+        <td style="color:#16a34a;font-weight:600;">Si</td>
+        <td style="color:#d97706;font-weight:600;">Si</td>
+        <td style="color:#9d174d;font-weight:600;">Si</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="diagram-box">
+    <p style="font-size:11pt;font-weight:600;color:#302b63;margin:0 0 6px 0;">Visión General - Los 3 Niveles de Bono</p>
+    <p style="font-size:9pt;color:#666;margin:0 0 12px 0;">Mientras más capital activo en su equipo, más bonos desbloquea</p>
+    <div class="diagram-levels">
+      <div class="diagram-level">
+        <div class="diagram-bar bar-salary">
+          <span class="bar-pct">0.5%</span>
+          <span class="bar-label">semanal</span>
+        </div>
+        <div class="diagram-threshold"><strong>$2,000+</strong><br>en equipo</div>
+      </div>
+      <div class="diagram-level">
+        <div class="diagram-bar bar-gold">
+          <span class="bar-pct">50%</span>
+          <span class="bar-label">de directos</span>
+        </div>
+        <div class="diagram-threshold"><strong>$4,000+</strong><br>en equipo</div>
+      </div>
+      <div class="diagram-level">
+        <div class="diagram-bar bar-daymond">
+          <span class="bar-pct">$1K</span>
+          <span class="bar-label">/mes</span>
+        </div>
+        <div class="diagram-threshold"><strong>$20,000+</strong><br>en equipo</div>
+      </div>
+    </div>
+  </div>
+
+  <footer>ActionCash &mdash; Documento Informativo &mdash; Página <span class="page-num">2</span></footer>
+</div>
+
+<!-- ==================== PAGE 3: AC-09 SALARIO SEMANAL ==================== -->
+<div class="page page-break">
+  <h2><span class="tag tag-ac09">AC-09</span> Salario Semanal</h2>
+  <p class="subtitle">0.5% del capital activo del equipo, pagado cada domingo</p>
+
+  <h3>Qué es</h3>
+  <p style="font-size:10.5pt;">Todo <strong>domingo</strong>, el sistema calcula <strong>0.5% del capital activo de su equipo</strong> y acredita directamente en su cartera. Es como un "salario" semanal solo por tener una red activa construida.</p>
+
+  <div class="rule-box">
+    <div class="rule-title">Regla</div>
+    <strong>Requisito:</strong> Su equipo necesita tener por lo menos <strong>$2,000</strong> en inversiones activas.<br>
+    <strong>Pago:</strong> 0.5% del capital activo del equipo, pagado cada domingo.
+  </div>
+
+  <div class="example-box">
+    <div class="example-title">Ejemplo Práctico</div>
+    Su equipo tiene <strong>$2,000</strong> en inversiones activas<br>
+    &rarr; Cálculo: <span class="calc">$2,000 x 0.5% = $10</span> por semana<br>
+    &rarr; Cada domingo: <span class="result">+$10 en su cartera</span><br><br>
+
+    Su equipo crece a <strong>$10,000</strong><br>
+    &rarr; Cálculo: <span class="calc">$10,000 x 0.5% = $50</span> por semana<br>
+    &rarr; Cada domingo: <span class="result">+$50 en su cartera</span><br><br>
+
+    Su equipo tiene <strong>$1,500</strong> (menos de $2,000)<br>
+    &rarr; <span style="color:#dc2626;font-weight:600;">No recibe nada. Necesita llegar a $2,000 primero.</span>
+  </div>
+
+  <h3>Tabla de Valores</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Capital del Equipo</th>
+        <th>Salario Semanal (0.5%)</th>
+        <th>Salario Mensal (~4 semanas)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>$1,999</td>
+        <td style="color:#dc2626;">$0 (abajo del mínimo)</td>
+        <td>$0</td>
+      </tr>
+      <tr>
+        <td>$2,000</td>
+        <td style="color:#16a34a;font-weight:600;">$10</td>
+        <td>~$40</td>
+      </tr>
+      <tr>
+        <td>$5,000</td>
+        <td style="color:#16a34a;font-weight:600;">$25</td>
+        <td>~$100</td>
+      </tr>
+      <tr>
+        <td>$10,000</td>
+        <td style="color:#16a34a;font-weight:600;">$50</td>
+        <td>~$200</td>
+      </tr>
+      <tr>
+        <td>$20,000</td>
+        <td style="color:#16a34a;font-weight:600;">$100</td>
+        <td>~$400</td>
+      </tr>
+      <tr>
+        <td>$50,000</td>
+        <td style="color:#16a34a;font-weight:600;">$250</td>
+        <td>~$1,000</td>
+      </tr>
+      <tr>
+        <td>$100,000</td>
+        <td style="color:#16a34a;font-weight:600;">$500</td>
+        <td>~$2,000</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="warning-box">
+    <div class="warning-title">Atención</div>
+    El salario semanal es calculado sobre el capital ACTIVO del equipo. Si un miembro del equipo retira o su inversión expira, el capital del equipo disminuye y el salario semanal también.
+  </div>
+
+  <footer>ActionCash &mdash; Documento Informativo &mdash; Página <span class="page-num">3</span></footer>
+</div>
+
+<!-- ==================== PAGE 4: AC-10 ACTION GOLD ==================== -->
+<div class="page page-break">
+  <h2><span class="tag tag-ac10">AC-10</span> Action Gold</h2>
+  <p class="subtitle">Gane el 50% del salario semanal de sus referidos directos</p>
+
+  <h3>Qué es</h3>
+  <p style="font-size:10.5pt;">Si usted tiene <strong>$4,000+</strong> en inversiones activas del equipo, usted gana <strong>50% del salario semanal que cada uno de sus referidos DIRECTOS recibe</strong>. Es como una "copia" del bono de ellos. Cuantos más directos con salario semanal, más gana.</p>
+
+  <div class="rule-box">
+    <div class="rule-title">Regla</div>
+    <strong>Requisito:</strong> Su equipo necesita tener por lo menos <strong>$4,000</strong> en inversiones activas.<br>
+    <strong>Pago:</strong> 50% de lo que cada directo suyo ganó en el salario semanal (AC-09).<br>
+    <strong>Importante:</strong> Solo cuenta referidos DIRECTOS (nivel 1).
+  </div>
+
+  <div class="example-box">
+    <div class="example-title">Ejemplo Práctico</div>
+    USTED tiene <strong>$4,000+</strong> en su equipo &rarr; calificado para Action Gold<br><br>
+
+    Usted indicó a <strong>MARIA</strong> (directa)<br>
+    Maria tiene equipo con $5,000 &rarr; ella gana salario semanal de <span class="calc">$25</span><br>
+    Usted gana 50% de su salario: <span class="result">$25 x 50% = $12.50 por semana</span><br><br>
+
+    Usted indicó a <strong>CARLOS</strong> (directo)<br>
+    Carlos tiene equipo con $8,000 &rarr; él gana salario semanal de <span class="calc">$40</span><br>
+    Usted gana 50% de su salario: <span class="result">$40 x 50% = $20 por semana</span><br><br>
+
+    Usted indicó a <strong>ANA</strong> (directa)<br>
+    Ana tiene equipo con $2,000 &rarr; ella gana salario semanal de <span class="calc">$10</span><br>
+    Usted gana 50% de su salario: <span class="result">$10 x 50% = $5 por semana</span><br><br>
+
+    <strong>Su Action Gold total: $12.50 + $20 + $5 = $37.50 por semana</strong>
+  </div>
+
+  <h3>Tabla de Ejemplo</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Su Directo</th>
+        <th>Equipo del Directo</th>
+        <th>Salario del Directo</th>
+        <th>Su Action Gold (50%)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Maria</td>
+        <td>$5,000</td>
+        <td>$25/semana</td>
+        <td style="color:#d97706;font-weight:600;">$12.50/semana</td>
+      </tr>
+      <tr>
+        <td>Carlos</td>
+        <td>$8,000</td>
+        <td>$40/semana</td>
+        <td style="color:#d97706;font-weight:600;">$20/semana</td>
+      </tr>
+      <tr>
+        <td>Ana</td>
+        <td>$2,000</td>
+        <td>$10/semana</td>
+        <td style="color:#d97706;font-weight:600;">$5/semana</td>
+      </tr>
+      <tr>
+        <td>Pedro</td>
+        <td>$1,500</td>
+        <td style="color:#999;">$0 (no califica)</td>
+        <td style="color:#999;">$0</td>
+      </tr>
+      <tr class="highlight-row">
+        <td colspan="3"><strong>Total Action Gold</strong></td>
+        <td style="color:#d97706;font-weight:700;">$37.50/semana</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="warning-box">
+    <div class="warning-title">Importante</div>
+    Solo los referidos <strong>DIRECTOS</strong> (nivel 1) generan Action Gold. Los referidos de sus referidos (nivel 2, 3, etc.) NO cuentan para el Action Gold — solo cuentan para el Salario Semanal (AC-09).<br><br>
+    Si un directo suyo NO recibe salario semanal (porque su equipo está abajo de $2,000), usted tampoco recibe Action Gold de esa persona.
+  </div>
+
+  <footer>ActionCash &mdash; Documento Informativo &mdash; Página <span class="page-num">4</span></footer>
+</div>
+
+<!-- ==================== PAGE 5: AC-11 ACTION DAYMOND ==================== -->
+<div class="page page-break">
+  <h2><span class="tag tag-ac11">AC-11</span> Action Daymond</h2>
+  <p class="subtitle">Paquete de $1,000/mes con rendimientos para equipos de $20,000+</p>
+
+  <h3>Qué es</h3>
+  <p style="font-size:10.5pt;">Si su equipo tiene <strong>$20,000+</strong> en inversiones activas, el sistema crea automáticamente un <strong>paquete de $1,000</strong> para usted cada mes. Ese paquete funciona como una inversión — genera ROI diario (3.3% por día durante 60 días). Es dinero que la plataforma pone para usted, sin necesidad de invertir de su propio bolsillo.</p>
+
+  <div class="rule-box">
+    <div class="rule-title">Regla</div>
+    <strong>Requisito:</strong> Su equipo necesita tener por lo menos <strong>$20,000</strong> en inversiones activas.<br>
+    <strong>Beneficio:</strong> Cada mes, el sistema crea automáticamente una inversión de <strong>$1,000</strong> para usted.<br>
+    <strong>Rendimiento:</strong> Esa inversión genera ROI diario de 3.3% durante 60 días.<br>
+    <strong>Renovación:</strong> Si el equipo se mantiene por encima de $20,000, el paquete se renueva al mes siguiente.
+  </div>
+
+  <div class="example-box">
+    <div class="example-title">Ejemplo Práctico</div>
+    Su equipo tiene <strong>$20,000+</strong> en inversiones activas<br><br>
+
+    Día 1 del mes &rarr; Sistema crea inversión de <span class="calc">$1,000</span> para usted<br>
+    &rarr; ROI diario: <span class="calc">$1,000 x 3.3% = $33 por día</span><br>
+    &rarr; Durante 60 días: <span class="result">$33 x 60 = $1,980 de lucro total</span><br><br>
+
+    Día 1 del mes siguiente &rarr; Sistema crea +$1,000 nuevamente<br>
+    &rarr; Si el equipo todavía está por encima de $20,000<br><br>
+
+    Si el equipo cae para <strong>$19,000</strong><br>
+    &rarr; <span style="color:#dc2626;font-weight:600;">No se crea más paquete. Necesita volver a $20,000.</span>
+  </div>
+
+  <h3>Tabla de Valores</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Capital del Equipo</th>
+        <th>Paquete Daymond</th>
+        <th>ROI Diario (3.3%)</th>
+        <th>Lucro Mensal (~30 días)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>$19,999</td>
+        <td style="color:#dc2626;">Ninguno</td>
+        <td>$0</td>
+        <td>$0</td>
+      </tr>
+      <tr>
+        <td>$20,000</td>
+        <td style="color:#9d174d;font-weight:600;">$1,000/mes</td>
+        <td style="color:#16a34a;font-weight:600;">$33/día</td>
+        <td style="color:#16a34a;font-weight:600;">~$990</td>
+      </tr>
+      <tr>
+        <td>$50,000</td>
+        <td style="color:#9d174d;font-weight:600;">$1,000/mes</td>
+        <td style="color:#16a34a;font-weight:600;">$33/día</td>
+        <td style="color:#16a34a;font-weight:600;">~$990</td>
+      </tr>
+      <tr>
+        <td>$100,000</td>
+        <td style="color:#9d174d;font-weight:600;">$1,000/mes</td>
+        <td style="color:#16a34a;font-weight:600;">$33/día</td>
+        <td style="color:#16a34a;font-weight:600;">~$990</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="warning-box">
+    <div class="warning-title">Nota Importante</div>
+    El paquete siempre es de <strong>$1,000</strong>, independientemente de cuánto por encima de $20,000 esté el equipo. Un equipo de $20,000 y un equipo de $100,000 reciben el mismo paquete de $1,000/mes.<br><br>
+    Sin embargo, equipos más grandes generan más Salario Semanal (AC-09) y más Action Gold (AC-10), entonces el beneficio total sí es mayor.
+  </div>
+
+  <footer>ActionCash &mdash; Documento Informativo &mdash; Página <span class="page-num">5</span></footer>
+</div>
+
+<!-- ==================== PAGE 6: RESUMEN FINAL ==================== -->
+<div class="page">
+  <h2>Resumen Final</h2>
+  <p class="subtitle">Cómo los 3 bonos se conectan y preguntas a decidir</p>
+
+  <h3>Los 3 bonos trabajando juntos</h3>
+  <p style="font-size:10.5pt;">Un usuario con equipo de $20,000+ puede recibir los 3 bonos simultáneamente:</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Bono</th>
+        <th>Requisito del Equipo</th>
+        <th>Qué recibe</th>
+        <th>Frecuencia</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="tag tag-ac09">AC-09</span> Salario Semanal</td>
+        <td>$2,000+</td>
+        <td>0.5% del capital del equipo</td>
+        <td>Semanal (domingos)</td>
+      </tr>
+      <tr>
+        <td><span class="tag tag-ac10">AC-10</span> Action Gold</td>
+        <td>$4,000+</td>
+        <td>50% del salario de los directos</td>
+        <td>Semanal (domingos)</td>
+      </tr>
+      <tr>
+        <td><span class="tag tag-ac11">AC-11</span> Action Daymond</td>
+        <td>$20,000+</td>
+        <td>$1,000 con ROI diario</td>
+        <td>Mensual</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Ejemplo Completo: Usuario con equipo de $25,000</h3>
+  <div class="example-box">
+    <div class="example-title">Cálculo mensual aproximado</div>
+    <strong>Salario Semanal:</strong> $25,000 x 0.5% = $125/semana &rarr; ~<span class="result">$500/mes</span><br><br>
+
+    <strong>Action Gold:</strong> Tiene 3 directos con salarios semanales de $25, $40 y $10<br>
+    50% de ($25 + $40 + $10) = $37.50/semana &rarr; ~<span class="result">$150/mes</span><br><br>
+
+    <strong>Action Daymond:</strong> Paquete de $1,000 con ROI de 3.3%/día<br>
+    $33/día x 30 días = <span class="result">$990/mes</span><br><br>
+
+    <strong>TOTAL ESTIMADO: $500 + $150 + $990 = $1,640/mes</strong><br>
+    <span style="font-size:9pt;color:#666;">(además del ROI de sus propias inversiones y comisiones de afiliado)</span>
+  </div>
+
+  <div class="questions-box">
+    <h4>Preguntas a Decidir Antes de Implementar</h4>
+    <ol>
+      <li><strong>"Equipo" significa todos los niveles de la red</strong> o solo los niveles que el usuario gana comisión de afiliado (6 niveles)?</li>
+      <li><strong>El usuario necesita tener inversión propia activa</strong> para recibir cualquiera de estos bonos, o solo el equipo basta?</li>
+      <li><strong>Action Daymond:</strong> El paquete de $1,000 es dinero real que el sistema coloca para el usuario, o es una "inversión virtual" que solo genera ROI pero no se puede retirar el principal?</li>
+      <li><strong>Action Gold:</strong> Si un directo suyo también es Action Gold, usted gana 50% del salario de él INCLUYENDO el Action Gold de él, o solo del salario base (AC-09)?</li>
+      <li><strong>Qué pasa si el equipo cae abajo del mínimo</strong> en el medio de la semana/mes? El bono es cancelado o mantenido hasta la próxima verificación?</li>
+    </ol>
+  </div>
+
+  <div class="concept-box" style="margin-top:20px;">
+    <strong>Nota:</strong> Este documento es informativo para verificación con el dueño del sistema. Ninguna funcionalidad será implementada sin aprobación explícita. Las respuestas a las preguntas arriba son necesarias para definir la lógica técnica de cada funcionalidad.
+  </div>
+
+  <footer>ActionCash &mdash; Documento Informativo &mdash; Página <span class="page-num">6</span></footer>
+</div>
+
+</body>
+</html>
