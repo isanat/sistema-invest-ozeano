@@ -2490,7 +2490,7 @@ export default function PlataformaROI() {
                 <div className="flex gap-4 sm:gap-6 text-xs sm:text-sm">
                   <div><span className="text-xl sm:text-2xl font-bold text-white animate-count-glow">{landingStats?.totalUsers || 0}+</span><p className="text-zinc-500">{t('landing.stats.users')}</p></div>
                   <div><span className="text-xl sm:text-2xl font-bold text-emerald-400">{landingStats?.totalRoi ? `$${(landingStats.totalRoi / 1000).toFixed(0)}k+` : '$0'}</span><p className="text-zinc-500">{t('landing.stats.mined')}</p></div>
-                  <div><span className="text-xl sm:text-2xl font-bold text-cyan-400">5%</span><p className="text-zinc-500">{t('common.perDay')}</p></div>
+                  <div><span className="text-xl sm:text-2xl font-bold text-cyan-400">3.3%</span><p className="text-zinc-500">{t('common.perDay')}</p></div>
                 </div>
               </motion.div>
 
@@ -2539,7 +2539,7 @@ export default function PlataformaROI() {
                       <div className="text-[10px] text-zinc-500 uppercase tracking-wider">{t('landing.badges.trading')}</div>
                     </div>
                     <div className="bg-white/[0.03] rounded-lg p-3 text-center">
-                      <div className="text-lg font-bold text-green-400">5%</div>
+                      <div className="text-lg font-bold text-green-400">3.3%</div>
                       <div className="text-[10px] text-zinc-500 uppercase tracking-wider">{t('landing.badges.dailyRoi')}</div>
                     </div>
                   </div>
@@ -2736,7 +2736,7 @@ export default function PlataformaROI() {
           </section>
         )}
 
-        {/* ── 5% Daily ROI Advantage ── */}
+        {/* ── 3.3% Daily ROI Advantage ── */}
         <section className="py-16 sm:py-24 relative overflow-hidden">
           <div className="absolute inset-0 pointer-events-none">
             <div className="absolute top-0 left-1/4 w-96 h-96 bg-emerald-500/5 rounded-full blur-[150px] animate-orb" />
@@ -2822,7 +2822,7 @@ export default function PlataformaROI() {
           </div>
         </section>
 
-        {/* ── Unilevel 11 Levels ── */}
+        {/* ── Unilevel 6 Levels ── */}
         <section className="py-16 sm:py-24 relative overflow-hidden">
           <div className="absolute inset-0 pointer-events-none">
             <div className="absolute top-0 left-1/2 w-96 h-96 bg-cyan-500/5 rounded-full blur-[150px]" />
@@ -2843,7 +2843,7 @@ export default function PlataformaROI() {
               <motion.div initial={{ opacity: 0, scale: 0.95 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }}>
                 <div className="glass-card gradient-border glow-emerald rounded-xl p-5 text-center">
                   <div className="text-3xl font-bold text-emerald-400 animate-count-glow">
-                    {landingAffiliateLevels.find(l => l.level === 1)?.percentage || '10'}%
+                    {landingAffiliateLevels.find(l => l.level === 1)?.percentage || '5'}%
                   </div>
                   <div className="text-sm text-emerald-400 font-medium mt-1">L1 — Direct</div>
                   <div className="text-xs text-zinc-500">Direct Referral Commission</div>
@@ -2855,20 +2855,20 @@ export default function PlataformaROI() {
                   <motion.div key={lvl} initial={{ opacity: 0, y: 10 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: lvl * 0.05 }} viewport={{ once: true }}>
                     <div className="glass-card rounded-xl p-3 text-center border border-white/5 stat-card-hover">
                       <div className="text-xl font-bold text-cyan-400">
-                        {landingAffiliateLevels.find(l => l.level === lvl)?.percentage || ['','4','3','2','1.5'][lvl]}%
+                        {landingAffiliateLevels.find(l => l.level === lvl)?.percentage || ['','3','1','1','1'][lvl]}%
                       </div>
                       <div className="text-[10px] text-zinc-500 mt-0.5">{t('landing.unilevel.level')} {lvl}</div>
                     </div>
                   </motion.div>
                 ))}
               </div>
-              {/* L6-L11 Row */}
-              <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
-                {[6, 7, 8, 9, 10, 11].map((lvl) => (
+              {/* L6 Row */}
+              <div className="grid grid-cols-1 gap-3">
+                {[6].map((lvl) => (
                   <motion.div key={lvl} initial={{ opacity: 0, y: 10 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: lvl * 0.04 }} viewport={{ once: true }}>
                     <div className="glass-card rounded-xl p-3 text-center border border-white/5 stat-card-hover">
                       <div className="text-lg font-bold text-zinc-400">
-                        {landingAffiliateLevels.find(l => l.level === lvl)?.percentage || ['1.5','1','1','0.5','0.5','1'][lvl - 6]}%
+                        {landingAffiliateLevels.find(l => l.level === lvl)?.percentage || '2'}%
                       </div>
                       <div className="text-[10px] text-zinc-500">{t('landing.unilevel.level')} {lvl}</div>
                     </div>
@@ -2882,7 +2882,7 @@ export default function PlataformaROI() {
                   <span className="text-lg font-bold text-emerald-400">
                     {landingAffiliateLevels.length > 0
                       ? landingAffiliateLevels.reduce((sum, l) => sum + d(l.percentage), 0).toFixed(1)
-                      : '28'}%
+                      : '13'}%
                   </span>
                 </div>
                 <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden">
@@ -3533,7 +3533,7 @@ export default function PlataformaROI() {
                             </div>
                             <h3 className="text-xl sm:text-2xl font-bold text-white mb-2">Comece a Investir Agora</h3>
                             <p className="text-zinc-400 text-sm max-w-md mx-auto mb-6">
-                              Deposite USDT na sua conta e comece a ganhar <span className="text-emerald-400 font-semibold">5% de ROI diário</span> automaticamente. O processo é simples e rápido!
+                              Deposite USDT na sua conta e comece a ganhar <span className="text-emerald-400 font-semibold">3.3% de ROI diário</span> automaticamente. O processo é simples e rápido!
                             </p>
                             
                             {/* Steps */}
@@ -3556,7 +3556,7 @@ export default function PlataformaROI() {
                                 <div className="w-8 h-8 bg-amber-500/15 rounded-lg flex items-center justify-center mx-auto mb-2">
                                   <TrendingUp className="h-4 w-4 text-amber-400" />
                                 </div>
-                                <div className="text-xs font-semibold text-white mb-0.5">3. Ganhe 5%/dia</div>
+                                <div className="text-xs font-semibold text-white mb-0.5">3. Ganhe 3.3%/dia</div>
                                 <div className="text-[10px] text-zinc-500">ROI diário automático</div>
                               </div>
                             </div>
@@ -3718,7 +3718,7 @@ export default function PlataformaROI() {
                           </div>
                           <div className="text-left">
                             <div className="text-sm font-semibold text-white group-hover:text-cyan-400 transition-colors">{t('dashboard.investNow')}</div>
-                            <div className="text-[10px] text-zinc-500">5% ROI/dia</div>
+                            <div className="text-[10px] text-zinc-500">3.3% ROI/dia</div>
                           </div>
                         </button>
 
@@ -3731,7 +3731,7 @@ export default function PlataformaROI() {
                           </div>
                           <div className="text-left">
                             <div className="text-sm font-semibold text-white group-hover:text-emerald-400 transition-colors">Afiliados</div>
-                            <div className="text-[10px] text-zinc-500">11 níveis</div>
+                            <div className="text-[10px] text-zinc-500">6 níveis</div>
                           </div>
                         </button>
                       </div>
@@ -5528,7 +5528,7 @@ export default function PlataformaROI() {
                       </div>
                       <div>
                         <h2 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">{t('affiliates.title')}</h2>
-                        <p className="text-xs text-zinc-500">Unilevel 11 Níveis · Bônus de Equipe · Saque Diário</p>
+                        <p className="text-xs text-zinc-500">Unilevel 6 Níveis · Bônus de Equipe · Saque Diário</p>
                       </div>
                     </motion.div>
 
@@ -6026,12 +6026,12 @@ export default function PlataformaROI() {
                           </div>
                         </motion.div>
 
-                        {/* ═══════════════ 3. 11-LEVEL UNILEVEL VISUALIZATION ═══════════════ */}
+                        {/* ═══════════════ 3. 6-LEVEL UNILEVEL VISUALIZATION ═══════════════ */}
                         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
                           <div className="glass-card gradient-border rounded-2xl p-5 sm:p-6">
                             <div className="flex items-center gap-2 mb-4">
                               <Activity className="h-5 w-5 text-cyan-400" />
-                              <h3 className="text-lg font-bold text-white">Unilevel 11 Níveis</h3>
+                              <h3 className="text-lg font-bold text-white">Unilevel 6 Níveis</h3>
                               {affiliateData?.commissionMode && (
                                 <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30 ml-auto text-[10px]" variant="outline">
                                   {affiliateData.commissionMode === 'system_margin' ? 'System Margin' : affiliateData.commissionMode === 'investment_profit' ? 'Trading Profit' : 'Revenue Pool'}
@@ -6054,7 +6054,7 @@ export default function PlataformaROI() {
                                       </div>
                                       <div>
                                         <div className="flex items-center gap-2">
-                                          <span className="text-lg font-bold text-emerald-400">{lvl1Pct?.percentage || '10'}%</span>
+                                          <span className="text-lg font-bold text-emerald-400">{lvl1Pct?.percentage || '5'}%</span>
                                           <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 text-[9px]" variant="outline">DIRECT</Badge>
                                         </div>
                                         <div className="text-xs text-zinc-500">{lvl1Refs.length} {t('common.referrals')}</div>
@@ -6091,9 +6091,9 @@ export default function PlataformaROI() {
                               })}
                             </div>
 
-                            {/* L6-L11 Row */}
-                            <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-                              {[6, 7, 8, 9, 10, 11].map((level) => {
+                            {/* L6 Row */}
+                            <div className="grid grid-cols-1 gap-2">
+                              {[6].map((level) => {
                                 const refs = affiliateData?.referralTree?.[level] || [];
                                 const comm = affiliateData?.commissionByLevel?.find(c => c.level === level);
                                 const levelPct = affiliateData?.affiliateLevels?.find(l => l.level === level);
@@ -6102,7 +6102,7 @@ export default function PlataformaROI() {
                                   <div key={level} className={`stat-card-hover glass-card rounded-lg p-2.5 border transition-all ${isActive ? 'border-emerald-500/20' : 'border-white/5 opacity-40'}`}>
                                     <div className="flex items-center justify-center gap-1 mb-0.5">
                                       <span className={`text-[10px] font-bold ${isActive ? 'text-emerald-400' : 'text-zinc-600'}`}>L{level}</span>
-                                      <span className={`text-sm font-bold ${isActive ? 'text-emerald-300' : 'text-zinc-600'}`}>{levelPct?.percentage || '?'}%</span>
+                                      <span className={`text-sm font-bold ${isActive ? 'text-emerald-300' : 'text-zinc-600'}`}>{levelPct?.percentage || '2'}%</span>
                                     </div>
                                     <div className="text-[9px] text-zinc-600 text-center">{refs.length} ref</div>
                                     <div className={`text-xs font-semibold text-center mt-0.5 ${isActive ? 'text-emerald-400' : 'text-zinc-700'}`}>${fmtUSDT(comm?._sum?.commissionAmount || 0)}</div>
@@ -6115,7 +6115,7 @@ export default function PlataformaROI() {
                             <div className="mt-3 flex items-center justify-between px-2 py-2 rounded-lg bg-zinc-800/30 border border-zinc-700/30">
                               <span className="text-xs text-zinc-400">Total Unilevel</span>
                               <span className="text-sm font-bold text-emerald-400">
-                                {affiliateData?.affiliateLevels?.length ? affiliateData.affiliateLevels.reduce((sum, l) => sum + d(l.percentage), 0).toFixed(1) : '28'}% · ${fmtUSDT(affiliateData?.commissionByLevel?.reduce((sum, c) => sum + (c._sum?.commissionAmount || 0), 0) || 0)}
+                                {affiliateData?.affiliateLevels?.length ? affiliateData.affiliateLevels.reduce((sum, l) => sum + d(l.percentage), 0).toFixed(1) : '13'}% · ${fmtUSDT(affiliateData?.commissionByLevel?.reduce((sum, c) => sum + (c._sum?.commissionAmount || 0), 0) || 0)}
                               </span>
                             </div>
 
@@ -7594,7 +7594,7 @@ export default function PlataformaROI() {
                                         </div>
                                         <div className="text-xs text-zinc-300 space-y-1">
                                           <p><span className="text-zinc-400 font-medium">De onde vem:</span> Da receita total de investimentos</p>
-                                          <p><span className="text-zinc-400 font-medium">Exemplo:</span> 5% de toda receita → pool dividido por nível. Investimento de $100 → $5 pro pool → N1 ganha 10% de $5 = <span className="text-cyan-400 font-semibold">$0.50</span></p>
+                                          <p><span className="text-zinc-400 font-medium">Exemplo:</span> 5% de toda receita → pool dividido por nível. Investimento de $100 → $5 pro pool → N1 ganha 5% de $5 = <span className="text-cyan-400 font-semibold">$0.25</span></p>
                                           <p><span className="text-zinc-400 font-medium">Sustentabilidade:</span> <span className="text-cyan-400">Previsível</span> — nunca excede X% da receita total</p>
                                         </div>
                                       </div>
@@ -7783,13 +7783,13 @@ export default function PlataformaROI() {
                           <CardHeader><CardTitle className="text-lg">{t('admin.affiliateLevels')}</CardTitle></CardHeader>
                           <CardContent>
                             <div className="space-y-4">
-                              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map(level => {
+                              {[1, 2, 3, 4, 5, 6].map(level => {
                                 const existing = affiliateLevels.find(l => l.level === level);
                                 return (
                                   <AffiliateLevelEditor
                                     key={level}
                                     level={level}
-                                    defaultPercentage={existing?.percentage || ['10', '4', '3', '2', '1.5', '1', '0.8', '0.5', '0.4', '0.3', '0.5'][level - 1]}
+                                    defaultPercentage={existing?.percentage || ['5', '3', '1', '1', '1', '2'][level - 1]}
                                     defaultActive={existing?.isActive ?? true}
                                     existingId={existing?.id}
                                     t={t}

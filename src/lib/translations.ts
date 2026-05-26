@@ -4,7 +4,7 @@ export const translations: Record<string, any> = {
     landing: {
       hero: {
         title: 'PLATAFORMA ROI',
-        subtitle: 'Especialistas en Copy Trading Automatizado - Gana hasta 5% diario con traders profesionales',
+        subtitle: 'Especialistas en Copy Trading Automatizado - Gana hasta 3.3% diario con traders profesionales',
         cta: 'Comenzar a Invertir',
         login: 'Iniciar Sesión',
         register: 'Crear Cuenta',
@@ -25,11 +25,11 @@ export const translations: Record<string, any> = {
       },
       advantage: {
         tag: '🚀 RENDIMIENTO DIARIO',
-        title: '5% de ROI Diario, Todos los Días',
+        title: '3.3% de ROI Diario, Todos los Días',
         subtitle: 'Duplica tu capital en 40 días con Copy Trading automatizado',
         desc1: 'Nuestros traders expertos operan por ti 24/7. Solo invierte y recibe rendimientos diarios automáticos directos en USDT.',
         desc2: 'Con aportes desde $10 USDT, cualquiera puede acceder a rendimientos profesionales. Sin conocimiento técnico necesario.',
-        stat1: { value: '5%', label: 'ROI Diario' },
+        stat1: { value: '3.3%', label: 'ROI Diario' },
         stat2: { value: '40', label: 'Días para Duplicar' },
         stat3: { value: '$0', label: 'Fee de Retiro' },
         cta: 'Invertir Ahora',
@@ -50,9 +50,9 @@ export const translations: Record<string, any> = {
       },
       unilevel: {
         title: 'Plan de Carrera Unilevel',
-        subtitle: 'Gana comisiones en hasta 11 niveles de profundidad',
+        subtitle: 'Gana comisiones en hasta 6 niveles de profundidad',
         level: 'Nivel',
-        total: 'Total: hasta 28% en 11 niveles',
+        total: 'Total: hasta 13% en 6 niveles',
       },
       featured: {
         title: 'Planes de Inversión',
@@ -61,7 +61,7 @@ export const translations: Record<string, any> = {
       },
       affiliate: {
         title: 'Programa de Afiliados',
-        description: 'Comparte tu link de afiliado y gana comisiones cada vez que tus indicados invierten. ¡Hasta 11 niveles de profundidad!',
+        description: 'Comparte tu link de afiliado y gana comisiones cada vez que tus indicados invierten. ¡Hasta 6 niveles de profundidad!',
         level: 'Nivel',
         cta: 'Comienza a Ganar',
       },
@@ -69,9 +69,9 @@ export const translations: Record<string, any> = {
         title: 'Preguntas Frecuentes',
         q1: { q: '¿Cómo funciona el Copy Trading?', a: 'Inviertes en planes de Copy Trading profesional. Nuestros traders expertos operan de forma automatizada 24/7 y recibes el ROI diario directamente en tu saldo USDT. Duplica tu capital en 40 días.' },
         q2: { q: '¿Cuáles son los métodos de pago?', a: 'Aceptamos depósitos en USDT (TRC20 y Polygon) a través de NowPayments. Los retiros se realizan en USDT TRC20 con cero fees.' },
-        q3: { q: '¿Cuánto puedo ganar?', a: 'El ROI diario es de hasta 5%{pix}{pixWithdraw} USDT TRC20. Con el Team Bonus puedes sumar hasta +3% adicional: Bronce (+1%), Plata (+2%), Oro (+3%). Además, gana comisiones de hasta 11 niveles con el plan Unilevel.' },
+        q3: { q: '¿Cuánto puedo ganar?', a: 'El ROI diario es de hasta 3.3%{pix}{pixWithdraw} USDT TRC20. Con el Team Bonus puedes sumar hasta +3% adicional: Bronce (+1%), Plata (+2%), Oro (+3%). Además, gana comisiones de hasta 6 niveles con el plan Unilevel.' },
         q4: { q: '¿Es seguro?', a: 'Utilizamos autenticación JWT, validación de wallet TRC20 y todas las operaciones financieras se procesan del lado del servidor con protección contra condiciones de carrera. Pagos procesados vía NowPayments.' },
-        q5: { q: '¿Cómo funciona el programa de afiliados?', a: 'Comparte tu link único y gana comisiones de hasta 11 niveles de profundidad. Nivel 1: 10%, Nivel 2: 4%, Nivel 3: 3% y así sucesivamente hasta 28% total en comisiones.' },
+        q5: { q: '¿Cómo funciona el programa de afiliados?', a: 'Comparte tu link único y gana comisiones de hasta 6 niveles de profundidad. Nivel 1: 5%, Nivel 2: 3%, Nivel 3: 1% y así sucesivamente hasta 13% total en comisiones.' },
       },
       footer: {
         rights: 'Todos los derechos reservados.',
@@ -783,7 +783,7 @@ export const translations: Record<string, any> = {
     landing: {
       hero: {
         title: 'PLATAFORMA ROI',
-        subtitle: 'Especialistas em Copy Trading Automatizado - Ganhe até 5% ao dia com traders profissionais',
+        subtitle: 'Especialistas em Copy Trading Automatizado - Ganhe até 3.3% ao dia com traders profissionais',
         cta: 'Começar a Investir',
         login: 'Entrar',
         register: 'Criar Conta',
@@ -804,11 +804,11 @@ export const translations: Record<string, any> = {
       },
       advantage: {
         tag: '🚀 RENDIMENTO DIÁRIO',
-        title: '5% de ROI Diário, Todos os Dias',
+        title: '3.3% de ROI Diário, Todos os Dias',
         subtitle: 'Dobre seu capital em 40 dias com Copy Trading automatizado',
         desc1: 'Nossos traders especialistas operam por você 24/7. Apenas invista e receba rendimentos diários automáticos diretos em USDT.',
         desc2: 'Com aportes a partir de $10 USDT, qualquer pessoa pode acessar rendimentos profissionais. Sem conhecimento técnico necessário.',
-        stat1: { value: '5%', label: 'ROI Diário' },
+        stat1: { value: '3.3%', label: 'ROI Diário' },
         stat2: { value: '40', label: 'Dias para Dobrar' },
         stat3: { value: '$0', label: 'Taxa de Saque' },
         cta: 'Investir Agora',
@@ -829,9 +829,9 @@ export const translations: Record<string, any> = {
       },
       unilevel: {
         title: 'Plano de Carreira Unilevel',
-        subtitle: 'Ganhe comissões em até 11 níveis de profundidade',
+        subtitle: 'Ganhe comissões em até 6 níveis de profundidade',
         level: 'Nível',
-        total: 'Total: até 28% em 11 níveis',
+        total: 'Total: até 13% em 6 níveis',
       },
       featured: {
         title: 'Planos de Investimento',
@@ -840,7 +840,7 @@ export const translations: Record<string, any> = {
       },
       affiliate: {
         title: 'Programa de Afiliados',
-        description: 'Compartilhe seu link de afiliado e ganhe comissões cada vez que seus indicados investem. Até 11 níveis de profundidade!',
+        description: 'Compartilhe seu link de afiliado e ganhe comissões cada vez que seus indicados investem. Até 6 níveis de profundidade!',
         level: 'Nível',
         cta: 'Comece a Ganhar',
       },
@@ -848,9 +848,9 @@ export const translations: Record<string, any> = {
         title: 'Perguntas Frequentes',
         q1: { q: 'Como funciona o Copy Trading?', a: 'Você investe em planos de Copy Trading profissional. Nossos traders especialistas operam de forma automatizada 24/7 e você recebe o ROI diário diretamente no seu saldo USDT. Dobre seu capital em 40 dias.' },
         q2: { q: 'Quais são os métodos de pagamento?', a: 'Aceitamos depósitos em USDT (TRC20 e Polygon) via NowPayments. Os saques são realizados em USDT TRC20 com zero taxas.' },
-        q3: { q: 'Quanto posso ganhar?', a: 'O ROI diário é de até 5%{pix}{pixWithdraw} USDT TRC20. Com o Team Bonus você pode somar até +3% adicional: Bronze (+1%), Prata (+2%), Ouro (+3%). Além disso, ganhe comissões de até 11 níveis com o plano Unilevel.' },
+        q3: { q: 'Quanto posso ganhar?', a: 'O ROI diário é de até 3.3%{pix}{pixWithdraw} USDT TRC20. Com o Team Bonus você pode somar até +3% adicional: Bronze (+1%), Prata (+2%), Ouro (+3%). Além disso, ganhe comissões de até 6 níveis com o plano Unilevel.' },
         q4: { q: 'É seguro?', a: 'Utilizamos autenticação JWT, validação de wallet TRC20 e todas as operações financeiras são processadas no servidor com proteção contra condições de corrida. Pagamentos processados via NowPayments.' },
-        q5: { q: 'Como funciona o programa de afiliados?', a: 'Compartilhe seu link único e ganhe comissões de até 11 níveis de profundidade. Nível 1: 10%, Nível 2: 4%, Nível 3: 3% e assim por diante até 28% total em comissões.' },
+        q5: { q: 'Como funciona o programa de afiliados?', a: 'Compartilhe seu link único e ganhe comissões de até 6 níveis de profundidade. Nível 1: 5%, Nível 2: 3%, Nível 3: 1% e assim por diante até 13% total em comissões.' },
       },
       footer: {
         rights: 'Todos os direitos reservados.',
@@ -1472,7 +1472,7 @@ export const translations: Record<string, any> = {
     landing: {
       hero: {
         title: 'PLATAFORMA ROI',
-        subtitle: 'Automated Copy Trading Experts - Earn up to 5% daily with professional traders',
+        subtitle: 'Automated Copy Trading Experts - Earn up to 3.3% daily with professional traders',
         cta: 'Start Investing',
         login: 'Sign In',
         register: 'Create Account',
@@ -1493,11 +1493,11 @@ export const translations: Record<string, any> = {
       },
       advantage: {
         tag: '🚀 DAILY RETURNS',
-        title: '5% Daily ROI, Every Day',
+        title: '3.3% Daily ROI, Every Day',
         subtitle: 'Double your capital in 40 days with automated Copy Trading',
         desc1: 'Our expert traders operate for you 24/7. Just invest and receive automatic daily returns directly in USDT.',
         desc2: 'With contributions starting from $10 USDT, anyone can access professional returns. No technical knowledge required.',
-        stat1: { value: '5%', label: 'Daily ROI' },
+        stat1: { value: '3.3%', label: 'Daily ROI' },
         stat2: { value: '40', label: 'Days to Double' },
         stat3: { value: '$0', label: 'Withdrawal Fee' },
         cta: 'Invest Now',
@@ -1518,9 +1518,9 @@ export const translations: Record<string, any> = {
       },
       unilevel: {
         title: 'Unilevel Career Plan',
-        subtitle: 'Earn commissions up to 11 levels deep',
+        subtitle: 'Earn commissions up to 6 levels deep',
         level: 'Level',
-        total: 'Total: up to 28% across 11 levels',
+        total: 'Total: up to 13% across 6 levels',
       },
       featured: {
         title: 'Investment Plans',
@@ -1529,7 +1529,7 @@ export const translations: Record<string, any> = {
       },
       affiliate: {
         title: 'Affiliate Program',
-        description: 'Share your affiliate link and earn commissions every time your referrals invest. Up to 11 levels deep!',
+        description: 'Share your affiliate link and earn commissions every time your referrals invest. Up to 6 levels deep!',
         level: 'Level',
         cta: 'Start Earning',
       },
@@ -1537,9 +1537,9 @@ export const translations: Record<string, any> = {
         title: 'Frequently Asked Questions',
         q1: { q: 'How does Copy Trading work?', a: 'You invest in professional Copy Trading plans. Our expert traders operate automatically 24/7 and you receive daily ROI directly into your USDT balance. Double your capital in 40 days.' },
         q2: { q: 'What payment methods are available?', a: 'We accept deposits in USDT (TRC20 and Polygon) via NowPayments. Withdrawals are made in USDT TRC20 with zero fees.' },
-        q3: { q: 'How much can I earn?', a: 'Daily ROI is up to 5%{pix}{pixWithdraw} USDT TRC20. With Team Bonus you can add up to +3% extra: Bronze (+1%), Silver (+2%), Gold (+3%). Plus, earn commissions up to 11 levels with the Unilevel plan.' },
+        q3: { q: 'How much can I earn?', a: 'Daily ROI is up to 3.3%{pix}{pixWithdraw} USDT TRC20. With Team Bonus you can add up to +3% extra: Bronze (+1%), Silver (+2%), Gold (+3%). Plus, earn commissions up to 6 levels with the Unilevel plan.' },
         q4: { q: 'Is it secure?', a: 'We use JWT authentication, TRC20 wallet validation, and all financial operations are processed server-side with race condition protection. Payments processed via NowPayments.' },
-        q5: { q: 'How does the affiliate program work?', a: 'Share your unique link and earn commissions up to 11 levels deep. Level 1: 10%, Level 2: 4%, Level 3: 3% and so on up to 28% total in commissions.' },
+        q5: { q: 'How does the affiliate program work?', a: 'Share your unique link and earn commissions up to 6 levels deep. Level 1: 5%, Level 2: 3%, Level 3: 1% and so on up to 13% total in commissions.' },
       },
       footer: {
         rights: 'All rights reserved.',
@@ -2148,7 +2148,7 @@ export const translations: Record<string, any> = {
     landing: {
       hero: {
         title: 'PLATAFORMA ROI',
-        subtitle: '自动化跟单交易专家 - 与专业交易员一起每日赚取高达5%',
+        subtitle: '自动化跟单交易专家 - 与专业交易员一起每日赚取高达3.3%',
         cta: '开始投资',
         login: '登录',
         register: '注册',
@@ -2169,11 +2169,11 @@ export const translations: Record<string, any> = {
       },
       advantage: {
         tag: '🚀 每日收益',
-        title: '每日5% ROI，天天如此',
+        title: '每日3.3% ROI，天天如此',
         subtitle: '40天内通过自动化跟单交易实现资金翻倍',
         desc1: '我们的专家交易员24/7为您操作。只需投资，即可自动获得每日收益，直接以USDT发放。',
         desc2: '从10美元USDT起投，任何人都可以获得专业收益。无需技术知识。',
-        stat1: { value: '5%', label: '每日ROI' },
+        stat1: { value: '3.3%', label: '每日ROI' },
         stat2: { value: '40', label: '翻倍天数' },
         stat3: { value: '$0', label: '提现费用' },
         cta: '立即投资',
@@ -2194,9 +2194,9 @@ export const translations: Record<string, any> = {
       },
       unilevel: {
         title: '单线职业计划',
-        subtitle: '在多达11个级别中赚取佣金',
+        subtitle: '在多达6个级别中赚取佣金',
         level: '级别',
-        total: '总计：11级最高28%',
+        total: '总计：6级最高13%',
       },
       featured: {
         title: '投资计划',
@@ -2205,7 +2205,7 @@ export const translations: Record<string, any> = {
       },
       affiliate: {
         title: '推荐计划',
-        description: '分享您的推荐链接，每次您的推荐人投资时即可赚取佣金。最多11级深度！',
+        description: '分享您的推荐链接，每次您的推荐人投资时即可赚取佣金。最多6级深度！',
         level: '级别',
         cta: '开始赚钱',
       },
@@ -2213,9 +2213,9 @@ export const translations: Record<string, any> = {
         title: '常见问题',
         q1: { q: '跟单交易如何运作？', a: '您投资于专业跟单交易计划。我们的专家交易员24/7自动操作，您每日获得ROI收益，直接存入您的USDT余额。40天内资金翻倍。' },
         q2: { q: '有哪些支付方式？', a: '我们接受通过NowPayments以USDT（TRC20和Polygon）存款。提现以USDT TRC20进行，零手续费。' },
-        q3: { q: '我能赚多少？', a: '每日ROI高达5%{pix}{pixWithdraw} USDT TRC20。通过团队奖金，您可额外增加高达+3%：青铜(+1%)、白银(+2%)、黄金(+3%)。此外，通过单线计划可在多达11个级别中赚取佣金。' },
+        q3: { q: '我能赚多少？', a: '每日ROI高达3.3%{pix}{pixWithdraw} USDT TRC20。通过团队奖金，您可额外增加高达+3%：青铜(+1%)、白银(+2%)、黄金(+3%)。此外，通过单线计划可在多达6个级别中赚取佣金。' },
         q4: { q: '安全吗？', a: '我们使用JWT身份验证、TRC20钱包验证，所有金融操作均在服务器端处理，具有竞态条件保护。付款通过NowPayments处理。' },
-        q5: { q: '推荐计划如何运作？', a: '分享您的专属链接，赚取最多11级深度的佣金。1级：10%，2级：4%，3级：3%，以此类推，佣金总计最高28%。' },
+        q5: { q: '推荐计划如何运作？', a: '分享您的专属链接，赚取最多6级深度的佣金。1级：5%，2级：3%，3级：1%，以此类推，佣金总计最高13%。' },
       },
       footer: {
         rights: '版权所有。',

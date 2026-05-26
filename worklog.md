@@ -99,3 +99,39 @@ The `Investment.source` field is a `String` type (not an enum), so `daymond_prem
 ### Verification
 - `bun run lint` passes with no errors
 - Dev server compiles and runs successfully
+
+---
+Task ID: 2
+Agent: full-stack-developer
+Task: Fix landing page hardcoded values to match ActionCash business plan
+
+Work Log:
+- Fixed 4 occurrences of ROI "5%" → "3.3%" in `/src/app/page.tsx` (hero stats, dashboard preview badge, CTA card, quick-action button)
+- Fixed 2 occurrences of "11 níveis" → "6 níveis" in `/src/app/page.tsx` (quick-action button, affiliate subtitle)
+- Fixed 2 occurrences of "Unilevel 11 Níveis" → "Unilevel 6 Níveis" in `/src/app/page.tsx` (affiliate header, section title)
+- Fixed 2 occurrences of fallback total "28%" → "13%" in `/src/app/page.tsx` (landing unilevel progress bar, affiliate total)
+- Fixed L1 fallback "10%" → "5%" in 2 places in `/src/app/page.tsx` (landing L1 card, affiliate L1 card)
+- Fixed L2-L5 fallback percentages from ['','4','3','2','1.5'] → ['','3','1','1','1'] in `/src/app/page.tsx`
+- Fixed L6-L11 row → L6 only row in 2 places in `/src/app/page.tsx` (landing section, affiliate section)
+- Fixed L6 fallback percentages from ['1.5','1','1','0.5','0.5','1'] → '2' in `/src/app/page.tsx`
+- Fixed admin affiliate levels from [1..11] → [1..6] with defaults ['10','4','3','2','1.5','1','0.8','0.5','0.4','0.3','0.5'] → ['5','3','1','1','1','2'] in `/src/app/page.tsx`
+- Fixed revenue pool example from "N1 ganha 10% de $5 = $0.50" → "N1 ganha 5% de $5 = $0.25" in `/src/app/page.tsx`
+- Fixed 3 section comments in `/src/app/page.tsx` (5% Daily ROI → 3.3%, Unilevel 11 → 6, 11-LEVEL → 6-LEVEL)
+- Fixed 12 translation strings in `/src/lib/i18n/translations.ts` (ES/EN/PT/ZH): hero descriptions (5% → 3.3%), affiliate subtitles (11 → 6 levels), FAQ answers (11 → 6 levels, 10% → 5%, 28% → 13%)
+- Fixed 28 translation strings in `/src/lib/translations.ts` across all 4 locales (ES/PT/EN/ZH):
+  - hero subtitles (5% → 3.3%)
+  - advantage titles (5% → 3.3%)
+  - stat1 values (5% → 3.3%)
+  - unilevel subtitles (11 levels → 6 levels)
+  - unilevel totals (28% en 11 niveles → 13% en 6 niveles)
+  - affiliate descriptions (11 levels → 6 levels)
+  - FAQ q3 answers (5% ROI → 3.3%, 11 levels → 6 levels)
+  - FAQ q5 answers (11 levels → 6, L1=10% → 5%, L2=4% → 3%, L3=3% → 1%, 28% → 13%)
+
+Stage Summary:
+- All landing page hardcoded values now match ActionCash business plan
+- ROI: 5% → 3.3% across all locales and components
+- Affiliate levels: 11 → 6 with correct percentages (L1=5%, L2=3%, L3=1%, L4=1%, L5=1%, L6=2%)
+- Total commission: 28% → 13%
+- `bun run lint` passes with no errors
+- Dev server compiles and runs successfully
