@@ -561,7 +561,14 @@ export default function PlataformaROI() {
   const [landingTraders, setLandingTraders] = useState <CopyTrader[]> ([]);
   const [landingAffiliateLevels, setLandingAffiliateLevels] = useState<AffiliateLevel[]>([]);
   const [landingStats, setLandingStats] = useState<{ totalUsers: number; activeInvestments: number; totalRoi: number; totalInvested: number } | null>(null);
-  const [landingConfig, setLandingConfig] = useState<{ siteName: string; minDeposit: string; minWithdrawal: string; hasPix: boolean; hasUsdt: boolean } | null>(null);
+  const [landingConfig, setLandingConfig] = useState<{
+    siteName: string; minDeposit: string; minInvestment: string; minWithdrawal: string; withdrawalFeePct: string;
+    hasPix: boolean; hasUsdt: boolean; dailyRoiPct: string; transferEnabled: boolean;
+    teamBonusSalaryEnabled: boolean; teamBonusSalaryPct: string; teamBonusSalaryMinTeamCapital: string;
+    teamBonusGoldEnabled: boolean; teamBonusGoldPct: string; teamBonusGoldMinTeamCapital: string;
+    teamBonusDaymondEnabled: boolean; teamBonusDaymondPackageAmount: string; teamBonusDaymondMinTeamCapital: string;
+    teamBonusDaymondPremiumEnabled: boolean; teamBonusDaymondPremiumPackageAmount: string; teamBonusDaymondPremiumMinTeamCapital: string; teamBonusDaymondPremiumDailyCapUsd: string;
+  } | null>(null);
   const [landingRate, setLandingRate] = useState(5.5);
 
   // Site Config State (for deposit/withdrawal modal toggles)
@@ -2794,35 +2801,43 @@ export default function PlataformaROI() {
               </h2>
               <p className="text-zinc-400 text-lg max-w-2xl mx-auto">{t('landing.tiers.subtitle')}</p>
             </motion.div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            {(() => {
+              const roiPct = d(landingConfig?.dailyRoiPct || '3.3');
+              return (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {[
-                { amount: 10, daily: 0.50, doubles: 20, color: 'from-zinc-500 to-zinc-400', featured: false },
-                { amount: 50, daily: 2.50, doubles: 100, color: 'from-amber-500 to-amber-400', featured: false },
-                { amount: 100, daily: 5.00, doubles: 200, color: 'from-cyan-500 to-cyan-400', featured: true },
-                { amount: 500, daily: 25.00, doubles: 1000, color: 'from-emerald-500 to-emerald-400', featured: false },
-                { amount: 1500, daily: 75.00, doubles: 3000, color: 'from-purple-500 to-purple-400', featured: false },
-              ].map((tier, i) => (
-                <motion.div key={tier.amount} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }} viewport={{ once: true }} className="stat-card-hover">
+                { amount: 10, color: 'from-zinc-500 to-zinc-400', featured: false },
+                { amount: 100, color: 'from-cyan-500 to-cyan-400', featured: true },
+                { amount: 500, color: 'from-emerald-500 to-emerald-400', featured: false },
+                { amount: 1000, color: 'from-purple-500 to-purple-400', featured: false },
+              ].map((tier) => {
+                const daily = +(tier.amount * roiPct / 100).toFixed(2);
+                const doubles = tier.amount * 2;
+                return (
+                <motion.div key={tier.amount} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: tier.amount * 0.001 }} viewport={{ once: true }} className="stat-card-hover">
                   <div className={`glass-card rounded-2xl p-5 text-center h-full ${tier.featured ? 'tier-card-premium gradient-border glow-emerald' : 'border border-white/5'}`}>
                     {tier.featured && <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 mb-3 text-[10px]">{t('landing.badges.popular')}</Badge>}
                     <div className={`text-3xl font-bold bg-gradient-to-r ${tier.color} bg-clip-text text-transparent mb-2`}>${tier.amount}</div>
                     <div className="text-sm text-zinc-400 mb-3">{t('landing.tiers.investLabel')}</div>
                     <div className="bg-white/[0.03] rounded-lg p-3 mb-3">
-                      <div className="text-lg font-semibold text-emerald-400">+${tier.daily.toFixed(2)}</div>
+                      <div className="text-lg font-semibold text-emerald-400">+${daily.toFixed(2)}</div>
                       <div className="text-xs text-zinc-500">{t('landing.tiers.perDay')}</div>
                     </div>
                     <div className="flex items-center justify-center gap-1 text-green-400 text-sm font-medium">
                       <TrendingUp className="h-4 w-4" />
-                      {t('common.doublesTo')} ${tier.doubles.toLocaleString()}
+                      {t('common.doublesTo')} ${doubles.toLocaleString()}
                     </div>
                   </div>
                 </motion.div>
-              ))}
+                );
+              })}
             </div>
+              );
+            })()}
           </div>
         </section>
 
-        {/* ── Unilevel 6 Levels ── */}
+        {/* ── Plano de Afiliados (Merged Unilevel) ── */}
         <section className="py-16 sm:py-24 relative overflow-hidden">
           <div className="absolute inset-0 pointer-events-none">
             <div className="absolute top-0 left-1/2 w-96 h-96 bg-cyan-500/5 rounded-full blur-[150px]" />
@@ -2837,7 +2852,7 @@ export default function PlataformaROI() {
               </h2>
               <p className="text-zinc-400 text-lg max-w-2xl mx-auto">{t('landing.unilevel.subtitle')}</p>
             </motion.div>
-            {/* Visual Tree Layout */}
+            {/* Visual Tree Layout - 6 Levels */}
             <div className="max-w-3xl mx-auto space-y-4">
               {/* L1 - Highlighted */}
               <motion.div initial={{ opacity: 0, scale: 0.95 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }}>
@@ -2846,7 +2861,7 @@ export default function PlataformaROI() {
                     {landingAffiliateLevels.find(l => l.level === 1)?.percentage || '5'}%
                   </div>
                   <div className="text-sm text-emerald-400 font-medium mt-1">L1 — Direct</div>
-                  <div className="text-xs text-zinc-500">Direct Referral Commission</div>
+                  <div className="text-xs text-zinc-500">{t('landing.affiliate.directReferrals')}</div>
                 </div>
               </motion.div>
               {/* L2-L5 Row */}
@@ -2867,7 +2882,7 @@ export default function PlataformaROI() {
                 {[6].map((lvl) => (
                   <motion.div key={lvl} initial={{ opacity: 0, y: 10 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: lvl * 0.04 }} viewport={{ once: true }}>
                     <div className="glass-card rounded-xl p-3 text-center border border-white/5 stat-card-hover">
-                      <div className="text-lg font-bold text-zinc-400">
+                      <div className="text-lg font-bold text-amber-400">
                         {landingAffiliateLevels.find(l => l.level === lvl)?.percentage || '2'}%
                       </div>
                       <div className="text-[10px] text-zinc-500">{t('landing.unilevel.level')} {lvl}</div>
@@ -2875,14 +2890,14 @@ export default function PlataformaROI() {
                   </motion.div>
                 ))}
               </div>
-              {/* Progress Bar */}
+              {/* Progress Bar - Total */}
               <div className="glass-card rounded-xl p-4 border border-white/5">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm text-zinc-300">{t('landing.unilevel.total')}</span>
                   <span className="text-lg font-bold text-emerald-400">
                     {landingAffiliateLevels.length > 0
                       ? landingAffiliateLevels.reduce((sum, l) => sum + d(l.percentage), 0).toFixed(1)
-                      : '13'}%
+                      : '13'}% {t('landing.unilevel.inLevels').replace('{n}', '6')}
                   </span>
                 </div>
                 <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden">
@@ -2890,13 +2905,20 @@ export default function PlataformaROI() {
                 </div>
               </div>
             </div>
+            {/* CTA */}
+            <div className="text-center mt-8">
+              <Button size="lg" className="bg-gradient-to-r from-emerald-600 to-green-500 hover:from-emerald-500 hover:to-green-400 text-white glow-emerald" onClick={() => { setAuthMode('register'); setShowAuth(true); }}>
+                {t('landing.affiliate.cta')} <ArrowUpRight className="ml-2 h-5 w-5" />
+              </Button>
+            </div>
           </div>
         </section>
 
-        {/* ── Team Bonuses ── */}
+        {/* ── Bônus de Equipe ActionCash ── */}
         <section className="py-16 sm:py-24 relative">
           <div className="absolute inset-0 pointer-events-none">
             <div className="absolute bottom-0 right-0 w-80 h-80 bg-amber-500/5 rounded-full blur-[120px]" />
+            <div className="absolute top-0 left-0 w-80 h-80 bg-violet-500/5 rounded-full blur-[120px]" />
           </div>
           <div className="max-w-7xl mx-auto px-4 sm:px-6 relative z-10">
             <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-10 sm:mb-14">
@@ -2904,64 +2926,70 @@ export default function PlataformaROI() {
                 <Trophy className="h-4 w-4" /> {t('landing.badges.teamRewards')}
               </span>
               <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-3">
-                <span className="bg-gradient-to-r from-amber-400 to-orange-400 bg-clip-text text-transparent">{t('landing.bonuses.title')}</span>
+                <span className="bg-gradient-to-r from-amber-400 to-orange-400 bg-clip-text text-transparent">{t('landing.teamBonus.title')}</span>
               </h2>
-              <p className="text-zinc-400 text-lg max-w-2xl mx-auto">{t('landing.bonuses.subtitle')}</p>
+              <p className="text-zinc-400 text-lg max-w-2xl mx-auto">{t('landing.teamBonus.subtitle')}</p>
             </motion.div>
-            <div className="grid sm:grid-cols-3 gap-6 max-w-4xl mx-auto">
-              {[
-                { name: t('landing.bonuses.bronze.name'), bonus: '+1%', desc: t('landing.bonuses.bronze.requirement'), icon: Medal, grad: 'from-amber-700 to-amber-600', glow: 'glow-emerald', border: 'border-amber-700/30' },
-                { name: t('landing.bonuses.silver.name'), bonus: '+2%', desc: t('landing.bonuses.silver.requirement'), icon: Award, grad: 'from-gray-300 to-gray-200', glow: 'glow-cyan', border: 'border-gray-500/30' },
-                { name: t('landing.bonuses.gold.name'), bonus: '+3%', desc: t('landing.bonuses.gold.requirement'), icon: Crown, grad: 'from-yellow-500 to-yellow-300', glow: 'glow-green', border: 'border-yellow-600/30' },
-              ].map((b, i) => (
-                <motion.div key={b.name} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.15 }} viewport={{ once: true }} className="stat-card-hover">
-                  <div className={`glass-card gradient-border rounded-2xl p-6 text-center ${b.glow}`}>
-                    <div className={`w-14 h-14 bg-gradient-to-br ${b.grad} rounded-2xl flex items-center justify-center mx-auto mb-4`}>
-                      <b.icon className="h-7 w-7 text-white" />
-                    </div>
-                    <h3 className={`text-xl font-bold bg-gradient-to-r ${b.grad} bg-clip-text text-transparent mb-2`}>{b.name}</h3>
-                    <div className="text-3xl font-bold text-emerald-400 mb-2">{b.bonus}</div>
-                    <div className="text-sm text-zinc-400">{t('landing.bonuses.extraDaily')}</div>
-                    <div className="mt-3 text-xs text-zinc-500 bg-white/[0.03] rounded-full px-3 py-1.5 inline-block">{b.desc}</div>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
+              {/* Salário Semanal */}
+              {landingConfig?.teamBonusSalaryEnabled !== false && (
+              <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: 0 }} viewport={{ once: true }} className="stat-card-hover">
+                <div className="glass-card gradient-border rounded-2xl p-6 text-center glow-emerald h-full flex flex-col">
+                  <div className="w-14 h-14 bg-gradient-to-br from-emerald-500 to-green-400 rounded-2xl flex items-center justify-center mx-auto mb-4 text-2xl">💰</div>
+                  <h3 className="text-lg font-bold bg-gradient-to-r from-emerald-400 to-green-300 bg-clip-text text-transparent mb-2">{t('landing.teamBonus.salary')}</h3>
+                  <div className="text-3xl font-bold text-emerald-400 mb-1">{landingConfig?.teamBonusSalaryPct || '0.5'}%</div>
+                  <div className="text-sm text-zinc-400 mb-3">{t('landing.teamBonus.salaryDesc')}</div>
+                  <div className="mt-auto text-xs text-zinc-500 bg-white/[0.03] rounded-full px-3 py-1.5 inline-block">
+                    {t('landing.teamBonus.minTeam')}: ${(landingConfig?.teamBonusSalaryMinTeamCapital || '2000').replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
                   </div>
-                </motion.div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* ── Affiliate Program ── */}
-        <section className="py-16 sm:py-24 relative">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 relative z-10">
-            <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-10 sm:mb-14">
-              <span className="inline-flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm font-medium px-4 py-1.5 rounded-full mb-4">
-                <Share2 className="h-4 w-4" /> {t('landing.badges.referralProgram')}
-              </span>
-              <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-3">
-                <span className="bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">{t('landing.affiliate.title')}</span>
-              </h2>
-              <p className="text-zinc-400 text-lg max-w-2xl mx-auto">{t('landing.affiliate.description')}</p>
-            </motion.div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 sm:gap-4 mb-10 max-w-3xl mx-auto">
-              {(landingAffiliateLevels.length > 0 ? landingAffiliateLevels : [
-                { level: 1, percentage: '10' },
-                { level: 2, percentage: '4' },
-                { level: 3, percentage: '3' },
-                { level: 4, percentage: '2' },
-                { level: 5, percentage: '1.5' },
-              ] as { level: number; percentage: string }[]).map((lvl) => (
-                <motion.div key={lvl.level} initial={{ opacity: 0, scale: 0.9 }} whileInView={{ opacity: 1, scale: 1 }} transition={{ delay: lvl.level * 0.05 }} viewport={{ once: true }} className="stat-card-hover">
-                  <div className={`glass-card rounded-xl p-4 text-center ${lvl.level === 1 ? 'gradient-border glow-emerald' : 'border border-white/5'}`}>
-                    <div className={`text-2xl font-bold ${lvl.level === 1 ? 'text-emerald-400 animate-count-glow' : 'text-cyan-400'}`}>{lvl.percentage}%</div>
-                    <div className="text-xs text-zinc-500 mt-1">{t('landing.affiliate.level')} {lvl.level}</div>
+                  <div className="text-[10px] text-emerald-500/60 mt-2">{t('landing.teamBonus.sundays')}</div>
+                </div>
+              </motion.div>
+              )}
+              {/* Action Gold */}
+              {landingConfig?.teamBonusGoldEnabled !== false && (
+              <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} viewport={{ once: true }} className="stat-card-hover">
+                <div className="glass-card gradient-border rounded-2xl p-6 text-center glow-green h-full flex flex-col">
+                  <div className="w-14 h-14 bg-gradient-to-br from-yellow-500 to-amber-300 rounded-2xl flex items-center justify-center mx-auto mb-4 text-2xl">🥇</div>
+                  <h3 className="text-lg font-bold bg-gradient-to-r from-yellow-400 to-amber-300 bg-clip-text text-transparent mb-2">{t('landing.teamBonus.gold')}</h3>
+                  <div className="text-3xl font-bold text-yellow-400 mb-1">{landingConfig?.teamBonusGoldPct || '50'}%</div>
+                  <div className="text-sm text-zinc-400 mb-3">{t('landing.teamBonus.goldDesc')}</div>
+                  <div className="mt-auto text-xs text-zinc-500 bg-white/[0.03] rounded-full px-3 py-1.5 inline-block">
+                    {t('landing.teamBonus.minTeam')}: ${(landingConfig?.teamBonusGoldMinTeamCapital || '4000').replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
                   </div>
-                </motion.div>
-              ))}
-            </div>
-            <div className="text-center">
-              <Button size="lg" className="bg-gradient-to-r from-emerald-600 to-green-500 hover:from-emerald-500 hover:to-green-400 text-white glow-emerald" onClick={() => { setAuthMode('register'); setShowAuth(true); }}>
-                {t('landing.affiliate.cta')} <ArrowUpRight className="ml-2 h-5 w-5" />
-              </Button>
+                </div>
+              </motion.div>
+              )}
+              {/* Action Daymond */}
+              {landingConfig?.teamBonusDaymondEnabled !== false && (
+              <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} viewport={{ once: true }} className="stat-card-hover">
+                <div className="glass-card gradient-border rounded-2xl p-6 text-center glow-cyan h-full flex flex-col">
+                  <div className="w-14 h-14 bg-gradient-to-br from-cyan-500 to-blue-400 rounded-2xl flex items-center justify-center mx-auto mb-4 text-2xl">💎</div>
+                  <h3 className="text-lg font-bold bg-gradient-to-r from-cyan-400 to-blue-300 bg-clip-text text-transparent mb-2">{t('landing.teamBonus.daymond')}</h3>
+                  <div className="text-3xl font-bold text-cyan-400 mb-1">${(landingConfig?.teamBonusDaymondPackageAmount || '1000').replace(/\B(?=(\d{3})+(?!\d))/g, ',')}</div>
+                  <div className="text-sm text-zinc-400 mb-3">{t('landing.teamBonus.daymondDesc')}</div>
+                  <div className="mt-auto text-xs text-zinc-500 bg-white/[0.03] rounded-full px-3 py-1.5 inline-block">
+                    {t('landing.teamBonus.minTeam')}: ${(landingConfig?.teamBonusDaymondMinTeamCapital || '20000').replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                  </div>
+                  <div className="text-[10px] text-cyan-500/60 mt-2">{t('landing.teamBonus.renewable')}</div>
+                </div>
+              </motion.div>
+              )}
+              {/* Daymond Premium */}
+              {landingConfig?.teamBonusDaymondPremiumEnabled !== false && (
+              <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} viewport={{ once: true }} className="stat-card-hover">
+                <div className="glass-card gradient-border rounded-2xl p-6 text-center glow-green h-full flex flex-col">
+                  <div className="w-14 h-14 bg-gradient-to-br from-violet-500 to-purple-400 rounded-2xl flex items-center justify-center mx-auto mb-4 text-2xl">👑</div>
+                  <h3 className="text-lg font-bold bg-gradient-to-r from-violet-400 to-purple-300 bg-clip-text text-transparent mb-2">{t('landing.teamBonus.daymondPremium')}</h3>
+                  <div className="text-3xl font-bold text-violet-400 mb-1">${(landingConfig?.teamBonusDaymondPremiumPackageAmount || '2000').replace(/\B(?=(\d{3})+(?!\d))/g, ',')}</div>
+                  <div className="text-sm text-zinc-400 mb-3">{t('landing.teamBonus.daymondPremiumDesc')}</div>
+                  <div className="mt-auto text-xs text-zinc-500 bg-white/[0.03] rounded-full px-3 py-1.5 inline-block">
+                    {t('landing.teamBonus.minTeam')}: ${(landingConfig?.teamBonusDaymondPremiumMinTeamCapital || '50000').replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                  </div>
+                  <div className="text-[10px] text-violet-500/60 mt-2">{t('landing.teamBonus.dailyCap')}: ${landingConfig?.teamBonusDaymondPremiumDailyCapUsd || '99'}{t('common.perDay')}</div>
+                </div>
+              </motion.div>
+              )}
             </div>
           </div>
         </section>

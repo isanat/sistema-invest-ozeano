@@ -32,6 +32,12 @@ const I18nContext = createContext<I18nContextType>({
 import { translations } from './translations';
 
 function getNestedValue(obj: Record<string, unknown>, path: string): string {
+  // Try direct key access first (translations use flat keys like 'landing.affiliate.title')
+  const direct = (obj as Record<string, unknown>)[path];
+  if (typeof direct === 'string') {
+    return direct;
+  }
+  // Fallback to nested path lookup for nested object structures
   const keys = path.split('.');
   let current: unknown = obj;
   for (const key of keys) {

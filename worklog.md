@@ -135,3 +135,50 @@ Stage Summary:
 - Total commission: 28% → 13%
 - `bun run lint` passes with no errors
 - Dev server compiles and runs successfully
+
+---
+Task ID: 3
+Agent: full-stack-developer
+Task: Redesign landing page for ActionCash business plan
+
+Work Log:
+- Updated landing API (`/src/app/api/landing/route.ts`) with 16 new config fields:
+  - `dailyRoiPct`, `minInvestment`, `withdrawalFeePct`, `transferEnabled`
+  - `teamBonusSalaryEnabled`, `teamBonusSalaryPct`, `teamBonusSalaryMinTeamCapital`
+  - `teamBonusGoldEnabled`, `teamBonusGoldPct`, `teamBonusGoldMinTeamCapital`
+  - `teamBonusDaymondEnabled`, `teamBonusDaymondPackageAmount`, `teamBonusDaymondMinTeamCapital`
+  - `teamBonusDaymondPremiumEnabled`, `teamBonusDaymondPremiumPackageAmount`, `teamBonusDaymondPremiumMinTeamCapital`, `teamBonusDaymondPremiumDailyCapUsd`
+- Updated `landingConfig` state type in `page.tsx` to include all new API fields
+- Removed duplicate "Programa de Afiliados" section (was showing same affiliate levels twice)
+- Merged Unilevel section into single "Plano de Afiliados" with CTA button
+- Added L6 amber color highlighting (2% special level)
+- Added `landing.unilevel.inLevels` translation key for "en 6 niveles" display
+- Redesigned Team Bonus section from Bronze/Prata/Ouro (+1%/+2%/+3%) to ActionCash features:
+  - 💰 Salário Semanal: 0.5% do capital ativo do time, todo domingo, mínimo $2,000
+  - 🥇 Action Gold: 50% do salário semanal dos diretos, mínimo $4,000
+  - 💎 Action Daymond: $1,000 package with 3.3% daily ROI, mínimo $20,000
+  - 👑 Daymond Premium: $2,000 package with $99/day cap, mínimo $50,000
+  - All values now come dynamically from `landingConfig` API response
+  - Cards conditionally rendered based on `teamBonus*Enabled` config flags
+- Fixed Investment Tiers to use dynamic ROI from API:
+  - Changed from 5 hardcoded tiers (at 5% ROI) to 4 tiers calculated from `landingConfig.dailyRoiPct`
+  - $10 → $0.33/day, $100 → $3.30/day, $500 → $16.50/day, $1,000 → $33.00/day
+- Added 16 new translation keys in `/src/lib/i18n/translations.ts` (ES/EN/PT/ZH):
+  - `landing.teamBonus.*` keys for salary, gold, daymond, daymondPremium
+  - `landing.unilevel.inLevels` for level count display
+- Added `landing.teamBonus` object in `/src/lib/translations.ts` for all 4 locales (ES/PT/EN/ZH)
+- Added `landing.unilevel.inLevels` key in all locales
+- Updated FAQ answers in both translation files:
+  - q3: Updated from "Bronze/Prata/Ouro +1%/+2%/+3%" to ActionCash team bonus features
+  - q5: Updated from generic "6 levels" to specific "L1=5%, L2=3%, L3=1%, L4=1%, L5=1%, L6=2% (13%)"
+  - Updated min investment from $10 to $5 in all locales
+
+Stage Summary:
+- Landing page now reflects ActionCash business plan dynamically from API config
+- Removed duplicate Unilevel/Affiliate section (was showing levels twice)
+- Team Bonus section redesigned with 4 ActionCash-specific programs (Salário Semanal, Action Gold, Action Daymond, Daymond Premium)
+- Investment Tiers now calculate dynamically from `dailyRoiPct` config (3.3%)
+- All values sourced from `landingConfig` API response when available
+- FAQ answers updated across all 4 languages to reflect ActionCash features
+- `bun run lint` passes with no errors
+- Dev server compiles and runs successfully

@@ -22,6 +22,7 @@ type TranslationKeys = {
   'general.usdt': string
   'general.daily': string
   'general.monthly': string
+  'general.perDay': string
   'general.total': string
   'general.active': string
   'general.completed': string
@@ -133,6 +134,23 @@ type TranslationKeys = {
   'landing.affiliate.additionalDailyRoi': string
   'landing.affiliate.level': string
   'landing.affiliate.startEarning': string
+
+  // Landing - Team Bonus (ActionCash)
+  'landing.teamBonus.title': string
+  'landing.teamBonus.subtitle': string
+  'landing.teamBonus.salary': string
+  'landing.teamBonus.salaryDesc': string
+  'landing.teamBonus.minTeam': string
+  'landing.teamBonus.sundays': string
+  'landing.teamBonus.gold': string
+  'landing.teamBonus.goldDesc': string
+  'landing.teamBonus.daymond': string
+  'landing.teamBonus.daymondDesc': string
+  'landing.teamBonus.renewable': string
+  'landing.teamBonus.daymondPremium': string
+  'landing.teamBonus.daymondPremiumDesc': string
+  'landing.teamBonus.dailyCap': string
+  'landing.unilevel.inLevels': string
 
   // Landing - FAQ
   'landing.faq.title': string
@@ -282,6 +300,7 @@ export const translations: Record<Locale, TranslationKeys> = {
     'general.usdt': 'USDT',
     'general.daily': 'Diario',
     'general.monthly': 'Mensual',
+    'general.perDay': '/día',
     'general.total': 'Total',
     'general.active': 'Activo',
     'general.completed': 'Completado',
@@ -394,6 +413,23 @@ export const translations: Record<Locale, TranslationKeys> = {
     'landing.affiliate.level': 'Nivel',
     'landing.affiliate.startEarning': 'Empezar a Ganar',
 
+    // Landing - Team Bonus (ActionCash)
+    'landing.teamBonus.title': 'Bônus de Equipe ActionCash',
+    'landing.teamBonus.subtitle': '4 programas exclusivos para multiplicar tus ganancias con tu equipo',
+    'landing.teamBonus.salary': 'Salário Semanal',
+    'landing.teamBonus.salaryDesc': 'del capital activo de tu equipo',
+    'landing.teamBonus.minTeam': 'Mín. equipo',
+    'landing.teamBonus.sundays': 'Se paga todos los domingos',
+    'landing.teamBonus.gold': 'Action Gold',
+    'landing.teamBonus.goldDesc': 'del salario semanal de tus referidos directos',
+    'landing.teamBonus.daymond': 'Action Daymond',
+    'landing.teamBonus.daymondDesc': 'Paquete con ROI diario de 3.3%',
+    'landing.teamBonus.renewable': 'Renovable',
+    'landing.teamBonus.daymondPremium': 'Daymond Premium',
+    'landing.teamBonus.daymondPremiumDesc': 'Paquete premium con ROI diario de 3.3%',
+    'landing.teamBonus.dailyCap': 'Cap diario',
+    'landing.unilevel.inLevels': 'en {n} niveles',
+
     // Landing - FAQ
     'landing.faq.title': 'Preguntas <em>Frecuentes</em>',
     'landing.faq.subtitle': 'Resuelve tus dudas sobre la plataforma',
@@ -402,11 +438,11 @@ export const translations: Record<Locale, TranslationKeys> = {
     'landing.faq.q2': '¿Cómo funciona el ROI diario?',
     'landing.faq.a2': 'El ROI diario se calcula según el plan elegido. Por ejemplo, en el plan Silver (2.5% al día), una inversión de $100 genera $2.50 por día. El rendimiento se acredita automáticamente en tu cuenta.',
     'landing.faq.q3': '¿Cuál es el monto mínimo para invertir?',
-    'landing.faq.a3': 'El monto mínimo es de $10 USDT en el plan Starter. Tenemos planes para todos los perfiles, desde $10 hasta $1.500+.',
+    'landing.faq.a3': 'El monto mínimo es de $5 USDT. Con el ROI diario de 3.3%, puedes empezar a generar ganancias desde el primer día. Además, accede a los Bônus de Equipe ActionCash según crezca tu equipo.',
     'landing.faq.q4': '¿Cómo hago retiros?',
     'landing.faq.a4': 'Puedes solicitar retiro en cualquier momento desde tu panel. El mínimo para retiro es de $10 USDT. Los retiros se procesan en hasta 24 horas hábiles, sin comisión.',
     'landing.faq.q5': '¿Cómo funciona el programa de afiliados?',
-    'landing.faq.a5': 'Nuestro programa Unilevel posee 6 niveles de comisiones. Ganas 5% en el 1er nivel y porcentajes menores en los niveles siguientes. Además, al alcanzar metas de referidos, recibes bonos de equipo (hasta +3% en el ROI).',
+    'landing.faq.a5': 'Nuestro programa Unilevel posee 6 niveles de comisiones: L1=5%, L2=3%, L3=1%, L4=1%, L5=1%, L6=2% (total 13%). Además, accede a los Bônus de Equipe: Salário Semanal, Action Gold, Action Daymond y Daymond Premium según el capital de tu equipo.',
     'landing.faq.q6': '¿Es seguro invertir?',
     'landing.faq.a6': 'Utilizamos estrategias de trading probadas con win rate de 89%. Nuestro sistema opera con stop loss y gestión de riesgo. Sin embargo, toda inversión involucra riesgos y rentabilidad pasada no garantiza resultados futuros.',
     'landing.faq.q7': '¿Cuáles son las formas de pago?',
@@ -540,6 +576,7 @@ export const translations: Record<Locale, TranslationKeys> = {
     'general.usdt': 'USDT',
     'general.daily': 'Daily',
     'general.monthly': 'Monthly',
+    'general.perDay': '/day',
     'general.total': 'Total',
     'general.active': 'Active',
     'general.completed': 'Completed',
@@ -645,6 +682,23 @@ export const translations: Record<Locale, TranslationKeys> = {
     'landing.affiliate.level': 'Level',
     'landing.affiliate.startEarning': 'Start Earning',
 
+    // Landing - Team Bonus (ActionCash)
+    'landing.teamBonus.title': 'ActionCash Team Bonuses',
+    'landing.teamBonus.subtitle': '4 exclusive programs to multiply your earnings with your team',
+    'landing.teamBonus.salary': 'Weekly Salary',
+    'landing.teamBonus.salaryDesc': 'of your team\'s active capital',
+    'landing.teamBonus.minTeam': 'Min. team',
+    'landing.teamBonus.sundays': 'Paid every Sunday',
+    'landing.teamBonus.gold': 'Action Gold',
+    'landing.teamBonus.goldDesc': 'of your direct referrals\' weekly salary',
+    'landing.teamBonus.daymond': 'Action Daymond',
+    'landing.teamBonus.daymondDesc': 'Package with 3.3% daily ROI',
+    'landing.teamBonus.renewable': 'Renewable',
+    'landing.teamBonus.daymondPremium': 'Daymond Premium',
+    'landing.teamBonus.daymondPremiumDesc': 'Premium package with 3.3% daily ROI',
+    'landing.teamBonus.dailyCap': 'Daily cap',
+    'landing.unilevel.inLevels': 'in {n} levels',
+
     'landing.faq.title': 'Frequently <em>Asked</em> Questions',
     'landing.faq.subtitle': 'Clear your doubts about the platform',
     'landing.faq.q1': 'What is Copy Trading?',
@@ -652,11 +706,11 @@ export const translations: Record<Locale, TranslationKeys> = {
     'landing.faq.q2': 'How does the daily ROI work?',
     'landing.faq.a2': 'The daily ROI is calculated based on the chosen plan. For example, on the Silver plan (2.5% per day), a $100 investment generates $2.50 per day. Earnings are automatically credited to your account.',
     'landing.faq.q3': 'What is the minimum amount to invest?',
-    'landing.faq.a3': 'The minimum amount is $10 USDT on the Starter plan. We have plans for all profiles, from $10 to $1,500+.',
+    'landing.faq.a3': 'The minimum amount is $5 USDT. With a 3.3% daily ROI, you can start earning from day one. Additionally, access ActionCash Team Bonuses as your team grows.',
     'landing.faq.q4': 'How do I make withdrawals?',
     'landing.faq.a4': 'You can request a withdrawal at any time from your panel. The minimum withdrawal is $10 USDT. Withdrawals are processed within 24 business hours, with no fees.',
     'landing.faq.q5': 'How does the affiliate program work?',
-    'landing.faq.a5': 'Our Unilevel program has 6 commission levels. You earn 5% on the 1st level and smaller percentages on subsequent levels. Additionally, when you reach referral goals, you receive team bonuses (up to +3% on ROI).',
+    'landing.faq.a5': 'Our Unilevel program has 6 commission levels: L1=5%, L2=3%, L3=1%, L4=1%, L5=1%, L6=2% (13% total). Additionally, access Team Bonuses: Weekly Salary, Action Gold, Action Daymond, and Daymond Premium based on your team\'s capital.',
     'landing.faq.q6': 'Is it safe to invest?',
     'landing.faq.a6': 'We use proven trading strategies with an 89% win rate. Our system operates with stop loss and risk management. However, all investments involve risks and past performance does not guarantee future results.',
     'landing.faq.q7': 'What payment methods are available?',
@@ -780,6 +834,7 @@ export const translations: Record<Locale, TranslationKeys> = {
     'general.usdt': 'USDT',
     'general.daily': 'Diário',
     'general.monthly': 'Mensal',
+    'general.perDay': '/dia',
     'general.total': 'Total',
     'general.active': 'Ativo',
     'general.completed': 'Concluído',
@@ -885,6 +940,23 @@ export const translations: Record<Locale, TranslationKeys> = {
     'landing.affiliate.level': 'Nível',
     'landing.affiliate.startEarning': 'Começar a Ganhar',
 
+    // Landing - Team Bonus (ActionCash)
+    'landing.teamBonus.title': 'Bônus de Equipe ActionCash',
+    'landing.teamBonus.subtitle': '4 programas exclusivos para multiplicar seus ganhos com seu time',
+    'landing.teamBonus.salary': 'Salário Semanal',
+    'landing.teamBonus.salaryDesc': 'do capital ativo do seu time',
+    'landing.teamBonus.minTeam': 'Mín. time',
+    'landing.teamBonus.sundays': 'Pago todo domingo',
+    'landing.teamBonus.gold': 'Action Gold',
+    'landing.teamBonus.goldDesc': 'do salário semanal dos seus diretos',
+    'landing.teamBonus.daymond': 'Action Daymond',
+    'landing.teamBonus.daymondDesc': 'Pacote com ROI diário de 3.3%',
+    'landing.teamBonus.renewable': 'Renovável',
+    'landing.teamBonus.daymondPremium': 'Daymond Premium',
+    'landing.teamBonus.daymondPremiumDesc': 'Pacote premium com ROI diário de 3.3%',
+    'landing.teamBonus.dailyCap': 'Cap diário',
+    'landing.unilevel.inLevels': 'em {n} níveis',
+
     'landing.faq.title': 'Perguntas <em>Frequentes</em>',
     'landing.faq.subtitle': 'Tire suas dúvidas sobre a plataforma',
     'landing.faq.q1': 'O que é Copy Trading?',
@@ -892,11 +964,11 @@ export const translations: Record<Locale, TranslationKeys> = {
     'landing.faq.q2': 'Como funciona o ROI diário?',
     'landing.faq.a2': 'O ROI diário é calculado com base no plano escolhido. Por exemplo, no plano Silver (2.5% ao dia), um investimento de $100 gera $2.50 por dia. O rendimento é creditado automaticamente na sua conta.',
     'landing.faq.q3': 'Qual o valor mínimo para investir?',
-    'landing.faq.a3': 'O valor mínimo é de $10 USDT no plano Starter. Temos planos para todos os perfis, de $10 a $1.500+.',
+    'landing.faq.a3': 'O valor mínimo é de $5 USDT. Com o ROI diário de 3.3%, você pode começar a ganhar desde o primeiro dia. Além disso, acesse os Bônus de Equipe ActionCash conforme seu time cresça.',
     'landing.faq.q4': 'Como faço saques?',
     'landing.faq.a4': 'Você pode solicitar saque a qualquer momento pelo painel. O mínimo para saque é de $10 USDT. Os saques são processados em até 24 horas úteis, sem taxa.',
     'landing.faq.q5': 'O programa de afiliados funciona como?',
-    'landing.faq.a5': 'Nosso programa Unilevel possui 6 níveis de comissões. Você ganha 5% no 1º nível e percentuais menores nos níveis seguintes. Além disso, ao atingir metas de indicações, recebe bônus de equipe (até +3% no ROI).',
+    'landing.faq.a5': 'Nosso programa Unilevel possui 6 níveis de comissões: N1=5%, N2=3%, N3=1%, N4=1%, N5=1%, N6=2% (total 13%). Além disso, acesse os Bônus de Equipe: Salário Semanal, Action Gold, Action Daymond e Daymond Premium conforme o capital do seu time.',
     'landing.faq.q6': 'É seguro investir?',
     'landing.faq.a6': 'Utilizamos estratégias de trading testadas com win rate de 89%. Nosso sistema opera com stop loss e gerenciamento de risco. No entanto, todo investimento envolve riscos e rentabilidade passada não garante resultados futuros.',
     'landing.faq.q7': 'Quais as formas de pagamento?',
@@ -1020,6 +1092,7 @@ export const translations: Record<Locale, TranslationKeys> = {
     'general.usdt': 'USDT',
     'general.daily': '每日',
     'general.monthly': '每月',
+    'general.perDay': '/天',
     'general.total': '总计',
     'general.active': '活跃',
     'general.completed': '已完成',
@@ -1125,6 +1198,23 @@ export const translations: Record<Locale, TranslationKeys> = {
     'landing.affiliate.level': '级别',
     'landing.affiliate.startEarning': '开始赚钱',
 
+    // Landing - Team Bonus (ActionCash)
+    'landing.teamBonus.title': 'ActionCash团队奖金',
+    'landing.teamBonus.subtitle': '4个专属计划，与团队一起倍增收益',
+    'landing.teamBonus.salary': '周薪',
+    'landing.teamBonus.salaryDesc': '团队活跃资金',
+    'landing.teamBonus.minTeam': '最低团队',
+    'landing.teamBonus.sundays': '每周日发放',
+    'landing.teamBonus.gold': 'Action Gold',
+    'landing.teamBonus.goldDesc': '直推周薪的分成',
+    'landing.teamBonus.daymond': 'Action Daymond',
+    'landing.teamBonus.daymondDesc': '3.3%日ROI套餐',
+    'landing.teamBonus.renewable': '可续期',
+    'landing.teamBonus.daymondPremium': 'Daymond高级版',
+    'landing.teamBonus.daymondPremiumDesc': '3.3%日ROI高级套餐',
+    'landing.teamBonus.dailyCap': '每日上限',
+    'landing.unilevel.inLevels': '{n}个级别',
+
     'landing.faq.title': '常见<em>问题</em>',
     'landing.faq.subtitle': '解答您关于平台的疑问',
     'landing.faq.q1': '什么是跟单交易？',
@@ -1132,11 +1222,11 @@ export const translations: Record<Locale, TranslationKeys> = {
     'landing.faq.q2': '每日ROI如何运作？',
     'landing.faq.a2': '每日ROI根据所选计划计算。例如，在Silver计划（每日2.5%），$100的投资每天产生$2.50。收益自动记入您的账户。',
     'landing.faq.q3': '最低投资金额是多少？',
-    'landing.faq.a3': 'Starter计划最低为$10 USDT。我们有适合所有配置的计划，从$10到$1,500+。',
+    'landing.faq.a3': '最低金额为$5 USDT。每日ROI为3.3%，您可以从第一天开始获利。随着团队增长，还可解锁ActionCash团队奖金。',
     'landing.faq.q4': '如何提现？',
     'landing.faq.a4': '您可以随时从面板申请提现。最低提现金额为$10 USDT。提现在24个工作小时内处理，免手续费。',
     'landing.faq.q5': '联盟计划如何运作？',
-    'landing.faq.a5': '我们的单层计划有6个佣金级别。您在第1级赚取5%，在后续级别赚取较小百分比。此外，达到推荐目标后，您可获得团队奖金（ROI最高+3%）。',
+    'landing.faq.a5': '我们的单层计划有6个佣金级别：L1=5%, L2=3%, L3=1%, L4=1%, L5=1%, L6=2%（总计13%）。此外，根据团队资金可解锁团队奖金：周薪、Action Gold、Action Daymond和Daymond Premium。',
     'landing.faq.q6': '投资安全吗？',
     'landing.faq.a6': '我们使用经过验证的89%胜率的交易策略。我们的系统采用止损和风险管理。然而，所有投资都涉及风险，过往表现不保证未来结果。',
     'landing.faq.q7': '有哪些支付方式？',
