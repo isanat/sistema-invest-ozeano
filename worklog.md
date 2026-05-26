@@ -50,3 +50,22 @@ These keys were referenced in page.tsx but were missing from translations, causi
 ## Verification
 - `bun run lint` passed with no errors
 - Dev server compiles successfully and serves pages
+
+---
+Task ID: 2b-fix
+Agent: Main Agent
+Task: Fix raw translation key issue in landing page
+
+Work Log:
+- Discovered that page.tsx imports `useI18n` from `@/lib/i18n` which resolves to `/home/z/my-project/src/lib/i18n.tsx`
+- This file imports from `./translations` which is the OLD nested-format file at `/home/z/my-project/src/lib/translations.ts`
+- Previous agent incorrectly added translation keys to `/home/z/my-project/src/lib/i18n/translations.ts` (NEW flat-format file) which is NOT used
+- Added missing keys to the OLD translations.ts for all 4 locales (es, pt, en, zh):
+  - `landing.affiliate.subtitle` and `landing.affiliate.directReferrals`
+  - `landing.career` section (title, subtitle, progression, unlockNext)
+- Verified all 160 translation key lookups resolve correctly across all locales
+
+Stage Summary:
+- Root cause: Two i18n systems exist - old nested (used) and new flat (unused by page.tsx)
+- All translation keys now resolve correctly
+- Commit b618b80 pushed to official repository
