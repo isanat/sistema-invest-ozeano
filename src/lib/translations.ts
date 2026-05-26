@@ -78,9 +78,17 @@ export const translations: Record<string, any> = {
       },
       affiliate: {
         title: 'Programa de Afiliados',
+        subtitle: 'Plan Carrera Unilevel - 6 Niveles de Comisiones',
         description: 'Comparte tu link de afiliado y gana comisiones cada vez que tus indicados invierten. ¡Hasta 6 niveles de profundidad!',
+        directReferrals: 'referidos directos activos',
         level: 'Nivel',
         cta: 'Comienza a Ganar',
+      },
+      career: {
+        title: 'Plano de Carrera',
+        subtitle: 'Escala tu equipo y desbloquea bonificaciones exclusivas en cada nivel',
+        progression: 'Progresión de Carrera',
+        unlockNext: 'Desbloquea el siguiente nivel',
       },
       faq: {
         title: 'Preguntas Frecuentes',
@@ -874,9 +882,17 @@ export const translations: Record<string, any> = {
       },
       affiliate: {
         title: 'Programa de Afiliados',
+        subtitle: 'Plano Carreira Unilevel - 6 Níveis de Comissões',
         description: 'Compartilhe seu link de afiliado e ganhe comissões cada vez que seus indicados investem. Até 6 níveis de profundidade!',
+        directReferrals: 'indicações diretas ativas',
         level: 'Nível',
         cta: 'Comece a Ganhar',
+      },
+      career: {
+        title: 'Plano de Carreira',
+        subtitle: 'Escale seu time e desbloqueie bonificações exclusivas em cada nível',
+        progression: 'Progressão de Carreira',
+        unlockNext: 'Desbloqueie o próximo nível',
       },
       faq: {
         title: 'Perguntas Frequentes',
@@ -1580,9 +1596,17 @@ export const translations: Record<string, any> = {
       },
       affiliate: {
         title: 'Affiliate Program',
+        subtitle: 'Unilevel Career Plan - 6 Commission Levels',
         description: 'Share your affiliate link and earn commissions every time your referrals invest. Up to 6 levels deep!',
+        directReferrals: 'active direct referrals',
         level: 'Level',
         cta: 'Start Earning',
+      },
+      career: {
+        title: 'Career Plan',
+        subtitle: 'Scale your team and unlock exclusive bonuses at each level',
+        progression: 'Career Progression',
+        unlockNext: 'Unlock next level',
       },
       faq: {
         title: 'Frequently Asked Questions',
@@ -2273,9 +2297,17 @@ export const translations: Record<string, any> = {
       },
       affiliate: {
         title: '推荐计划',
+        subtitle: '单层职业计划 - 6级佣金',
         description: '分享您的推荐链接，每次您的推荐人投资时即可赚取佣金。最多6级深度！',
+        directReferrals: '活跃直接推荐',
         level: '级别',
         cta: '开始赚钱',
+      },
+      career: {
+        title: '职业规划',
+        subtitle: '扩展团队，在每个级别解锁专属奖金',
+        progression: '职业发展路径',
+        unlockNext: '解锁下一级别',
       },
       faq: {
         title: '常见问题',
