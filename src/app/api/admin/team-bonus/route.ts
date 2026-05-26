@@ -1,5 +1,5 @@
 // ============================================================================
-// ADMIN: Team Bonus Management (GET stats, PUT config, POST triggers)
+// ADMIN: Team Bonus Management (GET stats, PUT config)
 // ============================================================================
 
 import { NextRequest } from 'next/server';
@@ -170,62 +170,6 @@ export async function PUT(request: NextRequest) {
     });
 
     return apiSuccess({ message: 'Configurações de bônus de equipe salvas com sucesso' });
-  } catch (error) {
-    return handleApiError(error);
-  }
-}
-
-// ─── POST: Manual trigger of cron jobs ────────────────────────────────
-export async function POST(request: NextRequest) {
-  try {
-    const adminId = await requireAdmin(request);
-    if (!adminId) throw new BusinessError('Não autorizado', 401);
-
-    const body = await request.json();
-    const { action } = body;
-
-    if (!action || !['weekly', 'daymond'].includes(action)) {
-      throw new BusinessError('Ação inválida. Use "weekly" ou "daymond".');
-    }
-
-    // Trigger by calling the cron endpoint internally
-    const cronSecret = process.env.CRON_SECRET || '';
-    const baseUrl = process.env.VERCEL_URL
-      ? `https://${process.env.VERCEL_URL}`
-      : 'http://localhost:3000';
-
-    const endpoint = action === 'weekly'
-      ? '/api/cron/weekly-bonuses'
-      : '/api/cron/monthly-daymond';
-
-    const headers: Record<string, string> = {
-      'Authorization': `Bearer ${cronSecret}`,
-      'Content-Type': 'application/json',
-    };
-
-    try {
-      const response = await fetch(`${baseUrl}${endpoint}`, {
-        method: 'POST',
-        headers,
-      });
-
-      const result = await response.json();
-
-      await db.adminLog.create({
-        data: {
-          adminId,
-          action: 'trigger',
-          entity: action === 'weekly' ? 'weekly_bonuses' : 'monthly_daymond',
-          description: `Trigger manual: ${action}`,
-          newValue: JSON.stringify(result),
-        },
-      });
-
-      return apiSuccess(result);
-    } catch (fetchErr) {
-      console.error('[ADMIN TEAM BONUS] Trigger error:', fetchErr);
-      throw new BusinessError('Erro ao executar trigger. Verifique os logs do servidor.');
-    }
   } catch (error) {
     return handleApiError(error);
   }

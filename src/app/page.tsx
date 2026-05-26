@@ -988,20 +988,6 @@ export default function PlataformaROI() {
     }
   };
 
-  // Trigger team bonus cron
-  const triggerTeamBonusCron = async (action: 'weekly' | 'daymond') => {
-    try {
-      const data = await api<{ success: boolean; message: string; results?: any }>('/api/admin/team-bonus', {
-        method: 'POST',
-        body: JSON.stringify({ action }),
-      });
-      toast.success(data.message || `${action === 'weekly' ? 'Salário Semanal' : 'Daymond Mensal'} executado!`);
-      fetchAdminTeamBonusData();
-    } catch (err: any) {
-      toast.error(err.message || 'Erro ao executar');
-    }
-  };
-
   const fetchAdminData = async () => {
     setAdminLoading(true);
     try {
@@ -8049,29 +8035,23 @@ export default function PlataformaROI() {
                               </Card>
                             </div>
 
-                            {/* Trigger Buttons */}
-                            <div className="glass-card rounded-xl p-4 border border-amber-500/15">
+                            {/* Cron Schedule Info */}
+                            <div className="glass-card rounded-xl p-4 border border-emerald-500/15">
                               <div className="flex items-center gap-2 mb-3">
-                                <Zap className="h-4 w-4 text-amber-400" />
-                                <span className="text-sm font-medium text-zinc-300">Execução Manual</span>
+                                <Clock className="h-4 w-4 text-emerald-400" />
+                                <span className="text-sm font-medium text-zinc-300">Execução Automática (Cron)</span>
                               </div>
-                              <div className="flex flex-wrap gap-3">
-                                <Button
-                                  className="bg-emerald-600 hover:bg-emerald-700 min-h-[44px]"
-                                  onClick={() => triggerTeamBonusCron('weekly')}
-                                  disabled={teamBonusSaving}
-                                >
-                                  <DollarSign className="mr-2 h-4 w-4" /> Executar Salário Semanal
-                                </Button>
-                                <Button
-                                  className="bg-cyan-600 hover:bg-cyan-700 min-h-[44px]"
-                                  onClick={() => triggerTeamBonusCron('daymond')}
-                                  disabled={teamBonusSaving}
-                                >
-                                  <Gem className="mr-2 h-4 w-4" /> Executar Daymond Mensal
-                                </Button>
+                              <div className="space-y-2 text-sm text-zinc-400">
+                                <div className="flex items-center gap-2">
+                                  <div className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                                  <span><strong className="text-emerald-400">Salário Semanal + Gold:</strong> Todo domingo às 00:00 UTC</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <div className="h-2 w-2 rounded-full bg-cyan-400 animate-pulse" />
+                                  <span><strong className="text-cyan-400">Daymond Mensal:</strong> Dia 1° de cada mês às 00:00 UTC</span>
+                                </div>
                               </div>
-                              <div className="text-[10px] text-zinc-600 mt-2">⚠️ Use com cautela. Isso executa os cálculos de bônus imediatamente.</div>
+                              <div className="text-[10px] text-zinc-600 mt-3">⏱️ Os bônus são processados automaticamente pelos crons. Execução manual não está disponível por segurança.</div>
                             </div>
 
                             {/* Config Panel */}
