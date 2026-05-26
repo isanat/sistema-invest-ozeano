@@ -108,7 +108,18 @@ export async function POST(request: NextRequest) {
         // Calculate daily ROI
         const amount = d(investment.amount);
         const dailyRoiPct = d(investment.dailyRoiPct);
-        const dailyROI = amount * (dailyRoiPct / 100);
+        let dailyROI = amount * (dailyRoiPct / 100);
+
+        // Apply daily cap for Daymond Premium investments
+        if (investment.source === 'daymond_premium') {
+          const capConfig = await db.systemConfig.findUnique({
+            where: { key: 'team_bonus_daymond_premium_daily_cap_usd' },
+          });
+          const dailyCap = capConfig ? d(capConfig.value) : 99;
+          if (dailyCap > 0 && dailyROI > dailyCap) {
+            dailyROI = dailyCap;
+          }
+        }
 
         // Calculate team bonus
         const teamBonusPct = d(investment.teamBonusPct);
@@ -158,7 +169,7 @@ export async function POST(request: NextRequest) {
 
         // Only process affiliate commissions for deposit-funded investments
         // Voucher-funded and Daymond-funded investments don't generate commissions
-        if (investment.source !== 'voucher' && investment.source !== 'daymond') {
+        if (investment.source !== 'voucher' && investment.source !== 'daymond' && investment.source !== 'daymond_premium') {
           try {
             await processCommissions(investment.userId, totalRoiForToday, 'trading', roiHistoryId);
           } catch (commErr) {

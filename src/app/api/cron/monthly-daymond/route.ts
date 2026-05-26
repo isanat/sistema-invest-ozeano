@@ -195,11 +195,114 @@ export async function POST(request: NextRequest) {
 
       console.info(`[DAYMOND] Complete: ${qualified} packages created, ${skipped} skipped`);
 
+      // ─── DAYMOND PREMIUM PROCESSING ─────────────────────────────
+      let premiumQualified = 0;
+      let premiumSkipped = 0;
+
+      if (config.daymondPremiumEnabled) {
+        console.info('[DAYMOND] Starting Daymond Premium processing...');
+
+        for (const user of users) {
+          try {
+            // Idempotency check for Daymond Premium — use same monthDate
+            // We reuse the same DaymondPackage model but with packageAmount = $2000
+            // Check if user already has a Daymond Premium package for this month
+            const existingPremium = await db.daymondPackage.findFirst({
+              where: {
+                userId: user.id,
+                monthDate,
+                packageAmount: config.daymondPremiumPackageAmount.toFixed(8),
+              },
+            });
+            if (existingPremium) { premiumSkipped++; continue; }
+
+            // Check own investment requirement
+            const hasOwn = await hasActiveInvestment(user.id);
+            if (!hasOwn) { premiumSkipped++; continue; }
+
+            // Calculate team active capital (already computed for regular Daymond above, but recalculate for safety)
+            const teamCapital = await calculateTeamActiveCapital(user.id, config.maxDepth);
+
+            if (teamCapital < config.daymondPremiumMinTeamCapital) {
+              premiumSkipped++;
+              continue;
+            }
+
+            // QUALIFIED — Create Daymond Premium package
+            const premiumPackageAmount = config.daymondPremiumPackageAmount;
+            const premiumDailyRoiPct = config.daymondPremiumDailyRoiPct;
+            const premiumDailyRoi = premiumPackageAmount * (premiumDailyRoiPct / 100);
+            const premiumStartDate = new Date();
+            const premiumEndDate = new Date();
+            premiumEndDate.setUTCDate(premiumEndDate.getUTCDate() + config.daymondDurationDays);
+
+            const _premiumResult = await db.$transaction(async (tx) => {
+              // 1. Create DaymondPackage record (reuses same model)
+              const pkg = await tx.daymondPackage.create({
+                data: {
+                  userId: user.id,
+                  monthDate,
+                  teamActiveCapital: teamCapital.toFixed(8),
+                  packageAmount: premiumPackageAmount.toFixed(8),
+                  status: 'active',
+                },
+              });
+
+              // 2. Create virtual Investment (source='daymond_premium', teamBonusPct=0)
+              const investment = await tx.investment.create({
+                data: {
+                  userId: user.id,
+                  amount: premiumPackageAmount.toFixed(8),
+                  dailyRoi: premiumDailyRoi.toFixed(8),
+                  dailyRoiPct: premiumDailyRoiPct.toString(),
+                  totalRoi: (premiumDailyRoi * config.daymondDurationDays).toFixed(8),
+                  startDate: premiumStartDate,
+                  endDate: premiumEndDate,
+                  status: 'active',
+                  teamBonusPct: '0',
+                  source: 'daymond_premium',
+                },
+              });
+
+              // 3. Link DaymondPackage → Investment
+              await tx.daymondPackage.update({
+                where: { id: pkg.id },
+                data: { investmentId: investment.id },
+              });
+
+              // 4. Create transaction record
+              await tx.transaction.create({
+                data: {
+                  userId: user.id,
+                  type: 'daymond_package',
+                  amount: premiumPackageAmount.toFixed(8),
+                  status: 'completed',
+                  description: `Action Daymond Premium: pacote de $${premiumPackageAmount.toFixed(2)} qualificado (${config.daymondDurationDays} dias, ${premiumDailyRoiPct}% ROI/dia, cap $${config.daymondPremiumDailyCapUsd}/dia)`,
+                  referenceId: investment.id,
+                  referenceType: 'Investment',
+                },
+              });
+
+              return { package: pkg, investment };
+            });
+
+            premiumQualified++;
+          } catch (err) {
+            console.error(`[DAYMOND-PREMIUM] Error for user ${user.id}:`, err);
+            errors.push(`Premium User ${user.id}: ${err}`);
+          }
+        }
+      }
+
+      console.info(`[DAYMOND] Premium Complete: ${premiumQualified} premium packages created, ${premiumSkipped} skipped`);
+
       return apiSuccess({
-        message: `Action Daymond: ${qualified} pacotes criados, ${skipped} sem qualificação`,
+        message: `Action Daymond: ${qualified} pacotes criados, ${skipped} sem qualificação | Daymond Premium: ${premiumQualified} pacotes criados, ${premiumSkipped} sem qualificação`,
         monthDate: monthDate.toISOString(),
         qualified,
         skipped,
+        premiumQualified,
+        premiumSkipped,
         errors: errors.length > 0 ? errors : undefined,
       });
     } finally {

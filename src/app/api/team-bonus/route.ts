@@ -89,6 +89,12 @@ export async function GET(request: NextRequest) {
 
     const daymondQualified = teamStats.totalActiveCapital >= config.daymondMinTeamCapital && hasOwnInvestment;
 
+    // ── Daymond Premium ──────────────────────────────────────
+    const daymondPremiumQualified = teamStats.totalActiveCapital >= config.daymondPremiumMinTeamCapital && hasOwnInvestment;
+    const estimatedDaymondPremiumDailyRoi = daymondPremiumQualified
+      ? Math.min(config.daymondPremiumPackageAmount * (config.daymondPremiumDailyRoiPct / 100), config.daymondPremiumDailyCapUsd)
+      : 0;
+
     // ── Progress ────────────────────────────────────────────
     const salaryProgress = config.salaryMinTeamCapital > 0
       ? Math.min(100, (teamStats.totalActiveCapital / config.salaryMinTeamCapital) * 100)
@@ -98,6 +104,9 @@ export async function GET(request: NextRequest) {
       : 0;
     const daymondProgress = config.daymondMinTeamCapital > 0
       ? Math.min(100, (teamStats.totalActiveCapital / config.daymondMinTeamCapital) * 100)
+      : 0;
+    const daymondPremiumProgress = config.daymondPremiumMinTeamCapital > 0
+      ? Math.min(100, (teamStats.totalActiveCapital / config.daymondPremiumMinTeamCapital) * 100)
       : 0;
 
     // ── Next Sunday countdown ───────────────────────────────
@@ -181,10 +190,21 @@ export async function GET(request: NextRequest) {
         })),
       },
 
+      daymondPremium: {
+        enabled: config.daymondPremiumEnabled,
+        qualified: daymondPremiumQualified,
+        minTeamCapital: config.daymondPremiumMinTeamCapital,
+        packageAmount: config.daymondPremiumPackageAmount,
+        dailyRoiPct: config.daymondPremiumDailyRoiPct,
+        dailyCapUsd: config.daymondPremiumDailyCapUsd,
+        estimatedDailyRoi: estimatedDaymondPremiumDailyRoi,
+      },
+
       progress: {
         salaryProgress: Math.round(salaryProgress),
         goldProgress: Math.round(goldProgress),
         daymondProgress: Math.round(daymondProgress),
+        daymondPremiumProgress: Math.round(daymondPremiumProgress),
       },
     });
   } catch (error) {

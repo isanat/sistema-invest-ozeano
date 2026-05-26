@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
       { key: 'usdt_brl_rate', value: '5.50', type: 'number', description: 'Câmbio fixo USDT/BRL', category: 'general' },
       { key: 'system_min_reserve', value: '15', type: 'number', description: 'Reserva mínima do sistema (%)', category: 'general' },
       // Deposit
-      { key: 'min_deposit_usdt', value: '10', type: 'number', description: 'Depósito mínimo USDT', category: 'deposit' },
+      { key: 'min_deposit_usdt', value: '5', type: 'number', description: 'Depósito mínimo USDT', category: 'deposit' },
       { key: 'max_deposit_usdt', value: '100000', type: 'number', description: 'Depósito máximo USDT', category: 'deposit' },
       { key: 'pix_wallet_address', value: '', type: 'string', description: 'Endereço USDT para depósitos PIX', category: 'deposit' },
       { key: 'usdt_trc20_address', value: '', type: 'string', description: 'Endereço USDT TRC20 para depósitos', category: 'deposit' },
@@ -30,15 +30,15 @@ export async function POST(request: NextRequest) {
       { key: 'has_usdt', value: 'true', type: 'boolean', description: 'Ativar depósito via USDT', category: 'deposit' },
       { key: 'manual_deposit_enabled', value: 'false', type: 'boolean', description: 'Ativar depósito manual (hash de transação)', category: 'deposit' },
       // Withdrawal
-      { key: 'min_withdrawal_usdt', value: '10', type: 'number', description: 'Saque mínimo USDT', category: 'withdrawal' },
+      { key: 'min_withdrawal_usdt', value: '5', type: 'number', description: 'Saque mínimo USDT', category: 'withdrawal' },
       { key: 'max_withdrawal_usdt', value: '50000', type: 'number', description: 'Saque máximo USDT', category: 'withdrawal' },
-      { key: 'withdrawal_fee_pct', value: '0', type: 'number', description: 'Taxa de saque (%)', category: 'withdrawal' },
+      { key: 'withdrawal_fee_pct', value: '5', type: 'number', description: 'Taxa de saque (%)', category: 'withdrawal' },
       { key: 'withdrawal_interval_hours', value: '12', type: 'number', description: 'Intervalo mínimo entre saques (horas)', category: 'withdrawal' },
-      { key: 'manual_withdrawal_enabled', value: 'true', type: 'boolean', description: 'Permitir saques manuais (admin aprova cada solicitação)', category: 'withdrawal' },
-      { key: 'nowpayments_withdrawal_enabled', value: 'false', type: 'boolean', description: 'Permitir saques automáticos via NowPayments (payout)', category: 'withdrawal' },
+      { key: 'manual_withdrawal_enabled', value: 'false', type: 'boolean', description: 'Permitir saques manuais (admin aprova cada solicitação)', category: 'withdrawal' },
+      { key: 'nowpayments_withdrawal_enabled', value: 'true', type: 'boolean', description: 'Permitir saques automáticos via NowPayments (payout)', category: 'withdrawal' },
       // Trading
-      { key: 'daily_roi_pct', value: '5', type: 'number', description: 'ROI diário padrão (%)', category: 'trading' },
-      { key: 'min_investment_usdt', value: '10', type: 'number', description: 'Investimento mínimo USDT', category: 'trading' },
+      { key: 'daily_roi_pct', value: '3.3', type: 'number', description: 'ROI diário padrão (%)', category: 'trading' },
+      { key: 'min_investment_usdt', value: '5', type: 'number', description: 'Investimento mínimo USDT', category: 'trading' },
       { key: 'default_profit_share_pct', value: '70', type: 'number', description: 'Share de lucro do investidor (%)', category: 'trading' },
       { key: 'mining_variance_pct', value: '5', type: 'number', description: 'Variação diária de ROI (%)', category: 'trading' },
       // Affiliate
@@ -53,6 +53,26 @@ export async function POST(request: NextRequest) {
       { key: 'nowpayments_enabled', value: 'true', type: 'boolean', description: 'Ativar depósito automático via NowPayments', category: 'nowpayments' },
       { key: 'nowpayments_split_pct', value: '0', type: 'number', description: 'Split da Plataforma (%)', category: 'nowpayments' },
       { key: 'nowpayments_split_wallet', value: '', type: 'string', description: 'Carteira de Split', category: 'nowpayments' },
+      // Team Bonus
+      { key: 'team_bonus_salary_enabled', value: 'true', type: 'boolean', description: 'Ativar Salário Semanal (0.5% do capital de equipe)', category: 'team_bonus', isActive: true },
+      { key: 'team_bonus_salary_pct', value: '0.5', type: 'number', description: '% do capital de equipe paga semanalmente', category: 'team_bonus', isActive: true },
+      { key: 'team_bonus_salary_min_team_capital', value: '2000', type: 'number', description: 'Capital mínimo de equipe para Salário em USDT', category: 'team_bonus', isActive: true },
+      { key: 'team_bonus_salary_requires_own_investment', value: 'true', type: 'boolean', description: 'Requer investimento próprio ativo para Salário', category: 'team_bonus', isActive: true },
+      { key: 'team_bonus_gold_enabled', value: 'true', type: 'boolean', description: 'Ativar Action Gold (50% dos diretos)', category: 'team_bonus', isActive: true },
+      { key: 'team_bonus_gold_pct', value: '50', type: 'number', description: '% do salário dos diretos paga como Gold', category: 'team_bonus', isActive: true },
+      { key: 'team_bonus_gold_min_team_capital', value: '4000', type: 'number', description: 'Capital mínimo de equipe para Gold em USDT', category: 'team_bonus', isActive: true },
+      { key: 'team_bonus_daymond_enabled', value: 'true', type: 'boolean', description: 'Ativar Action Daymond (pkg $1000, time $20k)', category: 'team_bonus', isActive: true },
+      { key: 'team_bonus_daymond_package_amount', value: '1000', type: 'number', description: 'Valor do pacote Daymond em USDT', category: 'team_bonus', isActive: true },
+      { key: 'team_bonus_daymond_min_team_capital', value: '20000', type: 'number', description: 'Capital mínimo de equipe para Daymond em USDT', category: 'team_bonus', isActive: true },
+      { key: 'team_bonus_daymond_duration_days', value: '30', type: 'number', description: 'Duração do pacote Daymond em dias', category: 'team_bonus', isActive: true },
+      { key: 'team_bonus_daymond_generates_commissions', value: 'false', type: 'boolean', description: 'Se Daymond gera comissões de afiliado', category: 'team_bonus', isActive: true },
+      { key: 'team_bonus_daily_cap_usd', value: '0', type: 'number', description: 'Cap diário de bônus de equipe em USDT (0 = sem cap)', category: 'team_bonus', isActive: true },
+      { key: 'team_bonus_max_depth', value: '6', type: 'number', description: 'Profundidade máxima do time para cálculo', category: 'team_bonus', isActive: true },
+      { key: 'team_bonus_daymond_premium_enabled', value: 'true', type: 'boolean', description: 'Ativar Action Daymond Premium (pkg $2000, time $50k)', category: 'team_bonus', isActive: true },
+      { key: 'team_bonus_daymond_premium_package_amount', value: '2000', type: 'number', description: 'Valor do pacote Daymond Premium em USDT', category: 'team_bonus', isActive: true },
+      { key: 'team_bonus_daymond_premium_min_team_capital', value: '50000', type: 'number', description: 'Capital mínimo de equipe para Daymond Premium em USDT', category: 'team_bonus', isActive: true },
+      { key: 'team_bonus_daymond_premium_daily_roi_pct', value: '3.3', type: 'number', description: 'ROI diário do pacote Daymond Premium (%)', category: 'team_bonus', isActive: true },
+      { key: 'team_bonus_daymond_premium_daily_cap_usd', value: '99', type: 'number', description: 'Cap diário de ganho Daymond Premium em USDT', category: 'team_bonus', isActive: true },
     ];
 
     let created = 0;

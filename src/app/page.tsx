@@ -577,8 +577,8 @@ export default function PlataformaROI() {
     hasPix: false, hasUsdt: false,
     manualDepositEnabled: false, nowpaymentsEnabled: false,
     manualWithdrawalEnabled: false, nowpaymentsWithdrawalEnabled: false,
-    minDepositUsdt: 10, maxDepositUsdt: 100000,
-    minWithdrawalUsdt: 10, maxWithdrawalUsdt: 50000, withdrawalFeePct: 0,
+    minDepositUsdt: 5, maxDepositUsdt: 100000,
+    minWithdrawalUsdt: 5, maxWithdrawalUsdt: 50000, withdrawalFeePct: 5,
     siteName: 'PLATAFORMA ROI',
   });
 
@@ -5779,12 +5779,12 @@ export default function PlataformaROI() {
                             <div className="flex items-center gap-2 mb-5">
                               <Trophy className="h-5 w-5 text-amber-400" />
                               <h3 className="text-lg font-bold text-white">Bônus de Equipe</h3>
-                              <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 ml-auto" variant="outline">3 Programas</Badge>
+                              <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 ml-auto" variant="outline">4 Programas</Badge>
                             </div>
 
                             {teamBonusLoading ? (
                               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                {[1,2,3].map(i => (
+                                {[1,2,3,4].map(i => (
                                   <div key={i} className="glass-card rounded-xl p-4 border border-white/5">
                                     <div className="animate-pulse bg-zinc-700/50 h-5 w-24 rounded mb-3" />
                                     <div className="animate-pulse bg-zinc-700/50 h-8 w-20 rounded mb-2" />
@@ -5812,7 +5812,7 @@ export default function PlataformaROI() {
                                 </div>
 
                                 {/* 3 Feature Cards */}
-                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
                                   {/* Salário Semanal */}
                                   <div className={`glass-card rounded-xl p-4 border transition-all ${
                                     teamBonusData?.salaryQualified ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-white/5 opacity-70'
@@ -5921,6 +5921,46 @@ export default function PlataformaROI() {
                                     />
                                     <div className="text-[9px] text-zinc-600 mt-1">
                                       ${fmtUSDT(Math.min(d(teamBonusData?.teamCapital), 20000))}/$20,000
+                                    </div>
+                                  </div>
+
+                                  {/* Action Daymond Premium */}
+                                  <div className={`glass-card rounded-xl p-4 border transition-all ${
+                                    teamBonusData?.daymondPremium?.qualified ? 'border-violet-500/30 bg-violet-500/5' : 'border-white/5 opacity-70'
+                                  }`}>
+                                    <div className="flex items-center gap-2 mb-3">
+                                      <span className="text-xl">👑</span>
+                                      <div>
+                                        <div className="text-sm font-bold text-white">Daymond Premium</div>
+                                        <div className="text-[10px] text-zinc-500">$2,000/mês</div>
+                                      </div>
+                                    </div>
+                                    <div className="mb-2">
+                                      {teamBonusData?.daymondPremium?.qualified ? (
+                                        <Badge className="bg-violet-500/20 text-violet-400 border-violet-500/30" variant="outline">
+                                          <CheckCircle2 className="h-3 w-3 mr-1" /> Qualificado
+                                        </Badge>
+                                      ) : (
+                                        <Badge className="bg-zinc-700/50 text-zinc-400 border-zinc-600/30" variant="outline">
+                                          <XCircle className="h-3 w-3 mr-1" /> Não qualificado
+                                        </Badge>
+                                      )}
+                                    </div>
+                                    <div className="text-xl font-bold text-violet-400 mb-1">
+                                      ~${fmtUSDT(teamBonusData?.daymondPremium?.estimatedDailyRoi || 66)}/dia
+                                    </div>
+                                    <div className="text-[10px] text-zinc-500 mb-1">
+                                      Cap: ${fmtUSDT(teamBonusData?.daymondPremium?.dailyCapUsd || 99)}/dia
+                                    </div>
+                                    <div className="text-[10px] text-zinc-500 mb-2">
+                                      Mín. $50,000 capital equipe
+                                    </div>
+                                    <Progress
+                                      value={Math.min(100, (d(teamBonusData?.teamActiveCapital || teamBonusData?.teamCapital) / 50000) * 100)}
+                                      className="h-1.5 bg-zinc-800 [&>[data-slot=indicator]]:bg-violet-500"
+                                    />
+                                    <div className="text-[9px] text-zinc-600 mt-1">
+                                      ${fmtUSDT(Math.min(d(teamBonusData?.teamActiveCapital || teamBonusData?.teamCapital), 50000))}/$50,000
                                     </div>
                                   </div>
                                 </div>
@@ -7975,7 +8015,7 @@ export default function PlataformaROI() {
                         <div className="flex items-center justify-between">
                           <div>
                             <h3 className="text-lg font-semibold flex items-center gap-2"><Trophy className="h-5 w-5 text-amber-400" /> Bônus de Equipe</h3>
-                            <p className="text-sm text-zinc-500 mt-1">Configure Salário Semanal, Action Gold e Action Daymond</p>
+                            <p className="text-sm text-zinc-500 mt-1">Configure Salário Semanal, Action Gold, Action Daymond e Daymond Premium</p>
                           </div>
                           <div className="flex gap-2">
                             <Button variant="outline" className="border-zinc-700 min-h-[44px]" onClick={() => fetchAdminTeamBonusData()} disabled={adminTeamBonusLoading}>
@@ -8274,6 +8314,95 @@ export default function PlataformaROI() {
                                       <Switch
                                         checked={teamBonusConfig.daymondGeneratesCommissions ?? false}
                                         onCheckedChange={(v) => setTeamBonusConfig({ ...teamBonusConfig, daymondGeneratesCommissions: v })}
+                                      />
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <Separator className="bg-zinc-800" />
+
+                                {/* Action Daymond Premium Group */}
+                                <div>
+                                  <div className="flex items-center gap-2 mb-3">
+                                    <span className="text-xl">👑</span>
+                                    <h4 className="font-semibold text-violet-400">Action Daymond Premium</h4>
+                                  </div>
+                                  <div className="grid sm:grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                      <div className="flex items-center gap-2">
+                                        <Label className="text-zinc-400 text-sm">Daymond Premium Ativado</Label>
+                                        <Popover>
+                                          <PopoverTrigger asChild><button className="text-zinc-600 hover:text-zinc-400 transition-colors"><Info className="h-3.5 w-3.5" /></button></PopoverTrigger>
+                                          <PopoverContent className="bg-zinc-800 border-zinc-700 text-zinc-300 text-xs max-w-xs" side="top">Ativa ou desativa o Action Daymond Premium. Cria um investimento virtual mensal de $2,000 para usuários com time {'≥'} $50,000. Recomendado: ativar — recompensa top líderes com ROI diário de 3.3% (cap $99/dia).</PopoverContent>
+                                        </Popover>
+                                      </div>
+                                      <Switch
+                                        checked={teamBonusConfig.daymondPremiumEnabled || false}
+                                        onCheckedChange={(v) => setTeamBonusConfig({ ...teamBonusConfig, daymondPremiumEnabled: v })}
+                                      />
+                                    </div>
+                                    <div className="space-y-2">
+                                      <div className="flex items-center gap-2">
+                                        <Label className="text-zinc-400 text-sm">Valor do Pacote Premium</Label>
+                                        <Popover>
+                                          <PopoverTrigger asChild><button className="text-zinc-600 hover:text-zinc-400 transition-colors"><Info className="h-3.5 w-3.5" /></button></PopoverTrigger>
+                                          <PopoverContent className="bg-zinc-800 border-zinc-700 text-zinc-300 text-xs max-w-xs" side="top">Valor do investimento virtual criado mensalmente. Recomendado: $2,000 — pacote premium para top líderes.</PopoverContent>
+                                        </Popover>
+                                      </div>
+                                      <Input
+                                        type="number"
+                                        step="100"
+                                        value={teamBonusConfig.daymondPremiumPackageAmount ?? 2000}
+                                        onChange={(e) => setTeamBonusConfig({ ...teamBonusConfig, daymondPremiumPackageAmount: parseFloat(e.target.value) || 0 })}
+                                        className="bg-zinc-800 border-zinc-700 h-9"
+                                      />
+                                    </div>
+                                    <div className="space-y-2">
+                                      <div className="flex items-center gap-2">
+                                        <Label className="text-zinc-400 text-sm">Capital Mínimo Premium</Label>
+                                        <Popover>
+                                          <PopoverTrigger asChild><button className="text-zinc-600 hover:text-zinc-400 transition-colors"><Info className="h-3.5 w-3.5" /></button></PopoverTrigger>
+                                          <PopoverContent className="bg-zinc-800 border-zinc-700 text-zinc-300 text-xs max-w-xs" side="top">Capital mínimo do equipo para qualificar ao Daymond Premium. Recomendado: $50,000 — reservado para os maiores líderes.</PopoverContent>
+                                        </Popover>
+                                      </div>
+                                      <Input
+                                        type="number"
+                                        step="5000"
+                                        value={teamBonusConfig.daymondPremiumMinTeamCapital ?? 50000}
+                                        onChange={(e) => setTeamBonusConfig({ ...teamBonusConfig, daymondPremiumMinTeamCapital: parseFloat(e.target.value) || 0 })}
+                                        className="bg-zinc-800 border-zinc-700 h-9"
+                                      />
+                                    </div>
+                                    <div className="space-y-2">
+                                      <div className="flex items-center gap-2">
+                                        <Label className="text-zinc-400 text-sm">ROI Diário Premium (%)</Label>
+                                        <Popover>
+                                          <PopoverTrigger asChild><button className="text-zinc-600 hover:text-zinc-400 transition-colors"><Info className="h-3.5 w-3.5" /></button></PopoverTrigger>
+                                          <PopoverContent className="bg-zinc-800 border-zinc-700 text-zinc-300 text-xs max-w-xs" side="top">ROI diário do pacote Daymond Premium. Recomendado: 3.3% — igual ao ROI padrão da plataforma.</PopoverContent>
+                                        </Popover>
+                                      </div>
+                                      <Input
+                                        type="number"
+                                        step="0.1"
+                                        value={teamBonusConfig.daymondPremiumDailyRoiPct ?? 3.3}
+                                        onChange={(e) => setTeamBonusConfig({ ...teamBonusConfig, daymondPremiumDailyRoiPct: parseFloat(e.target.value) || 0 })}
+                                        className="bg-zinc-800 border-zinc-700 h-9"
+                                      />
+                                    </div>
+                                    <div className="space-y-2">
+                                      <div className="flex items-center gap-2">
+                                        <Label className="text-zinc-400 text-sm">Cap Diário Premium ($)</Label>
+                                        <Popover>
+                                          <PopoverTrigger asChild><button className="text-zinc-600 hover:text-zinc-400 transition-colors"><Info className="h-3.5 w-3.5" /></button></PopoverTrigger>
+                                          <PopoverContent className="bg-zinc-800 border-zinc-700 text-zinc-300 text-xs max-w-xs" side="top">Cap diário de ganho do Daymond Premium. Com $2,000 a 3.3% = $66/dia, cap em $99/dia. Recomendado: $99 — limite de segurança.</PopoverContent>
+                                        </Popover>
+                                      </div>
+                                      <Input
+                                        type="number"
+                                        step="1"
+                                        value={teamBonusConfig.daymondPremiumDailyCapUsd ?? 99}
+                                        onChange={(e) => setTeamBonusConfig({ ...teamBonusConfig, daymondPremiumDailyCapUsd: parseFloat(e.target.value) || 0 })}
+                                        className="bg-zinc-800 border-zinc-700 h-9"
                                       />
                                     </div>
                                   </div>

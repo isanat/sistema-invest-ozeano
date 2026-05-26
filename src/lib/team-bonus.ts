@@ -32,6 +32,11 @@ export interface TeamBonusConfig {
   daymondMinTeamCapital: number;
   daymondDurationDays: number;
   daymondGeneratesCommissions: boolean;
+  daymondPremiumEnabled: boolean;
+  daymondPremiumPackageAmount: number;
+  daymondPremiumMinTeamCapital: number;
+  daymondPremiumDailyRoiPct: number;
+  daymondPremiumDailyCapUsd: number;
   dailyCapUsd: number;
   maxDepth: number;
 }
@@ -56,6 +61,11 @@ export async function getTeamBonusConfig(): Promise<TeamBonusConfig> {
     daymondMinTeamCapital: d(map.team_bonus_daymond_min_team_capital || '20000'),
     daymondDurationDays: parseInt(map.team_bonus_daymond_duration_days || '30'),
     daymondGeneratesCommissions: map.team_bonus_daymond_generates_commissions === 'true',
+    daymondPremiumEnabled: map.team_bonus_daymond_premium_enabled === 'true',
+    daymondPremiumPackageAmount: d(map.team_bonus_daymond_premium_package_amount || '2000'),
+    daymondPremiumMinTeamCapital: d(map.team_bonus_daymond_premium_min_team_capital || '50000'),
+    daymondPremiumDailyRoiPct: d(map.team_bonus_daymond_premium_daily_roi_pct || '3.3'),
+    daymondPremiumDailyCapUsd: d(map.team_bonus_daymond_premium_daily_cap_usd || '99'),
     dailyCapUsd: d(map.team_bonus_daily_cap_usd || '0'),
     maxDepth: parseInt(map.team_bonus_max_depth || '6'),
   };
@@ -100,7 +110,7 @@ export async function calculateTeamActiveCapital(
       where: {
         userId: { in: referralIds },
         status: 'active',
-        source: { not: 'daymond' },
+        source: { notIn: ['daymond', 'daymond_premium'] },
       },
     });
 
@@ -230,7 +240,7 @@ export async function getTeamStats(userId: string, maxDepth: number = 6): Promis
       where: {
         userId: { in: referralIds },
         status: 'active',
-        source: { not: 'daymond' },
+        source: { notIn: ['daymond', 'daymond_premium'] },
       },
     });
 

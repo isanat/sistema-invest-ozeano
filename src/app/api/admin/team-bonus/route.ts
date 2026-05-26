@@ -139,6 +139,11 @@ export async function PUT(request: NextRequest) {
       team_bonus_daymond_min_team_capital: { value: String(body.daymondMinTeamCapital ?? 20000), type: 'number' },
       team_bonus_daymond_duration_days: { value: String(body.daymondDurationDays ?? 30), type: 'number' },
       team_bonus_daymond_generates_commissions: { value: String(body.daymondGeneratesCommissions ?? false), type: 'boolean' },
+      team_bonus_daymond_premium_enabled: { value: String(body.daymondPremiumEnabled ?? false), type: 'boolean' },
+      team_bonus_daymond_premium_package_amount: { value: String(body.daymondPremiumPackageAmount ?? 2000), type: 'number' },
+      team_bonus_daymond_premium_min_team_capital: { value: String(body.daymondPremiumMinTeamCapital ?? 50000), type: 'number' },
+      team_bonus_daymond_premium_daily_roi_pct: { value: String(body.daymondPremiumDailyRoiPct ?? 3.3), type: 'number' },
+      team_bonus_daymond_premium_daily_cap_usd: { value: String(body.daymondPremiumDailyCapUsd ?? 99), type: 'number' },
       team_bonus_daily_cap_usd: { value: String(body.dailyCapUsd ?? 0), type: 'number' },
       team_bonus_max_depth: { value: String(body.maxDepth ?? 6), type: 'number' },
     };
