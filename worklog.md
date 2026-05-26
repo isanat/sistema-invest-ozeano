@@ -584,3 +584,27 @@ Stage Summary:
 - Info icon (ℹ️) in card header opens popover with 3-mode comparison table
 - Active mode is visually highlighted in the explanation
 - Dropdown items now show sustainability indicators
+
+---
+Task ID: engineering-plan
+Agent: Main
+Task: Create comprehensive engineering plan for AC-09 (Weekly Salary), AC-10 (Action Gold), AC-11 (Action Daymond)
+
+Work Log:
+- Analyzed full codebase: 22 Prisma models, 60+ API routes, 9889-line page.tsx
+- Studied existing cron system (daily ROI distribution with advisory lock)
+- Studied affiliate commission engine (3 modes, 11 levels, sustainability cap)
+- Identified Transfer model missing from schema but API code exists
+- Identified vercel.json has only daily cron, needs weekly + monthly
+- Created PLANO-ENGENHARIA-BONUS-EQUIPE.md with full engineering spec
+
+Stage Summary:
+- Full engineering document created at PLANO-ENGENHARIA-BONUS-EQUIPE.md
+- 3 new Prisma models: WeeklySalary, ActionGoldPayment, DaymondPackage
+- 14 new SystemConfig keys in category 'team_bonus'
+- Central function: calculateTeamActiveCapital() shared by all 3 features
+- Critical anti-fraud: Daymond investments DON'T count toward team capital (anti-inflation cascade)
+- Critical anti-cascade: Gold is ONLY 50% of base salary, never 50% of Gold
+- 2 new Vercel cron jobs: weekly-bonuses (Sunday), monthly-daymond (1st of month)
+- Estimated 13 hours total implementation across 7 phases
+- 5 pending decisions documented for owner approval
