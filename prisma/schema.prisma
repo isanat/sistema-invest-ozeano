@@ -9,7 +9,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -99,12 +99,12 @@ model Investment {
   planId   String?
 
   amount      String  // Invested amount in USDT
-  dailyRoi    String  // Daily ROI amount in USDT
-  dailyRoiPct String  // ROI percentage
-  totalRoi    String  // Total expected ROI
+  dailyRoi    String  @default("0")  // Daily ROI amount in USDT
+  dailyRoiPct String  @default("0")  // ROI percentage
+  totalRoi    String  @default("0")  // Total expected ROI
 
-  startDate DateTime
-  endDate   DateTime
+  startDate DateTime  @default(now())
+  endDate   DateTime  @default(now())
   status    String  @default("active") // active, completed, cancelled
 
   teamBonusPct String @default("0") // Team bonus % from affiliate rank
@@ -559,8 +559,8 @@ model Voucher {
 model VoucherUsage {
   id            String   @id @default(cuid())
   voucherId     String
-  investmentId  String
-  amount        String   // Amount used from voucher for this investment
+  investmentId  String   @default("") // default for migration
+  amount        String   @default("0") // Amount used from voucher for this investment
   
   createdAt     DateTime @default(now())
   
@@ -677,8 +677,8 @@ model SplitLog {
   id            String   @id @default(cuid())
   recipientId   String   // Which recipient
   depositId     String?  // Which NowPaymentsDeposit triggered this
-  amount        String   // USDT amount of this split slice
-  percentage    String   // % applied
+  amount        String   @default("0") // USDT amount of this split slice
+  percentage    String   @default("0") // % applied
   status        String   @default("accumulated") // accumulated, paid, failed
   payoutId      String?  // NowPaymentsPayout ID if paid
   paidAt        DateTime?
