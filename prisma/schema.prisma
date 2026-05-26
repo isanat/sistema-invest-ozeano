@@ -63,6 +63,8 @@ model User {
   actionGoldPayments   ActionGoldPayment[]
   actionGoldFrom       ActionGoldPayment[] @relation("GoldFromReferrals")
   daymondPackages      DaymondPackage[]
+  transfersSent        Transfer[]       @relation("TransfersSent")
+  transfersReceived    Transfer[]       @relation("TransfersReceived")
 
   @@index([email])
   @@index([affiliateCode])
@@ -204,7 +206,7 @@ model AffiliateCommission {
   id          String  @id @default(cuid())
   userId      String  // Who receives
   fromUserId  String  // Who generated
-  level       Int     // 1-11
+  level       Int     // 1-6
   investmentId String?
 
   baseAmount       String // Base value in USDT
@@ -246,10 +248,10 @@ model AffiliateWithdrawal {
   @@index([status])
 }
 
-// Default 11-level Unilevel: L1=10%, L2=4%, L3=3%, L4=2%, L5=1.5%, L6=1%, L7=0.8%, L8=0.5%, L9=0.4%, L10=0.3%, L11=0.5%
+// Default 6-level Unilevel per ActionCash business plan: L1=5%, L2=3%, L3=1%, L4=1%, L5=1%, L6=2%
 model AffiliateLevel {
   id          String  @id @default(cuid())
-  level       Int     @unique // 1 to 11
+  level       Int     @unique // 1 to 6
   percentage  String  // Commission %
   description String?
   isActive    Boolean @default(true)
@@ -733,6 +735,29 @@ model ActionGoldPayment {
   @@index([fromUserId])
   @@index([weekDate])
   @@index([status])
+}
+
+// ============================================================================
+// INTERNAL TRANSFER MODEL — User-to-user USDT balance transfers
+// ============================================================================
+
+model Transfer {
+  id          String   @id @default(cuid())
+  fromUserId  String   // Sender
+  toUserId    String   // Recipient
+  amount      String   // Transfer amount in USDT (before fee)
+  fee         String   // Fee in USDT
+  netAmount   String   // Amount recipient receives (amount - fee)
+  status      String   @default("completed") // completed, failed, reversed
+  createdAt   DateTime @default(now())
+
+  fromUser User @relation("TransfersSent", fields: [fromUserId], references: [id], onDelete: Restrict)
+  toUser   User @relation("TransfersReceived", fields: [toUserId], references: [id], onDelete: Restrict)
+
+  @@index([fromUserId])
+  @@index([toUserId])
+  @@index([status])
+  @@index([createdAt])
 }
 
 // AC-11: Action Daymond — $1000/month virtual investment package
