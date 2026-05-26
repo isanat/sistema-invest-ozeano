@@ -448,6 +448,113 @@ async function api<T>(url: string, options?: RequestInit): Promise<T> {
 }
 
 // ============================================================================
+// HELPER FUNCTIONS FOR MARKETING
+// ============================================================================
+
+function getCfgVal(configs: SystemConfig[], key: string): string {
+  return configs.find(c => c.key === key)?.value || '';
+}
+
+function generateWhatsAppText(data: {
+  siteName: string;
+  plans: { name: string; minAmount: number }[];
+  profitSharePct: number;
+  affiliateLevels: { level: number; percentage: number; isActive: boolean }[];
+  ranks: { name: string; minEarnings: number }[];
+  minDepositUsdt: number;
+  dailyRoiPct: number;
+}): string {
+  const { siteName, plans, profitSharePct, affiliateLevels, ranks, minDepositUsdt, dailyRoiPct } = data;
+
+  const activeLevels = affiliateLevels.filter(l => l.isActive && l.percentage > 0);
+  const numLevels = activeLevels.length;
+
+  // Build plans text
+  const plansText = plans.length > 0
+    ? plans.map(p => `• ${p.name} — A partir de $${p.minAmount}`).join('\n')
+    : `• A partir de $${minDepositUsdt}`;
+
+  // Build affiliate levels text
+  const levelEmojis = ['🥇', '🥈', '🥉', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟', '1️⃣1️⃣'];
+  let levelsText = '';
+
+  // Group consecutive levels with same percentage
+  let i = 0;
+  while (i < activeLevels.length) {
+    const lvl = activeLevels[i];
+    const emoji = levelEmojis[i] || `${i+1}️⃣`;
+    if (i === 0) {
+      levelsText += `${emoji} Nível 1 (Indicação direta): ${lvl.percentage}%\n`;
+    } else {
+      // Check if next levels have same percentage for grouping
+      let j = i;
+      while (j < activeLevels.length - 1 && activeLevels[j].percentage === activeLevels[j + 1].percentage) {
+        j++;
+      }
+      if (j > i) {
+        levelsText += `${emoji} Nível ${i+1} ao ${j+1}: ${lvl.percentage}% cada\n`;
+        i = j;
+      } else {
+        levelsText += `${emoji} Nível ${i+1}: ${lvl.percentage}%\n`;
+      }
+    }
+    i++;
+  }
+
+  // Build ranks text
+  const ranksText = ranks.length > 0
+    ? ranks.map(r => `• ${r.name}: Volume de equipe $${r.minEarnings.toLocaleString()}+`).join('\n')
+    : '';
+
+  // Build example calculation
+  const lvl1Pct = activeLevels.length > 0 ? activeLevels[0].percentage : 0;
+  const exampleEarning = (100 * 10 * lvl1Pct / 100).toFixed(0);
+  const lvl2Pct = activeLevels.length > 1 ? activeLevels[1].percentage : 0;
+
+  const text = `⚡ *${siteName}* ⚡
+*A Plataforma #1 de Copy Trading e Investimentos em Cripto*
+
+📈 O que é a ${siteName}?
+
+É a plataforma de copy trading mais avançada do mercado. Nossos traders profissionais operam 24/7 com estratégias validadas, garantindo máxima lucratividade para você!
+
+💰 Como funciona?
+
+1️⃣ Cadastre-se e deposite USDT (via PIX ou cripto)
+2️⃣ Escolha seu plano de copy trading
+3️⃣ Receba lucros diários direto na sua carteira!
+
+📊 Nossos Planos de Investimento:
+${plansText}
+
+✅ ROI diário de até ${dailyRoiPct}% garantido em USDT
+✅ Até ${profitSharePct}% do lucro das operações é seu
+✅ Pagamento via PIX ou USDT (TRC20/Polygon)
+✅ Copy trading 24/7 sem preocupação
+
+🔥 *PROGRAMA DE AFILIADOS — ${numLevels} NÍVEIS!*
+
+Ganhe comissões sobre TUDO que sua rede ganha:
+
+${levelsText}
+💡 Isso significa: Convide 10 pessoas, cada uma convida mais 10... Sua rede cresce exponencialmente e você ganha em TODOS os níveis!
+
+${ranksText ? `🏆 Bônus de Equipe!\n${ranksText}\n` : ''}📊 *Exemplo prático:*
+Seus 10 indicados diretos investem $100/dia cada:
+→ Você ganha ${lvl1Pct}% = $${exampleEarning}/dia só no Nível 1!
+${lvl2Pct > 0 ? `→ Se cada um indicar 10 pessoas (Nível 2 = 100 pessoas):
+→ Você ganha ${lvl2Pct}% dos lucros delas também!
+→ E assim por diante até o Nível ${numLevels}...` : ''}
+
+🚀 Comece agora mesmo!
+👉 Cadastre-se e comece a investir em copy trading hoje!
+
+*${siteName} — Invista no futuro.* 💎`;
+
+  return text;
+}
+
+// ============================================================================
 // MAIN COMPONENT
 // ============================================================================
 
@@ -750,6 +857,34 @@ export default function PlataformaROI() {
   const [splitEditDialog, setSplitEditDialog] = useState(false);
   const [splitNewRecipient, setSplitNewRecipient] = useState({ name: '', role: 'partner', walletAddress: '', currency: 'usdttrc20', percentage: '', minPayout: '50', autoPayout: true });
   const [splitPayoutLoading, setSplitPayoutLoading] = useState(false);
+
+  // WhatsApp text computed from dynamic data (no hardcoded values)
+  const whatsappText = useMemo(() => {
+    const profitSharePct = d(getCfgVal(adminConfigs, 'default_profit_share_pct')) || 70;
+    const dailyRoiPct = d(getCfgVal(adminConfigs, 'daily_roi_pct')) || 5;
+    const minDepositUsdt = d(getCfgVal(adminConfigs, 'min_deposit_usdt')) || 10;
+    const siteName = getCfgVal(adminConfigs, 'site_name') || siteConfig.siteName || 'PLATAFORMA ROI';
+
+    return generateWhatsAppText({
+      siteName,
+      plans: adminPlans.filter(p => p.isActive).map(p => ({
+        name: p.name,
+        minAmount: d(p.minAmount),
+      })),
+      profitSharePct,
+      affiliateLevels: affiliateLevels.map(l => ({
+        level: l.level,
+        percentage: d(l.percentage),
+        isActive: l.isActive,
+      })),
+      ranks: adminRanks.filter(r => r.isActive).map(r => ({
+        name: r.name,
+        minEarnings: d(r.minEarnings),
+      })),
+      minDepositUsdt,
+      dailyRoiPct,
+    });
+  }, [adminConfigs, adminPlans, affiliateLevels, adminRanks, siteConfig.siteName]);
 
   // Hydration guard: set mounted after first client render
   useEffect(() => {
@@ -8860,60 +8995,7 @@ export default function PlataformaROI() {
                                   variant="outline"
                                   className="border-zinc-700 text-zinc-300 hover:text-white gap-1"
                                   onClick={() => {
-                                    const text = `⚡ *PLATAFORMA ROI* ⚡
-*A Plataforma #1 de Copy Trading e Investimentos em Cripto*
-
-📈 O que é a PLATAFORMA ROI?
-
-É a plataforma de copy trading mais avançada do mercado. Nossos traders profissionais operam 24/7 com estratégias validadas, garantindo máxima lucratividade para você!
-
-💰 Como funciona?
-
-1️⃣ Cadastre-se e deposite USDT (via PIX ou cripto)
-2️⃣ Escolha seu plano de copy trading
-3️⃣ Receba lucros diários direto na sua carteira!
-
-📊 Nossos Planos de Investimento:
-• Trader Iniciante — A partir de $50
-• Trader Intermediário — A partir de $200
-• Trader Avançado — A partir de $500
-• Trader Elite — A partir de $2000
-
-✅ ROI diário garantido em USDT
-✅ Até 70% do lucro das operações é seu
-✅ Pagamento via PIX ou USDT (TRC20/Polygon)
-✅ Copy trading 24/7 sem preocupação
-
-🔥 *PROGRAMA DE AFILIADOS — 11 NÍVEIS!*
-
-Ganhe comissões sobre TUDO que sua rede ganha:
-
-🥇 Nível 1 (Indicação direta): 8%
-🥈 Nível 2: 3%
-🥉 Nível 3: 1.5%
-4️⃣ Nível 4: 0.5%
-5️⃣ Nível 5: 0.25%
-6️⃣ Nível 6 ao 11: 0.1% cada
-
-💡 Isso significa: Convide 10 pessoas, cada uma convida mais 10... Sua rede cresce exponencialmente e você ganha em TODOS os níveis!
-
-🏆 Bônus de Equipe!
-• Bronze: Volume de equipe $10.000+
-• Prata: Volume de equipe $50.000+
-• Ouro: Volume de equipe $200.000+
-
-📊 *Exemplo prático:*
-Seus 10 indicados diretos investem $100/dia cada:
-→ Você ganha 8% = $80/dia só no Nível 1!
-→ Se cada um indicar 10 pessoas (Nível 2 = 100 pessoas):
-→ Você ganha 3% dos lucros delas também!
-→ E assim por diante até o Nível 11...
-
-🚀 Comece agora mesmo!
-👉 Cadastre-se e comece a investir em copy trading hoje!
-
-*PLATAFORMA ROI — Invista no futuro.* 💎`;
-                                    navigator.clipboard.writeText(text);
+                                    navigator.clipboard.writeText(whatsappText);
                                     toast.success('Texto copiado! Cole no WhatsApp');
                                   }}
                                 >
@@ -8923,7 +9005,7 @@ Seus 10 indicados diretos investem $100/dia cada:
                                   size="sm"
                                   className="bg-green-600 hover:bg-green-700 text-white gap-1"
                                   onClick={() => {
-                                    const text = encodeURIComponent(`⚡ *PLATAFORMA ROI* ⚡\n*A Plataforma #1 de Copy Trading e Investimentos em Cripto*\n\n📈 O que é a PLATAFORMA ROI?\n\nÉ a plataforma de copy trading mais avançada do mercado. Nossos traders profissionais operam 24/7 com estratégias validadas, garantindo máxima lucratividade para você!\n\n💰 Como funciona?\n\n1️⃣ Cadastre-se e deposite USDT (via PIX ou cripto)\n2️⃣ Escolha seu plano de copy trading\n3️⃣ Receba lucros diários direto na sua carteira!\n\n📊 Nossos Planos de Investimento:\n• Trader Iniciante — A partir de $50\n• Trader Intermediário — A partir de $200\n• Trader Avançado — A partir de $500\n• Trader Elite — A partir de $2000\n\n✅ ROI diário garantido em USDT\n✅ Até 70% do lucro das operações é seu\n✅ Pagamento via PIX ou USDT (TRC20/Polygon)\n✅ Copy trading 24/7 sem preocupação\n\n🔥 *PROGRAMA DE AFILIADOS — 11 NÍVEIS!*\n\nGanhe comissões sobre TUDO que sua rede ganha:\n\n🥇 Nível 1 (Indicação direta): 8%\n🥈 Nível 2: 3%\n🥉 Nível 3: 1.5%\n4️⃣ Nível 4: 0.5%\n5️⃣ Nível 5: 0.25%\n6️⃣ Nível 6 ao 11: 0.1% cada\n\n💡 Isso significa: Convide 10 pessoas, cada uma convida mais 10... Sua rede cresce exponencialmente e você ganha em TODOS os níveis!\n\n🏆 Bônus de Equipe!\n• Bronze: Volume de equipe $10.000+\n• Prata: Volume de equipe $50.000+\n• Ouro: Volume de equipe $200.000+\n\n📊 *Exemplo prático:*\nSeus 10 indicados diretos investem $100/dia cada:\n→ Você ganha 8% = $80/dia só no Nível 1!\n→ Se cada um indicar 10 pessoas (Nível 2 = 100 pessoas):\n→ Você ganha 3% dos lucros delas também!\n→ E assim por diante até o Nível 11...\n\n🚀 Comece agora mesmo!\n👉 Cadastre-se e comece a investir em copy trading hoje!\n\n*PLATAFORMA ROI — Invista no futuro.* 💎`);
+                                    const text = encodeURIComponent(whatsappText);
                                     window.open(`https://wa.me/?text=${text}`, '_blank');
                                   }}
                                 >
@@ -8934,59 +9016,7 @@ Seus 10 indicados diretos investem $100/dia cada:
                           </CardHeader>
                           <CardContent>
                             <div className="bg-green-900/20 border border-green-500/20 rounded-xl p-4 sm:p-6 font-whatsapp text-sm sm:text-base leading-relaxed whitespace-pre-wrap text-zinc-200 max-h-[600px] overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
-{`⚡ *PLATAFORMA ROI* ⚡
-*A Plataforma #1 de Copy Trading e Investimentos em Cripto*
-
-📈 O que é a PLATAFORMA ROI?
-
-É a plataforma de copy trading mais avançada do mercado. Nossos traders profissionais operam 24/7 com estratégias validadas, garantindo máxima lucratividade para você!
-
-💰 Como funciona?
-
-1️⃣ Cadastre-se e deposite USDT (via PIX ou cripto)
-2️⃣ Escolha seu plano de copy trading
-3️⃣ Receba lucros diários direto na sua carteira!
-
-📊 Nossos Planos de Investimento:
-• Trader Iniciante — A partir de $50
-• Trader Intermediário — A partir de $200
-• Trader Avançado — A partir de $500
-• Trader Elite — A partir de $2000
-
-✅ ROI diário garantido em USDT
-✅ Até 70% do lucro das operações é seu
-✅ Pagamento via PIX ou USDT (TRC20/Polygon)
-✅ Copy trading 24/7 sem preocupação
-
-🔥 *PROGRAMA DE AFILIADOS — 11 NÍVEIS!*
-
-Ganhe comissões sobre TUDO que sua rede ganha:
-
-🥇 Nível 1 (Indicação direta): 8%
-🥈 Nível 2: 3%
-🥉 Nível 3: 1.5%
-4️⃣ Nível 4: 0.5%
-5️⃣ Nível 5: 0.25%
-6️⃣ Nível 6 ao 11: 0.1% cada
-
-💡 Isso significa: Convide 10 pessoas, cada uma convida mais 10... Sua rede cresce exponencialmente e você ganha em TODOS os níveis!
-
-🏆 Bônus de Equipe!
-• Bronze: Volume de equipe $10.000+
-• Prata: Volume de equipe $50.000+
-• Ouro: Volume de equipe $200.000+
-
-📊 *Exemplo prático:*
-Seus 10 indicados diretos investem $100/dia cada:
-→ Você ganha 8% = $80/dia só no Nível 1!
-→ Se cada um indicar 10 pessoas (Nível 2 = 100 pessoas):
-→ Você ganha 3% dos lucros delas também!
-→ E assim por diante até o Nível 11...
-
-🚀 Comece agora mesmo!
-👉 Cadastre-se e comece a investir em copy trading hoje!
-
-*PLATAFORMA ROI — Invista no futuro.* 💎`}
+{whatsappText}
                             </div>
                           </CardContent>
                         </Card>
@@ -9005,26 +9035,16 @@ Seus 10 indicados diretos investem $100/dia cada:
                               <div className="bg-zinc-800/50 rounded-lg p-4">
                                 <h4 className="font-semibold text-cyan-400 mb-3">📊 Níveis de Afiliados (Tabela AffiliateLevel)</h4>
                                 <div className="grid grid-cols-5 gap-2">
-                                  {(affiliateLevels.length > 0 ? affiliateLevels : [
-                                    { level: 1, percentage: '10', description: 'Nível 1 - Indicação direta', isActive: true },
-                                    { level: 2, percentage: '4', description: 'Nível 2', isActive: true },
-                                    { level: 3, percentage: '3', description: 'Nível 3', isActive: true },
-                                    { level: 4, percentage: '2', description: 'Nível 4', isActive: true },
-                                    { level: 5, percentage: '1.5', description: 'Nível 5', isActive: true },
-                                    { level: 6, percentage: '1', description: 'Nível 6', isActive: true },
-                                    { level: 7, percentage: '0.8', description: 'Nível 7', isActive: true },
-                                    { level: 8, percentage: '0.5', description: 'Nível 8', isActive: true },
-                                    { level: 9, percentage: '0.4', description: 'Nível 9', isActive: true },
-                                    { level: 10, percentage: '0.3', description: 'Nível 10', isActive: true },
-                                    { level: 11, percentage: '0.5', description: 'Nível 11', isActive: true },
-                                  ]).map((lvl) => (
+                                  {affiliateLevels.length > 0 ? affiliateLevels.map((lvl) => (
                                     <div key={lvl.level} className="bg-zinc-900 rounded-lg p-3 text-center border border-zinc-700">
                                       <div className="text-xl font-bold text-cyan-400">{lvl.percentage}%</div>
                                       <div className="text-xs text-zinc-400 mt-1">Nível {lvl.level}</div>
                                       <div className="text-[10px] text-zinc-500 mt-0.5">{lvl.description || ''}</div>
                                       {lvl.isActive && <Badge className="mt-1 text-[9px] bg-cyan-500/10 text-cyan-400 border-cyan-500/20" variant="outline">Ativo</Badge>}
                                     </div>
-                                  ))}
+                                  )) : (
+                                    <div className="col-span-5 text-center text-zinc-500 py-4">Nenhum nível de afiliado configurado</div>
+                                  )}
                                 </div>
                               </div>
 
@@ -9034,17 +9054,17 @@ Seus 10 indicados diretos investem $100/dia cada:
                                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                   <div className={`rounded-lg p-3 border ${adminConfigs.find(c => c.key === 'affiliate_commission_mode')?.value === 'system_margin' ? 'border-cyan-500/50 bg-cyan-500/5' : 'border-zinc-700 bg-zinc-900'}`}>
                                     <div className="font-semibold text-sm">Margem do Sistema</div>
-                                    <div className="text-xs text-zinc-400 mt-1">Comissão sobre a margem de lucro do sistema (30%). Mais sustentável — o dinheiro vem do lucro que o sistema retém, não dos ganhos dos usuários.</div>
+                                    <div className="text-xs text-zinc-400 mt-1">Comissão sobre a margem de lucro do sistema ({getCfgVal(adminConfigs, 'affiliate_system_margin_pct') || '—'}%). Mais sustentável — o dinheiro vem do lucro que o sistema retém, não dos ganhos dos usuários.</div>
                                     {adminConfigs.find(c => c.key === 'affiliate_commission_mode')?.value === 'system_margin' && <Badge className="mt-1 text-[9px] bg-cyan-500/10 text-cyan-400" variant="outline">Ativo</Badge>}
                                   </div>
                                   <div className={`rounded-lg p-3 border ${adminConfigs.find(c => c.key === 'affiliate_commission_mode')?.value === 'investment_profit' ? 'border-cyan-500/50 bg-cyan-500/5' : 'border-zinc-700 bg-zinc-900'}`}>
                                     <div className="font-semibold text-sm">Lucro de Investimento</div>
-                                    <div className="text-xs text-zinc-400 mt-1">Comissão sobre lucro de ROI + bônus de investimento (2%). O dinheiro vem dos ganhos de trading — mais arriscado.</div>
+                                    <div className="text-xs text-zinc-400 mt-1">Comissão sobre lucro de ROI + bônus de investimento ({getCfgVal(adminConfigs, 'affiliate_investment_bonus_pct') || '—'}%). O dinheiro vem dos ganhos de trading — mais arriscado.</div>
                                     {adminConfigs.find(c => c.key === 'affiliate_commission_mode')?.value === 'investment_profit' && <Badge className="mt-1 text-[9px] bg-cyan-500/10 text-cyan-400" variant="outline">Ativo</Badge>}
                                   </div>
                                   <div className={`rounded-lg p-3 border ${adminConfigs.find(c => c.key === 'affiliate_commission_mode')?.value === 'revenue_pool' ? 'border-cyan-500/50 bg-cyan-500/5' : 'border-zinc-700 bg-zinc-900'}`}>
                                     <div className="font-semibold text-sm">Pool de Receita</div>
-                                    <div className="text-xs text-zinc-400 mt-1">5% da receita total → pool distribuído por nível. Previsível e limitado — nunca excede X% da receita.</div>
+                                    <div className="text-xs text-zinc-400 mt-1">{getCfgVal(adminConfigs, 'affiliate_pool_revenue_pct') || '—'}% da receita total → pool distribuído por nível. Previsível e limitado — nunca excede X% da receita.</div>
                                     {adminConfigs.find(c => c.key === 'affiliate_commission_mode')?.value === 'revenue_pool' && <Badge className="mt-1 text-[9px] bg-cyan-500/10 text-cyan-400" variant="outline">Ativo</Badge>}
                                   </div>
                                 </div>
@@ -9069,7 +9089,7 @@ Seus 10 indicados diretos investem $100/dia cada:
                                     return (
                                       <div key={cfg.key} className="bg-zinc-900 rounded-lg p-2.5 border border-zinc-700">
                                         <div className="text-[10px] text-zinc-500">{cfg.label}</div>
-                                        <div className="font-semibold text-sm">{config ? config.value + cfg.suffix : '—'}{!config && cfg.key === 'default_profit_share_pct' && '70%'}{!config && cfg.key === 'mining_variance_pct' && '5%'}</div>
+                                        <div className="font-semibold text-sm">{config ? config.value + cfg.suffix : '—'}</div>
                                       </div>
                                     );
                                   })}
@@ -9111,11 +9131,11 @@ Seus 10 indicados diretos investem $100/dia cada:
                               <div className="bg-amber-500/5 border border-amber-500/20 rounded-lg p-4">
                                 <h4 className="font-semibold text-amber-400 mb-2">🛡️ Salvaguardas de Sustentabilidade</h4>
                                 <ul className="text-xs text-zinc-400 space-y-1">
-                                  <li>• Reserva mínima do sistema: 15% dos depósitos totais</li>
+                                  <li>• Reserva mínima do sistema: {getCfgVal(adminConfigs, 'system_min_reserve') || '—'}% dos depósitos totais</li>
                                   <li>• Cap diário de comissões afiliados: configurável (0 = sem limite)</li>
-                                  <li>• Calificación obligatoria: inversor + enlace desbloqueado para recibir comisiones</li>
-                                  <li>• Profundidade máxima: 5 níveis de afiliados</li>
-                                  <li>• Variação diária de ROI: ±5% (simula flutuação real)</li>
+                                  <li>• Qualificação obrigatória: investidor + link desbloqueado para receber comissões</li>
+                                  <li>• Profundidade máxima: {affiliateLevels.filter(l => l.isActive).length} níveis de afiliados</li>
+                                  <li>• Variação diária de ROI: ±{getCfgVal(adminConfigs, 'mining_variance_pct') || '—'}% (simula flutuação real)</li>
                                   <li>• 3 modos de comissão para equilibrar atratividade e sustentabilidade</li>
                                 </ul>
                               </div>

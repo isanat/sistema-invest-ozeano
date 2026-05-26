@@ -641,3 +641,45 @@ Stage Summary:
 - Admin sees stats, can configure all 14 settings, can trigger crons manually
 - Files created: 5 new API routes, 1 new lib file
 - Files modified: schema.prisma, seed.ts, validations.ts, vercel.json, cron/distribute, page.tsx
+---
+Task ID: marketing-dynamic
+Agent: Main
+Task: Make admin marketing page pull all data dynamically from database — no hardcoded values or fallbacks
+
+Work Log:
+- Analyzed marketing section in page.tsx (lines 8806-9146) — found 100% hardcoded WhatsApp text, hardcoded affiliate level fallbacks, hardcoded sustainability values
+- Added `getCfgVal()` helper function to look up config values by key from SystemConfig array
+- Added `generateWhatsAppText()` function that dynamically builds WhatsApp promotional text from:
+  - Site name from adminConfigs
+  - Investment plans from adminPlans (name + minAmount)
+  - Affiliate levels from affiliateLevels (level + percentage + isActive)
+  - Affiliate ranks from adminRanks (name + minEarnings)
+  - System configs: profit share %, daily ROI %, min deposit
+- Added `whatsappText` useMemo that computes text from state variables (reactive to admin changes)
+- Updated Copy button, WhatsApp share button, and display area to use `whatsappText` instead of hardcoded strings
+- Removed hardcoded fallback array for affiliate levels (was showing fake 11-level data when DB empty)
+  - Now shows "Nenhum nível de afiliado configurado" when no levels exist
+- Removed hardcoded fallback values "70%" and "5%" from Key System Configs display
+- Made Commission Mode section dynamic — system margin %, investment bonus %, and pool revenue % now come from adminConfigs
+- Updated Sustainability section to use dynamic values:
+  - system_min_reserve from adminConfigs
+  - Active affiliate level count (not hardcoded "5 níveis")
+  - mining_variance_pct from adminConfigs
+- Fixed Spanish text "Calificación obligatoria" → Portuguese "Qualificação obrigatória"
+- Added 3 missing config keys to migrate-config, reset-seed, and setup routes:
+  - default_profit_share_pct (value: 70, category: trading)
+  - mining_variance_pct (value: 5, category: trading)
+  - system_min_reserve (value: 15, category: general)
+- Ran manual migration to add the 3 new keys to the live database
+- Verified all existing config values in database (57 configs total)
+- Verified affiliate levels (11 levels: 10%, 4%, 3%, 2%, 1.5%, 1%, 0.8%, 0.5%, 0.4%, 0.3%, 0.5%)
+- Verified affiliate ranks (Bronze $100, Prata $500, Ouro $1000)
+- Verified investment plans (5 active: Starter $10, Silver $100, Gold $500, Platinum $2000, Diamond $10000)
+- Lint passes, dev server running without errors
+
+Stage Summary:
+- Marketing page is now 100% dynamic — all values come from database
+- WhatsApp text automatically reflects admin configuration changes
+- No hardcoded values or fallbacks remain in the marketing section
+- 3 new config keys added to database and migration scripts
+- 4 files modified: page.tsx, migrate-config/route.ts, reset-seed/route.ts, setup/route.ts
