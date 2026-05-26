@@ -311,6 +311,22 @@ async function main() {
     { key: 'site_name', value: 'PLATAFORMA ROI', type: 'string', description: 'Nombre del sitio', category: 'general', isActive: true },
     { key: 'site_description', value: 'Plataforma de Copy Trading con ROI garantizado', type: 'string', description: 'Descripción del sitio', category: 'general', isActive: true },
     { key: 'support_whatsapp', value: '', type: 'string', description: 'Número de WhatsApp de soporte', category: 'general', isActive: true },
+
+    // Team Bonus configs (AC-09, AC-10, AC-11)
+    { key: 'team_bonus_salary_enabled', value: 'false', type: 'boolean', description: 'Salário semanal ativado', category: 'team_bonus', isActive: true },
+    { key: 'team_bonus_salary_pct', value: '0.5', type: 'number', description: '% do capital ativo do equipo pago semanalmente', category: 'team_bonus', isActive: true },
+    { key: 'team_bonus_salary_min_team_capital', value: '2000', type: 'number', description: 'Capital mínimo do equipo para qualificar ao salário semanal (USDT)', category: 'team_bonus', isActive: true },
+    { key: 'team_bonus_salary_requires_own_investment', value: 'true', type: 'boolean', description: 'Usuário precisa ter investimento próprio ativo para receber salário', category: 'team_bonus', isActive: true },
+    { key: 'team_bonus_gold_enabled', value: 'false', type: 'boolean', description: 'Action Gold ativado', category: 'team_bonus', isActive: true },
+    { key: 'team_bonus_gold_pct', value: '50', type: 'number', description: '% do salário semanal dos diretos que o referer recebe', category: 'team_bonus', isActive: true },
+    { key: 'team_bonus_gold_min_team_capital', value: '4000', type: 'number', description: 'Capital mínimo do equipo para qualificar ao Action Gold (USDT)', category: 'team_bonus', isActive: true },
+    { key: 'team_bonus_daymond_enabled', value: 'false', type: 'boolean', description: 'Action Daymond ativado', category: 'team_bonus', isActive: true },
+    { key: 'team_bonus_daymond_package_amount', value: '1000', type: 'number', description: 'Valor do pacote Daymond mensal (USDT)', category: 'team_bonus', isActive: true },
+    { key: 'team_bonus_daymond_min_team_capital', value: '20000', type: 'number', description: 'Capital mínimo do equipo para qualificar ao Daymond (USDT)', category: 'team_bonus', isActive: true },
+    { key: 'team_bonus_daymond_duration_days', value: '30', type: 'number', description: 'Duração do investimento Daymond em dias', category: 'team_bonus', isActive: true },
+    { key: 'team_bonus_daymond_generates_commissions', value: 'false', type: 'boolean', description: 'Se o pacote Daymond gera comissões de afiliado para uplines', category: 'team_bonus', isActive: true },
+    { key: 'team_bonus_daily_cap_usd', value: '0', type: 'number', description: 'Limite diário total de bônus de equipo (0 = sem limite)', category: 'team_bonus', isActive: true },
+    { key: 'team_bonus_max_depth', value: '6', type: 'number', description: 'Profundidade máxima de referidos para cálculo de capital de equipo', category: 'team_bonus', isActive: true },
   ];
 
   for (const config of configs) {
@@ -320,7 +336,7 @@ async function main() {
       create: config,
     });
   }
-  console.log('✅ System configs created: 28 config keys');
+  console.log('✅ System configs created: 42 config keys');
 
   // ============================================================================
   // 8. Create Trading Pools

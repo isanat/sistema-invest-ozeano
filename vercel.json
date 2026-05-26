@@ -3,6 +3,14 @@
     {
       "path": "/api/cron/distribute",
       "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/cron/weekly-bonuses",
+      "schedule": "0 0 * * 0"
+    },
+    {
+      "path": "/api/cron/monthly-daymond",
+      "schedule": "0 0 1 * *"
     }
   ]
 }

@@ -157,8 +157,8 @@ export async function POST(request: NextRequest) {
         });
 
         // Only process affiliate commissions for deposit-funded investments
-        // Voucher-funded investments don't generate commissions (platform money)
-        if (investment.source !== 'voucher') {
+        // Voucher-funded and Daymond-funded investments don't generate commissions
+        if (investment.source !== 'voucher' && investment.source !== 'daymond') {
           try {
             await processCommissions(investment.userId, totalRoiForToday, 'trading', roiHistoryId);
           } catch (commErr) {

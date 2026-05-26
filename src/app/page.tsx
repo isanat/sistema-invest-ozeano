@@ -33,6 +33,7 @@ import {
   Trophy, Target, Crown, Star, Share2, Medal, Award,
   Info, MessageSquare, Ticket, LineChart, Calculator,
   Lock, Image, Upload, ImagePlus,
+  Calendar, Gem,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -521,6 +522,9 @@ export default function PlataformaROI() {
   const [affiliateData, setAffiliateData] = useState<AffiliateData | null>(null);
   const [affiliateLoading, setAffiliateLoading] = useState(false);
   const [affiliateSearch, setAffiliateSearch] = useState('');
+  const [teamBonusData, setTeamBonusData] = useState<any>(null);
+  const [teamBonusLoading, setTeamBonusLoading] = useState(false);
+  const [weeklyCountdown, setWeeklyCountdown] = useState<{ days: number; hours: number; minutes: number; seconds: number } | null>(null);
   const [usdtBrlRate, setUsdtBrlRate] = useState(5.5);
   const [dataLoading, setDataLoading] = useState(false);
 
@@ -586,6 +590,13 @@ export default function PlataformaROI() {
   const [adminAffiliateWithdrawals, setAdminAffiliateWithdrawals] = useState<any[]>([]);
   const [affiliateLevels, setAffiliateLevels] = useState<AffiliateLevel[]>([]);
   const [adminLoading, setAdminLoading] = useState(false);
+
+  // Admin Team Bonus state
+  const [adminTeamBonus, setAdminTeamBonus] = useState<any>(null);
+  const [adminTeamBonusLoading, setAdminTeamBonusLoading] = useState(false);
+  const [teamBonusConfig, setTeamBonusConfig] = useState<any>({});
+  const [teamBonusSaving, setTeamBonusSaving] = useState(false);
+  const [teamBonusPaymentTab, setTeamBonusPaymentTab] = useState<string>('salary');
 
   // Admin affiliate data for new models
   const [adminRanks, setAdminRanks] = useState<AffiliateRank[]>([]);
@@ -920,6 +931,77 @@ export default function PlataformaROI() {
     }
   };
 
+  // Fetch team bonus data for user
+  const fetchTeamBonusData = async () => {
+    if (!user) return;
+    setTeamBonusLoading(true);
+    try {
+      const data = await api<{ success: boolean; data: any }>('/api/team-bonus');
+      if (data.success) setTeamBonusData(data.data);
+    } catch (err) {
+      console.error('Team bonus fetch error:', err);
+    } finally {
+      setTeamBonusLoading(false);
+    }
+  };
+
+  // Fetch weekly countdown
+  const fetchWeeklyCountdown = async () => {
+    try {
+      const data = await api<{ success: boolean; countdown: { days: number; hours: number; minutes: number; seconds: number } }>('/api/cron/weekly-bonuses');
+      if (data.success) setWeeklyCountdown(data.countdown);
+    } catch (err) {
+      console.error('Weekly countdown fetch error:', err);
+    }
+  };
+
+  // Fetch admin team bonus data
+  const fetchAdminTeamBonusData = async () => {
+    setAdminTeamBonusLoading(true);
+    try {
+      const data = await api<{ success: boolean; stats: any; config: any; recentPayments: any[] }>('/api/admin/team-bonus');
+      if (data.success) {
+        setAdminTeamBonus({ stats: data.stats, recentPayments: data.recentPayments || [] });
+        setTeamBonusConfig(data.config || {});
+      }
+    } catch (err) {
+      console.error('Admin team bonus fetch error:', err);
+    } finally {
+      setAdminTeamBonusLoading(false);
+    }
+  };
+
+  // Save team bonus config
+  const saveTeamBonusConfig = async () => {
+    setTeamBonusSaving(true);
+    try {
+      await api('/api/admin/team-bonus', {
+        method: 'PUT',
+        body: JSON.stringify(teamBonusConfig),
+      });
+      toast.success('Configurações de Bônus de Equipe salvas!');
+      fetchAdminTeamBonusData();
+    } catch (err: any) {
+      toast.error(err.message || 'Erro ao salvar configurações');
+    } finally {
+      setTeamBonusSaving(false);
+    }
+  };
+
+  // Trigger team bonus cron
+  const triggerTeamBonusCron = async (action: 'weekly' | 'daymond') => {
+    try {
+      const data = await api<{ success: boolean; message: string; results?: any }>('/api/admin/team-bonus', {
+        method: 'POST',
+        body: JSON.stringify({ action }),
+      });
+      toast.success(data.message || `${action === 'weekly' ? 'Salário Semanal' : 'Daymond Mensal'} executado!`);
+      fetchAdminTeamBonusData();
+    } catch (err: any) {
+      toast.error(err.message || 'Erro ao executar');
+    }
+  };
+
   const fetchAdminData = async () => {
     setAdminLoading(true);
     try {
@@ -1082,6 +1164,8 @@ export default function PlataformaROI() {
   useEffect(() => {
     if (activeTab === 'afiliados' && user) {
       fetchAffiliateData();
+      fetchTeamBonusData();
+      fetchWeeklyCountdown();
       // Fetch user vouchers
       setUserVouchersLoading(true);
       api<{ success: boolean; vouchers: any[] }>('/api/vouchers').then(data => {
@@ -1129,7 +1213,7 @@ export default function PlataformaROI() {
 
   // Load admin data when admin tab is selected
   // For admin users, activeTab IS the admin section ID directly (e.g., 'overview', 'users')
-  const adminTabIds = ['overview', 'copyTraders', 'plans', 'users', 'deposits', 'withdrawals', 'nowpayments', 'affiliates', 'affiliateWithdrawals', 'affiliateRanks', 'affiliateMilestones', 'affiliateContests', 'affiliateBadges', 'vouchers', 'config', 'marketing', 'logs'];
+  const adminTabIds = ['overview', 'copyTraders', 'plans', 'users', 'deposits', 'withdrawals', 'nowpayments', 'affiliates', 'affiliateWithdrawals', 'affiliateRanks', 'affiliateMilestones', 'affiliateContests', 'affiliateBadges', 'teamBonus', 'vouchers', 'config', 'marketing', 'logs'];
   const isAdminUser = user?.role === 'admin';
   // Admin tab is only active if the admin is in admin view mode AND the tab is an admin tab
   const isAdminTab = isAdminUser && adminViewMode === 'admin' && adminTabIds.includes(activeTab);
@@ -1143,6 +1227,7 @@ export default function PlataformaROI() {
 
   useEffect(() => {
     if (isAdminUser && isAdminTab) fetchAdminData();
+    if (isAdminUser && activeTab === 'teamBonus') fetchAdminTeamBonusData();
   }, [activeTab, isAdminUser]);
 
   // Initialize investAmount when investment dialog opens or plan changes
@@ -3017,6 +3102,7 @@ export default function PlataformaROI() {
     { id: 'affiliateMilestones', label: t('admin.affiliateMilestones'), icon: Target },
     { id: 'affiliateContests', label: t('admin.affiliateContests'), icon: Trophy },
     { id: 'affiliateBadges', label: t('admin.affiliateBadges') || 'Badges', icon: Award },
+    { id: 'teamBonus', label: 'Bônus Equipe', icon: Trophy },
     { id: 'vouchers', label: 'Vouchers', icon: Ticket },
     { id: 'config', label: t('adminSidebar.config'), icon: Settings },
     { id: 'marketing', label: 'Marketing', icon: Share2 },
@@ -5695,6 +5781,219 @@ export default function PlataformaROI() {
                           </div>
                         </motion.div>
 
+                        {/* ═══════════════ 2.5 BÔNUS DE EQUIPE (AC-09/10/11) ═══════════════ */}
+                        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }}>
+                          <div className="glass-card gradient-border rounded-2xl p-5 sm:p-6">
+                            <div className="flex items-center gap-2 mb-5">
+                              <Trophy className="h-5 w-5 text-amber-400" />
+                              <h3 className="text-lg font-bold text-white">Bônus de Equipe</h3>
+                              <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 ml-auto" variant="outline">3 Programas</Badge>
+                            </div>
+
+                            {teamBonusLoading ? (
+                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                {[1,2,3].map(i => (
+                                  <div key={i} className="glass-card rounded-xl p-4 border border-white/5">
+                                    <div className="animate-pulse bg-zinc-700/50 h-5 w-24 rounded mb-3" />
+                                    <div className="animate-pulse bg-zinc-700/50 h-8 w-20 rounded mb-2" />
+                                    <div className="animate-pulse bg-zinc-700/50 h-3 w-full rounded mb-1" />
+                                    <div className="animate-pulse bg-zinc-700/50 h-2 w-full rounded" />
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <>
+                                {/* Team Capital Card */}
+                                <div className="glass-card rounded-xl p-4 border border-emerald-500/15 mb-4">
+                                  <div className="flex items-center justify-between">
+                                    <div>
+                                      <div className="text-[10px] uppercase tracking-wider text-zinc-500">Capital Ativo da Equipe</div>
+                                      <div className="text-2xl font-bold text-emerald-400" style={{ textShadow: '0 0 15px rgba(16,185,129,0.3)' }}>
+                                        ${fmtUSDT(teamBonusData?.teamCapital || 0)}
+                                      </div>
+                                    </div>
+                                    <div className="text-right">
+                                      <div className="text-sm text-zinc-400">{teamBonusData?.teamMemberCount || 0} membros</div>
+                                      <div className="text-[10px] text-zinc-500">na equipe</div>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {/* 3 Feature Cards */}
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+                                  {/* Salário Semanal */}
+                                  <div className={`glass-card rounded-xl p-4 border transition-all ${
+                                    teamBonusData?.salaryQualified ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-white/5 opacity-70'
+                                  }`}>
+                                    <div className="flex items-center gap-2 mb-3">
+                                      <span className="text-xl">📅</span>
+                                      <div>
+                                        <div className="text-sm font-bold text-white">Salário Semanal</div>
+                                        <div className="text-[10px] text-zinc-500">0.5% do capital</div>
+                                      </div>
+                                    </div>
+                                    <div className="mb-2">
+                                      {teamBonusData?.salaryQualified ? (
+                                        <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30" variant="outline">
+                                          <CheckCircle2 className="h-3 w-3 mr-1" /> Qualificado
+                                        </Badge>
+                                      ) : (
+                                        <Badge className="bg-zinc-700/50 text-zinc-400 border-zinc-600/30" variant="outline">
+                                          <XCircle className="h-3 w-3 mr-1" /> Não qualificado
+                                        </Badge>
+                                      )}
+                                    </div>
+                                    <div className="text-xl font-bold text-emerald-400 mb-1">
+                                      ~${fmtUSDT(teamBonusData?.estimatedSalary || 0)}
+                                    </div>
+                                    <div className="text-[10px] text-zinc-500 mb-2">
+                                      Mín. $2,000 capital equipe
+                                    </div>
+                                    <Progress
+                                      value={Math.min(100, (d(teamBonusData?.teamCapital) / 2000) * 100)}
+                                      className="h-1.5 bg-zinc-800 [&>[data-slot=indicator]]:bg-emerald-500"
+                                    />
+                                    <div className="text-[9px] text-zinc-600 mt-1">
+                                      ${fmtUSDT(Math.min(d(teamBonusData?.teamCapital), 2000))}/$2,000
+                                    </div>
+                                  </div>
+
+                                  {/* Action Gold */}
+                                  <div className={`glass-card rounded-xl p-4 border transition-all ${
+                                    teamBonusData?.goldQualified ? 'border-amber-500/30 bg-amber-500/5' : 'border-white/5 opacity-70'
+                                  }`}>
+                                    <div className="flex items-center gap-2 mb-3">
+                                      <span className="text-xl">🥇</span>
+                                      <div>
+                                        <div className="text-sm font-bold text-white">Action Gold</div>
+                                        <div className="text-[10px] text-zinc-500">50% dos diretos</div>
+                                      </div>
+                                    </div>
+                                    <div className="mb-2">
+                                      {teamBonusData?.goldQualified ? (
+                                        <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30" variant="outline">
+                                          <CheckCircle2 className="h-3 w-3 mr-1" /> Qualificado
+                                        </Badge>
+                                      ) : (
+                                        <Badge className="bg-zinc-700/50 text-zinc-400 border-zinc-600/30" variant="outline">
+                                          <XCircle className="h-3 w-3 mr-1" /> Não qualificado
+                                        </Badge>
+                                      )}
+                                    </div>
+                                    <div className="text-xl font-bold text-amber-400 mb-1">
+                                      ~${fmtUSDT(teamBonusData?.estimatedGold || 0)}
+                                    </div>
+                                    <div className="text-[10px] text-zinc-500 mb-2">
+                                      Mín. $4,000 capital equipe
+                                    </div>
+                                    <Progress
+                                      value={Math.min(100, (d(teamBonusData?.teamCapital) / 4000) * 100)}
+                                      className="h-1.5 bg-zinc-800 [&>[data-slot=indicator]]:bg-amber-500"
+                                    />
+                                    <div className="text-[9px] text-zinc-600 mt-1">
+                                      ${fmtUSDT(Math.min(d(teamBonusData?.teamCapital), 4000))}/$4,000
+                                    </div>
+                                  </div>
+
+                                  {/* Action Daymond */}
+                                  <div className={`glass-card rounded-xl p-4 border transition-all ${
+                                    teamBonusData?.daymondQualified ? 'border-cyan-500/30 bg-cyan-500/5' : 'border-white/5 opacity-70'
+                                  }`}>
+                                    <div className="flex items-center gap-2 mb-3">
+                                      <span className="text-xl">💎</span>
+                                      <div>
+                                        <div className="text-sm font-bold text-white">Action Daymond</div>
+                                        <div className="text-[10px] text-zinc-500">$1,000/mês</div>
+                                      </div>
+                                    </div>
+                                    <div className="mb-2">
+                                      {teamBonusData?.daymondQualified ? (
+                                        <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30" variant="outline">
+                                          <CheckCircle2 className="h-3 w-3 mr-1" /> Qualificado
+                                        </Badge>
+                                      ) : (
+                                        <Badge className="bg-zinc-700/50 text-zinc-400 border-zinc-600/30" variant="outline">
+                                          <XCircle className="h-3 w-3 mr-1" /> Não qualificado
+                                        </Badge>
+                                      )}
+                                    </div>
+                                    <div className="text-xl font-bold text-cyan-400 mb-1">
+                                      ${fmtUSDT(teamBonusData?.daymondPackageAmount || 1000)}
+                                    </div>
+                                    <div className="text-[10px] text-zinc-500 mb-2">
+                                      Mín. $20,000 capital equipe
+                                    </div>
+                                    <Progress
+                                      value={Math.min(100, (d(teamBonusData?.teamCapital) / 20000) * 100)}
+                                      className="h-1.5 bg-zinc-800 [&>[data-slot=indicator]]:bg-cyan-500"
+                                    />
+                                    <div className="text-[9px] text-zinc-600 mt-1">
+                                      ${fmtUSDT(Math.min(d(teamBonusData?.teamCapital), 20000))}/$20,000
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {/* Payment History */}
+                                {teamBonusData?.paymentHistory && teamBonusData.paymentHistory.length > 0 && (
+                                  <div className="mb-4">
+                                    <div className="flex items-center gap-2 mb-3">
+                                      <Clock4 className="h-4 w-4 text-zinc-400" />
+                                      <span className="text-sm font-medium text-zinc-300">Histórico de Pagamentos</span>
+                                    </div>
+                                    <div className="max-h-48 overflow-y-auto" style={{ scrollbarWidth: 'thin', scrollbarColor: '#27272a transparent' }}>
+                                      <Table>
+                                        <TableHeader>
+                                          <TableRow className="border-zinc-800 hover:bg-transparent">
+                                            <TableHead className="text-zinc-500 text-xs">Data</TableHead>
+                                            <TableHead className="text-zinc-500 text-xs">Tipo</TableHead>
+                                            <TableHead className="text-zinc-500 text-xs">Capital</TableHead>
+                                            <TableHead className="text-zinc-500 text-xs">Valor</TableHead>
+                                            <TableHead className="text-zinc-500 text-xs">Status</TableHead>
+                                          </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                          {teamBonusData.paymentHistory.map((p: any, idx: number) => (
+                                            <TableRow key={idx} className="border-zinc-800/50">
+                                              <TableCell className="text-xs text-zinc-400 whitespace-nowrap">{fmtDate(p.createdAt)}</TableCell>
+                                              <TableCell className="text-xs">
+                                                <Badge variant="outline" className={`text-[9px] ${
+                                                  p.type === 'salary' ? 'border-emerald-500/30 text-emerald-400' :
+                                                  p.type === 'gold' ? 'border-amber-500/30 text-amber-400' :
+                                                  'border-cyan-500/30 text-cyan-400'
+                                                }`}>
+                                                  {p.type === 'salary' ? 'Salário' : p.type === 'gold' ? 'Gold' : 'Daymond'}
+                                                </Badge>
+                                              </TableCell>
+                                              <TableCell className="text-xs text-zinc-300">${fmtUSDT(p.teamCapital || 0)}</TableCell>
+                                              <TableCell className="text-xs font-medium text-emerald-400">${fmtUSDT(p.amount)}</TableCell>
+                                              <TableCell className="text-xs">
+                                                <Badge variant="outline" className={statusColor(p.status)}>{statusLabel(p.status)}</Badge>
+                                              </TableCell>
+                                            </TableRow>
+                                          ))}
+                                        </TableBody>
+                                      </Table>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Countdown to next Sunday */}
+                                {weeklyCountdown && (
+                                  <div className="glass-card rounded-xl p-3 border border-amber-500/15 flex items-center gap-3">
+                                    <Calendar className="h-5 w-5 text-amber-400" />
+                                    <div>
+                                      <div className="text-xs text-zinc-400">Próximo pagamento semanal</div>
+                                      <div className="text-sm font-bold text-amber-400">
+                                        {weeklyCountdown.days}d {weeklyCountdown.hours}h {weeklyCountdown.minutes}m {weeklyCountdown.seconds}s
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+                              </>
+                            )}
+                          </div>
+                        </motion.div>
+
                         {/* ═══════════════ 3. 11-LEVEL UNILEVEL VISUALIZATION ═══════════════ */}
                         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
                           <div className="glass-card gradient-border rounded-2xl p-5 sm:p-6">
@@ -7675,6 +7974,445 @@ export default function PlataformaROI() {
                             </Card>
                           ))}
                         </div>
+                      </div>
+                    )}
+
+                    {/* Admin Team Bonus (Bônus de Equipe) */}
+                    {adminTab === 'teamBonus' && (
+                      <div className="space-y-6">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h3 className="text-lg font-semibold flex items-center gap-2"><Trophy className="h-5 w-5 text-amber-400" /> Bônus de Equipe</h3>
+                            <p className="text-sm text-zinc-500 mt-1">Configure Salário Semanal, Action Gold e Action Daymond</p>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button variant="outline" className="border-zinc-700 min-h-[44px]" onClick={() => fetchAdminTeamBonusData()} disabled={adminTeamBonusLoading}>
+                              <RefreshCw className={`mr-2 h-4 w-4 ${adminTeamBonusLoading ? 'animate-spin' : ''}`} /> Atualizar
+                            </Button>
+                          </div>
+                        </div>
+
+                        {adminTeamBonusLoading && !adminTeamBonus ? (
+                          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                            {[1,2,3,4].map(i => (
+                              <Card key={i} className="bg-zinc-900 border-zinc-800">
+                                <CardContent className="p-5">
+                                  <div className="animate-pulse bg-zinc-700/50 h-4 w-20 rounded mb-2" />
+                                  <div className="animate-pulse bg-zinc-700/50 h-7 w-24 rounded" />
+                                </CardContent>
+                              </Card>
+                            ))}
+                          </div>
+                        ) : (
+                          <>
+                            {/* Stats Cards */}
+                            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                              <Card className="bg-zinc-900 border-zinc-800">
+                                <CardContent className="p-5">
+                                  <div className="flex items-center justify-between mb-2">
+                                    <span className="text-sm text-zinc-400">Salário Semanal Pago</span>
+                                    <DollarSign className="h-5 w-5 text-emerald-400" />
+                                  </div>
+                                  <div className="text-2xl font-bold text-emerald-400">${fmtUSDT(adminTeamBonus?.stats?.totalWeeklyPaid || 0)}</div>
+                                  <div className="text-xs text-zinc-500 mt-1">Total acumulado</div>
+                                </CardContent>
+                              </Card>
+                              <Card className="bg-zinc-900 border-zinc-800">
+                                <CardContent className="p-5">
+                                  <div className="flex items-center justify-between mb-2">
+                                    <span className="text-sm text-zinc-400">Action Gold Pago</span>
+                                    <Award className="h-5 w-5 text-amber-400" />
+                                  </div>
+                                  <div className="text-2xl font-bold text-amber-400">${fmtUSDT(adminTeamBonus?.stats?.totalGoldPaid || 0)}</div>
+                                  <div className="text-xs text-zinc-500 mt-1">Total acumulado</div>
+                                </CardContent>
+                              </Card>
+                              <Card className="bg-zinc-900 border-zinc-800">
+                                <CardContent className="p-5">
+                                  <div className="flex items-center justify-between mb-2">
+                                    <span className="text-sm text-zinc-400">Pacotes Daymond Ativos</span>
+                                    <Gem className="h-5 w-5 text-cyan-400" />
+                                  </div>
+                                  <div className="text-2xl font-bold text-cyan-400">{adminTeamBonus?.stats?.activeDaymondPackages || 0}</div>
+                                  <div className="text-xs text-zinc-500 mt-1">Usuários qualificados</div>
+                                </CardContent>
+                              </Card>
+                              <Card className="bg-zinc-900 border-zinc-800">
+                                <CardContent className="p-5">
+                                  <div className="flex items-center justify-between mb-2">
+                                    <span className="text-sm text-zinc-400">Total Daymond</span>
+                                    <Trophy className="h-5 w-5 text-purple-400" />
+                                  </div>
+                                  <div className="text-2xl font-bold text-purple-400">${fmtUSDT(adminTeamBonus?.stats?.totalDaymondAmount || 0)}</div>
+                                  <div className="text-xs text-zinc-500 mt-1">Valor investido virtual</div>
+                                </CardContent>
+                              </Card>
+                            </div>
+
+                            {/* Trigger Buttons */}
+                            <div className="glass-card rounded-xl p-4 border border-amber-500/15">
+                              <div className="flex items-center gap-2 mb-3">
+                                <Zap className="h-4 w-4 text-amber-400" />
+                                <span className="text-sm font-medium text-zinc-300">Execução Manual</span>
+                              </div>
+                              <div className="flex flex-wrap gap-3">
+                                <Button
+                                  className="bg-emerald-600 hover:bg-emerald-700 min-h-[44px]"
+                                  onClick={() => triggerTeamBonusCron('weekly')}
+                                  disabled={teamBonusSaving}
+                                >
+                                  <DollarSign className="mr-2 h-4 w-4" /> Executar Salário Semanal
+                                </Button>
+                                <Button
+                                  className="bg-cyan-600 hover:bg-cyan-700 min-h-[44px]"
+                                  onClick={() => triggerTeamBonusCron('daymond')}
+                                  disabled={teamBonusSaving}
+                                >
+                                  <Gem className="mr-2 h-4 w-4" /> Executar Daymond Mensal
+                                </Button>
+                              </div>
+                              <div className="text-[10px] text-zinc-600 mt-2">⚠️ Use com cautela. Isso executa os cálculos de bônus imediatamente.</div>
+                            </div>
+
+                            {/* Config Panel */}
+                            <Card className="bg-zinc-900 border-zinc-800">
+                              <CardHeader className="pb-3">
+                                <CardTitle className="text-base flex items-center gap-2">
+                                  <Settings className="h-4 w-4 text-zinc-400" /> Configurações
+                                </CardTitle>
+                              </CardHeader>
+                              <CardContent className="space-y-6">
+                                {/* Salário Semanal Group */}
+                                <div>
+                                  <div className="flex items-center gap-2 mb-3">
+                                    <span className="text-xl">📅</span>
+                                    <h4 className="font-semibold text-emerald-400">Salário Semanal</h4>
+                                  </div>
+                                  <div className="grid sm:grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                      <div className="flex items-center gap-2">
+                                        <Label className="text-zinc-400 text-sm">Salário Ativado</Label>
+                                        <Popover>
+                                          <PopoverTrigger asChild><button className="text-zinc-600 hover:text-zinc-400 transition-colors"><Info className="h-3.5 w-3.5" /></button></PopoverTrigger>
+                                          <PopoverContent className="bg-zinc-800 border-zinc-700 text-zinc-300 text-xs max-w-xs" side="top">Ativa ou desativa o pagamento do salário semanal para todos os usuários. Recomendado: começar desativado até configurar os valores corretos.</PopoverContent>
+                                        </Popover>
+                                      </div>
+                                      <Switch
+                                        checked={teamBonusConfig.salaryEnabled || false}
+                                        onCheckedChange={(v) => setTeamBonusConfig({ ...teamBonusConfig, salaryEnabled: v })}
+                                      />
+                                    </div>
+                                    <div className="space-y-2">
+                                      <div className="flex items-center gap-2">
+                                        <Label className="text-zinc-400 text-sm">% do Salário</Label>
+                                        <Popover>
+                                          <PopoverTrigger asChild><button className="text-zinc-600 hover:text-zinc-400 transition-colors"><Info className="h-3.5 w-3.5" /></button></PopoverTrigger>
+                                          <PopoverContent className="bg-zinc-800 border-zinc-700 text-zinc-300 text-xs max-w-xs" side="top">Porcentagem do capital ativo do equipo paga semanalmente. Recomendado: 0.5% — valor suficiente para motivar sem comprometer a sustentabilidade.</PopoverContent>
+                                        </Popover>
+                                      </div>
+                                      <Input
+                                        type="number"
+                                        step="0.1"
+                                        value={teamBonusConfig.salaryPct ?? 0.5}
+                                        onChange={(e) => setTeamBonusConfig({ ...teamBonusConfig, salaryPct: parseFloat(e.target.value) || 0 })}
+                                        className="bg-zinc-800 border-zinc-700 h-9"
+                                      />
+                                    </div>
+                                    <div className="space-y-2">
+                                      <div className="flex items-center gap-2">
+                                        <Label className="text-zinc-400 text-sm">Capital Mínimo Salário</Label>
+                                        <Popover>
+                                          <PopoverTrigger asChild><button className="text-zinc-600 hover:text-zinc-400 transition-colors"><Info className="h-3.5 w-3.5" /></button></PopoverTrigger>
+                                          <PopoverContent className="bg-zinc-800 border-zinc-700 text-zinc-300 text-xs max-w-xs" side="top">Capital mínimo do equipo para o usuário qualificar ao salário semanal. Recomendado: $2,000 — garante que o usuário tenha uma rede mínima ativa.</PopoverContent>
+                                        </Popover>
+                                      </div>
+                                      <Input
+                                        type="number"
+                                        step="100"
+                                        value={teamBonusConfig.salaryMinTeamCapital ?? 2000}
+                                        onChange={(e) => setTeamBonusConfig({ ...teamBonusConfig, salaryMinTeamCapital: parseFloat(e.target.value) || 0 })}
+                                        className="bg-zinc-800 border-zinc-700 h-9"
+                                      />
+                                    </div>
+                                    <div className="space-y-2">
+                                      <div className="flex items-center gap-2">
+                                        <Label className="text-zinc-400 text-sm">Requer Investimento Próprio</Label>
+                                        <Popover>
+                                          <PopoverTrigger asChild><button className="text-zinc-600 hover:text-zinc-400 transition-colors"><Info className="h-3.5 w-3.5" /></button></PopoverTrigger>
+                                          <PopoverContent className="bg-zinc-800 border-zinc-700 text-zinc-300 text-xs max-w-xs" side="top">Se ativado, o usuário precisa ter investimento próprio ativo para receber o salário. Recomendado: SIM — evita que usuários sem investimento ganhem bônus passivamente.</PopoverContent>
+                                        </Popover>
+                                      </div>
+                                      <Switch
+                                        checked={teamBonusConfig.salaryRequiresOwnInvestment ?? true}
+                                        onCheckedChange={(v) => setTeamBonusConfig({ ...teamBonusConfig, salaryRequiresOwnInvestment: v })}
+                                      />
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <Separator className="bg-zinc-800" />
+
+                                {/* Action Gold Group */}
+                                <div>
+                                  <div className="flex items-center gap-2 mb-3">
+                                    <span className="text-xl">🥇</span>
+                                    <h4 className="font-semibold text-amber-400">Action Gold</h4>
+                                  </div>
+                                  <div className="grid sm:grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                      <div className="flex items-center gap-2">
+                                        <Label className="text-zinc-400 text-sm">Gold Ativado</Label>
+                                        <Popover>
+                                          <PopoverTrigger asChild><button className="text-zinc-600 hover:text-zinc-400 transition-colors"><Info className="h-3.5 w-3.5" /></button></PopoverTrigger>
+                                          <PopoverContent className="bg-zinc-800 border-zinc-700 text-zinc-300 text-xs max-w-xs" side="top">Ativa ou desativa o Action Gold. Depende do Salário Semanal estar ativado. Recomendado: ativar junto com o salário.</PopoverContent>
+                                        </Popover>
+                                      </div>
+                                      <Switch
+                                        checked={teamBonusConfig.goldEnabled || false}
+                                        onCheckedChange={(v) => setTeamBonusConfig({ ...teamBonusConfig, goldEnabled: v })}
+                                      />
+                                    </div>
+                                    <div className="space-y-2">
+                                      <div className="flex items-center gap-2">
+                                        <Label className="text-zinc-400 text-sm">% do Gold</Label>
+                                        <Popover>
+                                          <PopoverTrigger asChild><button className="text-zinc-600 hover:text-zinc-400 transition-colors"><Info className="h-3.5 w-3.5" /></button></PopoverTrigger>
+                                          <PopoverContent className="bg-zinc-800 border-zinc-700 text-zinc-300 text-xs max-w-xs" side="top">Porcentagem do salário semanal dos diretos que o referer recebe. Recomendado: 50% — valor generoso sem cascata. IMPORTANTE: Gold é calculado APENAS sobre o salário base, nunca sobre outros Gold — isso evita cascata infinita.</PopoverContent>
+                                        </Popover>
+                                      </div>
+                                      <Input
+                                        type="number"
+                                        step="1"
+                                        value={teamBonusConfig.goldPct ?? 50}
+                                        onChange={(e) => setTeamBonusConfig({ ...teamBonusConfig, goldPct: parseFloat(e.target.value) || 0 })}
+                                        className="bg-zinc-800 border-zinc-700 h-9"
+                                      />
+                                    </div>
+                                    <div className="space-y-2">
+                                      <div className="flex items-center gap-2">
+                                        <Label className="text-zinc-400 text-sm">Capital Mínimo Gold</Label>
+                                        <Popover>
+                                          <PopoverTrigger asChild><button className="text-zinc-600 hover:text-zinc-400 transition-colors"><Info className="h-3.5 w-3.5" /></button></PopoverTrigger>
+                                          <PopoverContent className="bg-zinc-800 border-zinc-700 text-zinc-300 text-xs max-w-xs" side="top">Capital mínimo do equipo para qualificar ao Action Gold. Recomendado: $4,000 — exige rede maior que o salário, recompensa líderes mais ativos.</PopoverContent>
+                                        </Popover>
+                                      </div>
+                                      <Input
+                                        type="number"
+                                        step="100"
+                                        value={teamBonusConfig.goldMinTeamCapital ?? 4000}
+                                        onChange={(e) => setTeamBonusConfig({ ...teamBonusConfig, goldMinTeamCapital: parseFloat(e.target.value) || 0 })}
+                                        className="bg-zinc-800 border-zinc-700 h-9"
+                                      />
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <Separator className="bg-zinc-800" />
+
+                                {/* Action Daymond Group */}
+                                <div>
+                                  <div className="flex items-center gap-2 mb-3">
+                                    <span className="text-xl">💎</span>
+                                    <h4 className="font-semibold text-cyan-400">Action Daymond</h4>
+                                  </div>
+                                  <div className="grid sm:grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                      <div className="flex items-center gap-2">
+                                        <Label className="text-zinc-400 text-sm">Daymond Ativado</Label>
+                                        <Popover>
+                                          <PopoverTrigger asChild><button className="text-zinc-600 hover:text-zinc-400 transition-colors"><Info className="h-3.5 w-3.5" /></button></PopoverTrigger>
+                                          <PopoverContent className="bg-zinc-800 border-zinc-700 text-zinc-300 text-xs max-w-xs" side="top">Ativa ou desativa o Action Daymond. Cria um investimento virtual mensal de $1,000 para usuários qualificados. Recomendado: ativar com cautela — é o bônus mais custoso do sistema.</PopoverContent>
+                                        </Popover>
+                                      </div>
+                                      <Switch
+                                        checked={teamBonusConfig.daymondEnabled || false}
+                                        onCheckedChange={(v) => setTeamBonusConfig({ ...teamBonusConfig, daymondEnabled: v })}
+                                      />
+                                    </div>
+                                    <div className="space-y-2">
+                                      <div className="flex items-center gap-2">
+                                        <Label className="text-zinc-400 text-sm">Valor do Pacote Daymond</Label>
+                                        <Popover>
+                                          <PopoverTrigger asChild><button className="text-zinc-600 hover:text-zinc-400 transition-colors"><Info className="h-3.5 w-3.5" /></button></PopoverTrigger>
+                                          <PopoverContent className="bg-zinc-800 border-zinc-700 text-zinc-300 text-xs max-w-xs" side="top">Valor do investimento virtual criado mensalmente. Recomendado: $1,000 — valor padrão ActionCash. Este investimento gera ROI diário como qualquer outro.</PopoverContent>
+                                        </Popover>
+                                      </div>
+                                      <Input
+                                        type="number"
+                                        step="100"
+                                        value={teamBonusConfig.daymondPackageAmount ?? 1000}
+                                        onChange={(e) => setTeamBonusConfig({ ...teamBonusConfig, daymondPackageAmount: parseFloat(e.target.value) || 0 })}
+                                        className="bg-zinc-800 border-zinc-700 h-9"
+                                      />
+                                    </div>
+                                    <div className="space-y-2">
+                                      <div className="flex items-center gap-2">
+                                        <Label className="text-zinc-400 text-sm">Capital Mínimo Daymond</Label>
+                                        <Popover>
+                                          <PopoverTrigger asChild><button className="text-zinc-600 hover:text-zinc-400 transition-colors"><Info className="h-3.5 w-3.5" /></button></PopoverTrigger>
+                                          <PopoverContent className="bg-zinc-800 border-zinc-700 text-zinc-300 text-xs max-w-xs" side="top">Capital mínimo do equipo para qualificar ao Daymond. Recomendado: $20,000 — exige rede muito grande, reservado para top líderes.</PopoverContent>
+                                        </Popover>
+                                      </div>
+                                      <Input
+                                        type="number"
+                                        step="1000"
+                                        value={teamBonusConfig.daymondMinTeamCapital ?? 20000}
+                                        onChange={(e) => setTeamBonusConfig({ ...teamBonusConfig, daymondMinTeamCapital: parseFloat(e.target.value) || 0 })}
+                                        className="bg-zinc-800 border-zinc-700 h-9"
+                                      />
+                                    </div>
+                                    <div className="space-y-2">
+                                      <div className="flex items-center gap-2">
+                                        <Label className="text-zinc-400 text-sm">Duração Daymond (dias)</Label>
+                                        <Popover>
+                                          <PopoverTrigger asChild><button className="text-zinc-600 hover:text-zinc-400 transition-colors"><Info className="h-3.5 w-3.5" /></button></PopoverTrigger>
+                                          <PopoverContent className="bg-zinc-800 border-zinc-700 text-zinc-300 text-xs max-w-xs" side="top">Duração do investimento Daymond em dias. Recomendado: 30 dias — coincide com o ciclo mensal. Após expirar, se ainda qualificado, novo pacote é criado no mês seguinte.</PopoverContent>
+                                        </Popover>
+                                      </div>
+                                      <Input
+                                        type="number"
+                                        step="1"
+                                        value={teamBonusConfig.daymondDurationDays ?? 30}
+                                        onChange={(e) => setTeamBonusConfig({ ...teamBonusConfig, daymondDurationDays: parseInt(e.target.value) || 30 })}
+                                        className="bg-zinc-800 border-zinc-700 h-9"
+                                      />
+                                    </div>
+                                    <div className="space-y-2">
+                                      <div className="flex items-center gap-2">
+                                        <Label className="text-zinc-400 text-sm">Daymond Gera Comissões</Label>
+                                        <Popover>
+                                          <PopoverTrigger asChild><button className="text-zinc-600 hover:text-zinc-400 transition-colors"><Info className="h-3.5 w-3.5" /></button></PopoverTrigger>
+                                          <PopoverContent className="bg-zinc-800 border-zinc-700 text-zinc-300 text-xs max-w-xs" side="top">Se o investimento Daymond gera comissões de afiliado para uplines. Recomendado: NÃO — o Daymond já é um custo alto ($990/mês de ROI). Adicionar comissões aumenta significativamente a saída de capital.</PopoverContent>
+                                        </Popover>
+                                      </div>
+                                      <Switch
+                                        checked={teamBonusConfig.daymondGeneratesCommissions ?? false}
+                                        onCheckedChange={(v) => setTeamBonusConfig({ ...teamBonusConfig, daymondGeneratesCommissions: v })}
+                                      />
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <Separator className="bg-zinc-800" />
+
+                                {/* Geral Group */}
+                                <div>
+                                  <div className="flex items-center gap-2 mb-3">
+                                    <Settings className="h-4 w-4 text-zinc-400" />
+                                    <h4 className="font-semibold text-zinc-300">Geral</h4>
+                                  </div>
+                                  <div className="grid sm:grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                      <div className="flex items-center gap-2">
+                                        <Label className="text-zinc-400 text-sm">Cap Diário Bônus</Label>
+                                        <Popover>
+                                          <PopoverTrigger asChild><button className="text-zinc-600 hover:text-zinc-400 transition-colors"><Info className="h-3.5 w-3.5" /></button></PopoverTrigger>
+                                          <PopoverContent className="bg-zinc-800 border-zinc-700 text-zinc-300 text-xs max-w-xs" side="top">Limite total diário de pagamentos de bônus de equipe. 0 = sem limite. Recomendado: $5,000 para plataformas em crescimento, $0 (sem limite) para início quando há poucos usuários.</PopoverContent>
+                                        </Popover>
+                                      </div>
+                                      <Input
+                                        type="number"
+                                        step="500"
+                                        value={teamBonusConfig.dailyCap ?? 0}
+                                        onChange={(e) => setTeamBonusConfig({ ...teamBonusConfig, dailyCap: parseFloat(e.target.value) || 0 })}
+                                        className="bg-zinc-800 border-zinc-700 h-9"
+                                      />
+                                    </div>
+                                    <div className="space-y-2">
+                                      <div className="flex items-center gap-2">
+                                        <Label className="text-zinc-400 text-sm">Profundidade do Equipe</Label>
+                                        <Popover>
+                                          <PopoverTrigger asChild><button className="text-zinc-600 hover:text-zinc-400 transition-colors"><Info className="h-3.5 w-3.5" /></button></PopoverTrigger>
+                                          <PopoverContent className="bg-zinc-800 border-zinc-700 text-zinc-300 text-xs max-w-xs" side="top">Número de níveis de referidos considerados no cálculo do capital de equipo. Recomendado: 6 níveis — igual ao número de níveis de comissão do ActionCash. IMPORTANTE: Investimentos Daymond NÃO contam para o capital de equipo dos uplines — isso evita inflação cascata (dinheiro virtual gerando mais dinheiro virtual).</PopoverContent>
+                                        </Popover>
+                                      </div>
+                                      <Input
+                                        type="number"
+                                        step="1"
+                                        min="1"
+                                        max="11"
+                                        value={teamBonusConfig.maxDepth ?? 6}
+                                        onChange={(e) => setTeamBonusConfig({ ...teamBonusConfig, maxDepth: parseInt(e.target.value) || 6 })}
+                                        className="bg-zinc-800 border-zinc-700 h-9"
+                                      />
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <Button
+                                  className="bg-emerald-600 hover:bg-emerald-700 w-full sm:w-auto min-h-[44px]"
+                                  onClick={saveTeamBonusConfig}
+                                  disabled={teamBonusSaving}
+                                >
+                                  {teamBonusSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
+                                  Salvar Configurações
+                                </Button>
+                              </CardContent>
+                            </Card>
+
+                            {/* Recent Payments */}
+                            <Card className="bg-zinc-900 border-zinc-800">
+                              <CardHeader className="pb-3">
+                                <div className="flex items-center justify-between">
+                                  <CardTitle className="text-base">Pagamentos Recentes</CardTitle>
+                                  <div className="flex gap-1">
+                                    {['salary', 'gold', 'daymond'].map(tab => (
+                                      <Button
+                                        key={tab}
+                                        size="sm"
+                                        variant={teamBonusPaymentTab === tab ? 'default' : 'outline'}
+                                        className={`h-8 text-xs ${teamBonusPaymentTab === tab ? 'bg-emerald-600' : 'border-zinc-700'}`}
+                                        onClick={() => setTeamBonusPaymentTab(tab)}
+                                      >
+                                        {tab === 'salary' ? '📅 Salário' : tab === 'gold' ? '🥇 Gold' : '💎 Daymond'}
+                                      </Button>
+                                    ))}
+                                  </div>
+                                </div>
+                              </CardHeader>
+                              <CardContent className="p-0 overflow-x-auto">
+                                <Table className="min-w-[500px]">
+                                  <TableHeader>
+                                    <TableRow className="border-zinc-800 hover:bg-transparent">
+                                      <TableHead className="text-zinc-400">Data</TableHead>
+                                      <TableHead className="text-zinc-400">Usuário</TableHead>
+                                      <TableHead className="text-zinc-400">Tipo</TableHead>
+                                      <TableHead className="text-zinc-400">Capital Equipe</TableHead>
+                                      <TableHead className="text-zinc-400">Valor</TableHead>
+                                      <TableHead className="text-zinc-400">Status</TableHead>
+                                    </TableRow>
+                                  </TableHeader>
+                                  <TableBody>
+                                    {adminTeamBonus?.recentPayments
+                                      ?.filter((p: any) => p.type === teamBonusPaymentTab)
+                                      ?.slice(0, 20)
+                                      ?.map((p: any, idx: number) => (
+                                        <TableRow key={idx} className="border-zinc-800">
+                                          <TableCell className="text-sm text-zinc-400 whitespace-nowrap">{fmtDateTime(p.createdAt)}</TableCell>
+                                          <TableCell className="text-sm">{p.userName || p.userId?.slice(0, 8) || '-'}</TableCell>
+                                          <TableCell>
+                                            <Badge variant="outline" className={`text-[9px] ${
+                                              p.type === 'salary' ? 'border-emerald-500/30 text-emerald-400' :
+                                              p.type === 'gold' ? 'border-amber-500/30 text-amber-400' :
+                                              'border-cyan-500/30 text-cyan-400'
+                                            }`}>
+                                              {p.type === 'salary' ? 'Salário' : p.type === 'gold' ? 'Gold' : 'Daymond'}
+                                            </Badge>
+                                          </TableCell>
+                                          <TableCell className="text-sm text-zinc-300">${fmtUSDT(p.teamCapital || 0)}</TableCell>
+                                          <TableCell className="text-sm font-medium text-emerald-400">${fmtUSDT(p.amount)}</TableCell>
+                                          <TableCell><Badge variant="outline" className={statusColor(p.status)}>{statusLabel(p.status)}</Badge></TableCell>
+                                        </TableRow>
+                                      ))}
+                                    {(!adminTeamBonus?.recentPayments?.filter((p: any) => p.type === teamBonusPaymentTab).length) && (
+                                      <TableRow><TableCell colSpan={6} className="text-center text-zinc-500 py-8">Nenhum pagamento encontrado</TableCell></TableRow>
+                                    )}
+                                  </TableBody>
+                                </Table>
+                              </CardContent>
+                            </Card>
+                          </>
+                        )}
                       </div>
                     )}
 

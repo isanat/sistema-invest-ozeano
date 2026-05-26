@@ -608,3 +608,36 @@ Stage Summary:
 - 2 new Vercel cron jobs: weekly-bonuses (Sunday), monthly-daymond (1st of month)
 - Estimated 13 hours total implementation across 7 phases
 - 5 pending decisions documented for owner approval
+
+---
+Task ID: implementation
+Agent: Main
+Task: Implement AC-09 (Weekly Salary), AC-10 (Action Gold), AC-11 (Action Daymond) with all recommendations
+
+Work Log:
+- Added 3 new Prisma models: WeeklySalary, ActionGoldPayment, DaymondPackage
+- Added relations to User model (weeklySalaries, actionGoldPayments, actionGoldFrom, daymondPackages)
+- Added relation to Investment model (daymondPackage, source='daymond')
+- Added 'team_bonus' category to validations.ts
+- Added 14 new SystemConfig keys in seed.ts (category: team_bonus)
+- Created src/lib/team-bonus.ts with core functions: calculateTeamActiveCapital(), hasActiveInvestment(), checkTeamBonusDailyCap(), getTeamBonusConfig(), getTeamStats(), getDirectsSalaryInfo()
+- Created /api/cron/weekly-bonuses (POST for salary+gold distribution, GET for countdown)
+- Created /api/cron/monthly-daymond (POST for daymond package creation)
+- Modified /api/cron/distribute to skip commissions for source='daymond'
+- Created /api/team-bonus (GET user data)
+- Created /api/admin/team-bonus (GET stats, PUT config, POST triggers)
+- Updated vercel.json with 2 new crons: weekly-bonuses (Sunday), monthly-daymond (1st of month)
+- Added user "Bônus de Equipe" section inside Afiliados tab (3 cards, history, countdown)
+- Added admin "Bônus Equipe" tab with config panel (14 fields with ℹ️ tooltips), stats, triggers, payment tables
+- All tooltips explain WHAT each setting does and WHY the recommended value is chosen
+- Lint passes, dev server running, all API endpoints return 200
+
+Stage Summary:
+- 3 features fully implemented: Weekly Salary (0.5%), Action Gold (50%), Action Daymond ($1000/mo)
+- Anti-fraud: Daymond doesn't count for team capital, Gold doesn't cascade, daily cap available
+- All configs adjustable by admin with explanatory tooltips
+- All crons idempotent (unique constraints) and locked (advisory locks)
+- User sees qualification status, progress bars, estimated amounts, payment history
+- Admin sees stats, can configure all 14 settings, can trigger crons manually
+- Files created: 5 new API routes, 1 new lib file
+- Files modified: schema.prisma, seed.ts, validations.ts, vercel.json, cron/distribute, page.tsx

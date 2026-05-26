@@ -61,7 +61,7 @@ export const adminConfigSchema = z.object({
   value: z.string(),
   type: z.enum(['string', 'number', 'boolean', 'json', 'secret']).default('string'),
   description: z.string().optional(),
-  category: z.enum(['general', 'branding', 'affiliate', 'withdrawal', 'trading', 'deposit', 'nowpayments']).default('general'),
+  category: z.enum(['general', 'branding', 'affiliate', 'withdrawal', 'trading', 'deposit', 'nowpayments', 'team_bonus']).default('general'),
   isActive: z.boolean().optional(),
 }).refine((data) => {
   if (data.type === 'number' && isNaN(parseFloat(data.value))) return false;

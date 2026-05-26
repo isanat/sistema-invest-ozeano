@@ -59,6 +59,10 @@ model User {
   nowpaymentsDeposits   NowPaymentsDeposit[]
   nowpaymentsPayouts    NowPaymentsPayout[]
   vouchers             Voucher[]
+  weeklySalaries       WeeklySalary[]
+  actionGoldPayments   ActionGoldPayment[]
+  actionGoldFrom       ActionGoldPayment[] @relation("GoldFromReferrals")
+  daymondPackages      DaymondPackage[]
 
   @@index([email])
   @@index([affiliateCode])
@@ -102,7 +106,7 @@ model Investment {
   status    String  @default("active") // active, completed, cancelled
 
   teamBonusPct String @default("0") // Team bonus % from affiliate rank
-  source       String  @default("deposit") // "deposit" (own balance) or "voucher" (voucher balance)
+  source       String  @default("deposit") // "deposit" (own balance), "voucher" (voucher balance), or "daymond" (Action Daymond package)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -111,6 +115,7 @@ model Investment {
   plan           InvestmentPlan? @relation(fields: [planId], references: [id], onDelete: SetNull)
   roiHistory     RoiHistory[]
   voucherUsages  VoucherUsage[]
+  daymondPackage DaymondPackage?
 
   @@index([userId])
   @@index([status])
@@ -683,4 +688,69 @@ model SplitLog {
   @@index([status])
   @@index([depositId])
   @@index([createdAt])
+}
+
+// ============================================================================
+// TEAM BONUS MODELS — AC-09 (Weekly Salary), AC-10 (Action Gold), AC-11 (Daymond)
+// ============================================================================
+
+// AC-09: Weekly Salary — 0.5% of team's active capital paid every Sunday
+model WeeklySalary {
+  id            String   @id @default(cuid())
+  userId        String
+  weekDate      DateTime   // Sunday date this salary refers to
+  teamActiveCapital String  // Team's active capital at calculation time
+  salaryPct     String   // % applied (e.g. "0.5")
+  salaryAmount  String   // USDT amount paid
+  status        String   @default("paid") // paid, failed
+  createdAt     DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, weekDate])
+  @@index([userId])
+  @@index([weekDate])
+  @@index([status])
+}
+
+// AC-10: Action Gold — 50% of direct referrals' weekly salary
+model ActionGoldPayment {
+  id              String   @id @default(cuid())
+  userId          String   // Who RECEIVED the Gold (the referrer)
+  fromUserId      String   // The direct referral whose salary generated this Gold
+  weekDate        DateTime // Same Sunday as the weekly salary
+  fromSalaryAmount String  // Weekly salary the direct referral received
+  goldPct         String   // % applied (e.g. "50")
+  goldAmount      String   // USDT amount paid
+  status          String   @default("paid") // paid, failed
+  createdAt       DateTime @default(now())
+
+  user     User @relation(fields: [userId], references: [id], onDelete: Restrict)
+  fromUser User @relation("GoldFromReferrals", fields: [fromUserId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, fromUserId, weekDate])
+  @@index([userId])
+  @@index([fromUserId])
+  @@index([weekDate])
+  @@index([status])
+}
+
+// AC-11: Action Daymond — $1000/month virtual investment package
+model DaymondPackage {
+  id              String   @id @default(cuid())
+  userId          String
+  monthDate       DateTime // 1st of the month this package refers to
+  teamActiveCapital String // Team's active capital at qualification time
+  packageAmount   String   // Package amount in USDT (e.g. "1000")
+  investmentId    String?  @unique // Link to the virtual Investment created
+  status          String   @default("qualified") // qualified, active, expired, skipped
+  createdAt       DateTime @default(now())
+
+  user       User        @relation(fields: [userId], references: [id], onDelete: Restrict)
+  investment Investment? @relation(fields: [investmentId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, monthDate])
+  @@index([userId])
+  @@index([monthDate])
+  @@index([status])
 }

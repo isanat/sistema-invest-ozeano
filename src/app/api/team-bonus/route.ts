@@ -1,62 +1,191 @@
+// ============================================================================
+// GET /api/team-bonus — User's team bonus data (AC-09, AC-10, AC-11)
+// ============================================================================
+// Returns consolidated team bonus information for the logged-in user:
+// - Team active capital and member count
+// - Salary status, qualification, estimated amount
+// - Gold status, qualification, estimated amount
+// - Daymond status, qualification, current package
+// - Progress bars toward each threshold
+// - Payment history (recent)
+// ============================================================================
+
 import { NextRequest } from 'next/server';
 import { db } from '@/lib/db';
-import { requireAuth } from '@/lib/auth';
-import { getTeamBonusPct } from '@/lib/affiliate';
-import { apiSuccess, apiError, handleApiError } from '@/lib/api-utils';
+import { d } from '@/lib/auth';
+import {
+  getTeamBonusConfig,
+  calculateTeamActiveCapital,
+  hasActiveInvestment,
+  getTeamStats,
+  getDirectsSalaryInfo,
+  getLastSunday,
+  getFirstOfMonth,
+} from '@/lib/team-bonus';
+import { requireAuth, apiSuccess, handleApiError, BusinessError } from '@/lib/api-utils';
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await requireAuth();
+    const userId = await requireAuth(request);
+    if (!userId) throw new BusinessError('Não autorizado', 401);
 
-    const user = await db.user.findUnique({
-      where: { id: session.userId },
-      select: { id: true, referredBy: true },
+    const config = await getTeamBonusConfig();
+    const weekDate = getLastSunday();
+    const monthDate = getFirstOfMonth();
+
+    // Get team stats
+    const teamStats = await getTeamStats(userId, config.maxDepth);
+
+    // Check own investment
+    const hasOwnInvestment = await hasActiveInvestment(userId);
+
+    // ── AC-09: Salary ───────────────────────────────────────
+    const lastSalary = await db.weeklySalary.findFirst({
+      where: { userId, status: 'paid' },
+      orderBy: { createdAt: 'desc' },
     });
 
-    if (!user) return apiError('Usuário não encontrado', 404);
-
-    const directReferrals = await db.user.count({
-      where: { referredBy: session.userId, hasInvested: true },
+    const salaryHistory = await db.weeklySalary.findMany({
+      where: { userId },
+      orderBy: { weekDate: 'desc' },
+      take: 12,
     });
 
-    const bonusPct = await getTeamBonusPct(session.userId);
+    const salaryQualified = teamStats.totalActiveCapital >= config.salaryMinTeamCapital && hasOwnInvestment;
+    const estimatedSalary = salaryQualified ? teamStats.totalActiveCapital * (config.salaryPct / 100) : 0;
 
-    // Determine tier dynamically from database ranks
-    let tier = 'none';
-    let nextTier: string | null = 'Bronze';
-    let referralsToNext = 0;
-
-    const ranks = await db.affiliateRank.findMany({
-      where: { isActive: true },
-      orderBy: { sortOrder: 'asc' },
+    // ── AC-10: Gold ─────────────────────────────────────────
+    const lastGold = await db.actionGoldPayment.findFirst({
+      where: { userId, status: 'paid' },
+      orderBy: { createdAt: 'desc' },
     });
 
-    // Find current and next rank based on direct referrals
-    for (let i = 0; i < ranks.length; i++) {
-      const rank = ranks[i];
-      if (directReferrals >= rank.minReferrals) {
-        tier = rank.name.toLowerCase();
-        if (i + 1 < ranks.length) {
-          nextTier = ranks[i + 1].name;
-          referralsToNext = Math.max(0, ranks[i + 1].minReferrals - directReferrals);
-        } else {
-          nextTier = null;
-          referralsToNext = 0;
-        }
-        break;
-      } else {
-        // User doesn't qualify for this rank yet
-        nextTier = rank.name;
-        referralsToNext = Math.max(0, rank.minReferrals - directReferrals);
-      }
-    }
+    const goldHistory = await db.actionGoldPayment.findMany({
+      where: { userId },
+      orderBy: { weekDate: 'desc' },
+      take: 12,
+      include: {
+        fromUser: { select: { name: true } },
+      },
+    });
+
+    // Get info about direct referrals' salaries this week for estimation
+    const directsSalaryInfo = await getDirectsSalaryInfo(userId, weekDate);
+    const goldQualified = teamStats.totalActiveCapital >= config.goldMinTeamCapital && hasOwnInvestment;
+    const estimatedGold = goldQualified ? directsSalaryInfo.totalSalary * (config.goldPct / 100) : 0;
+
+    // ── AC-11: Daymond ─────────────────────────────────────
+    const currentDaymondPkg = await db.daymondPackage.findUnique({
+      where: { userId_monthDate: { userId, monthDate } },
+      include: { investment: { select: { id: true, status: true, dailyRoi: true, endDate: true } } },
+    });
+
+    const daymondHistory = await db.daymondPackage.findMany({
+      where: { userId },
+      orderBy: { monthDate: 'desc' },
+      take: 12,
+      include: { investment: { select: { id: true, status: true, dailyRoi: true } } },
+    });
+
+    const daymondQualified = teamStats.totalActiveCapital >= config.daymondMinTeamCapital && hasOwnInvestment;
+
+    // ── Progress ────────────────────────────────────────────
+    const salaryProgress = config.salaryMinTeamCapital > 0
+      ? Math.min(100, (teamStats.totalActiveCapital / config.salaryMinTeamCapital) * 100)
+      : 0;
+    const goldProgress = config.goldMinTeamCapital > 0
+      ? Math.min(100, (teamStats.totalActiveCapital / config.goldMinTeamCapital) * 100)
+      : 0;
+    const daymondProgress = config.daymondMinTeamCapital > 0
+      ? Math.min(100, (teamStats.totalActiveCapital / config.daymondMinTeamCapital) * 100)
+      : 0;
+
+    // ── Next Sunday countdown ───────────────────────────────
+    const now = new Date();
+    const day = now.getUTCDay();
+    const daysUntilSunday = day === 0 ? 7 : 7 - day;
+    const nextSunday = new Date(now);
+    nextSunday.setUTCDate(nextSunday.getUTCDate() + daysUntilSunday);
+    nextSunday.setUTCHours(0, 0, 0, 0);
 
     return apiSuccess({
-      tier,
-      bonusPct,
-      directReferrals,
-      nextTier,
-      referralsToNext,
+      teamActiveCapital: teamStats.totalActiveCapital,
+      teamMembers: teamStats.totalMembers,
+      teamLevels: teamStats.levels,
+      maxDepth: config.maxDepth,
+      hasOwnInvestment,
+
+      salary: {
+        enabled: config.salaryEnabled,
+        qualified: salaryQualified,
+        minTeamCapital: config.salaryMinTeamCapital,
+        salaryPct: config.salaryPct,
+        estimatedWeeklySalary: estimatedSalary,
+        nextPaymentDate: nextSunday.toISOString(),
+        lastSalary: lastSalary ? {
+          amount: d(lastSalary.salaryAmount),
+          weekDate: lastSalary.weekDate,
+          teamCapital: d(lastSalary.teamActiveCapital),
+        } : null,
+        history: salaryHistory.map(s => ({
+          weekDate: s.weekDate,
+          teamCapital: d(s.teamActiveCapital),
+          salaryPct: d(s.salaryPct),
+          amount: d(s.salaryAmount),
+          status: s.status,
+        })),
+      },
+
+      gold: {
+        enabled: config.goldEnabled,
+        qualified: goldQualified,
+        minTeamCapital: config.goldMinTeamCapital,
+        goldPct: config.goldPct,
+        estimatedWeeklyGold: estimatedGold,
+        directsCount: directsSalaryInfo.count,
+        lastGold: lastGold ? {
+          amount: d(lastGold.goldAmount),
+          weekDate: lastGold.weekDate,
+        } : null,
+        history: goldHistory.map(g => ({
+          weekDate: g.weekDate,
+          fromUserName: g.fromUser.name,
+          fromSalaryAmount: d(g.fromSalaryAmount),
+          goldPct: d(g.goldPct),
+          amount: d(g.goldAmount),
+          status: g.status,
+        })),
+      },
+
+      daymond: {
+        enabled: config.daymondEnabled,
+        qualified: daymondQualified,
+        minTeamCapital: config.daymondMinTeamCapital,
+        packageAmount: config.daymondPackageAmount,
+        durationDays: config.daymondDurationDays,
+        currentPackage: currentDaymondPkg ? {
+          status: currentDaymondPkg.status,
+          teamCapital: d(currentDaymondPkg.teamActiveCapital),
+          investment: currentDaymondPkg.investment ? {
+            id: currentDaymondPkg.investment.id,
+            status: currentDaymondPkg.investment.status,
+            dailyRoi: d(currentDaymondPkg.investment.dailyRoi),
+            endDate: currentDaymondPkg.investment.endDate,
+          } : null,
+        } : null,
+        history: daymondHistory.map(dp => ({
+          monthDate: dp.monthDate,
+          teamCapital: d(dp.teamActiveCapital),
+          status: dp.status,
+          packageAmount: d(dp.packageAmount),
+        })),
+      },
+
+      progress: {
+        salaryProgress: Math.round(salaryProgress),
+        goldProgress: Math.round(goldProgress),
+        daymondProgress: Math.round(daymondProgress),
+      },
     });
   } catch (error) {
     return handleApiError(error);
