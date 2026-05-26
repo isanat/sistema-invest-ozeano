@@ -134,6 +134,7 @@ type TranslationKeys = {
   'landing.affiliate.additionalDailyRoi': string
   'landing.affiliate.level': string
   'landing.affiliate.startEarning': string
+  'landing.affiliate.cta': string
 
   // Landing - Team Bonus (ActionCash)
   'landing.teamBonus.title': string
@@ -151,6 +152,33 @@ type TranslationKeys = {
   'landing.teamBonus.daymondPremiumDesc': string
   'landing.teamBonus.dailyCap': string
   'landing.unilevel.inLevels': string
+  'landing.unilevel.title': string
+  'landing.unilevel.subtitle': string
+  'landing.unilevel.level': string
+  'landing.unilevel.total': string
+
+  // Landing - Badges
+  'landing.badges.copyTrading': string
+  'landing.badges.liveDashboard': string
+  'landing.badges.portfolioValue': string
+  'landing.badges.winRate': string
+  'landing.badges.trading': string
+  'landing.badges.dailyRoi': string
+  'landing.badges.simplePowerful': string
+  'landing.badges.step': string
+  'landing.badges.topTraders': string
+  'landing.badges.dailyRoiTag': string
+  'landing.badges.careerPlan': string
+  'landing.badges.teamRewards': string
+  'landing.badges.referralProgram': string
+  'landing.badges.live': string
+  'landing.badges.popular': string
+
+  // Landing - Career Plan
+  'landing.career.title': string
+  'landing.career.subtitle': string
+  'landing.career.progression': string
+  'landing.career.unlockNext': string
 
   // Landing - FAQ
   'landing.faq.title': string
@@ -412,6 +440,7 @@ export const translations: Record<Locale, TranslationKeys> = {
     'landing.affiliate.additionalDailyRoi': 'Bono adicional en el ROI diario',
     'landing.affiliate.level': 'Nivel',
     'landing.affiliate.startEarning': 'Empezar a Ganar',
+    'landing.affiliate.cta': 'Empezar a Ganar',
 
     // Landing - Team Bonus (ActionCash)
     'landing.teamBonus.title': 'Bônus de Equipe ActionCash',
@@ -429,6 +458,33 @@ export const translations: Record<Locale, TranslationKeys> = {
     'landing.teamBonus.daymondPremiumDesc': 'Paquete premium con ROI diario de 3.3%',
     'landing.teamBonus.dailyCap': 'Cap diario',
     'landing.unilevel.inLevels': 'en {n} niveles',
+    'landing.unilevel.title': 'Programa de <em>Afiliados</em>',
+    'landing.unilevel.subtitle': 'Gana comisiones en 6 niveles con nuestro plan Unilevel',
+    'landing.unilevel.level': 'Nivel',
+    'landing.unilevel.total': 'Total',
+
+    // Landing - Badges
+    'landing.badges.copyTrading': 'Plataforma de Copy Trading',
+    'landing.badges.liveDashboard': 'Panel de Trading en Vivo',
+    'landing.badges.portfolioValue': 'Valor del Portafolio',
+    'landing.badges.winRate': 'Tasa de Acierto',
+    'landing.badges.trading': 'Trading',
+    'landing.badges.dailyRoi': 'ROI Diario',
+    'landing.badges.simplePowerful': 'Simple y Potente',
+    'landing.badges.step': 'PASO',
+    'landing.badges.topTraders': 'Top Traders',
+    'landing.badges.dailyRoiTag': 'RENDIMIENTO DIARIO',
+    'landing.badges.careerPlan': 'PLAN DE CARRERA',
+    'landing.badges.teamRewards': 'RECOMPENSAS DE EQUIPO',
+    'landing.badges.referralProgram': 'PROGRAMA DE AFILIADOS',
+    'landing.badges.live': 'EN VIVO',
+    'landing.badges.popular': 'POPULAR',
+
+    // Landing - Career Plan
+    'landing.career.title': 'Plano de <em>Carrera</em>',
+    'landing.career.subtitle': 'Escala tu equipo y desbloquea bonificaciones exclusivas en cada nivel',
+    'landing.career.progression': 'Progresión de Carrera',
+    'landing.career.unlockNext': 'Desbloquea el siguiente nivel',
 
     // Landing - FAQ
     'landing.faq.title': 'Preguntas <em>Frecuentes</em>',
@@ -681,6 +737,7 @@ export const translations: Record<Locale, TranslationKeys> = {
     'landing.affiliate.additionalDailyRoi': 'Additional bonus on daily ROI',
     'landing.affiliate.level': 'Level',
     'landing.affiliate.startEarning': 'Start Earning',
+    'landing.affiliate.cta': 'Start Earning',
 
     // Landing - Team Bonus (ActionCash)
     'landing.teamBonus.title': 'ActionCash Team Bonuses',
@@ -698,6 +755,33 @@ export const translations: Record<Locale, TranslationKeys> = {
     'landing.teamBonus.daymondPremiumDesc': 'Premium package with 3.3% daily ROI',
     'landing.teamBonus.dailyCap': 'Daily cap',
     'landing.unilevel.inLevels': 'in {n} levels',
+    'landing.unilevel.title': 'Affiliate <em>Program</em>',
+    'landing.unilevel.subtitle': 'Earn commissions in 6 levels with our Unilevel plan',
+    'landing.unilevel.level': 'Level',
+    'landing.unilevel.total': 'Total',
+
+    // Landing - Badges
+    'landing.badges.copyTrading': 'Copy Trading Platform',
+    'landing.badges.liveDashboard': 'Live Trading Dashboard',
+    'landing.badges.portfolioValue': 'Portfolio Value',
+    'landing.badges.winRate': 'Win Rate',
+    'landing.badges.trading': 'Trading',
+    'landing.badges.dailyRoi': 'Daily ROI',
+    'landing.badges.simplePowerful': 'Simple & Powerful',
+    'landing.badges.step': 'STEP',
+    'landing.badges.topTraders': 'Top Traders',
+    'landing.badges.dailyRoiTag': 'DAILY ROI',
+    'landing.badges.careerPlan': 'CAREER PLAN',
+    'landing.badges.teamRewards': 'TEAM REWARDS',
+    'landing.badges.referralProgram': 'REFERRAL PROGRAM',
+    'landing.badges.live': 'LIVE',
+    'landing.badges.popular': 'POPULAR',
+
+    // Landing - Career Plan
+    'landing.career.title': 'Career <em>Plan</em>',
+    'landing.career.subtitle': 'Scale your team and unlock exclusive bonuses at each level',
+    'landing.career.progression': 'Career Progression',
+    'landing.career.unlockNext': 'Unlock next level',
 
     'landing.faq.title': 'Frequently <em>Asked</em> Questions',
     'landing.faq.subtitle': 'Clear your doubts about the platform',
@@ -939,6 +1023,7 @@ export const translations: Record<Locale, TranslationKeys> = {
     'landing.affiliate.additionalDailyRoi': 'Bônus adicional no ROI diário',
     'landing.affiliate.level': 'Nível',
     'landing.affiliate.startEarning': 'Começar a Ganhar',
+    'landing.affiliate.cta': 'Começar a Ganhar',
 
     // Landing - Team Bonus (ActionCash)
     'landing.teamBonus.title': 'Bônus de Equipe ActionCash',
@@ -956,6 +1041,33 @@ export const translations: Record<Locale, TranslationKeys> = {
     'landing.teamBonus.daymondPremiumDesc': 'Pacote premium com ROI diário de 3.3%',
     'landing.teamBonus.dailyCap': 'Cap diário',
     'landing.unilevel.inLevels': 'em {n} níveis',
+    'landing.unilevel.title': 'Programa de <em>Afiliados</em>',
+    'landing.unilevel.subtitle': 'Ganhe comissões em 6 níveis com nosso plano Unilevel',
+    'landing.unilevel.level': 'Nível',
+    'landing.unilevel.total': 'Total',
+
+    // Landing - Badges
+    'landing.badges.copyTrading': 'Plataforma de Copy Trading',
+    'landing.badges.liveDashboard': 'Painel de Trading ao Vivo',
+    'landing.badges.portfolioValue': 'Valor do Portfólio',
+    'landing.badges.winRate': 'Taxa de Acerto',
+    'landing.badges.trading': 'Trading',
+    'landing.badges.dailyRoi': 'ROI Diário',
+    'landing.badges.simplePowerful': 'Simples e Poderoso',
+    'landing.badges.step': 'PASSO',
+    'landing.badges.topTraders': 'Top Traders',
+    'landing.badges.dailyRoiTag': 'RENDIMENTO DIÁRIO',
+    'landing.badges.careerPlan': 'PLANO DE CARREIRA',
+    'landing.badges.teamRewards': 'RECOMPENSAS DE EQUIPE',
+    'landing.badges.referralProgram': 'PROGRAMA DE AFILIADOS',
+    'landing.badges.live': 'AO VIVO',
+    'landing.badges.popular': 'POPULAR',
+
+    // Landing - Career Plan
+    'landing.career.title': 'Plano de <em>Carreira</em>',
+    'landing.career.subtitle': 'Escale seu time e desbloqueie bonificações exclusivas em cada nível',
+    'landing.career.progression': 'Progressão de Carreira',
+    'landing.career.unlockNext': 'Desbloqueie o próximo nível',
 
     'landing.faq.title': 'Perguntas <em>Frequentes</em>',
     'landing.faq.subtitle': 'Tire suas dúvidas sobre a plataforma',
@@ -1197,6 +1309,7 @@ export const translations: Record<Locale, TranslationKeys> = {
     'landing.affiliate.additionalDailyRoi': '每日ROI额外奖金',
     'landing.affiliate.level': '级别',
     'landing.affiliate.startEarning': '开始赚钱',
+    'landing.affiliate.cta': '开始赚钱',
 
     // Landing - Team Bonus (ActionCash)
     'landing.teamBonus.title': 'ActionCash团队奖金',
@@ -1214,6 +1327,33 @@ export const translations: Record<Locale, TranslationKeys> = {
     'landing.teamBonus.daymondPremiumDesc': '3.3%日ROI高级套餐',
     'landing.teamBonus.dailyCap': '每日上限',
     'landing.unilevel.inLevels': '{n}个级别',
+    'landing.unilevel.title': '联盟<em>计划</em>',
+    'landing.unilevel.subtitle': '通过我们的Unilevel计划在6个级别赚取佣金',
+    'landing.unilevel.level': '级别',
+    'landing.unilevel.total': '总计',
+
+    // Landing - Badges
+    'landing.badges.copyTrading': '跟单交易平台',
+    'landing.badges.liveDashboard': '实时交易面板',
+    'landing.badges.portfolioValue': '投资组合价值',
+    'landing.badges.winRate': '胜率',
+    'landing.badges.trading': '交易',
+    'landing.badges.dailyRoi': '每日ROI',
+    'landing.badges.simplePowerful': '简单而强大',
+    'landing.badges.step': '步骤',
+    'landing.badges.topTraders': '顶级交易员',
+    'landing.badges.dailyRoiTag': '每日收益',
+    'landing.badges.careerPlan': '职业计划',
+    'landing.badges.teamRewards': '团队奖励',
+    'landing.badges.referralProgram': '推荐计划',
+    'landing.badges.live': '实时',
+    'landing.badges.popular': '热门',
+
+    // Landing - Career Plan
+    'landing.career.title': '职业<em>规划</em>',
+    'landing.career.subtitle': '扩展团队，在每个级别解锁专属奖金',
+    'landing.career.progression': '职业发展路径',
+    'landing.career.unlockNext': '解锁下一级别',
 
     'landing.faq.title': '常见<em>问题</em>',
     'landing.faq.subtitle': '解答您关于平台的疑问',
