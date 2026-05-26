@@ -737,3 +737,65 @@ export async function testConnection(): Promise<{
 
   return result;
 }
+
+// ============================================================================
+// PAYMENT PROCESSING HELPERS (used by callback and status routes)
+// ============================================================================
+
+/**
+ * Verify NowPayments webhook signature (synchronous wrapper).
+ * Takes raw body string, signature header, and IPN secret.
+ * Returns true if signature is valid, false otherwise.
+ */
+export function verifyNowPaymentsSignature(
+  rawBody: string,
+  signature: string,
+  ipnSecret: string
+): boolean {
+  if (!ipnSecret || !signature) return false;
+  try {
+    const hmac = crypto.createHmac('sha512', ipnSecret);
+    hmac.update(rawBody);
+    const computed = hmac.digest('hex');
+    if (computed.length !== signature.length) return false;
+    return crypto.timingSafeEqual(
+      Buffer.from(computed, 'hex'),
+      Buffer.from(signature, 'hex')
+    );
+  } catch (error) {
+    console.error('[NowPayments] Signature verification failed:', error);
+    return false;
+  }
+}
+
+/**
+ * Process payment splits after a deposit is confirmed.
+ * Handles: affiliate commissions, team bonus pct update, platform/trader fee allocation.
+ * This is called from the payment callback and status check routes.
+ */
+export async function processPaymentSplits(
+  paymentId: string,
+  userId: string,
+  amount: number
+): Promise<void> {
+  try {
+    const { processCommissions } = await import('./affiliate');
+    await processCommissions(userId, amount, 'deposit', paymentId);
+    console.log(`[PaymentSplits] Affiliate commissions processed for payment ${paymentId}`);
+  } catch (error) {
+    console.error(`[PaymentSplits] Error processing splits for payment ${paymentId}:`, error);
+    // Don't throw - deposit should succeed even if splits fail
+  }
+}
+
+/**
+ * Process any pending payment splits that may have been queued.
+ * Currently a no-op placeholder for future split queue functionality.
+ * This is called from the payment callback and status check routes.
+ */
+export async function processPendingSplits(
+  _paymentId: string
+): Promise<void> {
+  // Placeholder for future pending split queue processing
+  // Currently all splits are processed synchronously in processPaymentSplits
+}

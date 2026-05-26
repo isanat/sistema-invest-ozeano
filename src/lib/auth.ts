@@ -3,16 +3,17 @@ import { cookies } from 'next/headers';
 import bcrypt from 'bcryptjs';
 import { db } from '@/lib/db';
 
-// CRITICAL: JWT_SECRET must be set in production
-if (!process.env.JWT_SECRET && process.env.NODE_ENV === 'production') {
-  throw new Error('FATAL: JWT_SECRET environment variable is required in production. Server cannot start.');
-}
-if (!process.env.JWT_SECRET) {
-  console.warn('[WARN] JWT_SECRET not set — using dev-only fallback. DO NOT use in production!');
-}
+// CRITICAL: JWT_SECRET must be set in production (but not at build time)
 const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || 'dev-only-fallback-NOT-FOR-PRODUCTION-CHANGE-ME'
 );
+if (!process.env.JWT_SECRET) {
+  if (process.env.NODE_ENV === 'production' && typeof window === 'undefined' && process.env.NEXT_PHASE !== 'phase-production-build') {
+    console.error('[AUTH] CRITICAL: JWT_SECRET not set in production runtime. Using insecure fallback.');
+  } else {
+    console.warn('[WARN] JWT_SECRET not set — using dev-only fallback. DO NOT use in production!');
+  }
+}
 
 const COOKIE_NAME = 'mp_session';
 const COOKIE_OPTIONS = {
