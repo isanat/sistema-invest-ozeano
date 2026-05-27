@@ -109,3 +109,32 @@ Stage Summary:
 - System env var override issue identified (DATABASE_URL=file:... at system level)
 - For production Vercel: DATABASE_URL env var in Vercel settings must be the Neon URL
 - Landing API confirmed working with Neon PostgreSQL data
+
+---
+Task ID: 1
+Agent: Main Agent
+Task: Fix Coolify access and deploy ActionCash system
+
+Work Log:
+- SSH connected to server 164.68.126.14 with password @!Isa46936698@
+- Reset Coolify admin password using PHP artisan tinker
+- Verified login works with new password: ActionCash2024!
+- Found existing ActionCash project in Coolify (app UUID: v11amozlq06hamd8z3tfve35)
+- Multiple Docker build attempts failed due to:
+  1. bun.lockb not in repo → fixed by using npm install
+  2. npm ci lockfile out of sync → fixed by using npm install
+  3. global-error.tsx Turbopack prerender bug → fixed with --experimental-build-mode compile
+- Successfully built Docker image directly on server with --no-cache
+- Deployed container with Traefik labels for actioncash.app domain
+- Added JWT_SECRET environment variable
+- Site now live at https://actioncash.app returning HTTP 200
+- API verified: 4 traders, 5 plans from Neon PostgreSQL
+
+Stage Summary:
+- Coolify URL: http://164.68.126.14:8000
+- Coolify Email: netlinkassist@gmail.com
+- Coolify Password: ActionCash2024!
+- ActionCash Live: https://actioncash.app (HTTP 200)
+- Database: Neon PostgreSQL (working)
+- Key fix: `next build --webpack --experimental-build-mode compile` bypasses Turbopack prerender bug
+- Container: v11amozlq06hamd8z3tfve35-190308629225 running on coolify network
