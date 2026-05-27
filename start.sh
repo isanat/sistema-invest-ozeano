@@ -17,7 +17,6 @@ cd /app
 if [ -z "${DATABASE_URL:-}" ]; then
   echo "ERROR: DATABASE_URL is not set. The application requires a PostgreSQL database."
   echo "Please set DATABASE_URL in your Coolify environment variables."
-  echo "Example: postgresql://user:password@host:5432/dbname"
   exit 1
 fi
 
@@ -45,4 +44,5 @@ echo "Database schema applied."
 
 echo "[2/2] Starting Next.js server..."
 echo "node version: $(node --version)"
+
 exec npx next start -p 3000 -H 0.0.0.0
