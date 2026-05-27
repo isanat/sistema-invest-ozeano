@@ -46,3 +46,29 @@ Stage Summary:
 - NOWPAYMENTS vars (API_KEY, IPN_SECRET, EMAIL, PASSWORD, 2FA_SECRET) are EMPTY in Coolify - user must fill them in via Coolify dashboard
 - BITGET vars also EMPTY - user must fill in if needed
 - IMPORTANT: Coolify v4.0.0-beta has a bug with encrypted env vars in new deployments - avoid redeploying until fixed
+
+---
+Task ID: 3
+Agent: Main Agent
+Task: Fix /api/admin/upload 404 error and SQLite provider crash in Docker deployment
+
+Work Log:
+- Investigated /api/admin/upload 404 error - the ImageUploadField component called this endpoint but it didn't exist
+- Created /api/admin/upload/route.ts with admin auth, file validation (type/size), and base64 data URL conversion
+- Docker deployment was failing because Prisma schema had provider="sqlite" instead of "postgresql"
+- Root cause: prisma-provider.js script was unreliable during Docker builds (DATABASE_URL not available at build time)
+- Fixed Dockerfile: removed prisma-provider.js call, added grep safety check for provider="postgresql"
+- Fixed start.sh: added runtime safety checks (reject sqlite provider, validate DATABASE_URL protocol)
+- Updated prisma-provider.js: made it NEVER switch to sqlite (only allows postgresql)
+- Pushed all fixes to GitHub (commit d460037)
+- Triggered Coolify deployment via API
+- Deployment succeeded: app status is "running:healthy" at https://actioncash.app
+- Verified: main page returns 200, /api/landing returns 200
+- Environment variables in Coolify confirmed: DATABASE_URL, JWT_SECRET, NOWPAYMENTS_*, CRON_SECRET, NEXT_PUBLIC_APP_URL all set
+
+Stage Summary:
+- /api/admin/upload route created (base64 data URL approach for Docker persistence)
+- SQLite provider issue permanently fixed - hardcoded postgresql in schema, removed dynamic switching from Dockerfile
+- Safety checks added at both build time and runtime to prevent SQLite builds
+- Site live and healthy at https://actioncash.app (200 OK)
+- All env vars confirmed set in Coolify
