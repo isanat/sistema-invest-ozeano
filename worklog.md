@@ -68,3 +68,44 @@ Stage Summary:
 - Landing page and API are correct for ActionCash (NOT mining site)
 - The Neon PostgreSQL for production needs to be seeded when deployed to Vercel
 - CRITICAL: The Vercel DATABASE_URL must point to the correct Neon PostgreSQL, NOT the flashmining database
+
+---
+Task ID: 2
+Agent: main
+Task: Connect to correct Neon PostgreSQL and fix all data
+
+Work Log:
+- User provided correct Neon PostgreSQL URL: postgresql://neondb_owner:npg_8WwtDqMNX6de@ep-polished-salad-apmwyn2w-pooler.c-7.us-east-1.aws.neon.tech/neondb
+- Previous PostgreSQL (flashmining at 164.68.126.14:5435) was from a DIFFERENT project (mining site)
+- Updated .env with correct Neon DATABASE_URL
+- Switched Prisma provider from sqlite to postgresql in schema.prisma
+- Pushed schema to Neon PostgreSQL (already in sync)
+- Discovered Neon had wrong data from copytrade.app:
+  - site_name was "ACTION CASH" (should be "PLATAFORMA ROI")
+  - admin was admin@copytrade.app (should be admin@plataformaroi.com)
+  - 11 affiliate levels (should be 6)
+  - Plans with wrong values (Growth/Elite/VIP had 0% ROI)
+- Fixed ALL data in Neon PostgreSQL:
+  - site_name → PLATAFORMA ROI
+  - admin → admin@plataformaroi.com
+  - Deleted levels 7-11, fixed 1-6 (5/3/1/1/1/2 = 13%)
+  - Recreated 5 plans with correct values (all 3.3% ROI)
+  - Added 24 missing configs (team bonus, transfer, auto-compound, etc.)
+- Found root cause of API errors: system env var DATABASE_URL=file:... was overriding .env
+- Fixed by passing DATABASE_URL explicitly to Next.js process
+- Verified API returns correct ActionCash data from Neon:
+  - siteName: PLATAFORMA ROI
+  - dailyRoiPct: 3.3
+  - plans: 5 (Starter/Growth/Premium/Elite/VIP all 3.3%)
+  - affiliateLevels: 6 (5/3/1/1/1/2 = 13%)
+  - All team bonus configs correct
+  - transferEnabled: True
+  - stats: 2 users, 8 active investments
+- Committed and pushed to GitHub (ba965dc)
+
+Stage Summary:
+- Neon PostgreSQL now has ALL correct ActionCash data
+- The correct Neon URL is in .env
+- System env var override issue identified (DATABASE_URL=file:... at system level)
+- For production Vercel: DATABASE_URL env var in Vercel settings must be the Neon URL
+- Landing API confirmed working with Neon PostgreSQL data
