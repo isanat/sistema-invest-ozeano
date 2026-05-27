@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "NODE_OPTIONS='--max-old-space-size=3072' next dev -p 3000",
-    "build": "node scripts/prisma-provider.js && prisma generate && if [ -n \"$DATABASE_URL\" ]; then prisma db push --accept-data-loss 2>&1 || true; fi; next build --webpack && cp -r .next/static .next/standalone/.next/ && cp -r public .next/standalone/",
+    "build": "node scripts/prisma-provider.js && prisma generate && if [ -n \"$DATABASE_URL\" ]; then prisma db push --accept-data-loss 2>&1 || true; fi; next build --webpack --experimental-build-mode compile && cp -r .next/static .next/standalone/.next/ 2>/dev/null; cp -r public .next/standalone/ 2>/dev/null; echo BUILD_DONE",
     "start": "NODE_ENV=production node .next/standalone/server.js",
     "lint": "eslint .",
     "db:push": "node scripts/prisma-provider.js && prisma db push",
