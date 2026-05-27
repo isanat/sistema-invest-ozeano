@@ -14,6 +14,15 @@ echo "PWD: $(pwd)"
 
 cd /app
 
+# SAFETY CHECK: Verify schema.prisma uses PostgreSQL, NOT SQLite
+if grep -q 'provider = "sqlite"' prisma/schema.prisma 2>/dev/null; then
+  echo "FATAL: prisma/schema.prisma has provider=sqlite! This project requires PostgreSQL."
+  echo "The prisma-provider.js script may have incorrectly switched the provider."
+  echo "Fix: set provider = \"postgresql\" in prisma/schema.prisma and rebuild."
+  exit 1
+fi
+echo "Verified: schema.prisma uses PostgreSQL provider."
+
 if [ -z "${DATABASE_URL:-}" ]; then
   echo "ERROR: DATABASE_URL is not set. The application requires a PostgreSQL database."
   echo "Please set DATABASE_URL in your Coolify environment variables."
@@ -24,6 +33,13 @@ if [ -z "${JWT_SECRET:-}" ]; then
   echo "WARNING: JWT_SECRET is not set. Using insecure fallback."
   echo "Please set JWT_SECRET in your Coolify environment variables for production."
 fi
+
+# Verify DATABASE_URL is a PostgreSQL URL
+case "${DATABASE_URL}" in
+  postgresql://*|postgres://*) echo "DATABASE_URL protocol: PostgreSQL ✓" ;;
+  file://*) echo "FATAL: DATABASE_URL uses file:// protocol (SQLite). This project requires PostgreSQL!"; exit 1 ;;
+  *) echo "WARNING: DATABASE_URL doesn't look like a PostgreSQL URL: ${DATABASE_URL%%\?*}" ;;
+esac
 
 # Apply database schema
 MAX_ATTEMPTS=5

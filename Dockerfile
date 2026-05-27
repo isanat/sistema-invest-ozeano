@@ -1,6 +1,11 @@
 # ============================================================================
 # ActionCash - PLATAFORMA ROI - Production Dockerfile for Coolify
 # ============================================================================
+# IMPORTANT: This project uses PostgreSQL ONLY. Never SQLite.
+# The prisma schema is hardcoded to provider = "postgresql".
+# Do NOT use prisma-provider.js — it causes issues during Docker builds
+# when DATABASE_URL is not available as a build arg.
+# ============================================================================
 
 FROM node:20-alpine AS builder
 
@@ -19,16 +24,22 @@ COPY . .
 # Remove any stale .next cache
 RUN rm -rf .next
 
+# SAFETY CHECK: Verify schema.prisma has provider = "postgresql"
+# This prevents accidental SQLite builds
+RUN grep -q 'provider = "postgresql"' prisma/schema.prisma || \
+    (echo "FATAL: prisma/schema.prisma must have provider=postgresql! Found:" && \
+     grep 'provider =' prisma/schema.prisma && exit 1)
+
 # Install ALL dependencies
 RUN npm install
 
-# Run prisma provider switch and generate client
-RUN node scripts/prisma-provider.js && npx prisma generate
+# Generate Prisma client (schema already has provider = "postgresql")
+# Do NOT run prisma-provider.js — it can incorrectly switch to sqlite
+RUN npx prisma generate
 
 # Build the Next.js application
 # IMPORTANT: Use --webpack to avoid Turbopack bugs
 # IMPORTANT: Use --experimental-build-mode compile to skip prerendering
-# (the global-error page has a useContext bug during static generation)
 RUN npx next build --webpack --experimental-build-mode compile
 
 # Verify build output
