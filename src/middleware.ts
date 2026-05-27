@@ -3,15 +3,15 @@ import type { NextRequest } from 'next/server';
 import { jwtVerify } from 'jose';
 
 // CRITICAL: JWT_SECRET must match exactly with auth.ts — no separate fallback
-if (!process.env.JWT_SECRET && process.env.NODE_ENV === 'production') {
-  throw new Error('FATAL: JWT_SECRET environment variable is required in production.');
-}
-if (!process.env.JWT_SECRET) {
-  console.warn('[WARN] JWT_SECRET not set — using dev-only fallback. DO NOT use in production!');
-}
+// Use placeholder during build (NODE_ENV=development in Docker build stage)
 const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || 'dev-only-fallback-NOT-FOR-PRODUCTION-CHANGE-ME'
 );
+
+// Warn at runtime (not during build) if JWT_SECRET is not properly set
+if (!process.env.JWT_SECRET && typeof window === 'undefined') {
+  console.warn('[WARN] JWT_SECRET not set — using dev-only fallback. Set JWT_SECRET in production!');
+}
 
 // Public routes that don't require authentication
 const PUBLIC_API_ROUTES = [

@@ -1,6 +1,5 @@
-# Build: FORCE_REBUILD_ACTIONCASH_V6
 # ============================================================================
-# ActionCash - PLATAFORMA ROI - Production Dockerfile
+# ActionCash - PLATAFORMA ROI - Production Dockerfile for Coolify
 # ============================================================================
 
 # Force cache invalidation
@@ -14,7 +13,7 @@ WORKDIR /app
 ENV NODE_OPTIONS="--max-old-space-size=4096"
 
 # Override NODE_ENV to ensure devDependencies are installed
-# This is critical - Coolify sets NODE_ENV=production as build arg which skips devDeps
+# Coolify sets NODE_ENV=production as build arg which skips devDeps
 ARG NODE_ENV=development
 ENV NODE_ENV=development
 
@@ -28,8 +27,16 @@ RUN npm install
 COPY prisma ./prisma/
 COPY scripts/prisma-provider.js ./scripts/prisma-provider.js
 
-# Set build-time DATABASE_URL for Prisma (Neon PostgreSQL)
-ENV DATABASE_URL="postgresql://neondb_owner:npg_8WwtDqMNX6de@ep-polished-salad-apmwyn2w-pooler.c-7.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
+# Set build-time DATABASE_URL for Prisma generate only
+# The actual database URL will be provided at runtime via Coolify environment variables
+# prisma generate does NOT connect to the database - it only needs the schema
+# prisma db push (in build script) is conditional: skipped if DATABASE_URL is empty
+ARG DATABASE_URL=""
+ENV DATABASE_URL=${DATABASE_URL}
+
+# Set JWT_SECRET for build (prevents middleware warning)
+ARG JWT_SECRET="build-time-placeholder"
+ENV JWT_SECRET=${JWT_SECRET}
 
 # Switch provider to PostgreSQL and generate Prisma client
 RUN node scripts/prisma-provider.js && npx prisma generate
@@ -41,6 +48,8 @@ COPY . .
 RUN rm -rf .next
 
 # Build the Next.js application
+# The package.json build script uses --webpack --experimental-build-mode compile
+# which avoids Turbopack prerendering bugs
 RUN npm run build
 
 # Verify build output exists
