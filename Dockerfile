@@ -42,9 +42,6 @@ RUN npx prisma generate
 # IMPORTANT: Use --experimental-build-mode compile to skip prerendering
 RUN npx next build --webpack --experimental-build-mode compile
 
-# Verify build output
-RUN ls -la .next/ && echo "Build output verified"
-
 # ============================================================================
 # Production stage
 # ============================================================================
