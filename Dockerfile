@@ -17,35 +17,19 @@ ENV NODE_OPTIONS="--max-old-space-size=4096"
 ARG NODE_ENV=development
 ENV NODE_ENV=development
 
-# Copy package files
-COPY package.json package-lock.json ./
+# Copy ALL source code FIRST (including prisma/schema.prisma with provider = "postgresql")
+COPY . .
+
+# Remove any stale .next cache
+RUN rm -rf .next
 
 # Install ALL dependencies (including devDependencies needed for build)
 RUN npm install
 
-# Copy prisma schema and generate client
-COPY prisma ./prisma/
-COPY scripts/prisma-provider.js ./scripts/prisma-provider.js
-
-# Set build-time DATABASE_URL for Prisma generate only
-# The actual database URL will be provided at runtime via Coolify environment variables
-# prisma generate does NOT connect to the database - it only needs the schema
-# prisma db push (in build script) is conditional: skipped if DATABASE_URL is empty
-ARG DATABASE_URL=""
-ENV DATABASE_URL=${DATABASE_URL}
-
-# Set JWT_SECRET for build (prevents middleware warning)
-ARG JWT_SECRET="build-time-placeholder"
-ENV JWT_SECRET=${JWT_SECRET}
-
-# Switch provider to PostgreSQL and generate Prisma client
+# Generate Prisma client
+# prisma-provider.js will NOT change provider if DATABASE_URL is empty (keeps "postgresql")
+# The schema already has provider = "postgresql" hardcoded
 RUN node scripts/prisma-provider.js && npx prisma generate
-
-# Copy source code
-COPY . .
-
-# Clean any stale .next cache
-RUN rm -rf .next
 
 # Build the Next.js application
 # The package.json build script uses --webpack --experimental-build-mode compile
@@ -86,5 +70,9 @@ EXPOSE 3000
 
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
+
+# Health check for Coolify
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+  CMD curl -f http://localhost:3000/ || exit 1
 
 CMD ["/app/start.sh"]

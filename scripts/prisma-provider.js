@@ -32,13 +32,22 @@ function getDatabaseUrl() {
 function main() {
   const dbUrl = getDatabaseUrl();
   const isPostgres = dbUrl.startsWith('postgresql://') || dbUrl.startsWith('postgres://');
-  const targetProvider = isPostgres ? 'postgresql' : 'sqlite';
 
   let schema = fs.readFileSync(schemaPath, 'utf8');
 
   // Find the provider inside the datasource db block
   const datasourceMatch = schema.match(/datasource\s+db\s*\{[\s\S]*?provider\s*=\s*"(\w+)"/);
   const currentProvider = datasourceMatch ? datasourceMatch[1] : '';
+
+  // CRITICAL: If no DATABASE_URL is found, do NOT change the provider.
+  // This prevents accidentally switching from "postgresql" to "sqlite" during
+  // Docker builds where DATABASE_URL might not be available as a build arg.
+  if (!dbUrl) {
+    console.log(`[prisma-provider] No DATABASE_URL found. Keeping current provider "${currentProvider}".`);
+    return;
+  }
+
+  const targetProvider = isPostgres ? 'postgresql' : 'sqlite';
 
   if (currentProvider === targetProvider) {
     console.log(`[prisma-provider] Provider already set to "${targetProvider}" — no change needed`);
