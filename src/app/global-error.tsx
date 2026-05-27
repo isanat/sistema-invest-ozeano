@@ -1,6 +1,9 @@
-// NOTE: This file must NOT use 'use client' or React hooks (useEffect, etc.)
-// During Next.js prerendering, the React client context is not available,
-// causing "Cannot read properties of null (reading 'useContext')" errors.
+'use client';
+
+// NOTE: This MUST be a Client Component (Next.js requirement for global-error.tsx)
+// However, do NOT use React hooks like useEffect here, as they cause
+// "Cannot read properties of null (reading 'useContext')" during prerendering.
+// The error logging can be done via the error boundary's own mechanism.
 
 export default function GlobalError({
   error,
