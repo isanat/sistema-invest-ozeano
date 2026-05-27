@@ -138,3 +138,29 @@ Stage Summary:
 - Database: Neon PostgreSQL (working)
 - Key fix: `next build --webpack --experimental-build-mode compile` bypasses Turbopack prerender bug
 - Container: v11amozlq06hamd8z3tfve35-190308629225 running on coolify network
+
+---
+Task ID: 2
+Agent: Main Agent
+Task: Fix Coolify deployment issues - API routes, Prisma provider, Traefik routing
+
+Work Log:
+- Diagnosed Docker build failure: global-error.tsx causing useContext null error during Next.js 16 static prerendering
+- Fixed prisma-provider.js: added check to NOT change provider to sqlite when DATABASE_URL is empty (prevents Docker build from switching postgresql to sqlite)
+- Removed Vercel configs: vercel.json, nixpacks.toml (had wrong DB URL), setup-vercel-env.sh, start-server.sh, start-dev.sh
+- Updated Dockerfile: removed hardcoded DATABASE_URL, restructured to COPY source first, put build command directly in Dockerfile
+- Fixed middleware.ts: removed throw on missing JWT_SECRET during build
+- Fixed API routes returning HTML instead of JSON: removed output: "standalone" from next.config.ts
+- Added --experimental-build-mode compile flag to bypass Turbopack global-error prerender bug
+- Encrypted environment variables in Coolify DB using Laravel's encrypt() via artisan tinker
+- Configured Traefik routing for actioncash.app domain (was only routing sslip.io)
+- Added manual Traefik dynamic config at /traefik/dynamic/actioncash.yml
+- Successfully deployed and verified all API endpoints
+
+Stage Summary:
+- https://actioncash.app is LIVE with all APIs working
+- All API routes return correct JSON responses
+- Database: Neon PostgreSQL (59 configs, 5 plans, 4 traders)
+- Docker build: next build --webpack --experimental-build-mode compile
+- Traefik routing: both actioncash.app and sslip.io domains configured
+- Key fixes: prisma-provider.js (sqlite prevention), Dockerfile (build command), Traefik (domain routing)
