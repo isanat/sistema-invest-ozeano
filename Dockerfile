@@ -1,4 +1,4 @@
-# Build: FORCE_REBUILD_ACTIONCASH_V2
+# Build: FORCE_REBUILD_ACTIONCASH_V3
 # ============================================================================
 # ActionCash - PLATAFORMA ROI - Production Dockerfile
 # ============================================================================
@@ -11,10 +11,10 @@ WORKDIR /app
 ENV NODE_OPTIONS="--max-old-space-size=4096"
 
 # Copy package files
-COPY package.json bun.lockb ./
+COPY package.json package-lock.json ./
 
-# Install bun and dependencies
-RUN npm install -g bun && bun install --frozen-lockfile
+# Install dependencies
+RUN npm ci
 
 # Copy prisma schema and generate client
 COPY prisma ./prisma/
@@ -32,8 +32,9 @@ COPY . .
 # Clean any stale .next cache
 RUN rm -rf .next
 
-# Build the Next.js application
-RUN bun run build 2>&1 && echo "BUILD SUCCESS" || (echo "BUILD FAILED" && exit 1)
+# Build the Next.js application (NODE_ENV must NOT be production during build)
+ENV NODE_ENV=development
+RUN npm run build 2>&1 && echo "BUILD SUCCESS" || (echo "BUILD FAILED" && exit 1)
 
 # Verify build output exists
 RUN ls -la .next/ && echo "Build output verified"
