@@ -1,4 +1,4 @@
-# Build: FORCE_REBUILD_ACTIONCASH_V4
+# Build: FORCE_REBUILD_ACTIONCASH_V5
 # ============================================================================
 # ActionCash - PLATAFORMA ROI - Production Dockerfile
 # ============================================================================
@@ -10,10 +10,13 @@ WORKDIR /app
 # Increase Node memory for large builds
 ENV NODE_OPTIONS="--max-old-space-size=4096"
 
+# Override NODE_ENV to ensure devDependencies are installed
+ENV NODE_ENV=development
+
 # Copy package files
 COPY package.json package-lock.json ./
 
-# Install dependencies
+# Install ALL dependencies (including devDependencies needed for build)
 RUN npm install
 
 # Copy prisma schema and generate client
@@ -32,9 +35,8 @@ COPY . .
 # Clean any stale .next cache
 RUN rm -rf .next
 
-# Build the Next.js application (NODE_ENV must NOT be production during build)
-ENV NODE_ENV=development
-RUN npm run build 2>&1 && echo "BUILD SUCCESS" || (echo "BUILD FAILED" && exit 1)
+# Build the Next.js application
+RUN npm run build
 
 # Verify build output exists
 RUN ls -la .next/ && echo "Build output verified"
@@ -52,8 +54,15 @@ ENV NODE_OPTIONS="--max-old-space-size=2048"
 # Install curl for health checks
 RUN apk add --no-cache curl
 
-# Copy standalone output if available, otherwise copy everything
-COPY --from=builder /app ./
+# Copy built application from builder
+COPY --from=builder /app/package.json ./
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/scripts ./scripts
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/start.sh ./start.sh
+COPY --from=builder /app/next.config.ts ./next.config.ts
 
 # Make start.sh executable
 RUN chmod +x /app/start.sh
