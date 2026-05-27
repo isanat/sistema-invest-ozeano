@@ -94,3 +94,25 @@ Stage Summary:
 - Site live and healthy at https://actioncash.app
 - PostgreSQL connection working (5 plans returned from landing API)
 - Env vars: DATABASE_URL, JWT_SECRET, NEXTAUTH_URL, NEXTAUTH_SECRET, NEXT_PUBLIC_APP_URL, NOWPAYMENTS_BASE_URL, NOWPAYMENTS_API_KEY, NOWPAYMENTS_IPN_SECRET, NOWPAYMENTS_EMAIL, NOWPAYMENTS_PASSWORD, NOWPAYMENTS_2FA_SECRET, CRON_SECRET
+
+---
+Task ID: 5
+Agent: Main Agent
+Task: Fix Bad Gateway and switch from Neon PostgreSQL to Coolify's internal PostgreSQL
+
+Work Log:
+- Diagnosed Bad Gateway: Traefik dynamic config pointed to old container name, new container had different name
+- Fixed Traefik routing: changed service reference to use @docker suffix (auto-discovers from Docker labels)
+- Switched DATABASE_URL from Neon to Coolify internal PostgreSQL:
+  - Internal: postgres://actioncash:...@im5bgzdog99g2xbxnl7rx2x5:5432/actioncash
+  - Updated via Coolify tinker (deleted old encrypted, created new plain text)
+- Stopped old container to force Coolify to deploy new one with updated DATABASE_URL
+- New container (v11amozlq06hamd8z3tfve35-235218090895) running with Coolify PostgreSQL
+- Prisma db push applied schema automatically on startup
+- Site verified: https://actioncash.app returns 200, /api/landing returns 5 plans from Coolify PostgreSQL
+
+Stage Summary:
+- Database switched from Neon to Coolify's internal PostgreSQL ✅
+- Traefik routing fixed with @docker suffix (survives container name changes) ✅
+- Site live and healthy at https://actioncash.app ✅
+- All 12 env vars working with plain text values (no encryption) ✅
