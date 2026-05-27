@@ -1,4 +1,4 @@
-# Build: FORCE_REBUILD_ACTIONCASH_V3
+# Build: FORCE_REBUILD_ACTIONCASH_V4
 # ============================================================================
 # ActionCash - PLATAFORMA ROI - Production Dockerfile
 # ============================================================================
@@ -14,7 +14,7 @@ ENV NODE_OPTIONS="--max-old-space-size=4096"
 COPY package.json package-lock.json ./
 
 # Install dependencies
-RUN npm ci
+RUN npm install
 
 # Copy prisma schema and generate client
 COPY prisma ./prisma/
