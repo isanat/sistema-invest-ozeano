@@ -1,34 +1,17 @@
 FROM node:20-alpine
-
-# Install openssl for Prisma
 RUN apk add --no-cache openssl libc6-compat
-
 WORKDIR /app
-
-# Copy package files
-COPY package.json package-lock.json* ./
-
-# Install dependencies
+COPY package.json package-lock.json ./
 RUN npm ci
-
-# Copy source code
 COPY . .
-
-# Set DATABASE_URL for build time (external URL)
 ENV DATABASE_URL="postgres://actioncash:Rlb8TaB3hI6yz4s7egXqgBg5ieDO4jkzHmy209wzMGBGlccD2B3kABy9jtaH4Uen@164.68.126.14:5436/actioncash"
-
-# Switch to PostgreSQL provider and generate Prisma client
-RUN node scripts/prisma-provider.js && npx prisma generate
-
-# Build Next.js
-RUN npx next build
-
-# Runtime environment
+RUN node scripts/prisma-provider.js
+RUN npx prisma generate
+RUN npm run build
+ENV DATABASE_URL="postgres://actioncash:Rlb8TaB3hI6yz4s7egXqgBg5ieDO4jkzHmy209wzMGBGlccD2B3kABy9jtaH4Uen@im5bgzdog99g2xbxnl7rx2x5:5432/actioncash"
+ENV JWT_SECRET="a7f3e9b1c4d6f8a2e5b7c9d1f3a5e7b9c2d4f6a8e1b3c5d7f9a2e4b6c8d1f3a5"
 ENV NODE_ENV=production
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
-
 EXPOSE 3000
-
-# Start with next start (not standalone)
-CMD ["npx", "next", "start"]
+CMD ["npm", "run", "start"]
