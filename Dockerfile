@@ -2,9 +2,6 @@
 # ActionCash - PLATAFORMA ROI - Production Dockerfile for Coolify
 # ============================================================================
 
-# Force cache invalidation
-ARG CACHEBUST=1
-
 FROM node:20-alpine AS builder
 
 WORKDIR /app
@@ -13,30 +10,28 @@ WORKDIR /app
 ENV NODE_OPTIONS="--max-old-space-size=4096"
 
 # Override NODE_ENV to ensure devDependencies are installed
-# Coolify sets NODE_ENV=production as build arg which skips devDeps
 ARG NODE_ENV=development
 ENV NODE_ENV=development
 
-# Copy ALL source code FIRST (including prisma/schema.prisma with provider = "postgresql")
+# Copy ALL source code FIRST
 COPY . .
 
 # Remove any stale .next cache
 RUN rm -rf .next
 
-# Install ALL dependencies (including devDependencies needed for build)
+# Install ALL dependencies
 RUN npm install
 
-# Generate Prisma client
-# prisma-provider.js will NOT change provider if DATABASE_URL is empty (keeps "postgresql")
-# The schema already has provider = "postgresql" hardcoded
+# Run prisma provider switch and generate client
 RUN node scripts/prisma-provider.js && npx prisma generate
 
 # Build the Next.js application
-# The package.json build script uses --webpack --experimental-build-mode compile
-# which avoids Turbopack prerendering bugs
-RUN npm run build
+# IMPORTANT: Use --webpack to avoid Turbopack bugs
+# IMPORTANT: Use --experimental-build-mode compile to skip prerendering
+# (the global-error page has a useContext bug during static generation)
+RUN npx next build --webpack --experimental-build-mode compile
 
-# Verify build output exists
+# Verify build output
 RUN ls -la .next/ && echo "Build output verified"
 
 # ============================================================================
@@ -46,14 +41,13 @@ FROM node:20-alpine AS runner
 
 WORKDIR /app
 
-# Set NODE_ENV to production for runtime
 ENV NODE_ENV=production
 ENV NODE_OPTIONS="--max-old-space-size=2048"
 
 # Install curl for health checks
 RUN apk add --no-cache curl
 
-# Copy only necessary files from builder
+# Copy files from builder
 COPY --from=builder /app/package.json ./
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/node_modules ./node_modules
@@ -63,7 +57,6 @@ COPY --from=builder /app/public ./public
 COPY --from=builder /app/start.sh ./start.sh
 COPY --from=builder /app/next.config.ts ./next.config.ts
 
-# Make start.sh executable
 RUN chmod +x /app/start.sh
 
 EXPOSE 3000
@@ -71,7 +64,7 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-# Health check for Coolify
+# Health check - test a simple API endpoint
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
   CMD curl -f http://localhost:3000/ || exit 1
 
