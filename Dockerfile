@@ -1,7 +1,10 @@
-# Build: FORCE_REBUILD_ACTIONCASH_V5
+# Build: FORCE_REBUILD_ACTIONCASH_V6
 # ============================================================================
 # ActionCash - PLATAFORMA ROI - Production Dockerfile
 # ============================================================================
+
+# Force cache invalidation
+ARG CACHEBUST=1
 
 FROM node:20-alpine AS builder
 
@@ -11,6 +14,8 @@ WORKDIR /app
 ENV NODE_OPTIONS="--max-old-space-size=4096"
 
 # Override NODE_ENV to ensure devDependencies are installed
+# This is critical - Coolify sets NODE_ENV=production as build arg which skips devDeps
+ARG NODE_ENV=development
 ENV NODE_ENV=development
 
 # Copy package files
@@ -48,13 +53,14 @@ FROM node:20-alpine AS runner
 
 WORKDIR /app
 
+# Set NODE_ENV to production for runtime
 ENV NODE_ENV=production
 ENV NODE_OPTIONS="--max-old-space-size=2048"
 
 # Install curl for health checks
 RUN apk add --no-cache curl
 
-# Copy built application from builder
+# Copy only necessary files from builder
 COPY --from=builder /app/package.json ./
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/node_modules ./node_modules
