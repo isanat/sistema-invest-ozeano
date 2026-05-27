@@ -1,6 +1,6 @@
-'use client';
-
-import { useEffect } from 'react';
+// NOTE: This file must NOT use 'use client' or React hooks (useEffect, etc.)
+// During Next.js prerendering, the React client context is not available,
+// causing "Cannot read properties of null (reading 'useContext')" errors.
 
 export default function GlobalError({
   error,
@@ -9,10 +9,6 @@ export default function GlobalError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
-  useEffect(() => {
-    console.error('[GlobalErrorBoundary]', error);
-  }, [error]);
-
   // global-error.tsx must define its own <html> and <body> tags
   // since the root layout is not rendered when this boundary catches
   return (
