@@ -65,8 +65,8 @@ db/
 dev.log
 server.log
 
-# Uploads
-upload/
+# Uploads (local file uploads directory, NOT the API route)
+/public/upload/
 
 # Research
 nowpayments-api-research.md
