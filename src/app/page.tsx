@@ -2481,14 +2481,12 @@ export default function PlataformaROI() {
         <nav className="fixed top-0 left-0 right-0 z-50 glass-card border-b border-white/5">
           <div className="max-w-7xl mx-auto flex items-center justify-between px-3 sm:px-6 py-2.5 sm:py-3">
             <div className="flex items-center gap-2 sm:gap-2.5">
-              <div className="relative">
-                <TrendingUp className="h-5 w-5 sm:h-7 sm:w-7 text-emerald-400" />
-                <div className="absolute -top-1 -right-1 w-2.5 h-2.5 sm:w-3 sm:h-3 bg-emerald-500 rounded-full animate-pulse" />
-              </div>
-              <span className="text-base sm:text-xl font-bold bg-gradient-to-r from-emerald-400 to-green-400 bg-clip-text text-transparent">
-                {landingConfig?.siteName || 'PLATAFORMA ROI'}
-              </span>
-              <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 text-[9px] sm:text-[10px] px-1 sm:px-1.5 py-0 hidden sm:inline-flex">{t('landing.badges.live')}</Badge>
+              <img
+                src="/logo.png"
+                alt="Logo"
+                className="h-9 sm:h-10 w-auto object-contain"
+                draggable={false}
+              />
             </div>
             <div className="flex items-center gap-1.5 sm:gap-3">
               <DropdownMenu>
@@ -3253,19 +3251,6 @@ export default function PlataformaROI() {
             <Button variant="ghost" size="icon" className="lg:hidden text-zinc-400 hover:text-white hover:bg-white/[0.05]" onClick={() => setSidebarOpen(!sidebarOpen)}>
               <Menu className="h-5 w-5" />
             </Button>
-            <div className="flex items-center gap-2.5">
-              <div className="relative">
-                <Bot className="h-6 w-6 text-emerald-400" />
-                {/* Animated live dot */}
-                <span className="absolute -top-0.5 -right-0.5 flex h-2.5 w-2.5">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
-                </span>
-              </div>
-              <span className="font-bold text-lg hidden sm:inline bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">
-                {isAdmin ? (adminViewMode === 'admin' ? 'ADMIN PANEL' : 'PLATAFORMA ROI') : 'PLATAFORMA ROI'}
-              </span>
-            </div>
             {/* Admin View Mode Toggle */}
             {isAdmin && (
               <div className="flex items-center bg-white/[0.04] backdrop-blur-sm rounded-lg p-0.5 border border-white/[0.06]">
@@ -3429,6 +3414,15 @@ export default function PlataformaROI() {
       <div className="flex-1 flex">
         {/* DESKTOP SIDEBAR */}
         <aside className="hidden lg:flex w-60 bg-[#0a0a0f]/90 backdrop-blur-xl border-r border-white/[0.06] flex-col">
+          {/* Logo */}
+          <div className="flex items-center px-4 py-4 border-b border-white/[0.06]">
+            <img
+              src="/logo.png"
+              alt="Logo"
+              className="h-11 w-auto object-contain"
+              draggable={false}
+            />
+          </div>
           {/* Quick Stats at top */}
           {(!isAdmin || adminViewMode === 'investor') && (
             <div className="p-4 border-b border-white/[0.06]">
@@ -3501,18 +3495,12 @@ export default function PlataformaROI() {
                 {/* User Profile at Top */}
                 <div className="p-4 border-b border-white/[0.06]">
                   <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2.5">
-                      <div className="relative">
-                        <Bot className="h-6 w-6 text-emerald-400" />
-                        <span className="absolute -top-0.5 -right-0.5 flex h-2 w-2">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                          <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                        </span>
-                      </div>
-                      <span className="font-bold bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">
-                        {isAdmin ? (adminViewMode === 'admin' ? 'ADMIN' : 'PLATAFORMA ROI') : 'PLATAFORMA ROI'}
-                      </span>
-                    </div>
+                    <img
+                      src="/logo.png"
+                      alt="Logo"
+                      className="h-10 w-auto object-contain"
+                      draggable={false}
+                    />
                     <Button variant="ghost" size="icon" className="text-zinc-400 hover:text-white hover:bg-white/[0.05] h-8 w-8" onClick={() => setSidebarOpen(false)}><X className="h-4 w-4" /></Button>
                   </div>
                   {(!isAdmin || adminViewMode === 'investor') && (

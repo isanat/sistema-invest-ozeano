@@ -34,7 +34,6 @@ import {
   ChevronRight,
   Wallet,
   Zap,
-  Hexagon,
   Activity,
   CreditCard,
 } from 'lucide-react'
@@ -126,19 +125,13 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <div className="flex flex-col h-full bg-[#060a14]">
       {/* Logo */}
-      <div className="flex items-center gap-3 px-5 py-5 border-b border-border/10">
-        <div className="relative">
-          <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-emerald-500 to-cyan-500 flex items-center justify-center shadow-[0_0_20px_rgba(16,185,129,0.3)]">
-            <Hexagon className="h-5 w-5 text-white" />
-          </div>
-          <div className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.6)]" />
-        </div>
-        <div>
-          <span className="font-bold text-base tracking-tight bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">
-            PLATAFORMA
-          </span>
-          <span className="font-bold text-base tracking-tight text-foreground ml-1">ROI</span>
-        </div>
+      <div className="flex items-center px-5 py-5 border-b border-border/10">
+        <img
+          src="/logo.png"
+          alt="Logo"
+          className="h-12 w-auto object-contain"
+          draggable={false}
+        />
       </div>
 
       {/* User Info */}
@@ -315,11 +308,13 @@ export function DashboardSidebar() {
             <SidebarContent onNavigate={() => setMobileOpen(false)} />
           </SheetContent>
         </Sheet>
-        <div className="flex items-center gap-2 ml-3">
-          <div className="h-6 w-6 rounded-lg bg-gradient-to-br from-emerald-500 to-cyan-500 flex items-center justify-center">
-            <Hexagon className="h-3.5 w-3.5 text-white" />
-          </div>
-          <span className="font-bold text-sm bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">PLATAFORMA ROI</span>
+        <div className="flex items-center ml-3">
+          <img
+            src="/logo.png"
+            alt="Logo"
+            className="h-8 w-auto object-contain"
+            draggable={false}
+          />
         </div>
       </div>
 

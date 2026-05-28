@@ -86,11 +86,13 @@ function Navbar() {
     }`}>
       <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
         {/* Logo */}
-        <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-emerald-500 to-cyan-500 flex items-center justify-center shadow-lg shadow-emerald-500/20">
-            <TrendingUp className="h-5 w-5 text-white" />
-          </div>
-          <span className="font-black text-lg gradient-text-emerald tracking-tight">PLATAFORMA ROI</span>
+        <div className="flex items-center">
+          <img
+            src="/logo.png"
+            alt="Logo"
+            className="h-9 w-auto object-contain"
+            draggable={false}
+          />
         </div>
 
         {/* Desktop Nav Links */}

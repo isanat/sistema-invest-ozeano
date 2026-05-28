@@ -38,11 +38,13 @@ export function Footer() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-10 mb-12">
             {/* Brand */}
             <div className="md:col-span-1">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-emerald-500 to-cyan-500 flex items-center justify-center shadow-lg shadow-emerald-500/20">
-                  <TrendingUp className="h-5 w-5 text-white" />
-                </div>
-                <span className="font-black text-lg gradient-text-emerald">{t('landing.footer.brand')}</span>
+              <div className="flex items-center mb-4">
+                <img
+                  src="/logo.png"
+                  alt="Logo"
+                  className="h-10 w-auto object-contain"
+                  draggable={false}
+                />
               </div>
               <p className="text-sm text-muted-foreground leading-relaxed">
                 {t('landing.footer.description')}
