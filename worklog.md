@@ -71,3 +71,25 @@ Stage Summary:
 - Idempotency: `@@unique([investmentId, periodIndex])` prevents double distribution
 - Catch-up: If cron was down, all missed periods are distributed on next run
 - Investment auto-completes after all `durationDays` periods are distributed
+
+---
+Task ID: 2
+Agent: main
+Task: Fix profile page issues - password change, PIX visibility, Team Bonus Ranks, investment cards
+
+Work Log:
+- Analyzed user screenshots showing profile page with missing password change, visible PIX when disabled, always-visible Team Bonus Ranks
+- Added "Alterar Senha" button to profile card (Key icon + button that opens existing changePasswordDialog)
+- Made Chave PIX card conditional on siteConfig.hasPix — only shows when PIX is enabled in admin
+- Created new SystemConfig key `team_bonus_ranks_visible` with admin toggle
+- Updated /api/site/config to return teamBonusRanksVisible flag
+- Added teamBonusRanksVisible to siteConfig state in page.tsx
+- Made Team Bonus Ranks card conditional on siteConfig.teamBonusRanksVisible
+- Added admin config UI for `team_bonus_ranks_visible` toggle
+- Improved Active Investments cards: added Investido label, Próx. ROI countdown, ROI total, Voucher badge, 4-column grid layout
+
+Stage Summary:
+- Profile now has "Alterar Senha" button that opens the existing password change dialog
+- PIX key field hidden when PIX is disabled in admin settings
+- Team Bonus Ranks card hidden when `team_bonus_ranks_visible` config is false
+- Investment cards now show: Investido, ROI/dia, Earned, Próx. ROI (24h countdown), ROI total, Voucher badge

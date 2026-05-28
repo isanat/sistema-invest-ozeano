@@ -27,6 +27,7 @@ export async function GET() {
       'site_favicon',
       'usdt_brl_rate',
       'maintenance_mode',
+      'team_bonus_ranks_visible',
     ];
 
     const configs = await db.systemConfig.findMany({
@@ -64,6 +65,7 @@ export async function GET() {
       siteFavicon: configMap.site_favicon || '',
       usdtBrlRate: Number(configMap.usdt_brl_rate) || 5.50,
       maintenanceMode: configMap.maintenance_mode === 'true',
+      teamBonusRanksVisible: configMap.team_bonus_ranks_visible === 'true',
     });
   } catch (error) {
     return handleApiError(error);

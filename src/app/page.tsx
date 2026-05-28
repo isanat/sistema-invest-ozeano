@@ -33,7 +33,7 @@ import {
   Trophy, Target, Crown, Star, Share2, Medal, Award,
   Info, MessageSquare, Ticket, LineChart, Calculator,
   Lock, Image, Upload, ImagePlus,
-  Calendar, Gem, LogIn,
+  Calendar, Gem, LogIn, Key,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -398,6 +398,8 @@ const CONFIG_LABELS: Record<string, {
   affiliate_daily_cap_usd: { label: 'Cap Diário Afiliado', description: 'Cap diário de comissões em USDT (0 = sem limite)', type: 'number', unit: 'USDT' },
   // NowPayments
   nowpayments_enabled: { label: 'NowPayments Habilitado', description: 'Ativar integração com NowPayments para depósitos automáticos', type: 'boolean' },
+  // Team Bonus
+  team_bonus_ranks_visible: { label: 'Ranks Visíveis', description: 'Mostrar card de Team Bonus Ranks no perfil de afiliados', type: 'boolean' },
 };
 
 // Keys hidden from the generic config list (managed via dedicated UI sections)
@@ -597,6 +599,7 @@ export default function PlataformaROI() {
     minDepositUsdt: number; maxDepositUsdt: number;
     minWithdrawalUsdt: number; maxWithdrawalUsdt: number; withdrawalFeePct: number;
     siteName: string;
+    teamBonusRanksVisible: boolean;
   }>({
     hasPix: false, hasUsdt: false,
     manualDepositEnabled: false, nowpaymentsEnabled: false,
@@ -604,6 +607,7 @@ export default function PlataformaROI() {
     minDepositUsdt: 5, maxDepositUsdt: 100000,
     minWithdrawalUsdt: 5, maxWithdrawalUsdt: 50000, withdrawalFeePct: 5,
     siteName: 'PLATAFORMA ROI',
+    teamBonusRanksVisible: false,
   });
 
   // Admin Data
@@ -848,6 +852,7 @@ export default function PlataformaROI() {
             maxWithdrawalUsdt: data.maxWithdrawalUsdt ?? 50000,
             withdrawalFeePct: data.withdrawalFeePct ?? 0,
             siteName: data.siteName ?? 'PLATAFORMA ROI',
+            teamBonusRanksVisible: data.teamBonusRanksVisible ?? false,
           }));
         }
       })
@@ -4029,6 +4034,20 @@ export default function PlataformaROI() {
                               const baseWinRate = parseFloat((r.plan as any)?.winRate || r.plan?.dailyRoiPct || '0');
                               const currentWR = liveWinRates[idx] || baseWinRate;
                               const teamBonus = d(r.teamBonusPct);
+                              const MS_PER_DAY = 24 * 60 * 60 * 1000;
+                              const invStart = new Date(r.startDate).getTime();
+                              const invEnd = new Date(r.endDate).getTime();
+                              const nowMs = Date.now();
+                              const daysElapsed = Math.floor((nowMs - invStart) / MS_PER_DAY);
+                              const durationDays = r.plan?.durationDays || Math.ceil((invEnd - invStart) / MS_PER_DAY);
+                              const progress = Math.min(100, Math.max(0, ((nowMs - invStart) / (invEnd - invStart)) * 100));
+                              // Next ROI countdown (24h per investment model)
+                              const nextPeriod = (r.distributedPeriods || 0) + 1;
+                              const nextRoiMs = invStart + nextPeriod * MS_PER_DAY;
+                              const msUntilRoi = Math.max(0, nextRoiMs - nowMs);
+                              const hoursUntilRoi = Math.floor(msUntilRoi / (1000 * 60 * 60));
+                              const minsUntilRoi = Math.floor((msUntilRoi % (1000 * 60 * 60)) / (1000 * 60));
+                              const totalRoiExpected = d(r.totalRoi);
                               return (
                                 <div key={r.id} className="glass-card rounded-xl relative overflow-hidden stat-card-hover">
                                   {/* Animated top indicator bar */}
@@ -4048,7 +4067,7 @@ export default function PlataformaROI() {
                                         </div>
                                         <div className="min-w-0">
                                           <div className="text-sm font-semibold truncate">{r.plan?.name || t('plans.plan')}</div>
-                                          <div className="flex items-center gap-2 mt-0.5">
+                                          <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                                             <Badge className="bg-emerald-500/15 text-emerald-400 border-emerald-500/25 text-[10px]" variant="outline">
                                               {t('status.active')}
                                             </Badge>
@@ -4057,14 +4076,19 @@ export default function PlataformaROI() {
                                                 +{teamBonus}% bônus
                                               </Badge>
                                             )}
+                                            {r.source === 'voucher' && (
+                                              <Badge className="bg-amber-500/15 text-amber-400 border-amber-500/25 text-[10px]" variant="outline">
+                                                Voucher
+                                              </Badge>
+                                            )}
                                           </div>
                                         </div>
                                       </div>
 
                                       {/* Key Metrics */}
-                                      <div className="grid grid-cols-3 gap-2 w-full sm:w-auto">
+                                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 w-full sm:w-auto">
                                         <div className="bg-white/[0.03] rounded-lg p-2 text-center border border-white/[0.04]">
-                                          <div className="text-[10px] text-zinc-500">Valor</div>
+                                          <div className="text-[10px] text-zinc-500">Investido</div>
                                           <div className="text-xs font-semibold text-white font-mono">${d(r.amount).toFixed(2)}</div>
                                         </div>
                                         <div className="bg-white/[0.03] rounded-lg p-2 text-center border border-white/[0.04]">
@@ -4075,6 +4099,10 @@ export default function PlataformaROI() {
                                           <div className="text-[10px] text-zinc-500">{t('trading.earned')}</div>
                                           <div className="text-xs font-semibold text-cyan-400 font-mono">+${(rentalAccumulatedEarnings[idx] || 0).toFixed(2)}</div>
                                         </div>
+                                        <div className="bg-white/[0.03] rounded-lg p-2 text-center border border-white/[0.04]">
+                                          <div className="text-[10px] text-zinc-500">Próx. ROI</div>
+                                          <div className="text-xs font-semibold text-amber-400 font-mono">{hoursUntilRoi}h{minsUntilRoi}m</div>
+                                        </div>
                                       </div>
                                     </div>
 
@@ -4082,25 +4110,15 @@ export default function PlataformaROI() {
                                     <div className="mt-3">
                                       <div className="flex items-center justify-between text-[10px] text-zinc-500 mb-1">
                                         <span>{fmtDate(r.startDate)}</span>
-                                        <span>{(() => {
-                                          const start = new Date(r.startDate).getTime();
-                                          const end = new Date(r.endDate).getTime();
-                                          const now = Date.now();
-                                          const daysElapsed = Math.floor((now - start) / (1000 * 60 * 60 * 24));
-                                          return `${daysElapsed}d / ${r.plan?.durationDays || '?'}d`;
-                                        })()}</span>
+                                        <span className="text-zinc-400">
+                                          {daysElapsed}d / {durationDays}d · ROI total: ${totalRoiExpected.toFixed(2)}
+                                        </span>
                                         <span>{fmtDate(r.endDate)}</span>
                                       </div>
                                       <div className="w-full bg-white/[0.04] rounded-full h-1.5 overflow-hidden">
-                                        {(() => {
-                                          const start = new Date(r.startDate).getTime();
-                                          const end = new Date(r.endDate).getTime();
-                                          const now = Date.now();
-                                          const progress = Math.min(100, Math.max(0, ((now - start) / (end - start)) * 100));
-                                          return <div className="bg-gradient-to-r from-emerald-500 to-cyan-400 h-1.5 rounded-full transition-all duration-1000 relative overflow-hidden" style={{ width: `${progress}%` }}>
-                                            <div className="animate-shimmer absolute inset-0" />
-                                          </div>;
-                                        })()}
+                                        <div className="bg-gradient-to-r from-emerald-500 to-cyan-400 h-1.5 rounded-full transition-all duration-1000 relative overflow-hidden" style={{ width: `${progress}%` }}>
+                                          <div className="animate-shimmer absolute inset-0" />
+                                        </div>
                                       </div>
                                     </div>
                                   </div>
@@ -5638,6 +5656,7 @@ export default function PlataformaROI() {
                         </motion.div>
 
                         {/* ═══════════════ 2. TEAM BONUS RANKS VISUALIZATION ═══════════════ */}
+                        {siteConfig.teamBonusRanksVisible && (
                         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
                           <div className="glass-card gradient-border rounded-2xl p-5 sm:p-6">
                             <div className="flex items-center gap-2 mb-5">
@@ -5731,6 +5750,7 @@ export default function PlataformaROI() {
                             )}
                           </div>
                         </motion.div>
+                        )}
 
                         {/* ═══════════════ 2.5 BÔNUS DE EQUIPE (AC-09/10/11) ═══════════════ */}
                         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }}>
@@ -6551,6 +6571,7 @@ export default function PlataformaROI() {
                   <div className="space-y-6">
                     <h2 className="text-xl sm:text-2xl font-bold">{t('profile.title')}</h2>
                     <div className="grid lg:grid-cols-2 gap-6">
+                      {/* Card 1: Dados Pessoais + Trocar Senha */}
                       <Card className="bg-zinc-900 border-zinc-800">
                         <CardHeader><CardTitle>{t('profile.title')}</CardTitle></CardHeader>
                         <CardContent>
@@ -6558,11 +6579,17 @@ export default function PlataformaROI() {
                             <div><Label className="text-zinc-400">{t('profile.name')}</Label><Input name="name" defaultValue={user.name} required className="bg-zinc-800 border-zinc-700 mt-1" /></div>
                             <div><Label className="text-zinc-400">{t('profile.email')}</Label><Input value={user.email} disabled className="bg-zinc-800 border-zinc-700 mt-1 text-zinc-500" /></div>
                             <div><Label className="text-zinc-400">{t('admin.role')}</Label><Input value={user.role === 'admin' ? t('admin.admin') : t('admin.user')} disabled className="bg-zinc-800 border-zinc-700 mt-1 text-zinc-500" /></div>
-                            <Button type="submit" className="bg-emerald-600 hover:bg-cyan-700">{t('profile.save')}</Button>
+                            <div className="flex flex-col sm:flex-row gap-3">
+                              <Button type="submit" className="bg-emerald-600 hover:bg-cyan-700 flex-1">{t('profile.save')}</Button>
+                              <Button type="button" variant="outline" className="border-zinc-700 flex-1" onClick={() => setChangePasswordDialog(true)}>
+                                <Key className="h-4 w-4 mr-2" /> {t('profile.changePassword')}
+                              </Button>
+                            </div>
                           </form>
                         </CardContent>
                       </Card>
                       <div className="space-y-6">
+                        {/* Wallet USDT — sempre mostrar */}
                         <Card className="bg-zinc-900 border-zinc-800">
                           <CardHeader><CardTitle>{t('profile.walletAddress')}</CardTitle></CardHeader>
                           <CardContent>
@@ -6572,15 +6599,18 @@ export default function PlataformaROI() {
                             </form>
                           </CardContent>
                         </Card>
-                        <Card className="bg-zinc-900 border-zinc-800">
-                          <CardHeader><CardTitle>{t('profile.pixKey')}</CardTitle></CardHeader>
-                          <CardContent>
-                            <form onSubmit={handleProfileUpdate} className="space-y-4">
-                              <div><Label className="text-zinc-400">{t('profile.pixKey')}</Label><Input name="pixKey" defaultValue={user.pixKey || ''} className="bg-zinc-800 border-zinc-700 mt-1" placeholder={t('profile.pixKeyPlaceholder')} /></div>
-                              <Button type="submit" variant="outline" className="border-zinc-700">{t('profile.save')}</Button>
-                            </form>
-                          </CardContent>
-                        </Card>
+                        {/* Chave PIX — só mostrar se PIX estiver ativo no admin */}
+                        {siteConfig.hasPix && (
+                          <Card className="bg-zinc-900 border-zinc-800">
+                            <CardHeader><CardTitle>{t('profile.pixKey')}</CardTitle></CardHeader>
+                            <CardContent>
+                              <form onSubmit={handleProfileUpdate} className="space-y-4">
+                                <div><Label className="text-zinc-400">{t('profile.pixKey')}</Label><Input name="pixKey" defaultValue={user.pixKey || ''} className="bg-zinc-800 border-zinc-700 mt-1" placeholder={t('profile.pixKeyPlaceholder')} /></div>
+                                <Button type="submit" variant="outline" className="border-zinc-700">{t('profile.save')}</Button>
+                              </form>
+                            </CardContent>
+                          </Card>
+                        )}
                         <Card className="bg-zinc-900 border-zinc-800">
                           <CardHeader><CardTitle>{t('admin.overview')}</CardTitle></CardHeader>
                           <CardContent className="space-y-2 text-sm">

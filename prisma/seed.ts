@@ -344,6 +344,7 @@ async function main() {
     { key: 'team_bonus_daymond_generates_commissions', value: 'false', type: 'boolean', description: 'Se o pacote Daymond gera comissões de afiliado para uplines', category: 'team_bonus', isActive: true },
     { key: 'team_bonus_daily_cap_usd', value: '0', type: 'number', description: 'Limite diário total de bônus de equipo (0 = sem limite)', category: 'team_bonus', isActive: true },
     { key: 'team_bonus_max_depth', value: '6', type: 'number', description: 'Profundidade máxima de referidos para cálculo de capital de equipo', category: 'team_bonus', isActive: true },
+    { key: 'team_bonus_ranks_visible', value: 'true', type: 'boolean', description: 'Mostrar card de Team Bonus Ranks no perfil de afiliados', category: 'team_bonus', isActive: true },
   ];
 
   for (const config of configs) {
