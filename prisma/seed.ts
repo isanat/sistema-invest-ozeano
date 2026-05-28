@@ -9,10 +9,10 @@ async function main() {
   // ============================================================================
   // 1. Create Admin User
   // ============================================================================
-  const adminPasswordHash = await bcrypt.hash('Admin@2026!', 12);
+  const adminPasswordHash = bcrypt.hashSync('Admin@2026!', 12);
   const admin = await prisma.user.upsert({
     where: { email: 'admin@plataformaroi.com' },
-    update: {},
+    update: { password: adminPasswordHash },
     create: {
       email: 'admin@plataformaroi.com',
       password: adminPasswordHash,
@@ -36,10 +36,10 @@ async function main() {
   // ============================================================================
   // 2. Create Test User
   // ============================================================================
-  const userPasswordHash = await bcrypt.hash('User@2026!', 12);
+  const userPasswordHash = bcrypt.hashSync('User@2026!', 12);
   const testUser = await prisma.user.upsert({
     where: { email: 'user@test.com' },
-    update: {},
+    update: { password: userPasswordHash },
     create: {
       email: 'user@test.com',
       password: userPasswordHash,
