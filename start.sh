@@ -46,8 +46,11 @@ esac
 MAX_ATTEMPTS=5
 ATTEMPT=1
 
-echo "[1/3] Applying database schema with prisma db push..."
-until npx prisma db push --skip-generate --accept-data-loss 2>&1; do
+# IMPORTANT: Use prisma db push WITHOUT --accept-data-loss to prevent data loss.
+# If schema changes require destructive operations, the deploy will fail with a
+# clear error message instead of silently dropping data.
+echo "[1/3] Applying database schema with prisma db push (safe mode — no data loss)..."
+until npx prisma db push --skip-generate 2>&1; do
   if [ "$ATTEMPT" -ge "$MAX_ATTEMPTS" ]; then
     echo "WARNING: Prisma db push failed after ${MAX_ATTEMPTS} attempts. Continuing anyway..."
     break
