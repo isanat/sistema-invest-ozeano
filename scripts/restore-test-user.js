@@ -122,7 +122,7 @@ async function main() {
     const configCount = await tx.systemConfig.count();
     if (configCount === 0) {
       const configs = [
-        { key: 'site_name', value: 'PLATAFORMA ROI', type: 'string', description: 'Nome do site', category: 'general', isActive: true },
+        { key: 'site_name', value: 'ActionCash', type: 'string', description: 'Nome do site', category: 'general', isActive: true },
         { key: 'has_pix', value: 'false', type: 'boolean', description: 'Ativar PIX', category: 'deposit', isActive: true },
         { key: 'has_usdt', value: 'true', type: 'boolean', description: 'Ativar USDT', category: 'deposit', isActive: true },
         { key: 'daily_roi_pct', value: '3.3', type: 'number', description: 'ROI diário (%)', category: 'trading', isActive: true },

@@ -58,7 +58,7 @@ export async function GET() {
       withdrawalFeePct: Number(configMap.withdrawal_fee_pct) || 0,
       withdrawalIntervalHours: Number(configMap.withdrawal_interval_hours) || 0,
       // Site settings
-      siteName: configMap.site_name || 'PLATAFORMA ROI',
+      siteName: configMap.site_name || 'ActionCash',
       hasLogo: !!configMap.site_logo,
       hasFavicon: !!configMap.site_favicon,
       siteLogo: configMap.site_logo || '',

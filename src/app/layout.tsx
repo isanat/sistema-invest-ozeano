@@ -15,10 +15,10 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "PLATAFORMA ROI - Copy Trading Automatizado",
+  title: "ActionCash - Copy Trading Automatizado",
   description: "Plataforma de Copy Trading con retornos reales en USDT. Copia traders profesionales y recibe ganancias diarias.",
   keywords: ["copy trading", "crypto", "ROI", "USDT", "bitcoin", "inversiones", "criptomonedas"],
-  authors: [{ name: "PLATAFORMA ROI" }],
+  authors: [{ name: "ActionCash" }],
   icons: {
     icon: [
       { url: "/favicon.ico", sizes: "32x32" },
@@ -30,7 +30,7 @@ export const metadata: Metadata = {
   },
   manifest: "/site.webmanifest",
   openGraph: {
-    title: "PLATAFORMA ROI",
+    title: "ActionCash",
     description: "Plataforma de Copy Trading con retornos reales en USDT",
     type: "website",
   },

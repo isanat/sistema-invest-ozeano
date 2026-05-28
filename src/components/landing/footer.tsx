@@ -42,7 +42,7 @@ export function Footer() {
                 <img
                   src="/logo.png"
                   alt="Logo"
-                  className="h-10 w-auto object-contain"
+                  className="h-12 w-auto object-contain"
                   draggable={false}
                 />
               </div>

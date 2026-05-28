@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
         price_currency: 'usd',
         pay_currency: npCurrency,
         order_id: orderId,
-        order_description: `PLATAFORMA ROI Deposit - ${amount} USDT`,
+        order_description: `ActionCash Deposit - ${amount} USDT`,
         ipn_callback_url: `${process.env.NEXT_PUBLIC_APP_URL || ''}/api/nowpayments/webhook`,
       });
       depositAddress = payment.pay_address;

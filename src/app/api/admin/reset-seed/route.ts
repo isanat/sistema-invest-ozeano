@@ -145,7 +145,7 @@ export async function POST(request: NextRequest) {
         { key: 'site_logo', value: '', type: 'string', description: 'URL do logo do site (PNG ou SVG, fundo transparente)', category: 'branding' },
         { key: 'site_favicon', value: '', type: 'string', description: 'URL do favicon do site (ICO ou PNG, 32x32px)', category: 'branding' },
         // General
-        { key: 'site_name', value: 'PLATAFORMA ROI', type: 'string', description: 'Nome do site', category: 'general' },
+        { key: 'site_name', value: 'ActionCash', type: 'string', description: 'Nome do site', category: 'general' },
         { key: 'maintenance_mode', value: 'false', type: 'boolean', description: 'Modo manutenção', category: 'general' },
         { key: 'usdt_brl_rate', value: '5.50', type: 'number', description: 'Câmbio fixo USDT/BRL', category: 'general' },
         { key: 'system_min_reserve', value: '15', type: 'number', description: 'Reserva mínima do sistema (%)', category: 'general' },

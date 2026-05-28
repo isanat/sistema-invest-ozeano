@@ -125,11 +125,11 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <div className="flex flex-col h-full bg-[#060a14]">
       {/* Logo */}
-      <div className="flex items-center px-5 py-5 border-b border-border/10">
+      <div className="flex items-center justify-center px-4 py-4 border-b border-border/10">
         <img
           src="/logo.png"
           alt="Logo"
-          className="h-12 w-auto object-contain"
+          className="h-16 w-auto max-w-[200px] object-contain"
           draggable={false}
         />
       </div>
@@ -312,7 +312,7 @@ export function DashboardSidebar() {
           <img
             src="/logo.png"
             alt="Logo"
-            className="h-8 w-auto object-contain"
+            className="h-10 w-auto object-contain"
             draggable={false}
           />
         </div>

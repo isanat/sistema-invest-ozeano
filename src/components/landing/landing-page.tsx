@@ -90,7 +90,7 @@ function Navbar() {
           <img
             src="/logo.png"
             alt="Logo"
-            className="h-9 w-auto object-contain"
+            className="h-11 sm:h-12 w-auto object-contain"
             draggable={false}
           />
         </div>

@@ -3,7 +3,7 @@ export const translations: Record<string, any> = {
     // === LANDING PAGE ===
     landing: {
       hero: {
-        title: 'PLATAFORMA ROI',
+        title: 'ActionCash',
         subtitle: 'Especialistas en Copy Trading Automatizado - Gana hasta 3.3% diario con traders profesionales',
         cta: 'Comenzar a Invertir',
         login: 'Iniciar Sesión',
@@ -128,7 +128,7 @@ export const translations: Record<string, any> = {
       auth: {
         loginTitle: 'Iniciar Sesión en tu Cuenta',
         registerTitle: 'Crear Cuenta',
-        loginDesc: 'Accede a PLATAFORMA ROI',
+        loginDesc: 'Accede a ActionCash',
         registerDesc: 'Regístrate y comienza a invertir',
         name: 'Nombre',
         namePlaceholder: 'Tu nombre completo',
@@ -811,7 +811,7 @@ export const translations: Record<string, any> = {
   pt: {
     landing: {
       hero: {
-        title: 'PLATAFORMA ROI',
+        title: 'ActionCash',
         subtitle: 'Especialistas em Copy Trading Automatizado - Ganhe até 3.3% ao dia com traders profissionais',
         cta: 'Começar a Investir',
         login: 'Entrar',
@@ -936,7 +936,7 @@ export const translations: Record<string, any> = {
       auth: {
         loginTitle: 'Entrar na sua Conta',
         registerTitle: 'Criar Conta',
-        loginDesc: 'Acesse a PLATAFORMA ROI',
+        loginDesc: 'Acesse a ActionCash',
         registerDesc: 'Cadastre-se e comece a investir',
         name: 'Nome',
         namePlaceholder: 'Seu nome completo',
@@ -1529,7 +1529,7 @@ export const translations: Record<string, any> = {
   en: {
     landing: {
       hero: {
-        title: 'PLATAFORMA ROI',
+        title: 'ActionCash',
         subtitle: 'Automated Copy Trading Experts - Earn up to 3.3% daily with professional traders',
         cta: 'Start Investing',
         login: 'Sign In',
@@ -1654,7 +1654,7 @@ export const translations: Record<string, any> = {
       auth: {
         loginTitle: 'Sign In to Your Account',
         registerTitle: 'Create Account',
-        loginDesc: 'Access PLATAFORMA ROI',
+        loginDesc: 'Access ActionCash',
         registerDesc: 'Sign up and start investing',
         name: 'Name',
         namePlaceholder: 'Your full name',
@@ -2234,7 +2234,7 @@ export const translations: Record<string, any> = {
   zh: {
     landing: {
       hero: {
-        title: 'PLATAFORMA ROI',
+        title: 'ActionCash',
         subtitle: '自动化跟单交易专家 - 与专业交易员一起每日赚取高达3.3%',
         cta: '开始投资',
         login: '登录',
@@ -2359,7 +2359,7 @@ export const translations: Record<string, any> = {
       auth: {
         loginTitle: '登录您的账户',
         registerTitle: '创建账户',
-        loginDesc: '访问PLATAFORMA ROI',
+        loginDesc: '访问ActionCash',
         registerDesc: '注册并开始投资',
         name: '姓名',
         namePlaceholder: '您的全名',

@@ -325,7 +325,7 @@ async function main() {
     { key: 'nowpayments_split_wallet', value: '', type: 'string', description: 'Billetera de plataforma para recibir splits', category: 'deposit', isActive: true },
 
     // General configs
-    { key: 'site_name', value: 'PLATAFORMA ROI', type: 'string', description: 'Nombre del sitio', category: 'general', isActive: true },
+    { key: 'site_name', value: 'ActionCash', type: 'string', description: 'Nombre del sitio', category: 'general', isActive: true },
     { key: 'site_description', value: 'Plataforma de Copy Trading con ROI garantizado', type: 'string', description: 'Descripción del sitio', category: 'general', isActive: true },
     { key: 'support_whatsapp', value: '', type: 'string', description: 'Número de WhatsApp de soporte', category: 'general', isActive: true },
 

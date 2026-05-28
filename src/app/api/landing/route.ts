@@ -97,7 +97,7 @@ export async function GET() {
       plans,
       affiliateLevels,
       config: {
-        siteName: configMap.site_name || 'PLATAFORMA ROI',
+        siteName: configMap.site_name || 'ActionCash',
         siteLogo: configMap.site_logo || '',
         siteFavicon: configMap.site_favicon || '',
         minDeposit: configMap.min_deposit_usdt || '5',

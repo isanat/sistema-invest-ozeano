@@ -2,7 +2,7 @@ export const pt = {
   // === LANDING PAGE ===
   landing: {
     hero: {
-      title: 'PLATAFORMA ROI',
+      title: 'ActionCash',
       subtitle: 'Especialistas em Copy Trading Automatizado - Ganhe até 5% ao dia com traders profissionais',
       cta: 'Começar a Investir',
       login: 'Entrar',
@@ -173,7 +173,7 @@ export const pt = {
     auth: {
       loginTitle: 'Entrar na sua Conta',
       registerTitle: 'Criar Conta',
-      loginDesc: 'Acesse a PLATAFORMA ROI',
+      loginDesc: 'Acesse a ActionCash',
       registerDesc: 'Cadastre-se e comece a investir',
       name: 'Nome',
       email: 'Email',

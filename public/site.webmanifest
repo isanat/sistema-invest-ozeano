@@ -1,6 +1,6 @@
 {
-  "name": "PLATAFORMA ROI - Copy Trading",
-  "short_name": "PLATAFORMA ROI",
+  "name": "ActionCash - Copy Trading",
+  "short_name": "ActionCash",
   "description": "Plataforma de Copy Trading con retornos reales en USDT. Copia traders profesionales y recibe ganancias diarias.",
   "start_url": "/",
   "display": "standalone",
