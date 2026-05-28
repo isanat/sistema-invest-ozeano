@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 /**
- * Prisma Provider Switcher (DEPRECATED - PostgreSQL ONLY)
+ * Prisma Provider Switcher
  *
- * This project uses PostgreSQL exclusively. This script is kept for
- * backward compatibility with local `db:push` and `db:generate` npm scripts,
- * but it will NEVER switch to SQLite.
+ * Auto-detects the correct Prisma provider based on DATABASE_URL:
+ * - postgresql:// or postgres:// → provider = "postgresql"
+ * - file:// or no protocol       → provider = "sqlite"
  *
- * If no DATABASE_URL is found, it defaults to PostgreSQL.
- * If a file:// URL is found, it WARNs and keeps PostgreSQL.
+ * This allows the same schema to work with PostgreSQL in production
+ * and SQLite in local development.
  */
 
 const fs = require('fs');
@@ -16,31 +16,30 @@ const path = require('path');
 const schemaPath = path.join(__dirname, '..', 'prisma', 'schema.prisma');
 
 function main() {
+  const dbUrl = (process.env.DATABASE_URL || '').toLowerCase();
+  const isPostgres = dbUrl.startsWith('postgresql://') || dbUrl.startsWith('postgres://');
+  const isSqlite = dbUrl.startsWith('file:') || (!isPostgres && dbUrl.length > 0);
+  const targetProvider = isPostgres ? 'postgresql' : isSqlite ? 'sqlite' : 'sqlite';
+
   let schema = fs.readFileSync(schemaPath, 'utf8');
 
-  // Find the provider inside the datasource db block
+  // Find the current provider
   const datasourceMatch = schema.match(/datasource\s+db\s*\{[\s\S]*?provider\s*=\s*"(\w+)"/);
   const currentProvider = datasourceMatch ? datasourceMatch[1] : '';
 
-  // This project ALWAYS uses PostgreSQL. Never switch to SQLite.
-  if (currentProvider === 'postgresql') {
-    console.log(`[prisma-provider] Provider is "postgresql" — correct. No change needed.`);
+  if (currentProvider === targetProvider) {
+    console.log(`[prisma-provider] Provider is "${targetProvider}" — correct. No change needed.`);
     return;
   }
 
-  if (currentProvider === 'sqlite') {
-    console.warn(`[prisma-provider] WARNING: Provider was "sqlite" — switching to "postgresql" (this project requires PostgreSQL).`);
-    const oldBlock = schema.match(/datasource\s+db\s*\{[\s\S]*?provider\s*=\s*"\w+"/);
-    if (oldBlock) {
-      const newBlock = oldBlock[0].replace(/provider\s*=\s*"\w+"/, 'provider = "postgresql"');
-      schema = schema.replace(oldBlock[0], newBlock);
-      fs.writeFileSync(schemaPath, schema);
-      console.log(`[prisma-provider] Switched provider from "sqlite" to "postgresql".`);
-    }
-    return;
+  // Switch provider
+  const oldBlock = schema.match(/datasource\s+db\s*\{[\s\S]*?provider\s*=\s*"\w+"/);
+  if (oldBlock) {
+    const newBlock = oldBlock[0].replace(/provider\s*=\s*"\w+"/, `provider = "${targetProvider}"`);
+    schema = schema.replace(oldBlock[0], newBlock);
+    fs.writeFileSync(schemaPath, schema);
+    console.log(`[prisma-provider] Switched provider from "${currentProvider}" to "${targetProvider}".`);
   }
-
-  console.log(`[prisma-provider] Provider is "${currentProvider}" — no change needed.`);
 }
 
 main();

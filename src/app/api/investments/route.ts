@@ -76,10 +76,10 @@ export async function POST(request: NextRequest) {
       }
 
       // Validate amount against plan limits (if plan exists)
-      let minAmount = 10; // Default minimum
+      let minAmount = 5; // Default minimum
       let maxAmount = Infinity;
-      let dailyRoiPct = 5; // Default ROI
-      let durationDays = 35; // Default duration
+      let dailyRoiPct = 3.3; // Default ROI
+      let durationDays = 60; // Default duration
       let planName = 'Copy Trading';
 
       if (effectivePlan) {

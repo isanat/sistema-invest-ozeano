@@ -630,6 +630,10 @@ export const translations: Record<string, any> = {
       splitWallet: 'Wallet del Split',
       testConnection: 'Probar Conexión',
       totalPrice: 'Precio Total',
+      minAmount: 'Mínimo',
+      maxAmount: 'Máximo',
+      dailyRoiPct: 'ROI Diario %',
+      duration: 'Duración',
     },
 
     // === STATUS LABELS ===
@@ -1415,6 +1419,10 @@ export const translations: Record<string, any> = {
       splitWallet: 'Carteira do Split',
       testConnection: 'Testar Conexão',
       totalPrice: 'Preço Total',
+      minAmount: 'Mínimo',
+      maxAmount: 'Máximo',
+      dailyRoiPct: 'ROI Diário %',
+      duration: 'Duração',
     },
 
     status: {
@@ -2116,6 +2124,10 @@ export const translations: Record<string, any> = {
       splitWallet: 'Split Wallet',
       testConnection: 'Test Connection',
       totalPrice: 'Total Price',
+      minAmount: 'Minimum',
+      maxAmount: 'Maximum',
+      dailyRoiPct: 'Daily ROI %',
+      duration: 'Duration',
     },
 
     status: {
@@ -2817,6 +2829,10 @@ export const translations: Record<string, any> = {
       splitWallet: 'Split钱包',
       testConnection: '测试连接',
       totalPrice: '总价',
+      minAmount: '最低',
+      maxAmount: '最高',
+      dailyRoiPct: '每日ROI %',
+      duration: '期限',
     },
 
     status: {

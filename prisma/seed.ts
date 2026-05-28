@@ -65,55 +65,55 @@ async function main() {
   const plans = [
     {
       name: 'Starter',
-      description: 'Plan inicial para comenzar en copy trading. Ideal para principiantes que quieren probar la plataforma con poco capital.',
-      minAmount: '10',
+      description: 'Plan inicial para começar no copy trading. Ideal para iniciantes que desejam testar a plataforma com pouco capital.',
+      minAmount: '5',
       maxAmount: '99',
-      dailyRoiPct: '1.5',
-      durationDays: 30,
+      dailyRoiPct: '3.3',
+      durationDays: 60,
       isActive: true,
       isFeatured: false,
       sortOrder: 1,
     },
     {
-      name: 'Silver',
-      description: 'Plan Silver con ROI mejorado. Perfecto para inversores que buscan un equilibrio entre rendimiento y seguridad.',
+      name: 'Growth',
+      description: 'Plan Growth com ROI consistente. Perfeito para investidores que buscam crescimento equilibrado e sustentável.',
       minAmount: '100',
       maxAmount: '499',
-      dailyRoiPct: '2.0',
-      durationDays: 35,
+      dailyRoiPct: '3.3',
+      durationDays: 60,
       isActive: true,
-      isFeatured: false,
+      isFeatured: true,
       sortOrder: 2,
     },
     {
-      name: 'Gold',
-      description: 'Plan Gold con alto rendimiento. Diseñado para inversores experimentados que buscan maximizar sus ganancias.',
+      name: 'Premium',
+      description: 'Plan Premium para investidores experientes. Maximize seus ganhos com o melhor rendimento do mercado.',
       minAmount: '500',
       maxAmount: '1999',
-      dailyRoiPct: '2.5',
-      durationDays: 40,
+      dailyRoiPct: '3.3',
+      durationDays: 60,
       isActive: true,
-      isFeatured: true,
+      isFeatured: false,
       sortOrder: 3,
     },
     {
-      name: 'Platinum',
-      description: 'Plan Platinum exclusivo con el mejor ROI. Para inversores premium que quieren los máximos beneficios del copy trading.',
+      name: 'Elite',
+      description: 'Plan Elite exclusivo. Acesso prioritário aos melhores traders com rendimento premium garantido.',
       minAmount: '2000',
       maxAmount: '9999',
-      dailyRoiPct: '3.0',
-      durationDays: 45,
+      dailyRoiPct: '3.3',
+      durationDays: 60,
       isActive: true,
       isFeatured: false,
       sortOrder: 4,
     },
     {
-      name: 'Diamond',
-      description: 'Plan Diamond VIP. Acceso exclusivo a los mejores traders de la plataforma con rendimiento premium garantizado.',
+      name: 'VIP',
+      description: 'Plan VIP Diamond. Acesso exclusivo aos melhores traders da plataforma com rendimento máximo e benefícios únicos.',
       minAmount: '10000',
       maxAmount: null,
-      dailyRoiPct: '3.5',
-      durationDays: 50,
+      dailyRoiPct: '3.3',
+      durationDays: 60,
       isActive: true,
       isFeatured: true,
       sortOrder: 5,
@@ -123,11 +123,28 @@ async function main() {
   for (const plan of plans) {
     await prisma.investmentPlan.upsert({
       where: { name: plan.name },
-      update: {},
+      update: {
+        description: plan.description,
+        minAmount: plan.minAmount,
+        maxAmount: plan.maxAmount,
+        dailyRoiPct: plan.dailyRoiPct,
+        durationDays: plan.durationDays,
+        isActive: plan.isActive,
+        isFeatured: plan.isFeatured,
+        sortOrder: plan.sortOrder,
+      },
       create: plan,
     });
   }
-  console.log('✅ Investment plans created: Starter, Silver, Gold, Platinum, Diamond');
+  // Deactivate old plans that no longer exist in the new schema
+  const oldPlanNames = ['Silver', 'Gold', 'Platinum', 'Diamond'];
+  for (const oldName of oldPlanNames) {
+    await prisma.investmentPlan.updateMany({
+      where: { name: oldName, isActive: true },
+      data: { isActive: false },
+    });
+  }
+  console.log('✅ Investment plans created: Starter, Growth, Premium, Elite, VIP');
 
   // ============================================================================
   // 4. Create Affiliate Levels (11 levels)

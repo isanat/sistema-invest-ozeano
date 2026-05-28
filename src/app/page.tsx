@@ -98,7 +98,7 @@ interface BitgetTrader {
 interface InvestmentPlan {
   id: string; name: string; description?: string | null;
   minAmount: string; maxAmount: string; dailyRoiPct: string; durationDays: number;
-  days: number; totalReturn: string;
+  days?: number; totalReturn?: string;
   isActive: boolean; isFeatured: boolean; sortOrder: number;
   createdAt: string; updatedAt: string;
 }
@@ -537,6 +537,7 @@ export default function PlataformaROI() {
 
   // Data State
   const [copyTraders, setCopyTraders] = useState <CopyTrader[]> ([]);
+  const [dbPlans, setDbPlans] = useState<InvestmentPlan[]>([]);
   const [userInvestments, setUserInvestments] = useState<UserInvestment[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [affiliateData, setAffiliateData] = useState<AffiliateData | null>(null);
@@ -877,16 +878,18 @@ export default function PlataformaROI() {
   const fetchDashboardData = async () => {
     setDataLoading(true);
     try {
-      const [tradersRes, investmentsRes, txRes, rateRes] = await Promise.allSettled([
+      const [tradersRes, investmentsRes, txRes, rateRes, plansRes] = await Promise.allSettled([
         api<{ success: boolean; traders: CopyTrader[] }>('/api/copy-traders'),
         api<{ success: boolean; investments: UserInvestment[] }>('/api/investments'),
         api<{ success: boolean; transactions: Transaction[] }>('/api/transactions'),
         api<{ success: boolean; rate: number }>('/api/exchange-rate'),
+        api<{ plans: InvestmentPlan[] }>('/api/plans'),
       ]);
       if (tradersRes.status === 'fulfilled') setCopyTraders(tradersRes.value.traders || []);
       if (investmentsRes.status === 'fulfilled') setUserInvestments(investmentsRes.value.investments || []);
       if (txRes.status === 'fulfilled') setTransactions(txRes.value.transactions || []);
       if (rateRes.status === 'fulfilled') setUsdtBrlRate(rateRes.value.rate || 5.5);
+      if (plansRes.status === 'fulfilled') setDbPlans(plansRes.value.plans || []);
     } catch (e) {
       console.error('Dashboard data error:', e);
     } finally {
@@ -1570,21 +1573,18 @@ export default function PlataformaROI() {
     if (!investDialogPlan) return;
     setInvestLoading(true);
     try {
-      // Get the selected plan details to send with the investment
+      // Get the selected plan — use the real plan ID from DB
       const selectedPlan = selectedPlanId
         ? investDialogPlan.plans?.find((p: any) => p.id === selectedPlanId)
         : investDialogPlan.plans?.[0];
+      const realPlanId = selectedPlan?.id || selectedPlanId || investDialogPlan.plans?.[0]?.id || '';
       await api('/api/investments', {
         method: 'POST',
         body: JSON.stringify({
-          planId: selectedPlanId || investDialogPlan.plans?.[0]?.id || '',
+          planId: realPlanId,
           amount: rentalCalc.totalPrice,
           useVoucher: useVoucherForInvest,
           voucherId: useVoucherForInvest ? selectedVoucherId : undefined,
-          // Send plan params so backend can use them if plan doesn't exist in DB
-          dailyRoiPct: selectedPlan?.dailyRoiPct || '5',
-          durationDays: selectedPlan?.durationDays || selectedPlan?.days || 35,
-          planName: selectedPlan?.name || investDialogPlan.name,
         }),
       });
       toast.success(useVoucherForInvest ? t('toast.voucherInvestSuccess') : t('toast.rentSuccess'));
@@ -1898,9 +1898,9 @@ export default function PlataformaROI() {
       const body: any = {
         name: (form.name as HTMLInputElement).value,
         description: (form.description as HTMLInputElement)?.value || undefined,
-        dailyRoiPct: (form.dailyRoiPct as HTMLInputElement)?.value || '5',
-        durationDays: parseInt((form.durationDays as HTMLInputElement)?.value) || 40,
-        minAmount: (form.minAmount as HTMLInputElement)?.value || '10',
+        dailyRoiPct: (form.dailyRoiPct as HTMLInputElement)?.value || '3.3',
+        durationDays: parseInt((form.durationDays as HTMLInputElement)?.value) || 60,
+        minAmount: (form.minAmount as HTMLInputElement)?.value || '5',
         maxAmount: (form.maxAmount as HTMLInputElement)?.value || undefined,
         isActive: (form.isActive as HTMLInputElement).checked,
         isFeatured: (form.isFeatured as HTMLInputElement).checked,
@@ -4259,25 +4259,15 @@ export default function PlataformaROI() {
                         <h3 className="text-lg font-bold text-white">{t('plans.title')}</h3>
                       </div>
                       {(() => {
-                        // Collect unique plans from all copy traders
-                        const allPlans = copyTraders
-                          .filter(t => t.isActive)
-                          .flatMap(t => (t.plans || []).map(p => ({ ...p, traderName: t.name, traderId: t.id })))
-                          .filter(p => p.isActive);
-                        const uniquePlanIds = [...new Set(allPlans.map(p => p.id))];
-                        const uniquePlans = uniquePlanIds.map(id => allPlans.find(p => p.id === id)!);
+                        // Use real plans from database (fetched from /api/plans)
+                        const displayPlans = dbPlans.filter(p => p.isActive);
+                        if (displayPlans.length === 0) return null;
 
-                        if (uniquePlans.length === 0) {
-                          // Show default platform plans when no DB plans exist
-                          const defaultPlans = [
-                            { id: 'starter', name: 'Starter', dailyRoiPct: '5', minAmount: '10', maxAmount: '499', durationDays: 40, totalReturn: '200', isFeatured: false, description: 'Ideal para começar' },
-                            { id: 'growth', name: 'Growth', dailyRoiPct: '5', minAmount: '500', maxAmount: '1999', durationDays: 35, totalReturn: '175', isFeatured: true, description: 'O mais popular' },
-                            { id: 'premium', name: 'Premium', dailyRoiPct: '5', minAmount: '2000', maxAmount: '9999', durationDays: 30, totalReturn: '150', isFeatured: false, description: 'Para investidores sérios' },
-                            { id: 'elite', name: 'Elite', dailyRoiPct: '5', minAmount: '10000', maxAmount: '999999', durationDays: 25, totalReturn: '125', isFeatured: false, description: 'Retorno acelerado' },
-                          ];
-                          return (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                              {defaultPlans.map((plan, idx) => (
+                        return (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+                            {displayPlans.map((plan, idx) => {
+                              const totalReturn = d(plan.dailyRoiPct) * plan.durationDays;
+                              return (
                                 <motion.div
                                   key={plan.id}
                                   initial={{ opacity: 0, y: 20 }}
@@ -4296,11 +4286,11 @@ export default function PlataformaROI() {
                                     <div className="relative p-5">
                                       {/* Plan Name */}
                                       <h4 className="text-base font-bold text-white mb-1">{plan.name}</h4>
-                                      <p className="text-xs text-zinc-500 mb-4">{plan.description}</p>
+                                      {plan.description && <p className="text-xs text-zinc-500 mb-4">{plan.description}</p>}
                                       {/* Daily ROI - Large & Prominent */}
                                       <div className="text-center mb-4">
                                         <div className="text-3xl sm:text-4xl font-black text-emerald-400 animate-count-glow">
-                                          {d(plan.dailyRoiPct).toFixed(0)}%
+                                          {d(plan.dailyRoiPct).toFixed(1)}%
                                         </div>
                                         <div className="text-xs text-zinc-500 mt-1">{t('plans.dailyRoi')}</div>
                                       </div>
@@ -4312,7 +4302,7 @@ export default function PlataformaROI() {
                                         </div>
                                         <div className="flex justify-between text-sm">
                                           <span className="text-zinc-500">{t('plans.maximum')}</span>
-                                          <span className="text-zinc-300 font-medium">${fmtUSDT(plan.maxAmount)}</span>
+                                          <span className="text-zinc-300 font-medium">{plan.maxAmount ? `$${fmtUSDT(plan.maxAmount)}` : '∞'}</span>
                                         </div>
                                         <div className="flex justify-between text-sm">
                                           <span className="text-zinc-500">{t('plans.durationLabel')}</span>
@@ -4321,7 +4311,7 @@ export default function PlataformaROI() {
                                         <Separator className="bg-zinc-800" />
                                         <div className="flex justify-between text-sm">
                                           <span className="text-zinc-400">{t('plans.totalReturnLabel')}</span>
-                                          <span className="text-emerald-400 font-bold">{d(plan.totalReturn).toFixed(0)}%</span>
+                                          <span className="text-emerald-400 font-bold">{totalReturn.toFixed(0)}%</span>
                                         </div>
                                         <div className="flex justify-between text-sm">
                                           <span className="text-zinc-400">{t('plans.capitalDoublesIn')}</span>
@@ -4336,20 +4326,21 @@ export default function PlataformaROI() {
                                             : 'bg-emerald-600 hover:bg-emerald-500 text-white'
                                         }`}
                                         onClick={() => {
+                                          // Create a wrapper CopyTrader with the real plan ID so the investment API can find it
                                           setInvestDialogPlan({
-                                            id: plan.id,
+                                            id: `plan-wrapper-${plan.id}`,
                                             name: plan.name,
                                             avatar: null,
                                             specialty: plan.description || 'Copy Trading',
                                             winRate: '85',
                                             monthlyRoi: String(d(plan.dailyRoiPct) * 30),
-                                            totalPnl: plan.totalReturn,
+                                            totalPnl: String(totalReturn),
                                             riskLevel: 'low',
                                             isActive: true,
                                             isFeatured: plan.isFeatured,
-                                            sortOrder: idx,
-                                            createdAt: new Date().toISOString(),
-                                            updatedAt: new Date().toISOString(),
+                                            sortOrder: plan.sortOrder,
+                                            createdAt: plan.createdAt,
+                                            updatedAt: plan.updatedAt,
                                             plans: [{
                                               id: plan.id,
                                               name: plan.name,
@@ -4358,18 +4349,16 @@ export default function PlataformaROI() {
                                               maxAmount: plan.maxAmount,
                                               dailyRoiPct: plan.dailyRoiPct,
                                               durationDays: plan.durationDays,
-                                              days: plan.durationDays,
-                                              totalReturn: plan.totalReturn,
-                                              isActive: true,
+                                              isActive: plan.isActive,
                                               isFeatured: plan.isFeatured,
-                                              sortOrder: idx,
-                                              createdAt: new Date().toISOString(),
-                                              updatedAt: new Date().toISOString(),
+                                              sortOrder: plan.sortOrder,
+                                              createdAt: plan.createdAt,
+                                              updatedAt: plan.updatedAt,
                                             }],
                                           } as CopyTrader);
                                           setSelectedPlanId(plan.id);
                                           setInvestmentDuration(plan.durationDays);
-                                          setInvestAmount(String(d(plan.minAmount) || 10));
+                                          setInvestAmount(String(d(plan.minAmount) || 5));
                                         }}
                                       >
                                         <Zap className="mr-2 h-4 w-4" /> {t('plans.investNow')}
@@ -4379,24 +4368,24 @@ export default function PlataformaROI() {
                                         <div className="mt-2 flex items-center gap-2 p-2 rounded-lg bg-purple-500/10 border border-purple-500/20">
                                           <input
                                             type="checkbox"
-                                            id={`voucher-default-${plan.id}`}
+                                            id={`voucher-plan-${plan.id}`}
                                             checked={false}
                                             onChange={(e) => {
                                               if (e.target.checked) {
                                                 setInvestDialogPlan({
-                                                  id: plan.id,
+                                                  id: `plan-wrapper-${plan.id}`,
                                                   name: plan.name,
                                                   avatar: null,
                                                   specialty: plan.description || 'Copy Trading',
                                                   winRate: '85',
                                                   monthlyRoi: String(d(plan.dailyRoiPct) * 30),
-                                                  totalPnl: plan.totalReturn,
+                                                  totalPnl: String(totalReturn),
                                                   riskLevel: 'low',
                                                   isActive: true,
                                                   isFeatured: plan.isFeatured,
-                                                  sortOrder: idx,
-                                                  createdAt: new Date().toISOString(),
-                                                  updatedAt: new Date().toISOString(),
+                                                  sortOrder: plan.sortOrder,
+                                                  createdAt: plan.createdAt,
+                                                  updatedAt: plan.updatedAt,
                                                   plans: [{
                                                     id: plan.id,
                                                     name: plan.name,
@@ -4405,18 +4394,16 @@ export default function PlataformaROI() {
                                                     maxAmount: plan.maxAmount,
                                                     dailyRoiPct: plan.dailyRoiPct,
                                                     durationDays: plan.durationDays,
-                                                    days: plan.durationDays,
-                                                    totalReturn: plan.totalReturn,
-                                                    isActive: true,
+                                                    isActive: plan.isActive,
                                                     isFeatured: plan.isFeatured,
-                                                    sortOrder: idx,
-                                                    createdAt: new Date().toISOString(),
-                                                    updatedAt: new Date().toISOString(),
+                                                    sortOrder: plan.sortOrder,
+                                                    createdAt: plan.createdAt,
+                                                    updatedAt: plan.updatedAt,
                                                   }],
                                                 } as CopyTrader);
                                                 setSelectedPlanId(plan.id);
                                                 setInvestmentDuration(plan.durationDays);
-                                                setInvestAmount(String(d(plan.minAmount) || 10));
+                                                setInvestAmount(String(d(plan.minAmount) || 5));
                                                 setUseVoucherForInvest(true);
                                                 const firstActive = userVouchers.find((v: any) => v.status === 'active');
                                                 if (firstActive) setSelectedVoucherId(firstActive.id);
@@ -4424,104 +4411,7 @@ export default function PlataformaROI() {
                                             }}
                                             className="rounded accent-purple-500"
                                           />
-                                          <Label htmlFor={`voucher-default-${plan.id}`} className="text-purple-400 text-xs font-medium cursor-pointer">
-                                            🎫 {t('plans.activateWithVoucher')}
-                                          </Label>
-                                        </div>
-                                      )}
-                                    </div>
-                                  </div>
-                                </motion.div>
-                              ))}
-                            </div>
-                          );
-                        }
-
-                        // Render DB plans from copy traders
-                        return (
-                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {uniquePlans.map((plan, idx) => {
-                              const traderForPlan = copyTraders.find(t => t.isActive && (t.plans || []).some(p => p.id === plan.id));
-                              return (
-                                <motion.div
-                                  key={plan.id}
-                                  initial={{ opacity: 0, y: 20 }}
-                                  animate={{ opacity: 1, y: 0 }}
-                                  transition={{ duration: 0.5, delay: 0.25 + idx * 0.1 }}
-                                >
-                                  <div className={`glass-card rounded-2xl overflow-hidden stat-card-hover relative plan-card-gradient ${plan.isFeatured ? 'gradient-border plan-card-featured' : 'border border-zinc-800'}`}>
-                                    {plan.isFeatured && (
-                                      <div className="absolute top-0 right-0 bg-gradient-to-l from-emerald-500 to-cyan-500 text-white text-[10px] font-bold px-3 py-1 rounded-bl-xl z-10">
-                                        ⭐ {t('plans.featured')}
-                                      </div>
-                                    )}
-                                    <div className="absolute inset-0 opacity-5 animate-shimmer pointer-events-none" />
-                                    <div className="relative p-5">
-                                      <h4 className="text-base font-bold text-white mb-1">{plan.name}</h4>
-                                      {plan.description && <p className="text-xs text-zinc-500 mb-4">{plan.description}</p>}
-                                      <div className="text-center mb-4">
-                                        <div className="text-3xl sm:text-4xl font-black text-emerald-400 animate-count-glow">
-                                          {d(plan.dailyRoiPct).toFixed(0)}%
-                                        </div>
-                                        <div className="text-xs text-zinc-500 mt-1">{t('plans.dailyRoi')}</div>
-                                      </div>
-                                      <div className="space-y-2 mb-4">
-                                        <div className="flex justify-between text-sm">
-                                          <span className="text-zinc-500">{t('plans.minimum')}</span>
-                                          <span className="text-zinc-300 font-medium">${fmtUSDT(plan.minAmount)}</span>
-                                        </div>
-                                        <div className="flex justify-between text-sm">
-                                          <span className="text-zinc-500">{t('plans.maximum')}</span>
-                                          <span className="text-zinc-300 font-medium">${fmtUSDT(plan.maxAmount)}</span>
-                                        </div>
-                                        <div className="flex justify-between text-sm">
-                                          <span className="text-zinc-500">{t('plans.durationLabel')}</span>
-                                          <span className="text-zinc-300 font-medium">{plan.durationDays} {t('plans.days')}</span>
-                                        </div>
-                                        <Separator className="bg-zinc-800" />
-                                        <div className="flex justify-between text-sm">
-                                          <span className="text-zinc-400">{t('plans.totalReturnLabel')}</span>
-                                          <span className="text-emerald-400 font-bold">{d(plan.totalReturn).toFixed(0)}%</span>
-                                        </div>
-                                      </div>
-                                      <Button
-                                        className={`w-full font-semibold rounded-xl ${
-                                          plan.isFeatured
-                                            ? 'bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-white shadow-lg shadow-emerald-500/20'
-                                            : 'bg-emerald-600 hover:bg-emerald-500 text-white'
-                                        }`}
-                                        onClick={() => {
-                                          if (traderForPlan) {
-                                            setInvestDialogPlan(traderForPlan);
-                                            setSelectedPlanId(plan.id);
-                                            setInvestmentDuration(plan.durationDays);
-                                            setInvestAmount(String(d(plan.minAmount) || 10));
-                                          }
-                                        }}
-                                      >
-                                        <Zap className="mr-2 h-4 w-4" /> {t('plans.investNow')}
-                                      </Button>
-                                      {/* Voucher activation checkbox — shown if user has active vouchers */}
-                                      {userVouchers.filter((v: any) => v.status === 'active').length > 0 && (
-                                        <div className="mt-2 flex items-center gap-2 p-2 rounded-lg bg-purple-500/10 border border-purple-500/20">
-                                          <input
-                                            type="checkbox"
-                                            id={`voucher-db-${plan.id}`}
-                                            checked={false}
-                                            onChange={(e) => {
-                                              if (e.target.checked && traderForPlan) {
-                                                setInvestDialogPlan(traderForPlan);
-                                                setSelectedPlanId(plan.id);
-                                                setInvestmentDuration(plan.durationDays);
-                                                setInvestAmount(String(d(plan.minAmount) || 10));
-                                                setUseVoucherForInvest(true);
-                                                const firstActive = userVouchers.find((v: any) => v.status === 'active');
-                                                if (firstActive) setSelectedVoucherId(firstActive.id);
-                                              }
-                                            }}
-                                            className="rounded accent-purple-500"
-                                          />
-                                          <Label htmlFor={`voucher-db-${plan.id}`} className="text-purple-400 text-xs font-medium cursor-pointer">
+                                          <Label htmlFor={`voucher-plan-${plan.id}`} className="text-purple-400 text-xs font-medium cursor-pointer">
                                             🎫 {t('plans.activateWithVoucher')}
                                           </Label>
                                         </div>
@@ -4896,7 +4786,7 @@ export default function PlataformaROI() {
                                         <div className="flex flex-wrap gap-1">
                                           {(trader.plans || []).slice(0, 3).map(p => (
                                             <Badge key={p.id} className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 text-[10px] px-1.5 py-0" variant="outline">
-                                              {p.name} ({d(p.dailyRoiPct).toFixed(0)}%/dia)
+                                              {p.name} ({d(p.dailyRoiPct).toFixed(1)}%/dia)
                                             </Badge>
                                           ))}
                                         </div>
@@ -6889,20 +6779,21 @@ export default function PlataformaROI() {
                           <CardContent className="p-0 overflow-x-auto">
                             <Table className="min-w-[700px]">
                               <TableHeader><TableRow className="border-zinc-800 hover:bg-transparent">
-                                <TableHead className="text-zinc-400">{t('admin.name')}</TableHead><TableHead className="text-zinc-400">{t('admin.plan')}</TableHead>
-                                <TableHead className="text-zinc-400">{t('admin.days')}</TableHead><TableHead className="text-zinc-400">{t('admin.discountPct')}</TableHead>
-                                <TableHead className="text-zinc-400">{t('admin.totalPrice')}</TableHead><TableHead className="text-zinc-400">{t('admin.dailyRevenue')}</TableHead>
+                                <TableHead className="text-zinc-400">{t('admin.name')}</TableHead>
+                                <TableHead className="text-zinc-400">{t('admin.minAmount')}</TableHead>
+                                <TableHead className="text-zinc-400">{t('admin.maxAmount')}</TableHead>
+                                <TableHead className="text-zinc-400">{t('admin.dailyRoiPct')}</TableHead>
+                                <TableHead className="text-zinc-400">{t('admin.duration')}</TableHead>
                                 <TableHead className="text-zinc-400">{t('admin.active')}</TableHead><TableHead className="text-zinc-400">{t('admin.action')}</TableHead>
                               </TableRow></TableHeader>
                               <TableBody>
                                 {adminPlans.map(p => (
                                   <TableRow key={p.id} className="border-zinc-800">
                                     <TableCell className="font-medium">{p.name}</TableCell>
-                                    <TableCell>{(p as any).trader?.name || '-'}</TableCell>
-                                    <TableCell>{p.durationDays || (p as any).days || '-'}</TableCell>
-                                    <TableCell>{(p as any).discountPct || 0}%</TableCell>
-                                    <TableCell>${fmtUSDT((p as any).totalPrice || p.maxAmount || 0)}</TableCell>
-                                    <TableCell>${fmtUSDT((p as any).dailyReturn || p.dailyRoiPct || 0)}</TableCell>
+                                    <TableCell>${fmtUSDT(p.minAmount)}</TableCell>
+                                    <TableCell>{p.maxAmount ? `$${fmtUSDT(p.maxAmount)}` : '∞'}</TableCell>
+                                    <TableCell>{p.dailyRoiPct}%</TableCell>
+                                    <TableCell>{p.durationDays} {t('plans.days')}</TableCell>
                                     <TableCell>{p.isActive ? <CheckCircle2 className="h-4 w-4 text-cyan-400" /> : <XCircle className="h-4 w-4 text-red-400" />}</TableCell>
                                     <TableCell>
                                       <div className="flex gap-1">
@@ -9633,8 +9524,8 @@ export default function PlataformaROI() {
             <div><Label className="text-zinc-300 text-xs">{t('admin.name')}</Label><Input name="name" defaultValue={planDialog.plan?.name || ''} required className="bg-zinc-800 border-zinc-700 mt-1" /></div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div><Label className="text-zinc-300 text-xs">{t('admin.dailyRoi')}</Label><Input name="dailyRoiPct" type="number" step="0.1" defaultValue={planDialog.plan?.dailyRoiPct || ''} required className="bg-zinc-800 border-zinc-700 mt-1" /></div>
-              <div><Label className="text-zinc-300 text-xs">{t('admin.days')}</Label><Input name="durationDays" type="number" defaultValue={planDialog.plan?.durationDays || 30} required className="bg-zinc-800 border-zinc-700 mt-1" /></div>
-              <div><Label className="text-zinc-300 text-xs">Min USDT</Label><Input name="minAmount" defaultValue={planDialog.plan?.minAmount || '10'} required className="bg-zinc-800 border-zinc-700 mt-1" /></div>
+              <div><Label className="text-zinc-300 text-xs">{t('admin.days')}</Label><Input name="durationDays" type="number" defaultValue={planDialog.plan?.durationDays || 60} required className="bg-zinc-800 border-zinc-700 mt-1" /></div>
+              <div><Label className="text-zinc-300 text-xs">Min USDT</Label><Input name="minAmount" defaultValue={planDialog.plan?.minAmount || '5'} required className="bg-zinc-800 border-zinc-700 mt-1" /></div>
               <div><Label className="text-zinc-300 text-xs">Max USDT</Label><Input name="maxAmount" defaultValue={planDialog.plan?.maxAmount || ''} className="bg-zinc-800 border-zinc-700 mt-1" /></div>
             </div>
             <div><Label className="text-zinc-300 text-xs">{t('admin.description')}</Label><Input name="description" defaultValue={planDialog.plan?.description || ''} className="bg-zinc-800 border-zinc-700 mt-1" /></div>
