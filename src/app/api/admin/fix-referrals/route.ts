@@ -4,7 +4,8 @@
 // ============================================================================
 import { NextRequest } from 'next/server';
 import { db } from '@/lib/db';
-import { requireAdmin, apiSuccess, handleApiError, BusinessError } from '@/lib/api-utils';
+import { apiSuccess, handleApiError, BusinessError } from '@/lib/api-utils';
+import { requireAdmin } from '@/lib/auth';
 
 // GET /api/admin/fix-referrals — Find orphaned users (no referredBy but likely referred)
 export async function GET(request: NextRequest) {
