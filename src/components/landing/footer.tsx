@@ -1,10 +1,23 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { useI18n } from '@/lib/i18n/context'
 import { TrendingUp, Twitter, MessageCircle, Instagram, Youtube, ExternalLink } from 'lucide-react'
 
 export function Footer() {
   const { t } = useI18n()
+  const [siteLogo, setSiteLogo] = useState('')
+
+  useEffect(() => {
+    fetch('/api/site/config')
+      .then(r => r.json())
+      .then(data => {
+        if (data.success && data.siteLogo) {
+          setSiteLogo(data.siteLogo)
+        }
+      })
+      .catch(() => {})
+  }, [])
 
   const socialLinks = [
     { icon: Twitter, href: '#' },
@@ -40,7 +53,7 @@ export function Footer() {
             <div className="md:col-span-1">
               <div className="flex items-center mb-4">
                 <img
-                  src="/logo.png"
+                  src={siteLogo || '/logo.png'}
                   alt="Logo"
                   className="h-12 w-auto object-contain"
                   draggable={false}

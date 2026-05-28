@@ -188,3 +188,116 @@ Stage Summary:
 - Transfer configs added to admin config panel and setup route
 - Migration script ensures transfer configs exist in production DB
 - Deployment in progress
+
+---
+Task ID: 2
+Agent: Transfer Tab Agent
+Task: Add Transfer tab to component-based dashboard
+
+Work Log:
+- Added 'transfer' to DashboardTab type union in src/lib/store.ts
+- Added transfer nav item to dashboard-sidebar.tsx (ArrowDownUp icon, cyan accent, between team-bonus and withdrawals)
+- Added dash.sidebar.transfer translation key to all 4 locales (ES: Transferencia, EN: Transfer, PT-BR: Transferência, ZH: 转账)
+- Added 28 dash.transfer.* translation keys to all 4 locales (title, subtitle, recipientEmail, amount, fee, config, history, etc.)
+- Created src/components/dashboard/transfer-tab.tsx with full P2P transfer UI:
+  - Fetches config + history from GET /api/transfers
+  - Email lookup via GET /api/transfers/lookup?email=xxx
+  - Sends transfers via POST /api/transfers
+  - Transfer form with email lookup, amount input, fee calculation, cooldown display
+  - Config card showing min, max, fee %, daily limit, cooldown, enabled status
+  - Daily limit progress bar
+  - Transfer history with sent/received visual indicators
+  - Dark theme styling matching other dashboard tabs
+  - Uses shadcn/ui components (Card, Button, Input, Label, Badge)
+  - Loading states, errors, and success feedback via toast
+- Created src/components/dashboard/dashboard-content.tsx with tab rendering switch
+  - Imports all dashboard tab components including new TransferTab
+  - AnimatePresence transitions between tabs
+  - Switch statement renders correct component for each DashboardTab value
+
+Stage Summary:
+- Transfer tab now available in the component-based dashboard sidebar
+- Full transfer functionality: email lookup, amount with fee calculation, config display, history
+- All 4 languages supported (ES, EN, PT-BR, ZH)
+- Existing API endpoints (/api/transfers, /api/transfers/lookup) unchanged
+- Lint passes for all modified/created files
+- Dev server running successfully
+
+---
+Task ID: 3
+Agent: Referral Fix & Cleanup Agent
+Task: Fix referral system not working, remove duplicate transfer route, clean up "PLATAFORMA ROI" text
+
+Work Log:
+- Audited the full referral flow: frontend URL param → form field → API request → backend lookup
+- Found Bug #1: auth-modals.tsx `closeAndReset()` clears `regReferral` to empty string — when user closes and reopens the dialog, the referral code from URL is lost because the useEffect only runs on mount
+  - Fix: Modified `closeAndReset()` to preserve referral code from URL (restores `urlRefCode` instead of clearing)
+- Found Bug #2: register/route.ts uses case-sensitive `findUnique` for `affiliateCode` lookup — affiliate codes are generated in uppercase (e.g. `NAMEAB12`) but URLs with lowercase codes (e.g. `?ref=nameab12`) would fail to match
+  - Fix: Changed to `findFirst` with `mode: 'insensitive'` and uppercase the input for robustness
+- Verified page.tsx landing page form: `defaultValue={urlReferralCode}` on referralCode input — correct
+- Verified page.tsx handleRegister: sends `referralCode: (form.referralCode as HTMLInputElement)?.value || undefined` — correct
+- Verified registerSchema allows `referralCode: z.string().optional()` — correct
+- Deleted old `/api/transfer/route.ts` that used wrong config keys (`min_transfer_usdt`, `transfer_cooldown_minutes`) and Transaction model instead of Transfer model
+- The correct route `/api/transfers/route.ts` already exists with proper config keys (`transfer_min`, `transfer_cooldown_min`) and Transfer model
+- Cleaned up all "PLATAFORMA ROI" text from source files:
+  - page.tsx: "Plataforma ROI" → "ActionCash" (line 4334)
+  - prisma/schema.prisma: Comment header updated
+  - Dockerfile: Comment header updated
+  - start.sh: Echo message updated
+  - DEPLOY-GUIDE.md: Title updated
+  - Remaining occurrences only in agent-ctx/ (historical logs) and worklog.md (historical) — left as-is
+- Verified dev server compiles and runs correctly
+- Verified ESLint passes (only pre-existing warnings in set-env.js)
+
+Stage Summary:
+- Referral system now works correctly: case-insensitive affiliate code lookup + referral code preserved on dialog close/reopen
+- Old /api/transfer route removed (was using wrong model/config keys); only /api/transfers remains
+- Zero occurrences of "PLATAFORMA ROI" in source code (only historical agent logs remain)
+
+---
+Task ID: 1
+Agent: Logo Fix Agent
+Task: Fix dynamic logo — admin-uploaded logo never displayed (hardcoded /logo.png)
+
+Work Log:
+- Identified the root cause: all logo <img> tags across 4 files hardcoded `src="/logo.png"` and never read the `site_logo` SystemConfig value from the API
+- The API `/api/site/config` already returns `siteLogo` (base64 data URL) in its response — just not consumed by frontend
+- Confirmed `apiSuccess()` spreads data flat (not nested under `data`), so response shape is `{ success: true, siteLogo: "...", ... }`
+
+Files modified:
+
+1. **dashboard-sidebar.tsx**
+   - Added `useState('')` for `siteLogo` in `DashboardSidebar` component
+   - Added `useEffect` to fetch `/api/site/config` and set `siteLogo` from response
+   - Passed `siteLogo` as prop to `SidebarContent` component
+   - Changed both `<img src="/logo.png">` → `<img src={siteLogo || '/logo.png'}>` (desktop sidebar logo + mobile header logo)
+
+2. **landing-page.tsx**
+   - Added `useState('')` for `siteLogo` in `Navbar` component
+   - Added `useEffect` to fetch `/api/site/config` and set `siteLogo`
+   - Changed navbar logo `<img src="/logo.png">` → `<img src={siteLogo || '/logo.png'}>`
+
+3. **footer.tsx**
+   - Added `useState, useEffect` imports
+   - Added `useState('')` for `siteLogo` in `Footer` component
+   - Added `useEffect` to fetch `/api/site/config` and set `siteLogo`
+   - Changed footer logo `<img src="/logo.png">` → `<img src={siteLogo || '/logo.png'}>`
+
+4. **page.tsx**
+   - Added `siteLogo: string` to `siteConfig` state type definition
+   - Added `siteLogo: ''` to `siteConfig` initial value
+   - Added `siteLogo: data.siteLogo ?? ''` in the existing `setSiteConfig` useEffect
+   - Changed 3 hardcoded `<img src="/logo.png">` references → `<img src={siteConfig.siteLogo || '/logo.png'}>`:
+     - Fixed navigation bar logo (line ~2580)
+     - Desktop sidebar logo (line ~3516)
+     - Mobile sidebar overlay logo (line ~3595)
+
+- Verified zero remaining hardcoded `/logo.png` references in src/ (grep confirmed)
+- Verified ESLint passes (only pre-existing set-env.js warnings)
+- Verified dev server compiles and runs correctly
+
+Stage Summary:
+- Admin-uploaded logo (site_logo SystemConfig) now displays dynamically in ALL locations
+- Fallback to `/logo.png` preserved when no admin logo is set
+- Total of 7 logo references fixed across 4 files
+- No other functionality changed

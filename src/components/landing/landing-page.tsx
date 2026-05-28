@@ -59,11 +59,23 @@ function Navbar() {
   const { t } = useI18n()
   const [scrolled, setScrolled] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [siteLogo, setSiteLogo] = useState('')
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20)
     window.addEventListener('scroll', handleScroll, { passive: true })
     return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
+
+  useEffect(() => {
+    fetch('/api/site/config')
+      .then(r => r.json())
+      .then(data => {
+        if (data.success && data.siteLogo) {
+          setSiteLogo(data.siteLogo)
+        }
+      })
+      .catch(() => {})
   }, [])
 
   const navLinks = [
@@ -88,7 +100,7 @@ function Navbar() {
         {/* Logo */}
         <div className="flex items-center">
           <img
-            src="/logo.png"
+            src={siteLogo || '/logo.png'}
             alt="Logo"
             className="h-11 sm:h-12 w-auto object-contain"
             draggable={false}

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAppStore, type DashboardTab, type AdminTab } from '@/lib/store'
 import { formatUSDT } from '@/lib/api'
 import { useI18n } from '@/lib/i18n/context'
@@ -59,6 +59,7 @@ const navItems: NavItem[] = [
   { id: 'copy-traders', labelKey: 'dash.sidebar.copyTraders', icon: Activity, accent: 'cyan' },
   { id: 'affiliate', labelKey: 'dash.sidebar.affiliate', icon: UserPlus, accent: 'amber' },
   { id: 'team-bonus', labelKey: 'dash.sidebar.teamBonus', icon: Award, accent: 'amber' },
+  { id: 'transfer', labelKey: 'dash.sidebar.transfer', icon: ArrowDownUp, accent: 'cyan' },
   { id: 'withdrawals', labelKey: 'dash.sidebar.withdrawals', icon: ArrowDownCircle, accent: 'cyan' },
 ]
 
@@ -75,7 +76,7 @@ const adminItems: AdminNavItem[] = [
   { id: 'admin-nowpayments', labelKey: 'admin.nowpayments', icon: CreditCard },
 ]
 
-function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
+function SidebarContent({ onNavigate, siteLogo }: { onNavigate?: () => void; siteLogo?: string }) {
   const { currentUser, dashboardTab, setDashboardTab, adminTab, setAdminTab, logout, setCurrentView } = useAppStore()
   const { t } = useI18n()
   const [adminOpen, setAdminOpen] = useState(true)
@@ -127,7 +128,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       {/* Logo */}
       <div className="flex items-center justify-center px-4 py-4 border-b border-border/10">
         <img
-          src="/logo.png"
+          src={siteLogo || '/logo.png'}
           alt="Logo"
           className="h-16 w-auto max-w-[200px] object-contain"
           draggable={false}
@@ -293,6 +294,18 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
 export function DashboardSidebar() {
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [siteLogo, setSiteLogo] = useState('')
+
+  useEffect(() => {
+    fetch('/api/site/config')
+      .then(r => r.json())
+      .then(data => {
+        if (data.success && data.siteLogo) {
+          setSiteLogo(data.siteLogo)
+        }
+      })
+      .catch(() => {})
+  }, [])
 
   return (
     <>
@@ -305,12 +318,12 @@ export function DashboardSidebar() {
             </Button>
           </SheetTrigger>
           <SheetContent side="left" className="p-0 w-72 bg-[#060a14] border-border/10">
-            <SidebarContent onNavigate={() => setMobileOpen(false)} />
+            <SidebarContent onNavigate={() => setMobileOpen(false)} siteLogo={siteLogo} />
           </SheetContent>
         </Sheet>
         <div className="flex items-center ml-3">
           <img
-            src="/logo.png"
+            src={siteLogo || '/logo.png'}
             alt="Logo"
             className="h-10 w-auto object-contain"
             draggable={false}
@@ -321,7 +334,7 @@ export function DashboardSidebar() {
       {/* Desktop sidebar */}
       <aside className="hidden lg:flex flex-col w-[260px] min-h-screen border-r border-border/10 relative">
         <div className="absolute inset-0 bg-gradient-to-b from-emerald-500/[0.02] to-transparent pointer-events-none" />
-        <SidebarContent />
+        <SidebarContent siteLogo={siteLogo} />
       </aside>
     </>
   )

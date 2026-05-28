@@ -99,7 +99,12 @@ export function AuthModals() {
     setRegEmail('')
     setRegPassword('')
     setRegConfirm('')
-    setRegReferral('')
+    // Preserve referral code from URL — don't clear it so reopening the dialog still has it
+    if (!urlRefCode) {
+      setRegReferral('')
+    } else {
+      setRegReferral(urlRefCode)
+    }
   }
 
   return (

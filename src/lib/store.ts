@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 
-export type DashboardTab = 'overview' | 'invest' | 'plans' | 'copy-traders' | 'affiliate' | 'team-bonus' | 'withdrawals' | 'admin'
+export type DashboardTab = 'overview' | 'invest' | 'plans' | 'copy-traders' | 'affiliate' | 'team-bonus' | 'withdrawals' | 'transfer' | 'admin'
 export type AdminTab = 'admin-dashboard' | 'admin-plans' | 'admin-copy-traders' | 'admin-pools' | 'admin-users' | 'admin-withdrawals' | 'admin-settings' | 'admin-levels' | 'admin-ranks' | 'admin-nowpayments'
 export type AuthModal = null | 'login' | 'register'
 

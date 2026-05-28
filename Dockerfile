@@ -1,5 +1,5 @@
 # ============================================================================
-# ActionCash - PLATAFORMA ROI - Production Dockerfile for Coolify
+# ActionCash - Production Dockerfile for Coolify
 # ============================================================================
 # IMPORTANT: This project uses PostgreSQL ONLY. Never SQLite.
 # The prisma schema is hardcoded to provider = "postgresql".

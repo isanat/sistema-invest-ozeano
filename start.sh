@@ -2,7 +2,7 @@
 set -eu
 
 echo "============================================"
-echo "ActionCash - PLATAFORMA ROI Starting"
+echo "ActionCash Starting"
 echo "============================================"
 
 echo "NODE_ENV: ${NODE_ENV:-}"

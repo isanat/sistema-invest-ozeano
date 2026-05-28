@@ -25,11 +25,11 @@ export async function POST(request: NextRequest) {
     // Generate affiliate code
     const affiliateCode = generateAffiliateCode(data.name);
 
-    // Handle referral code
+    // Handle referral code (case-insensitive: affiliate codes are uppercase, but users may type lowercase)
     let referredBy: string | null = null;
     if (data.referralCode) {
-      const referrer = await db.user.findUnique({
-        where: { affiliateCode: data.referralCode },
+      const referrer = await db.user.findFirst({
+        where: { affiliateCode: { equals: data.referralCode.toUpperCase(), mode: 'insensitive' } },
       });
       if (referrer) {
         referredBy = referrer.id;

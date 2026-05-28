@@ -611,6 +611,7 @@ export default function PlataformaROI() {
     minDepositUsdt: number; maxDepositUsdt: number;
     minWithdrawalUsdt: number; maxWithdrawalUsdt: number; withdrawalFeePct: number;
     siteName: string;
+    siteLogo: string;
     teamBonusRanksVisible: boolean;
   }>({
     hasPix: false, hasUsdt: false,
@@ -619,6 +620,7 @@ export default function PlataformaROI() {
     minDepositUsdt: 5, maxDepositUsdt: 100000,
     minWithdrawalUsdt: 5, maxWithdrawalUsdt: 50000, withdrawalFeePct: 5,
     siteName: 'ActionCash',
+    siteLogo: '',
     teamBonusRanksVisible: false,
   });
 
@@ -652,6 +654,14 @@ export default function PlataformaROI() {
   const [milestoneDialog, setMilestoneDialog] = useState<{ open: boolean; milestone?: AffiliateMilestone | null }>({ open: false });
   const [contestDialog, setContestDialog] = useState<{ open: boolean; contest?: AffiliateContest | null }>({ open: false });
   const [badgeDialog, setBadgeDialog] = useState<{ open: boolean; badge?: any | null }>({ open: false });
+
+  // Fix Referrals state
+  const [orphanedUsers, setOrphanedUsers] = useState<any[]>([]);
+  const [referralAffiliates, setReferralAffiliates] = useState<any[]>([]);
+  const [fixReferralLoading, setFixReferralLoading] = useState(false);
+  const [assignReferralCode, setAssignReferralCode] = useState('');
+  const [assignReferralUserId, setAssignReferralUserId] = useState('');
+  const [assignReferralLoading, setAssignReferralLoading] = useState(false);
 
   // User Voucher state (leader view)
   const [userVouchers, setUserVouchers] = useState<any[]>([]);
@@ -882,6 +892,7 @@ export default function PlataformaROI() {
             maxWithdrawalUsdt: data.maxWithdrawalUsdt ?? 50000,
             withdrawalFeePct: data.withdrawalFeePct ?? 0,
             siteName: data.siteName ?? 'ActionCash',
+            siteLogo: data.siteLogo ?? '',
             teamBonusRanksVisible: data.teamBonusRanksVisible ?? false,
           }));
         }
@@ -2574,7 +2585,7 @@ export default function PlataformaROI() {
           <div className="max-w-7xl mx-auto flex items-center justify-between px-3 sm:px-6 py-2.5 sm:py-3">
             <div className="flex items-center gap-2 sm:gap-2.5">
               <img
-                src="/logo.png"
+                src={siteConfig.siteLogo || '/logo.png'}
                 alt="Logo"
                 className="h-11 sm:h-12 w-auto object-contain"
                 draggable={false}
@@ -3510,7 +3521,7 @@ export default function PlataformaROI() {
           {/* Logo */}
           <div className="flex items-center justify-center px-3 py-3 border-b border-white/[0.06]">
             <img
-              src="/logo.png"
+              src={siteConfig.siteLogo || '/logo.png'}
               alt="Logo"
               className="h-14 w-auto max-w-[180px] object-contain"
               draggable={false}
@@ -3589,7 +3600,7 @@ export default function PlataformaROI() {
                 <div className="p-4 border-b border-white/[0.06]">
                   <div className="flex items-center justify-between mb-4">
                     <img
-                      src="/logo.png"
+                      src={siteConfig.siteLogo || '/logo.png'}
                       alt="Logo"
                       className="h-12 w-auto max-w-[160px] object-contain"
                       draggable={false}
@@ -4331,7 +4342,7 @@ export default function PlataformaROI() {
                         </div>
                         <div>
                           <h2 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">{t('sidebar.invest')}</h2>
-                          <p className="text-zinc-500 text-sm">Plataforma ROI — {t('copyTraders.realData')}</p>
+                          <p className="text-zinc-500 text-sm">ActionCash — {t('copyTraders.realData')}</p>
                         </div>
                       </div>
                     </motion.div>
@@ -7083,36 +7094,159 @@ export default function PlataformaROI() {
 
                     {/* Admin Users */}
                     {adminTab === 'users' && (
-                      <Card className="bg-zinc-900 border-zinc-800">
-                        <CardContent className="p-0 overflow-x-auto">
-                          <Table className="min-w-[700px]">
-                            <TableHeader><TableRow className="border-zinc-800 hover:bg-transparent">
-                              <TableHead className="text-zinc-400">{t('admin.name')}</TableHead><TableHead className="text-zinc-400">{t('admin.email')}</TableHead>
-                              <TableHead className="text-zinc-400">{t('admin.role')}</TableHead><TableHead className="text-zinc-400">{t('admin.balance')}</TableHead>
-                              <TableHead className="text-zinc-400">Afiliado</TableHead><TableHead className="text-zinc-400">{t('admin.active')}</TableHead>
-                              <TableHead className="text-zinc-400">{t('admin.action')}</TableHead>
-                            </TableRow></TableHeader>
-                            <TableBody>
-                              {adminUsers.map(u => (
-                                <TableRow key={u.id} className="border-zinc-800">
-                                  <TableCell className="font-medium">{u.name}</TableCell>
-                                  <TableCell className="text-zinc-400 text-sm">{u.email}</TableCell>
-                                  <TableCell><Badge variant="outline" className={u.role === 'admin' ? 'border-amber-500/30 text-amber-400' : 'border-zinc-600'}>{u.role}</Badge></TableCell>
-                                  <TableCell>${fmtUSDT(u.balance)}</TableCell>
-                                  <TableCell>${fmtUSDT(u.affiliateBalance || '0')}</TableCell>
-                                  <TableCell>{u.isActive ? <CheckCircle2 className="h-4 w-4 text-cyan-400" /> : <XCircle className="h-4 w-4 text-red-400" />}</TableCell>
-                                  <TableCell>
-                                    <div className="flex gap-1">
-                                      <Button variant="ghost" size="icon" className="h-10 w-10" title="Editar" onClick={() => setUserDialog({ open: true, user: u })}><Pencil className="h-4 w-4" /></Button>
-                                      <Button variant="ghost" size="icon" className="h-10 w-10 text-cyan-400" title="Logar como este usuário" onClick={async () => { try { const res = await api('/api/auth/login-as', { method: 'POST', body: JSON.stringify({ userId: u.id }) }); if (res.user) { toast.success(`Logado como ${res.user.name}`); setUser(res.user); } } catch(e: any) { toast.error(e.message || 'Erro ao logar como usuário'); } }}><LogIn className="h-4 w-4" /></Button>
-                                    </div>
-                                  </TableCell>
-                                </TableRow>
-                              ))}
-                            </TableBody>
-                          </Table>
-                        </CardContent>
-                      </Card>
+                      <div className="space-y-6">
+                        <Card className="bg-zinc-900 border-zinc-800">
+                          <CardContent className="p-0 overflow-x-auto">
+                            <Table className="min-w-[700px]">
+                              <TableHeader><TableRow className="border-zinc-800 hover:bg-transparent">
+                                <TableHead className="text-zinc-400">{t('admin.name')}</TableHead><TableHead className="text-zinc-400">{t('admin.email')}</TableHead>
+                                <TableHead className="text-zinc-400">{t('admin.role')}</TableHead><TableHead className="text-zinc-400">{t('admin.balance')}</TableHead>
+                                <TableHead className="text-zinc-400">Afiliado</TableHead><TableHead className="text-zinc-400">{t('admin.active')}</TableHead>
+                                <TableHead className="text-zinc-400">{t('admin.action')}</TableHead>
+                              </TableRow></TableHeader>
+                              <TableBody>
+                                {adminUsers.map(u => (
+                                  <TableRow key={u.id} className="border-zinc-800">
+                                    <TableCell className="font-medium">{u.name}</TableCell>
+                                    <TableCell className="text-zinc-400 text-sm">{u.email}</TableCell>
+                                    <TableCell><Badge variant="outline" className={u.role === 'admin' ? 'border-amber-500/30 text-amber-400' : 'border-zinc-600'}>{u.role}</Badge></TableCell>
+                                    <TableCell>${fmtUSDT(u.balance)}</TableCell>
+                                    <TableCell>${fmtUSDT(u.affiliateBalance || '0')}</TableCell>
+                                    <TableCell>{u.isActive ? <CheckCircle2 className="h-4 w-4 text-cyan-400" /> : <XCircle className="h-4 w-4 text-red-400" />}</TableCell>
+                                    <TableCell>
+                                      <div className="flex gap-1">
+                                        <Button variant="ghost" size="icon" className="h-10 w-10" title="Editar" onClick={() => setUserDialog({ open: true, user: u })}><Pencil className="h-4 w-4" /></Button>
+                                        <Button variant="ghost" size="icon" className="h-10 w-10 text-cyan-400" title="Logar como este usuário" onClick={async () => { try { const res = await api('/api/auth/login-as', { method: 'POST', body: JSON.stringify({ userId: u.id }) }); if (res.user) { toast.success(`Logado como ${res.user.name}`); setUser(res.user); } } catch(e: any) { toast.error(e.message || 'Erro ao logar como usuário'); } }}><LogIn className="h-4 w-4" /></Button>
+                                      </div>
+                                    </TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </CardContent>
+                        </Card>
+
+                        {/* Fix Referrals Section */}
+                        <Card className="bg-zinc-900 border-zinc-800">
+                          <CardHeader className="pb-3">
+                            <div className="flex items-center justify-between">
+                              <CardTitle className="text-lg flex items-center gap-2">
+                                <Users className="h-5 w-5 text-amber-400" />
+                                Corrigir Referidos
+                              </CardTitle>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="border-amber-500/30 text-amber-400 hover:bg-amber-500/10"
+                                disabled={fixReferralLoading}
+                                onClick={async () => {
+                                  setFixReferralLoading(true);
+                                  try {
+                                    const data = await api<{ success: boolean; orphanedUsers: any[]; affiliates: any[]; summary: any }>('/api/admin/fix-referrals');
+                                    setOrphanedUsers(data.orphanedUsers || []);
+                                    setReferralAffiliates(data.affiliates || []);
+                                    toast.success(`${data.summary?.orphanedCount || 0} usuário(s) sem patrocinador encontrado(s)`);
+                                  } catch (e: any) {
+                                    toast.error(e.message || 'Erro ao buscar dados');
+                                  } finally {
+                                    setFixReferralLoading(false);
+                                  }
+                                }}
+                              >
+                                {fixReferralLoading ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Search className="h-4 w-4 mr-1" />}
+                                Buscar Órfãos
+                              </Button>
+                            </div>
+                            <p className="text-xs text-zinc-500">Encontre usuários que foram cadastrados sem patrocinador e atribua o código de afiliado correto.</p>
+                          </CardHeader>
+                          {orphanedUsers.length > 0 && (
+                            <CardContent className="p-0 overflow-x-auto">
+                              <Table className="min-w-[600px]">
+                                <TableHeader><TableRow className="border-zinc-800 hover:bg-transparent">
+                                  <TableHead className="text-zinc-400">Nome</TableHead>
+                                  <TableHead className="text-zinc-400">Email</TableHead>
+                                  <TableHead className="text-zinc-400">Investiu?</TableHead>
+                                  <TableHead className="text-zinc-400">Cadastro</TableHead>
+                                  <TableHead className="text-zinc-400">Atribuir Patrocinador</TableHead>
+                                </TableRow></TableHeader>
+                                <TableBody>
+                                  {orphanedUsers.map(u => (
+                                    <TableRow key={u.id} className="border-zinc-800">
+                                      <TableCell className="font-medium">{u.name}</TableCell>
+                                      <TableCell className="text-zinc-400 text-sm">{u.email}</TableCell>
+                                      <TableCell>{u.hasInvested ? <CheckCircle2 className="h-4 w-4 text-emerald-400" /> : <XCircle className="h-4 w-4 text-red-400" />}</TableCell>
+                                      <TableCell className="text-zinc-500 text-xs">{new Date(u.createdAt).toLocaleDateString('pt-BR')}</TableCell>
+                                      <TableCell>
+                                        <div className="flex gap-1 items-center">
+                                          <Input
+                                            placeholder="Código afiliado"
+                                            className="bg-zinc-800 border-zinc-700 h-8 text-xs w-32"
+                                            value={assignReferralUserId === u.id ? assignReferralCode : ''}
+                                            onChange={(e) => {
+                                              setAssignReferralUserId(u.id);
+                                              setAssignReferralCode(e.target.value);
+                                            }}
+                                            onFocus={() => {
+                                              if (assignReferralUserId !== u.id) {
+                                                setAssignReferralUserId(u.id);
+                                                setAssignReferralCode('');
+                                              }
+                                            }}
+                                          />
+                                          <Button
+                                            size="sm"
+                                            className="h-8 bg-emerald-600 hover:bg-emerald-500 text-xs"
+                                            disabled={assignReferralLoading || (assignReferralUserId !== u.id || !assignReferralCode.trim())}
+                                            onClick={async () => {
+                                              if (!assignReferralCode.trim()) return;
+                                              setAssignReferralLoading(true);
+                                              try {
+                                                const data = await api<{ success: boolean; message: string }>('/api/admin/fix-referrals', {
+                                                  method: 'POST',
+                                                  body: JSON.stringify({ userId: u.id, sponsorAffiliateCode: assignReferralCode.trim() }),
+                                                });
+                                                toast.success(data.message || 'Patrocinador atribuído!');
+                                                // Refresh the list
+                                                setOrphanedUsers(prev => prev.filter(ou => ou.id !== u.id));
+                                                setAssignReferralCode('');
+                                                setAssignReferralUserId('');
+                                              } catch (e: any) {
+                                                toast.error(e.message || 'Erro ao atribuir patrocinador');
+                                              } finally {
+                                                setAssignReferralLoading(false);
+                                              }
+                                            }}
+                                          >
+                                            {assignReferralLoading && assignReferralUserId === u.id ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Atribuir'}
+                                          </Button>
+                                        </div>
+                                      </TableCell>
+                                    </TableRow>
+                                  ))}
+                                </TableBody>
+                              </Table>
+                              {/* Affiliates reference */}
+                              {referralAffiliates.length > 0 && (
+                                <div className="p-3 border-t border-zinc-800">
+                                  <p className="text-xs text-zinc-500 mb-2">Códigos de afiliado disponíveis:</p>
+                                  <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
+                                    {referralAffiliates.map((a: any) => (
+                                      <Badge key={a.id} variant="outline" className="border-zinc-700 text-zinc-400 text-xs cursor-pointer hover:border-emerald-500/50 hover:text-emerald-400" onClick={() => { navigator.clipboard.writeText(a.affiliateCode || ''); toast.success(`Código ${a.affiliateCode} copiado!`); }}>
+                                        {a.affiliateCode} — {a.name}
+                                      </Badge>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </CardContent>
+                          )}
+                          {orphanedUsers.length === 0 && fixReferralLoading === false && (
+                            <CardContent className="py-6 text-center text-zinc-500 text-sm">
+                              Clique em "Buscar Órfãos" para encontrar usuários sem patrocinador.
+                            </CardContent>
+                          )}
+                        </Card>
+                      </div>
                     )}
 
                     {/* Admin Deposits */}

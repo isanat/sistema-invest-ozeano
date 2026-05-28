@@ -1,4 +1,4 @@
-# 🚀 Guia de Deploy - PLATAFORMA ROI
+# 🚀 Guia de Deploy - ActionCash
 
 ## 1. Variáveis de Ambiente no Vercel (OBRIGATÓRIO)
 

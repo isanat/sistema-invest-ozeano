@@ -219,6 +219,7 @@ type TranslationKeys = {
   'dash.sidebar.affiliate': string
   'dash.sidebar.teamBonus': string
   'dash.sidebar.withdrawals': string
+  'dash.sidebar.transfer': string
   'dash.sidebar.admin': string
 
   // Dashboard - Overview
@@ -284,6 +285,37 @@ type TranslationKeys = {
   'dash.team.nextTier': string
   'dash.team.referralsNeeded': string
   'dash.team.bonusOnRoi': string
+
+  // Dashboard - Transfer
+  'dash.transfer.title': string
+  'dash.transfer.subtitle': string
+  'dash.transfer.recipientEmail': string
+  'dash.transfer.recipientEmailPlaceholder': string
+  'dash.transfer.lookupUser': string
+  'dash.transfer.foundUser': string
+  'dash.transfer.userNotFound': string
+  'dash.transfer.amount': string
+  'dash.transfer.amountPlaceholder': string
+  'dash.transfer.fee': string
+  'dash.transfer.netAmount': string
+  'dash.transfer.totalDebit': string
+  'dash.transfer.sendTransfer': string
+  'dash.transfer.config': string
+  'dash.transfer.minAmount': string
+  'dash.transfer.maxAmount': string
+  'dash.transfer.feePct': string
+  'dash.transfer.dailyLimit': string
+  'dash.transfer.cooldown': string
+  'dash.transfer.enabled': string
+  'dash.transfer.disabled': string
+  'dash.transfer.history': string
+  'dash.transfer.noTransfers': string
+  'dash.transfer.sent': string
+  'dash.transfer.received': string
+  'dash.transfer.completed': string
+  'dash.transfer.transferSuccess': string
+  'dash.transfer.dailyUsed': string
+  'dash.transfer.cooldownRemaining': string
 
   // Admin
   'admin.dashboard': string
@@ -525,6 +557,7 @@ export const translations: Record<Locale, TranslationKeys> = {
     'dash.sidebar.affiliate': 'Afiliados',
     'dash.sidebar.teamBonus': 'Bono Equipo',
     'dash.sidebar.withdrawals': 'Retiros',
+    'dash.sidebar.transfer': 'Transferencia',
     'dash.sidebar.admin': 'Admin',
 
     // Dashboard - Overview
@@ -590,6 +623,37 @@ export const translations: Record<Locale, TranslationKeys> = {
     'dash.team.nextTier': 'Próximo Nivel',
     'dash.team.referralsNeeded': 'Referidos necesarios',
     'dash.team.bonusOnRoi': 'Bono en ROI',
+
+    // Dashboard - Transfer
+    'dash.transfer.title': 'Transferencia',
+    'dash.transfer.subtitle': 'Envía USDT a otro usuario de la plataforma',
+    'dash.transfer.recipientEmail': 'Email del destinatario',
+    'dash.transfer.recipientEmailPlaceholder': 'usuario@email.com',
+    'dash.transfer.lookupUser': 'Buscar',
+    'dash.transfer.foundUser': 'Usuario encontrado',
+    'dash.transfer.userNotFound': 'Usuario no encontrado',
+    'dash.transfer.amount': 'Monto',
+    'dash.transfer.amountPlaceholder': '0.00',
+    'dash.transfer.fee': 'Comisión',
+    'dash.transfer.netAmount': 'Monto neto',
+    'dash.transfer.totalDebit': 'Total débito',
+    'dash.transfer.sendTransfer': 'Enviar Transferencia',
+    'dash.transfer.config': 'Configuración',
+    'dash.transfer.minAmount': 'Monto mínimo',
+    'dash.transfer.maxAmount': 'Monto máximo',
+    'dash.transfer.feePct': 'Comisión',
+    'dash.transfer.dailyLimit': 'Límite diario',
+    'dash.transfer.cooldown': 'Espera entre transferencias',
+    'dash.transfer.enabled': 'Habilitado',
+    'dash.transfer.disabled': 'Deshabilitado',
+    'dash.transfer.history': 'Historial de transferencias',
+    'dash.transfer.noTransfers': 'No tienes transferencias registradas.',
+    'dash.transfer.sent': 'Enviado',
+    'dash.transfer.received': 'Recibido',
+    'dash.transfer.completed': 'Completado',
+    'dash.transfer.transferSuccess': '¡Transferencia enviada exitosamente!',
+    'dash.transfer.dailyUsed': 'Usados hoy',
+    'dash.transfer.cooldownRemaining': 'Espera restante',
 
     // Admin
     'admin.dashboard': 'Dashboard Admin',
@@ -819,6 +883,7 @@ export const translations: Record<Locale, TranslationKeys> = {
     'dash.sidebar.affiliate': 'Affiliates',
     'dash.sidebar.teamBonus': 'Team Bonus',
     'dash.sidebar.withdrawals': 'Withdrawals',
+    'dash.sidebar.transfer': 'Transfer',
     'dash.sidebar.admin': 'Admin',
 
     'dash.overview.welcome': 'Hello',
@@ -878,6 +943,37 @@ export const translations: Record<Locale, TranslationKeys> = {
     'dash.team.nextTier': 'Next Tier',
     'dash.team.referralsNeeded': 'Referrals needed',
     'dash.team.bonusOnRoi': 'Bonus on ROI',
+
+    // Dashboard - Transfer
+    'dash.transfer.title': 'Transfer',
+    'dash.transfer.subtitle': 'Send USDT to another platform user',
+    'dash.transfer.recipientEmail': 'Recipient email',
+    'dash.transfer.recipientEmailPlaceholder': 'user@email.com',
+    'dash.transfer.lookupUser': 'Lookup',
+    'dash.transfer.foundUser': 'User found',
+    'dash.transfer.userNotFound': 'User not found',
+    'dash.transfer.amount': 'Amount',
+    'dash.transfer.amountPlaceholder': '0.00',
+    'dash.transfer.fee': 'Fee',
+    'dash.transfer.netAmount': 'Net amount',
+    'dash.transfer.totalDebit': 'Total debit',
+    'dash.transfer.sendTransfer': 'Send Transfer',
+    'dash.transfer.config': 'Configuration',
+    'dash.transfer.minAmount': 'Minimum amount',
+    'dash.transfer.maxAmount': 'Maximum amount',
+    'dash.transfer.feePct': 'Fee',
+    'dash.transfer.dailyLimit': 'Daily limit',
+    'dash.transfer.cooldown': 'Cooldown between transfers',
+    'dash.transfer.enabled': 'Enabled',
+    'dash.transfer.disabled': 'Disabled',
+    'dash.transfer.history': 'Transfer history',
+    'dash.transfer.noTransfers': 'No transfers registered.',
+    'dash.transfer.sent': 'Sent',
+    'dash.transfer.received': 'Received',
+    'dash.transfer.completed': 'Completed',
+    'dash.transfer.transferSuccess': 'Transfer sent successfully!',
+    'dash.transfer.dailyUsed': 'Used today',
+    'dash.transfer.cooldownRemaining': 'Cooldown remaining',
 
     'admin.dashboard': 'Admin Dashboard',
     'admin.plans': 'Plans',
@@ -1105,6 +1201,7 @@ export const translations: Record<Locale, TranslationKeys> = {
     'dash.sidebar.affiliate': 'Afiliados',
     'dash.sidebar.teamBonus': 'Bônus Equipe',
     'dash.sidebar.withdrawals': 'Saques',
+    'dash.sidebar.transfer': 'Transferência',
     'dash.sidebar.admin': 'Admin',
 
     'dash.overview.welcome': 'Olá',
@@ -1164,6 +1261,37 @@ export const translations: Record<Locale, TranslationKeys> = {
     'dash.team.nextTier': 'Próximo Nível',
     'dash.team.referralsNeeded': 'Indicações necessárias',
     'dash.team.bonusOnRoi': 'Bônus no ROI',
+
+    // Dashboard - Transfer
+    'dash.transfer.title': 'Transferência',
+    'dash.transfer.subtitle': 'Envie USDT para outro usuário da plataforma',
+    'dash.transfer.recipientEmail': 'E-mail do destinatário',
+    'dash.transfer.recipientEmailPlaceholder': 'usuario@email.com',
+    'dash.transfer.lookupUser': 'Buscar',
+    'dash.transfer.foundUser': 'Usuário encontrado',
+    'dash.transfer.userNotFound': 'Usuário não encontrado',
+    'dash.transfer.amount': 'Valor',
+    'dash.transfer.amountPlaceholder': '0.00',
+    'dash.transfer.fee': 'Taxa',
+    'dash.transfer.netAmount': 'Valor líquido',
+    'dash.transfer.totalDebit': 'Débito total',
+    'dash.transfer.sendTransfer': 'Enviar Transferência',
+    'dash.transfer.config': 'Configuração',
+    'dash.transfer.minAmount': 'Valor mínimo',
+    'dash.transfer.maxAmount': 'Valor máximo',
+    'dash.transfer.feePct': 'Taxa',
+    'dash.transfer.dailyLimit': 'Limite diário',
+    'dash.transfer.cooldown': 'Espera entre transferências',
+    'dash.transfer.enabled': 'Habilitado',
+    'dash.transfer.disabled': 'Desabilitado',
+    'dash.transfer.history': 'Histórico de transferências',
+    'dash.transfer.noTransfers': 'Nenhuma transferência registrada.',
+    'dash.transfer.sent': 'Enviado',
+    'dash.transfer.received': 'Recebido',
+    'dash.transfer.completed': 'Concluído',
+    'dash.transfer.transferSuccess': 'Transferência enviada com sucesso!',
+    'dash.transfer.dailyUsed': 'Usados hoje',
+    'dash.transfer.cooldownRemaining': 'Espera restante',
 
     'admin.dashboard': 'Dashboard Admin',
     'admin.plans': 'Planos',
@@ -1391,6 +1519,7 @@ export const translations: Record<Locale, TranslationKeys> = {
     'dash.sidebar.affiliate': '联盟',
     'dash.sidebar.teamBonus': '团队奖金',
     'dash.sidebar.withdrawals': '提现',
+    'dash.sidebar.transfer': '转账',
     'dash.sidebar.admin': '管理',
 
     'dash.overview.welcome': '你好',
@@ -1450,6 +1579,37 @@ export const translations: Record<Locale, TranslationKeys> = {
     'dash.team.nextTier': '下一等级',
     'dash.team.referralsNeeded': '所需推荐',
     'dash.team.bonusOnRoi': 'ROI奖金',
+
+    // Dashboard - Transfer
+    'dash.transfer.title': '转账',
+    'dash.transfer.subtitle': '向平台其他用户发送USDT',
+    'dash.transfer.recipientEmail': '收件人邮箱',
+    'dash.transfer.recipientEmailPlaceholder': 'user@email.com',
+    'dash.transfer.lookupUser': '查找',
+    'dash.transfer.foundUser': '找到用户',
+    'dash.transfer.userNotFound': '未找到用户',
+    'dash.transfer.amount': '金额',
+    'dash.transfer.amountPlaceholder': '0.00',
+    'dash.transfer.fee': '手续费',
+    'dash.transfer.netAmount': '净金额',
+    'dash.transfer.totalDebit': '总扣款',
+    'dash.transfer.sendTransfer': '发送转账',
+    'dash.transfer.config': '配置',
+    'dash.transfer.minAmount': '最低金额',
+    'dash.transfer.maxAmount': '最高金额',
+    'dash.transfer.feePct': '手续费率',
+    'dash.transfer.dailyLimit': '每日限额',
+    'dash.transfer.cooldown': '转账间隔',
+    'dash.transfer.enabled': '已启用',
+    'dash.transfer.disabled': '已禁用',
+    'dash.transfer.history': '转账记录',
+    'dash.transfer.noTransfers': '暂无转账记录。',
+    'dash.transfer.sent': '已发送',
+    'dash.transfer.received': '已收到',
+    'dash.transfer.completed': '已完成',
+    'dash.transfer.transferSuccess': '转账发送成功！',
+    'dash.transfer.dailyUsed': '今日已用',
+    'dash.transfer.cooldownRemaining': '剩余等待',
 
     'admin.dashboard': '管理面板',
     'admin.plans': '计划',
