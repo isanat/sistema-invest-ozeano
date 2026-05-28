@@ -104,10 +104,11 @@ export async function POST(request: NextRequest) {
       throw new BusinessError('Este usuário já tem um patrocinador. Use PUT para alterar.');
     }
 
-    // Find the sponsor by affiliate code (case-insensitive)
+    // Find the sponsor by affiliate code (codes are stored uppercase)
+    const upperCode = sponsorAffiliateCode.toUpperCase();
     const sponsor = await db.user.findFirst({
       where: {
-        affiliateCode: { equals: sponsorAffiliateCode.toUpperCase(), mode: 'insensitive' },
+        affiliateCode: upperCode,
       },
       select: { id: true, name: true, email: true, affiliateCode: true },
     });
@@ -181,10 +182,11 @@ export async function PUT(request: NextRequest) {
       throw new BusinessError('Usuário não encontrado');
     }
 
-    // Find the sponsor by affiliate code (case-insensitive)
+    // Find the sponsor by affiliate code (codes are stored uppercase)
+    const upperCode = sponsorAffiliateCode.toUpperCase();
     const sponsor = await db.user.findFirst({
       where: {
-        affiliateCode: { equals: sponsorAffiliateCode.toUpperCase(), mode: 'insensitive' },
+        affiliateCode: upperCode,
       },
       select: { id: true, name: true, email: true, affiliateCode: true },
     });

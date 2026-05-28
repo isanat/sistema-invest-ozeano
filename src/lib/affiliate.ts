@@ -351,7 +351,7 @@ async function processRevenuePoolCommission(
 
     if (!referrer) break;
 
-    if (referrer.hasInvested && referrer.linkUnlocked) {
+    if (referrer.hasInvested) {
       const levelConfig = levels[levelIndex];
       referrers.push({
         id: referrer.id,
@@ -462,7 +462,7 @@ async function walkUpReferralChain(
 
     if (!referrer) break;
 
-    if (referrer.hasInvested && referrer.linkUnlocked) {
+    if (referrer.hasInvested) {
       const levelConfig = levels[levelIndex];
       const template = commissionTemplate.find((t) => t.level === levelConfig.level);
       if (template) {
@@ -700,7 +700,7 @@ export async function calculateCommissions(
 
     if (!referrer) break;
 
-    if (referrer.hasInvested && referrer.linkUnlocked) {
+    if (referrer.hasInvested) {
       const levelConfig = levels[levelIndex];
       const percentage = d(levelConfig.percentage);
 

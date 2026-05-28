@@ -2976,7 +2976,7 @@ export default function PlataformaROI() {
                 { amount: 1000, color: 'from-purple-500 to-purple-400', featured: false },
               ].map((tier) => {
                 const daily = +(tier.amount * roiPct / 100).toFixed(2);
-                const doubles = tier.amount * 2;
+                const breakevenDays = Math.ceil(100 / roiPct);
                 return (
                 <motion.div key={tier.amount} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: tier.amount * 0.001 }} viewport={{ once: true }} className="stat-card-hover">
                   <div className={`glass-card rounded-2xl p-5 text-center h-full ${tier.featured ? 'tier-card-premium gradient-border glow-emerald' : 'border border-white/5'}`}>
@@ -2989,7 +2989,7 @@ export default function PlataformaROI() {
                     </div>
                     <div className="flex items-center justify-center gap-1 text-green-400 text-sm font-medium">
                       <TrendingUp className="h-4 w-4" />
-                      {t('common.doublesTo')} ${doubles.toLocaleString()}
+                      {t('common.capitalRecovery')} {breakevenDays} {t('landing.plans.duration')}
                     </div>
                   </div>
                 </motion.div>
