@@ -411,6 +411,21 @@ const HIDDEN_CONFIG_KEYS = new Set<string>([
   'affiliate_daily_cap_usd',
   'min_affiliate_withdrawal',
   'affiliate_withdrawal_fee_pct',
+  // NowPayments credentials — MUST be in Coolify env vars, NOT in database
+  'nowpayments_api_key',
+  'nowpayments_email',
+  'nowpayments_password',
+  'nowpayments_ipn_secret',
+  'nowpayments_base_url',
+  // Irrelevant trading configs — not part of ActionCash business model
+  'auto_compound_enabled',     // ActionCash pays ROI daily to balance, no auto-compound
+  'default_profit_share_pct',  // User gets 100% of 3.3% ROI, no profit sharing
+  'mining_variance_pct',       // ROI is fixed at 3.3%, no variance
+  'daily_roi_pct',             // ROI is per-plan, not global
+  'min_investment_usdt',       // Min investment is per-plan, not global
+  // Deposit configs managed elsewhere or irrelevant
+  'nowpayments_enabled',       // Managed via NowPayments tab
+  'pix_wallet_address',        // Not used in current model
 ]);
 
 const categoryIcon = (cat: string) => {
@@ -426,9 +441,9 @@ const categoryDescription: Record<string, string> = {
   general: 'Configurações gerais do site',
   deposit: 'Opções de depósito e métodos de pagamento',
   withdrawal: 'Regras para saques e taxas',
-  trading: 'Configurações de ROI e investimentos',
+  trading: 'Configurações de trading e investimentos',
   affiliate: 'Comissões e configurações de afiliados',
-  nowpayments: 'Configurações NowPayments — o split é gerenciado na aba NowPayments → Sócios & Split',
+  nowpayments: 'Credenciais NowPayments são configuradas nas variáveis de ambiente do Coolify',
 };
 
 // ============================================================================
@@ -8846,7 +8861,7 @@ export default function PlataformaROI() {
                             <Plus className="mr-2 h-4 w-4" /> Nova Config
                           </Button>
                         </div>
-                        {['branding', 'general', 'deposit', 'withdrawal', 'trading', 'nowpayments'].map(cat => {
+                        {['branding', 'general', 'deposit', 'withdrawal', 'trading'].map(cat => {
                           const catConfigs = adminConfigs.filter(c => c.category === cat && !HIDDEN_CONFIG_KEYS.has(c.key));
                           if (catConfigs.length === 0) return null;
                           const CatIcon = categoryIcon(cat);
