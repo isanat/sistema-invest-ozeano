@@ -1,30 +1,48 @@
 ---
 Task ID: 1
-Agent: main
-Task: Migrate database from SQLite to PostgreSQL and sync ActionCash data
+Agent: Main
+Task: Fix /api/auth/login 401 Unauthorized error
 
 Work Log:
-- Discovered PostgreSQL URL from git history: postgresql://flashmining:...@164.68.126.14:5435/flashmining
-- Compared SQLite (2 users, ActionCash configs) vs PostgreSQL (5 real users, old Flash Minings data)
-- Found PostgreSQL was running old Flash Minings schema with missing tables (InvestmentPlan, CopyTrader, etc.)
-- Changed Prisma provider from sqlite to postgresql in schema.prisma
-- Added default values for required columns (Investment.dailyRoi, dailyRoiPct, totalRoi, startDate, endDate)
-- Pushed Prisma schema to PostgreSQL with db push --accept-data-loss
-- Created all missing tables: InvestmentPlan, CopyTrader, TradingPool, BitgetTraderCache, WeeklySalary, ActionGoldPayment, DaymondPackage, Transfer
-- Updated SystemConfig: removed obsolete mining configs, updated site_name to "PLATAFORMA ROI", added 38 new ActionCash configs
-- Updated AffiliateLevel from 5 levels (15%) to 6 levels (5/3/1/1/1/2 = 13%)
-- Created 5 Investment Plans: Starter/Silver/Gold/Platinum/Diamond all @ 3.3% ROI
-- Updated admin user email from admintest@flashminings.com to admin@plataformaroi.com
-- Dropped obsolete Flash Minings tables: MiningPlan, Miner, MiningHistory, MiningRental, PoolStatus
-- Added datasourceUrl to PrismaClient constructor for reliable env var loading
-- Updated package.json dev script with NODE_OPTIONS memory limit
-- Verified all data via direct Prisma queries: plans, levels, configs, users all correct
-- Committed and pushed to GitHub (commit 6533864)
+- Investigated the 401 error on POST /api/auth/login
+- Confirmed auth.ts, login route, validations all exist and are correct
+- Discovered DATABASE_URL was pointing to Neon PostgreSQL, but Coolify has its own PostgreSQL instance
+- Updated local .env to use Coolify's public PostgreSQL URL (164.68.126.14:5436)
+- Pushed Prisma schema to Coolify PostgreSQL (was already in sync)
+- Seeded Coolify PostgreSQL with admin user, test user, investment plans, affiliate levels, etc.
+- Discovered the seed script was generating corrupted password hashes (161-char hex format instead of 60-char bcrypt)
+- Root cause: `bcrypt.hash()` async in tsx was producing wrong output; fixed by using `bcrypt.hashSync()`
+- Updated admin and user passwords directly in the database with correct bcrypt hashes
+- Verified login API returns 200 with correct user data
+- Fixed seed.ts to use hashSync and update passwords on upsert (not just create)
+- Added `prisma.seed` config and `tsx` dev dependency to package.json
+- Pushed fix to GitHub
 
 Stage Summary:
-- PostgreSQL migration complete and verified
-- All ActionCash business plan data synced to production database
-- 5 real users preserved (ADRIANO, Admin, Izaias, André, Ananias)
-- NowPayments config and deposit data preserved
-- Dev server works but has OOM issues with page.tsx (10K+ lines) in sandbox - not an issue on Vercel
-- Landing API returns correct data from PostgreSQL
+- Login now works: admin@plataformaroi.com / Admin@2026!
+- Database switched from Neon to Coolify PostgreSQL
+- All seed data populated in Coolify's PostgreSQL
+- Container env vars verified: DATABASE_URL points to Coolify internal PostgreSQL
+
+---
+Task ID: 2
+Agent: Main
+Task: Fix /api/admin/upload 404 and "Failed to find Server Action" errors
+
+Work Log:
+- Discovered /api/admin/upload route was missing from deployed Docker container
+- Root cause: .gitignore had `upload/` pattern which blocked `src/app/api/admin/upload/` from being tracked by git
+- Fixed .gitignore: changed `upload/` to `/public/upload/` (only ignore local upload directory, not API route)
+- Force-added `src/app/api/admin/upload/route.ts` to git tracking
+- Added debug logging to login route to diagnose future 401 errors
+- Pushed all fixes to GitHub
+- Triggered two Coolify deployments (first for seed fix, second for upload route)
+- Verified new container has the upload route compiled and working
+- Verified login API returns 200 with correct auth logging
+- Verified main page loads (200) and landing API works
+
+Stage Summary:
+- /api/admin/upload now deployed and returns proper errors (not 404)
+- Auth logging added: [AUTH] Login attempt/success/invalid messages in container logs
+- New container: 63ab98ac3dea (created 2026-05-28 02:19:34 CEST)
+- All APIs working: login, upload, landing, auth/me
