@@ -1,0 +1,32 @@
+#!/bin/sh
+# ============================================================================
+# PRE-COMMIT HOOK: Prevent SQLite provider in prisma/schema.prisma
+# ============================================================================
+# This project uses PostgreSQL EXCLUSIVELY. Any commit that changes
+# prisma/schema.prisma to use provider = "sqlite" will be REJECTED.
+# ============================================================================
+
+SCHEMA_FILE="prisma/schema.prisma"
+
+if [ -f "$SCHEMA_FILE" ]; then
+    if grep -q 'provider = "sqlite"' "$SCHEMA_FILE"; then
+        echo ""
+        echo "❌ COMMIT REJECTED: prisma/schema.prisma contains provider = \"sqlite\""
+        echo "   This project uses PostgreSQL EXCLUSIVELY. Never use SQLite."
+        echo "   Fix: Change provider = \"sqlite\" to provider = \"postgresql\""
+        echo ""
+        exit 1
+    fi
+fi
+
+# Also check if any staged changes would introduce sqlite provider
+STAGED_SCHEMA=$(git diff --cached -- "$SCHEMA_FILE" 2>/dev/null)
+if echo "$STAGED_SCHEMA" | grep -q '+.*provider = "sqlite"'; then
+    echo ""
+    echo "❌ COMMIT REJECTED: You are trying to introduce provider = \"sqlite\""
+    echo "   This project uses PostgreSQL EXCLUSIVELY. Never use SQLite."
+    echo ""
+    exit 1
+fi
+
+exit 0

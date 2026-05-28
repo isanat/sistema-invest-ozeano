@@ -1,5 +1,9 @@
 // ============================================================================
-// PLATAFORMA ROI - COPY TRADING ROI PLATFORM (PostgreSQL for Vercel)
+// PLATAFORMA ROI - COPY TRADING ROI PLATFORM (PostgreSQL ONLY)
+// ============================================================================
+// ⚠️  WARNING: This project uses PostgreSQL EXCLUSIVELY. NEVER change the
+//     datasource provider to "sqlite". A pre-commit hook will reject it.
+//     A Dockerfile check will also fail the build if sqlite is detected.
 // ============================================================================
 // USDT primary currency. All financial values as String (precision-safe).
 // ============================================================================

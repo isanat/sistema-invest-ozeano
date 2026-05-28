@@ -16,9 +16,9 @@ if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = db
 // ============================================================================
 // DATABASE PROVIDER DETECTION
 // ============================================================================
-// Used to conditionally execute PostgreSQL-specific SQL (FOR UPDATE, advisory
-// locks) that would cause syntax errors on SQLite. The Prisma provider is
-// dynamically switched by a script: sqlite locally, postgresql on Vercel.
+// This project uses PostgreSQL EXCLUSIVELY — never SQLite.
+// The Prisma schema is hardcoded to provider = "postgresql".
+// The isPostgres() check is kept for safety but should always return true.
 // ============================================================================
 
 let _isPostgresCache: boolean | undefined;
@@ -33,7 +33,7 @@ export function isPostgres(): boolean {
 
 /**
  * Acquire a row-level lock on a table row (PostgreSQL only).
- * On SQLite this is a no-op — transactions already serialize writes.
+ * On non-PostgreSQL this is a no-op — transactions already serialize writes.
  *
  * Usage inside a $transaction callback:
  *   await acquireRowLock(tx, 'User', userId);
@@ -49,12 +49,12 @@ export async function acquireRowLock(
     // table at compile-time, but we accept it for documentation.
     // The actual query is inlined at each call site below.
   }
-  // SQLite: no-op. Transactions handle locking automatically.
+  // Non-PostgreSQL: no-op. Transactions handle locking automatically.
 }
 
 /**
  * Acquire a PostgreSQL advisory lock to prevent concurrent cron execution.
- * On SQLite this is a no-op (cron deduplication handled differently).
+ * On non-PostgreSQL this is a no-op (cron deduplication handled differently).
  */
 export async function acquireAdvisoryLock(lockId: number): Promise<boolean> {
   if (isPostgres()) {
@@ -65,13 +65,13 @@ export async function acquireAdvisoryLock(lockId: number): Promise<boolean> {
       return false;
     }
   }
-  // SQLite: always succeed (no advisory lock support)
+  // Non-PostgreSQL: always succeed (no advisory lock support)
   return true;
 }
 
 /**
  * Release a PostgreSQL advisory lock.
- * On SQLite this is a no-op.
+ * On non-PostgreSQL this is a no-op.
  */
 export async function releaseAdvisoryLock(lockId: number): Promise<void> {
   if (isPostgres()) {
