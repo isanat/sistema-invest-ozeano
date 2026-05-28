@@ -93,3 +93,32 @@ Stage Summary:
 - PIX key field hidden when PIX is disabled in admin settings
 - Team Bonus Ranks card hidden when `team_bonus_ranks_visible` config is false
 - Investment cards now show: Investido, ROI/dia, Earned, Próx. ROI (24h countdown), ROI total, Voucher badge
+
+---
+Task ID: 1
+Agent: Main Agent
+Task: Add ActionCash logo and favicon, move logo to sidebar only
+
+Work Log:
+- Analyzed uploaded image (full screenshot, not a clean logo file)
+- Generated professional ActionCash logo using AI Image Generation (icon-only + wide with text)
+- Updated dashboard-sidebar.tsx: replaced Hexagon icon + "PLATAFORMA ROI" text with actual logo image (h-12)
+- Updated mobile header in dashboard-sidebar.tsx: replaced Hexagon + text with logo image (h-8)
+- Removed logo from dashboard header in page.tsx (was Bot icon + "PLATAFORMA ROI" text)
+- Added logo to desktop sidebar in page.tsx (h-11, with border-b separator)
+- Updated mobile sidebar overlay in page.tsx with logo image (h-10)
+- Updated landing page navbar (landing-page.tsx) with logo image (h-9)
+- Updated landing page footer (footer.tsx) with logo image (h-10)
+- Updated landing page fixed nav in page.tsx with logo image (h-9 sm:h-10)
+- Generated all favicon files from logo (16x16, 32x32, 96x96, 180x180, 192x192, 512x512, .ico)
+- Updated src/app/icon.png for Next.js app-router
+- Committed and pushed to GitHub
+- Deployed to Coolify production (actioncash.app)
+- Verified: container healthy, logo.png and favicon.ico accessible
+
+Stage Summary:
+- Logo now appears ONLY in sidebar (not in header) as requested
+- Logo is bigger (h-12 in sidebar vs previous h-9 icon)
+- No fallback text or site name in place of logo - only actual image
+- All favicon files updated with new ActionCash branding
+- Production deployment verified at https://actioncash.app
