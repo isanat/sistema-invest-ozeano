@@ -5,7 +5,7 @@ import { apiError, apiSuccess, handleApiError } from '@/lib/api-utils';
 import bcrypt from 'bcryptjs';
 
 // ============================================================================
-// ADMIN RESTORE UICO - Restore test user "uico" with their investments & ROI
+// ADMIN RESTORE USER - Restore test user (user@test.com) with their investments & ROI
 // ============================================================================
 // Data recovered from user's transaction history:
 //   4 investments: $10, $30, $40, $18 (total $98) in "Starter - 60 dias"
@@ -62,17 +62,17 @@ export async function POST(request: NextRequest) {
     }
 
     // Optional: override user email/name/password
-    const userEmail = body.email || 'uico@plataformaroi.com';
-    const userName = body.name || 'Uico';
-    const userPassword = body.password || 'Uico@2026!';
+    const userEmail = body.email || 'user@test.com';
+    const userName = body.name || 'Usuario Teste';
+    const userPassword = body.password || 'User@2026!';
 
-    console.info('[RESTORE-UICO] Starting data restoration for user uico...');
+    console.info('[RESTORE] Starting data restoration for user test...');
 
     await db.$transaction(async (tx) => {
       // ========== STEP 0: Ensure admin user exists (in case DB was fully reset) ==========
       const adminCount = await tx.user.count({ where: { role: 'admin' } });
       if (adminCount === 0) {
-        console.info('[RESTORE-UICO] No admin user found. Creating default admin...');
+        console.info('[RESTORE] No admin user found. Creating default admin...');
         const adminPasswordHash = bcrypt.hashSync('Admin@2026!', 12);
         await tx.user.create({
           data: {
@@ -94,11 +94,11 @@ export async function POST(request: NextRequest) {
             linkUnlocked: true,
           },
         });
-        console.info('[RESTORE-UICO] Admin user created: admin@plataformaroi.com / Admin@2026!');
+        console.info('[RESTORE] Admin user created: admin@plataformaroi.com / Admin@2026!');
       }
 
       // ========== STEP 1: Ensure Starter plan exists with 60 days ==========
-      console.info('[RESTORE-UICO] Step 1: Ensuring Starter plan...');
+      console.info('[RESTORE] Step 1: Ensuring Starter plan...');
 
       const starterPlan = await tx.investmentPlan.upsert({
         where: { name: 'Starter' },
@@ -125,7 +125,7 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      console.info(`[RESTORE-UICO] Starter plan ensured: ${starterPlan.id} (durationDays: ${starterPlan.durationDays})`);
+      console.info(`[RESTORE] Starter plan ensured: ${starterPlan.id} (durationDays: ${starterPlan.durationDays})`);
 
       // ========== STEP 1b: Ensure other plans exist ==========
       const otherPlans = [
@@ -167,7 +167,7 @@ export async function POST(request: NextRequest) {
         for (const lvl of levels) {
           await tx.affiliateLevel.create({ data: lvl });
         }
-        console.info('[RESTORE-UICO] Created 6 affiliate levels');
+        console.info('[RESTORE] Created 6 affiliate levels');
       }
 
       // ========== STEP 1d: Ensure system configs exist ==========
@@ -188,11 +188,11 @@ export async function POST(request: NextRequest) {
           { key: 'team_bonus_ranks_visible', value: 'true', type: 'boolean', description: 'Mostrar card de Team Bonus Ranks', category: 'team_bonus', isActive: true },
         ];
         await tx.systemConfig.createMany({ data: configs });
-        console.info(`[RESTORE-UICO] Created ${configs.length} system configs`);
+        console.info(`[RESTORE] Created ${configs.length} system configs`);
       }
 
-      // ========== STEP 2: Create or update user "uico" ==========
-      console.info('[RESTORE-UICO] Step 2: Creating/updating user uico...');
+      // ========== STEP 2: Create or update test user ==========
+      console.info('[RESTORE] Step 2: Creating/updating test user...');
 
       const passwordHash = bcrypt.hashSync(userPassword, 12);
 
@@ -215,7 +215,7 @@ export async function POST(request: NextRequest) {
             linkUnlocked: true,
           },
         });
-        console.info(`[RESTORE-UICO] Updated existing user: ${user.email} (id: ${user.id})`);
+        console.info(`[RESTORE] Updated existing user: ${user.email} (id: ${user.id})`);
       } else {
         // Create new user
         user = await tx.user.create({
@@ -233,25 +233,25 @@ export async function POST(request: NextRequest) {
             totalDeposited: '0',
             totalWithdrawn: '0',
             teamBonusPct: '0',
-            affiliateCode: 'UICO01',
+            affiliateCode: 'TEST01',
             hasInvested: true,
             linkUnlocked: true,
           },
         });
-        console.info(`[RESTORE-UICO] Created new user: ${user.email} (id: ${user.id})`);
+        console.info(`[RESTORE] Created new user: ${user.email} (id: ${user.id})`);
       }
 
       const userId = user.id;
 
       // ========== STEP 3: Delete any existing investments/ROI for this user ==========
-      console.info('[RESTORE-UICO] Step 3: Cleaning existing investments...');
+      console.info('[RESTORE] Step 3: Cleaning existing investments...');
 
       await tx.roiHistory.deleteMany({ where: { userId } });
       await tx.investment.deleteMany({ where: { userId } });
       await tx.transaction.deleteMany({ where: { userId } });
 
       // ========== STEP 4: Create 4 investments ==========
-      console.info('[RESTORE-UICO] Step 4: Creating investments...');
+      console.info('[RESTORE] Step 4: Creating investments...');
 
       // All investments were made on 28/05/2026
       const investmentDate = new Date('2026-05-28T12:56:00-03:00');
@@ -291,11 +291,11 @@ export async function POST(request: NextRequest) {
         });
 
         investments.push({ id: investment.id, amount: inv.amount, dailyRoi: inv.dailyRoi });
-        console.info(`[RESTORE-UICO] Created investment: $${inv.amount} (id: ${investment.id})`);
+        console.info(`[RESTORE] Created investment: $${inv.amount} (id: ${investment.id})`);
       }
 
       // ========== STEP 5: Create 4 ROI history records ==========
-      console.info('[RESTORE-UICO] Step 5: Creating ROI history records...');
+      console.info('[RESTORE] Step 5: Creating ROI history records...');
 
       const roiRecords = [
         { investmentIndex: 0, roiAmount: '0.33', totalRoi: '0.33' },  // $10 investment
@@ -320,11 +320,11 @@ export async function POST(request: NextRequest) {
             totalRoi: roi.totalRoi,
           },
         });
-        console.info(`[RESTORE-UICO] Created ROI record: $${roi.roiAmount} for investment $${inv.amount}`);
+        console.info(`[RESTORE] Created ROI record: $${roi.roiAmount} for investment $${inv.amount}`);
       }
 
       // ========== STEP 6: Create transaction records ==========
-      console.info('[RESTORE-UICO] Step 6: Creating transaction records...');
+      console.info('[RESTORE] Step 6: Creating transaction records...');
 
       const transactions = [
         {
@@ -390,7 +390,7 @@ export async function POST(request: NextRequest) {
         });
       }
 
-      console.info(`[RESTORE-UICO] Created ${transactions.length} transaction records`);
+      console.info(`[RESTORE] Created ${transactions.length} transaction records`);
 
       // ========== STEP 7: Log the restore action ==========
       const logAdminId = adminId || (await tx.user.findFirst({ where: { role: 'admin' } }))?.id;
@@ -401,7 +401,7 @@ export async function POST(request: NextRequest) {
           action: 'create',
           entity: 'user',
           entityId: userId,
-          description: `Restauração de dados do usuário uico (${userEmail}) - 4 investimentos ($98) + 4 ROI ($3.23)`,
+          description: `Restauração de dados do usuário teste (${userEmail}) - 4 investimentos ($98) + 4 ROI ($3.23)`,
           newValue: JSON.stringify({
             userId,
             email: userEmail,
@@ -415,10 +415,10 @@ export async function POST(request: NextRequest) {
       });
     }, { timeout: 30000 });
 
-    console.info('[RESTORE-UICO] Data restoration completed successfully!');
+    console.info('[RESTORE] Data restoration completed successfully!');
 
     return apiSuccess({
-      message: 'Dados do usuário uico restaurados com sucesso!',
+      message: 'Dados do usuário test restaurados com sucesso!',
       restored: {
         user: {
           email: userEmail,
@@ -448,7 +448,7 @@ export async function POST(request: NextRequest) {
       },
     }, 201);
   } catch (error) {
-    console.error('[RESTORE-UICO] Error:', error);
+    console.error('[RESTORE] Error:', error);
     return handleApiError(error);
   }
 }
