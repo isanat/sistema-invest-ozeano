@@ -301,3 +301,32 @@ Stage Summary:
 - Fallback to `/logo.png` preserved when no admin logo is set
 - Total of 7 logo references fixed across 4 files
 - No other functionality changed
+
+---
+Task ID: session-referral-logo-fix
+Agent: Main Orchestrator
+Task: Fix logo display, fix referral system, add Fix Referrals admin UI, remove duplicate transfer route, commit and push
+
+Work Log:
+- Investigated logo upload system: admin uploads via /api/admin/upload (base64), saved in site_logo SystemConfig, but sidebar/landing page hardcoded /logo.png
+- Fixed all logo references to use siteLogo from /api/site/config API with fallback to /logo.png
+- Fixed files: dashboard-sidebar.tsx, landing-page.tsx, footer.tsx, page.tsx
+- Audited referral system: found 2 bugs:
+  1. Case-sensitive affiliate code lookup (register/route.ts) - fixed with case-insensitive mode
+  2. Referral code lost on dialog close (auth-modals.tsx) - fixed by preserving urlRefCode
+- Created /api/admin/fix-referrals endpoint (GET/POST/PUT) for finding and fixing orphaned referral accounts
+- Added "Corrigir Referidos" section in admin Users tab with orphan finder and sponsor assignment UI
+- Removed old /api/transfer route (duplicate of /api/transfers with wrong config keys)
+- Added transfer tab to dashboard sidebar, store types, and translations
+- Removed "PLATAFORMA ROI" text from all source files
+- Created dashboard-content.tsx and transfer-tab.tsx components
+- Committed and pushed to GitHub (fdf5906)
+- Triggered Coolify deployment (pc0gv8cpal7nh4fmfdxnskq0)
+
+Stage Summary:
+- Logo: All components now use admin-uploaded logo from SystemConfig
+- Referral: Case-insensitive lookup + code preservation on dialog close
+- Admin: New Fix Referrals UI in Users tab
+- Transfer: Already existed in page.tsx, added to component dashboard too
+- Old /api/transfer route removed
+- Production deployment triggered
