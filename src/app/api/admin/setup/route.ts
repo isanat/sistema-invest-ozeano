@@ -122,6 +122,13 @@ export async function POST(request: NextRequest) {
       { key: 'team_bonus_daymond_premium_min_team_capital', value: '50000', type: 'number', description: 'Capital mínimo de equipe para Daymond Premium em USDT', category: 'team_bonus', isActive: true },
       { key: 'team_bonus_daymond_premium_daily_roi_pct', value: '3.3', type: 'number', description: 'ROI diário do pacote Daymond Premium (%)', category: 'team_bonus', isActive: true },
       { key: 'team_bonus_daymond_premium_daily_cap_usd', value: '99', type: 'number', description: 'Cap diário de ganho Daymond Premium em USDT', category: 'team_bonus', isActive: true },
+      // Transfer (P2P)
+      { key: 'transfer_enabled', value: 'true', type: 'boolean', description: 'Permitir transferências entre usuários', category: 'transfer' },
+      { key: 'transfer_min', value: '5', type: 'number', description: 'Valor mínimo para transferência em USDT', category: 'transfer' },
+      { key: 'transfer_max', value: '0', type: 'number', description: 'Valor máximo para transferência em USDT (0 = sem limite)', category: 'transfer' },
+      { key: 'transfer_fee_pct', value: '1', type: 'number', description: 'Taxa de transferência (%)', category: 'transfer' },
+      { key: 'transfer_daily_limit', value: '5', type: 'number', description: 'Limite diário de transferências', category: 'transfer' },
+      { key: 'transfer_cooldown_min', value: '30', type: 'number', description: 'Cooldown entre transferências (minutos)', category: 'transfer' },
     ];
 
     await db.systemConfig.createMany({ data: configs });

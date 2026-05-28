@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { useAppStore } from '@/lib/store'
 import { useI18n } from '@/lib/i18n/context'
 import { login, register } from '@/lib/api'
@@ -26,6 +27,16 @@ export function AuthModals() {
   const [regPassword, setRegPassword] = useState('')
   const [regConfirm, setRegConfirm] = useState('')
   const [regReferral, setRegReferral] = useState('')
+  const searchParams = useSearchParams()
+  const urlRefCode = searchParams.get('ref') || ''
+
+  // Auto-populate referral code from URL and open register modal
+  useEffect(() => {
+    if (urlRefCode) {
+      setRegReferral(urlRefCode)
+      setAuthModal('register')
+    }
+  }, [urlRefCode])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()

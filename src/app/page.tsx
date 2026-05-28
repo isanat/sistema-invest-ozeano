@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -400,6 +401,13 @@ const CONFIG_LABELS: Record<string, {
   nowpayments_enabled: { label: 'NowPayments Habilitado', description: 'Ativar integração com NowPayments para depósitos automáticos', type: 'boolean' },
   // Team Bonus
   team_bonus_ranks_visible: { label: 'Ranks Visíveis', description: 'Mostrar card de Team Bonus Ranks no perfil de afiliados', type: 'boolean' },
+  // Transfer (P2P)
+  transfer_enabled: { label: 'Transferências Habilitadas', description: 'Permitir transferências entre usuários', type: 'boolean' },
+  transfer_min: { label: 'Transferência Mínima', description: 'Valor mínimo para transferência em USDT', type: 'number', unit: 'USDT' },
+  transfer_max: { label: 'Transferência Máxima', description: 'Valor máximo para transferência em USDT (0 = sem limite)', type: 'number', unit: 'USDT' },
+  transfer_fee_pct: { label: 'Taxa de Transferência', description: 'Percentual cobrado como taxa em cada transferência', type: 'number', unit: '%' },
+  transfer_daily_limit: { label: 'Limite Diário', description: 'Número máximo de transferências por dia', type: 'number', unit: 'transf/dia' },
+  transfer_cooldown_min: { label: 'Cooldown Transferência', description: 'Minutos de espera entre transferências', type: 'number', unit: 'min' },
 };
 
 // Keys hidden from the generic config list (managed via dedicated UI sections)
@@ -434,7 +442,7 @@ const HIDDEN_CONFIG_KEYS = new Set<string>([
 const categoryIcon = (cat: string) => {
   const icons: Record<string, typeof Settings> = {
     branding: Image, general: Settings, deposit: Banknote, withdrawal: HandCoins,
-    trading: LineChart, affiliate: Link2, nowpayments: Globe,
+    trading: LineChart, affiliate: Link2, nowpayments: Globe, transfer: ArrowUpRight,
   };
   return icons[cat] || Settings;
 };
@@ -447,6 +455,7 @@ const categoryDescription: Record<string, string> = {
   trading: 'Configurações de trading e investimentos',
   affiliate: 'Comissões e configurações de afiliados',
   nowpayments: 'Credenciais NowPayments são configuradas nas variáveis de ambiente do Coolify',
+  transfer: 'Configurações de transferência entre usuários (P2P)',
 };
 
 // ============================================================================
@@ -503,7 +512,7 @@ export default function PlataformaROI() {
   const categoryLabel = (cat: string): string => {
     const labels: Record<string, string> = {
       branding: 'Marca do Site', general: t('category.general'), deposit: t('category.deposit'), withdrawal: t('category.withdrawal'),
-      trading: t('category.trading'), affiliate: t('category.affiliate'), nowpayments: 'NowPayments',
+      trading: t('category.trading'), affiliate: t('category.affiliate'), nowpayments: 'NowPayments', transfer: 'Transferência',
     };
     return labels[cat] || cat;
   };
@@ -527,6 +536,9 @@ export default function PlataformaROI() {
     if (diffDay < 7) return diffDay > 1 ? t('common.daysAgoPlural', { n: diffDay }) : t('common.daysAgo', { n: diffDay });
     return fmtDateTime(dateStr);
   };
+
+  const searchParams = useSearchParams();
+  const urlReferralCode = searchParams.get('ref') || '';
 
   const [showAuth, setShowAuth] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
@@ -760,6 +772,16 @@ export default function PlataformaROI() {
   const [statementLoading, setStatementLoading] = useState(false);
   const [depositFilter, setDepositFilter] = useState<string>('all');
   const [payoutFilter, setPayoutFilter] = useState<string>('all');
+
+  // Transfer state
+  const [transferEmail, setTransferEmail] = useState('');
+  const [transferAmount, setTransferAmount] = useState('');
+  const [transferLoading, setTransferLoading] = useState(false);
+  const [transferLookup, setTransferLookup] = useState<{ found: boolean; name: string; email: string } | null>(null);
+  const [transferLookupLoading, setTransferLookupLoading] = useState(false);
+  const [transferHistory, setTransferHistory] = useState<any[]>([]);
+  const [transferConfig, setTransferConfig] = useState<{ enabled: boolean; minAmount: number; maxAmount: number; feePct: number; dailyLimit: number; cooldownMin: number } | null>(null);
+  const [transferHistoryLoading, setTransferHistoryLoading] = useState(false);
   const [statementFilter, setStatementFilter] = useState<string>('all');
 
   // Admin NowPayments state
@@ -794,6 +816,14 @@ export default function PlataformaROI() {
   useEffect(() => {
     checkAuth();
   }, []);
+
+  // Auto-open register dialog when referral code is in URL (?ref=CODE)
+  useEffect(() => {
+    if (urlReferralCode && !user && !authLoading && mounted) {
+      setAuthMode('register');
+      setShowAuth(true);
+    }
+  }, [urlReferralCode, user, authLoading, mounted]);
 
   const checkAuth = async () => {
     try {
@@ -1131,6 +1161,63 @@ export default function PlataformaROI() {
     }
   };
 
+  // Fetch transfer data (for Transferência tab)
+  const fetchTransferData = async () => {
+    setTransferHistoryLoading(true);
+    try {
+      const data = await api<{ success: boolean; config: any; transfers: any[]; dailyLimit: any; cooldownRemaining: number }>('/api/transfers');
+      setTransferConfig(data.config || null);
+      setTransferHistory(data.transfers || []);
+    } catch (e) {
+      console.error('Transfer data error:', e);
+    } finally {
+      setTransferHistoryLoading(false);
+    }
+  };
+
+  // Lookup user by email for transfer
+  const handleTransferLookup = async () => {
+    if (!transferEmail.trim()) return;
+    setTransferLookupLoading(true);
+    setTransferLookup(null);
+    try {
+      const data = await api<{ success: boolean; found: boolean; name?: string; email?: string; message?: string }>(`/api/transfers/lookup?email=${encodeURIComponent(transferEmail.trim().toLowerCase())}`);
+      if (data.found) {
+        setTransferLookup({ found: true, name: data.name || '', email: data.email || '' });
+      } else {
+        setTransferLookup({ found: false, name: '', email: '' });
+        toast.error(data.message || 'Usuário não encontrado');
+      }
+    } catch (e: any) {
+      toast.error(e.message || 'Erro ao buscar usuário');
+    } finally {
+      setTransferLookupLoading(false);
+    }
+  };
+
+  // Execute transfer
+  const handleTransferSend = async () => {
+    if (!transferEmail.trim() || !transferAmount) return;
+    setTransferLoading(true);
+    try {
+      const data = await api<{ success: boolean; message: string }>('/api/transfers', {
+        method: 'POST',
+        body: JSON.stringify({ toEmail: transferEmail.trim().toLowerCase(), amount: parseFloat(transferAmount) }),
+      });
+      toast.success(data.message || 'Transferência enviada com sucesso!');
+      setTransferEmail('');
+      setTransferAmount('');
+      setTransferLookup(null);
+      // Refresh user data and transfer history
+      checkAuth();
+      fetchTransferData();
+    } catch (e: any) {
+      toast.error(e.message || 'Erro na transferência');
+    } finally {
+      setTransferLoading(false);
+    }
+  };
+
   // Fetch admin NowPayments data
   const fetchAdminNpData = async () => {
     setAdminNpLoading(true);
@@ -1233,6 +1320,11 @@ export default function PlataformaROI() {
   useEffect(() => {
     if (activeTab === 'extrato' && user) fetchStatement();
   }, [activeTab, user, statementFilter]);
+
+  // Fetch transfer data when Transferência tab is active
+  useEffect(() => {
+    if (activeTab === 'transferencia' && user) fetchTransferData();
+  }, [activeTab, user]);
 
   // Load admin data when admin tab is selected
   // For admin users, activeTab IS the admin section ID directly (e.g., 'overview', 'users')
@@ -2456,7 +2548,7 @@ export default function PlataformaROI() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="referralCode" className="text-zinc-300">{t('landing.auth.referralCode')}</Label>
-                    <Input id="referralCode" name="referralCode" className="bg-white/5 border-white/10 text-white focus:border-emerald-500/50" placeholder={t('landing.auth.referralCode')} />
+                    <Input id="referralCode" name="referralCode" className="bg-white/5 border-white/10 text-white focus:border-emerald-500/50" placeholder={t('landing.auth.referralCode')} defaultValue={urlReferralCode} />
                   </div>
                 </>
               )}
@@ -3200,6 +3292,7 @@ export default function PlataformaROI() {
     { id: 'home', label: t('sidebar.home'), icon: Home },
     { id: 'investir', label: t('sidebar.invest'), icon: TrendingUp },
     { id: 'alugueis', label: t('dashboard.activeInvestments'), icon: Clock },
+    { id: 'transferencia', label: 'Transferência', icon: ArrowUpRight },
     { id: 'faturas', label: 'Faturas', icon: Banknote },
     { id: 'saques', label: 'Saques', icon: HandCoins },
     { id: 'extrato', label: 'Extrato', icon: FileText },
@@ -3239,8 +3332,8 @@ export default function PlataformaROI() {
   const mobileNavIds = isAdmin
     ? (adminViewMode === 'admin'
         ? ['overview', 'users', 'deposits', 'nowpayments', 'config']
-        : ['home', 'investir', 'extrato', 'afiliados', 'perfil'])
-    : ['home', 'investir', 'extrato', 'afiliados', 'perfil'];
+        : ['home', 'investir', 'transferencia', 'extrato', 'afiliados'])
+    : ['home', 'investir', 'transferencia', 'extrato', 'afiliados'];
 
   return (
     <div className="min-h-screen flex flex-col bg-zinc-950 text-white">
@@ -3800,7 +3893,7 @@ export default function PlataformaROI() {
 
                     {/* ====== QUICK ACTION BUTTONS ====== */}
                     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      <div className={`grid ${d(user.balance) >= 5 ? 'grid-cols-2 sm:grid-cols-5' : 'grid-cols-2 sm:grid-cols-4'} gap-3`}>
                         <button
                           onClick={() => setDepositDialog(true)}
                           className="glass-card gradient-border rounded-xl p-4 stat-card-hover flex items-center gap-3 group cursor-pointer"
@@ -3839,6 +3932,22 @@ export default function PlataformaROI() {
                             <div className="text-[10px] text-zinc-500">3.3% ROI/dia</div>
                           </div>
                         </button>
+
+                        {/* Reinvestir button - only shows when user has balance >= $5 */}
+                        {d(user.balance) >= 5 && (
+                          <button
+                            onClick={() => setActiveTab('investir')}
+                            className="glass-card rounded-xl p-4 stat-card-hover flex items-center gap-3 border border-amber-500/20 group cursor-pointer"
+                          >
+                            <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-orange-500 rounded-lg flex items-center justify-center shadow-lg shadow-amber-500/20">
+                              <RefreshCw className="h-5 w-5 text-white" />
+                            </div>
+                            <div className="text-left">
+                              <div className="text-sm font-semibold text-white group-hover:text-amber-400 transition-colors">Reinvestir</div>
+                              <div className="text-[10px] text-zinc-500">${fmtUSDT(user.balance)} saldo</div>
+                            </div>
+                          </button>
+                        )}
 
                         <button
                           onClick={() => setActiveTab('afiliados')}
@@ -4888,6 +4997,187 @@ export default function PlataformaROI() {
                         )}
                       </>
                     )}
+                  </div>
+                )}
+
+                {/* ====== TRANSFERÊNCIA TAB ====== */}
+                {activeTab === 'transferencia' && (
+                  <div className="space-y-6">
+                    {/* Header */}
+                    <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500/20 to-cyan-500/20 flex items-center justify-center">
+                          <ArrowUpRight className="h-5 w-5 text-emerald-400" />
+                        </div>
+                        <div>
+                          <h2 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">Transferência</h2>
+                          <p className="text-zinc-500 text-sm">Envie USDT para outros usuários da plataforma</p>
+                        </div>
+                      </div>
+                    </motion.div>
+
+                    {/* Transfer disabled notice */}
+                    {transferConfig && !transferConfig.enabled && (
+                      <Card className="bg-zinc-900 border-zinc-800">
+                        <CardContent className="py-8 text-center">
+                          <AlertTriangle className="h-10 w-10 text-amber-400 mx-auto mb-3" />
+                          <p className="text-zinc-400">Transferências estão desativadas pelo administrador no momento.</p>
+                        </CardContent>
+                      </Card>
+                    )}
+
+                    {/* Transfer must have invested */}
+                    {user && !user.hasInvested && (
+                      <Card className="bg-zinc-900 border-zinc-800">
+                        <CardContent className="py-8 text-center">
+                          <AlertTriangle className="h-10 w-10 text-amber-400 mx-auto mb-3" />
+                          <p className="text-zinc-400 mb-3">Apenas investidores podem fazer transferências. Faça um investimento primeiro.</p>
+                          <Button className="bg-emerald-600 hover:bg-emerald-500" onClick={() => setActiveTab('investir')}>Investir Agora</Button>
+                        </CardContent>
+                      </Card>
+                    )}
+
+                    {/* Transfer Form */}
+                    {(!transferConfig || transferConfig.enabled) && user?.hasInvested && (
+                      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.1 }}>
+                        <Card className="bg-zinc-900 border-zinc-800">
+                          <CardHeader>
+                            <CardTitle className="text-lg">Nova Transferência</CardTitle>
+                            <CardDescription className="text-zinc-500">
+                              Saldo disponível: <span className="text-emerald-400 font-semibold">${fmtUSDT(user?.balance || '0')} USDT</span>
+                              {transferConfig && transferConfig.feePct > 0 && <span className="text-zinc-500 ml-2">• Taxa: {transferConfig.feePct}%</span>}
+                            </CardDescription>
+                          </CardHeader>
+                          <CardContent className="space-y-4">
+                            {/* Recipient Email */}
+                            <div className="space-y-2">
+                              <Label className="text-zinc-300 text-sm">E-mail do Destinatário</Label>
+                              <div className="flex gap-2">
+                                <Input
+                                  type="email"
+                                  placeholder="email@exemplo.com"
+                                  value={transferEmail}
+                                  onChange={e => { setTransferEmail(e.target.value); setTransferLookup(null); }}
+                                  className="bg-zinc-800 border-zinc-700 flex-1"
+                                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleTransferLookup(); } }}
+                                />
+                                <Button
+                                  variant="outline"
+                                  className="border-zinc-700 text-zinc-300 hover:text-white hover:border-emerald-500/50"
+                                  onClick={handleTransferLookup}
+                                  disabled={transferLookupLoading || !transferEmail.trim()}
+                                >
+                                  {transferLookupLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                                </Button>
+                              </div>
+                              {/* Lookup result */}
+                              {transferLookup && transferLookup.found && (
+                                <div className="flex items-center gap-2 p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-sm">
+                                  <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                                  <span className="text-emerald-400 font-medium">{transferLookup.name}</span>
+                                  <span className="text-zinc-500">({transferLookup.email})</span>
+                                </div>
+                              )}
+                              {transferLookup && !transferLookup.found && (
+                                <div className="flex items-center gap-2 p-2 rounded-lg bg-red-500/10 border border-red-500/20 text-sm">
+                                  <XCircle className="h-4 w-4 text-red-400" />
+                                  <span className="text-red-400">Usuário não encontrado</span>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Amount */}
+                            <div className="space-y-2">
+                              <Label className="text-zinc-300 text-sm">Valor (USDT)</Label>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                min={transferConfig?.minAmount || 5}
+                                max={transferConfig?.maxAmount || 999999}
+                                placeholder={transferConfig ? `Mín: $${transferConfig.minAmount.toFixed(2)}` : '5.00'}
+                                value={transferAmount}
+                                onChange={e => setTransferAmount(e.target.value)}
+                                className="bg-zinc-800 border-zinc-700"
+                              />
+                              {transferConfig && transferAmount && parseFloat(transferAmount) > 0 && (
+                                <div className="text-xs text-zinc-500 space-y-0.5">
+                                  <div>Taxa ({transferConfig.feePct}%): ${((parseFloat(transferAmount) * transferConfig.feePct / 100)).toFixed(2)} USDT</div>
+                                  <div>Total debitado: ${(parseFloat(transferAmount) * (1 + transferConfig.feePct / 100)).toFixed(2)} USDT</div>
+                                  <div>Destinatário recebe: ${(parseFloat(transferAmount) * (1 - transferConfig.feePct / 100)).toFixed(2)} USDT</div>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Transfer limits info */}
+                            {transferConfig && (
+                              <div className="text-xs text-zinc-500 bg-zinc-800/50 rounded-lg p-3 space-y-1">
+                                <div className="font-medium text-zinc-400 mb-1">Limites & Regras</div>
+                                <div>• Mínimo: ${transferConfig.minAmount.toFixed(2)} USDT</div>
+                                {transferConfig.maxAmount > 0 && <div>• Máximo: ${transferConfig.maxAmount.toFixed(2)} USDT</div>}
+                                <div>• Taxa: {transferConfig.feePct}%</div>
+                                <div>• Limite diário: {transferConfig.dailyLimit} transferências/dia</div>
+                                <div>• Cooldown: {transferConfig.cooldownMin} min entre transferências</div>
+                              </div>
+                            )}
+
+                            {/* Send button */}
+                            <Button
+                              className="w-full bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-white font-semibold rounded-xl"
+                              onClick={handleTransferSend}
+                              disabled={transferLoading || !transferLookup?.found || !transferAmount || parseFloat(transferAmount) <= 0}
+                            >
+                              {transferLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ArrowUpRight className="mr-2 h-4 w-4" />}
+                              Enviar Transferência
+                            </Button>
+                          </CardContent>
+                        </Card>
+                      </motion.div>
+                    )}
+
+                    {/* Transfer History */}
+                    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.2 }}>
+                      <Card className="bg-zinc-900 border-zinc-800">
+                        <CardHeader>
+                          <CardTitle className="text-lg">Histórico de Transferências</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          {transferHistoryLoading ? (
+                            <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-emerald-400" /></div>
+                          ) : transferHistory.length === 0 ? (
+                            <div className="text-center py-8 text-zinc-500">
+                              <ArrowUpRight className="h-10 w-10 mx-auto mb-2 opacity-30" />
+                              <p>Nenhuma transferência realizada</p>
+                            </div>
+                          ) : (
+                            <div className="space-y-2 max-h-96 overflow-y-auto">
+                              {transferHistory.map((tx: any) => (
+                                <div key={tx.id} className="flex items-center justify-between p-3 rounded-lg bg-zinc-800/50 hover:bg-zinc-800/80 transition-colors">
+                                  <div className="flex items-center gap-3">
+                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${tx.direction === 'sent' ? 'bg-red-500/10' : 'bg-emerald-500/10'}`}>
+                                      {tx.direction === 'sent' ? <ArrowUpRight className="h-4 w-4 text-red-400" /> : <ArrowDownLeft className="h-4 w-4 text-emerald-400" />}
+                                    </div>
+                                    <div>
+                                      <div className="text-sm font-medium">
+                                        {tx.direction === 'sent' ? `Para ${tx.counterparty?.name || tx.counterparty?.email}` : `De ${tx.counterparty?.name || tx.counterparty?.email}`}
+                                      </div>
+                                      <div className="text-xs text-zinc-500">{fmtDateTime(tx.createdAt)}</div>
+                                    </div>
+                                  </div>
+                                  <div className="text-right">
+                                    <div className={`text-sm font-semibold ${tx.direction === 'sent' ? 'text-red-400' : 'text-emerald-400'}`}>
+                                      {tx.direction === 'sent' ? '-' : '+'}${fmtUSDT(tx.netAmount || tx.amount)}
+                                    </div>
+                                    {tx.fee && parseFloat(tx.fee) > 0 && (
+                                      <div className="text-[10px] text-zinc-500">Taxa: ${fmtUSDT(tx.fee)}</div>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    </motion.div>
                   </div>
                 )}
 
