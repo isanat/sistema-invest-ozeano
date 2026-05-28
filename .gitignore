@@ -76,3 +76,4 @@ src_backup/
 prisma_backup/
 public_backup/
 .env*.local
+upload/

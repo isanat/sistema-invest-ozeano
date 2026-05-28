@@ -1977,8 +1977,11 @@ export default function PlataformaROI() {
         await api(`/api/admin/copy-traders?id=${deleteConfirm.id}`, { method: 'DELETE' });
         toast.success(t('toast.adminTraderDeactivateSuccess'));
       } else if (deleteConfirm.type === 'plan') {
-        await api(`/api/admin/plans?id=${deleteConfirm.id}`, { method: 'DELETE' });
-        toast.success(t('toast.adminPlanDeactivateSuccess'));
+        // Find the plan to check if it's already inactive (hard delete) or active (soft delete)
+        const plan = adminPlans.find(p => p.id === deleteConfirm.id);
+        const isInactive = plan && !plan.isActive;
+        await api(`/api/admin/plans?id=${deleteConfirm.id}${isInactive ? '&hard=true' : ''}`, { method: 'DELETE' });
+        toast.success(isInactive ? 'Plano excluído permanentemente' : t('toast.adminPlanDeactivateSuccess'));
       }
       setDeleteConfirm({ open: false, type: '', id: '', name: '' });
       fetchAdminData();
@@ -3820,7 +3823,7 @@ export default function PlataformaROI() {
                     </motion.div>
 
                     {/* ====== INVESTMENT PLANS PREVIEW ====== */}
-                    {copyTraders.length > 0 && (
+                    {dbPlans.filter(p => p.isActive).length > 0 && (
                       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
                         <div className="flex items-center justify-between mb-3">
                           <h3 className="text-lg font-bold flex items-center gap-2">
@@ -3832,44 +3835,70 @@ export default function PlataformaROI() {
                           </button>
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                          {copyTraders.slice(0, 3).map((trader, idx) => {
+                          {dbPlans.filter(p => p.isActive).slice(0, 3).map((plan, idx) => {
                             const accentColors = [
                               { border: 'from-emerald-500/40 to-emerald-600/10', glow: 'shadow-emerald-500/10', text: 'text-emerald-400', bg: 'from-emerald-500/15 to-emerald-600/5' },
                               { border: 'from-cyan-500/40 to-cyan-600/10', glow: 'shadow-cyan-500/10', text: 'text-cyan-400', bg: 'from-cyan-500/15 to-cyan-600/5' },
                               { border: 'from-purple-500/40 to-purple-600/10', glow: 'shadow-purple-500/10', text: 'text-purple-400', bg: 'from-purple-500/15 to-purple-600/5' },
                             ];
                             const accent = accentColors[idx % 3];
-                            const plan = trader.plans?.[0];
+                            const totalReturn = d(plan.dailyRoiPct) * plan.durationDays;
                             return (
-                              <div key={trader.id} className={`glass-card rounded-xl relative overflow-hidden stat-card-hover group`}>
+                              <div key={plan.id} className={`glass-card rounded-xl relative overflow-hidden stat-card-hover group`}>
                                 <div className={`absolute inset-0 bg-gradient-to-br ${accent.bg} opacity-50 pointer-events-none`} />
                                 <div className={`absolute top-0 left-0 right-0 h-px bg-gradient-to-r ${accent.border}`} />
                                 <div className="relative p-4">
                                   <div className="flex items-center gap-2 mb-3">
                                     <div className={`w-8 h-8 bg-gradient-to-br ${accent.bg} rounded-lg flex items-center justify-center border border-white/[0.06]`}>
-                                      <span className="text-sm font-bold text-white">{assetIcon(trader.name || 'USDT')}</span>
+                                      <span className="text-sm font-bold text-white">{plan.name.charAt(0)}</span>
                                     </div>
                                     <div className="min-w-0 flex-1">
-                                      <div className="text-sm font-semibold truncate">{trader.name}</div>
-                                      <div className="text-[10px] text-zinc-500">{trader.specialty}</div>
+                                      <div className="text-sm font-semibold truncate">{plan.name}</div>
+                                      <div className="text-[10px] text-zinc-500">{plan.durationDays} dias</div>
                                     </div>
                                   </div>
                                   <div className="space-y-1.5 mb-3">
                                     <div className="flex items-center justify-between">
                                       <span className="text-xs text-zinc-400">ROI Diário</span>
-                                      <span className={`text-sm font-bold ${accent.text}`}>{plan?.dailyRoiPct || trader.winRate}%</span>
+                                      <span className={`text-sm font-bold ${accent.text}`}>{d(plan.dailyRoiPct).toFixed(1)}%</span>
                                     </div>
                                     <div className="flex items-center justify-between">
                                       <span className="text-xs text-zinc-400">Mínimo</span>
-                                      <span className="text-xs text-white">${plan?.minAmount || '10'} USDT</span>
+                                      <span className="text-xs text-white">${fmtUSDT(plan.minAmount)} USDT</span>
                                     </div>
                                     <div className="flex items-center justify-between">
-                                      <span className="text-xs text-zinc-400">Duração</span>
-                                      <span className="text-xs text-white">{plan?.days || plan?.durationDays || '30'} dias</span>
+                                      <span className="text-xs text-zinc-400">Retorno Total</span>
+                                      <span className="text-xs text-emerald-400 font-medium">{totalReturn.toFixed(0)}%</span>
                                     </div>
                                   </div>
                                   <button
-                                    onClick={() => { setInvestDialogPlan(trader); setSelectedPlanId(plan?.id || undefined); }}
+                                    onClick={() => {
+                                      setInvestDialogPlan({
+                                        id: `plan-wrapper-${plan.id}`,
+                                        name: plan.name,
+                                        avatar: null,
+                                        specialty: plan.description || 'Copy Trading',
+                                        winRate: '85',
+                                        monthlyRoi: String(d(plan.dailyRoiPct) * 30),
+                                        totalPnl: String(totalReturn),
+                                        riskLevel: 'low',
+                                        isActive: true,
+                                        isFeatured: plan.isFeatured,
+                                        sortOrder: plan.sortOrder,
+                                        createdAt: plan.createdAt,
+                                        updatedAt: plan.updatedAt,
+                                        plans: [{
+                                          id: plan.id, name: plan.name, description: plan.description || null,
+                                          minAmount: plan.minAmount, maxAmount: plan.maxAmount,
+                                          dailyRoiPct: plan.dailyRoiPct, durationDays: plan.durationDays,
+                                          isActive: plan.isActive, isFeatured: plan.isFeatured,
+                                          sortOrder: plan.sortOrder, createdAt: plan.createdAt, updatedAt: plan.updatedAt,
+                                        }],
+                                      } as CopyTrader);
+                                      setSelectedPlanId(plan.id);
+                                      setInvestmentDuration(plan.durationDays);
+                                      setInvestAmount(String(d(plan.minAmount) || 5));
+                                    }}
                                     className={`w-full bg-gradient-to-r ${accent.bg} hover:opacity-80 border border-white/[0.06] rounded-lg py-2 text-xs font-medium text-white transition-all`}
                                   >
                                     Começar a investir
@@ -4180,10 +4209,11 @@ export default function PlataformaROI() {
                           {/* Calculations */}
                           {(() => {
                             const simAmt = Math.max(0, parseFloat(simulatorAmount) || 0);
-                            const dailyRoi = simAmt * 0.05;
+                            const roiPct = dbPlans.filter(p => p.isActive).length > 0 ? d(dbPlans.filter(p => p.isActive)[0].dailyRoiPct) / 100 : 0.033;
+                            const dailyRoi = simAmt * roiPct;
                             const weeklyRoi = dailyRoi * 7;
                             const monthlyRoi = dailyRoi * 30;
-                            const daysToDouble = simAmt > 0 ? Math.ceil(simAmt / dailyRoi) : 0;
+                            const daysToDouble = simAmt > 0 && dailyRoi > 0 ? Math.ceil(simAmt / dailyRoi) : 0;
                             return (
                               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                                 <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3 text-center stat-card-hover">
@@ -4218,7 +4248,8 @@ export default function PlataformaROI() {
                                 { rank: 'Ouro', bonus: 3, color: 'text-amber-400', border: 'border-amber-500/20', bg: 'bg-amber-500/10', icon: Crown },
                               ].map(tier => {
                                 const simAmt = Math.max(0, parseFloat(simulatorAmount) || 0);
-                                const extraDaily = simAmt * 0.05 * (tier.bonus / 100);
+                                const roiPct2 = dbPlans.filter(p => p.isActive).length > 0 ? d(dbPlans.filter(p => p.isActive)[0].dailyRoiPct) / 100 : 0.033;
+                                const extraDaily = simAmt * roiPct2 * (tier.bonus / 100);
                                 return (
                                   <div key={tier.rank} className={`${tier.bg} border ${tier.border} rounded-lg p-2.5 text-center stat-card-hover`}>
                                     <tier.icon className={`h-4 w-4 ${tier.color} mx-auto mb-1`} />
@@ -4243,7 +4274,7 @@ export default function PlataformaROI() {
                         </div>
                         <div className="glass-card gradient-border rounded-xl p-3 sm:p-4 text-center stat-card-hover">
                           <div className="text-[10px] sm:text-xs text-zinc-500 mb-1 flex items-center justify-center gap-1"><Percent className="h-3 w-3" /> ROI Médio/Dia</div>
-                          <div className="text-base sm:text-lg font-bold text-cyan-400">5.00%</div>
+                          <div className="text-base sm:text-lg font-bold text-cyan-400">{dbPlans.filter(p => p.isActive).length > 0 ? d(dbPlans.filter(p => p.isActive)[0].dailyRoiPct).toFixed(1) : '3.3'}%</div>
                         </div>
                         <div className="glass-card gradient-border rounded-xl p-3 sm:p-4 text-center stat-card-hover">
                           <div className="text-[10px] sm:text-xs text-zinc-500 mb-1 flex items-center justify-center gap-1"><Users className="h-3 w-3" /> Investidores</div>
@@ -6739,21 +6770,24 @@ export default function PlataformaROI() {
                           <CardContent className="p-0 overflow-x-auto">
                             <Table className="min-w-[700px]">
                               <TableHeader><TableRow className="border-zinc-800 hover:bg-transparent">
-                                <TableHead className="text-zinc-400">{t('admin.name')}</TableHead><TableHead className="text-zinc-400">{t('admin.model')}</TableHead>
-                                <TableHead className="text-zinc-400">{t('admin.coin')}</TableHead><TableHead className="text-zinc-400">{t('admin.dailyRevenue')}</TableHead>
-                                <TableHead className="text-zinc-400">{t('admin.pricePerDay')}</TableHead><TableHead className="text-zinc-400">{t('admin.profitShare')}</TableHead>
-                                <TableHead className="text-zinc-400">{t('admin.status')}</TableHead><TableHead className="text-zinc-400">{t('admin.action')}</TableHead>
+                                <TableHead className="text-zinc-400">{t('admin.name')}</TableHead>
+                                <TableHead className="text-zinc-400">Especialidade</TableHead>
+                                <TableHead className="text-zinc-400">Win Rate</TableHead>
+                                <TableHead className="text-zinc-400">ROI Mensal</TableHead>
+                                <TableHead className="text-zinc-400">PnL Total</TableHead>
+                                <TableHead className="text-zinc-400">Risco</TableHead>
+                                <TableHead className="text-zinc-400">{t('admin.active')}</TableHead><TableHead className="text-zinc-400">{t('admin.action')}</TableHead>
                               </TableRow></TableHeader>
                               <TableBody>
                                 {adminCopyTraders.map(m => (
                                   <TableRow key={m.id} className="border-zinc-800">
                                     <TableCell className="font-medium">{m.name}</TableCell>
-                                    <TableCell>{m.model}</TableCell>
-                                    <TableCell><span className={assetColor(m.coin)}>{m.coin}</span></TableCell>
-                                    <TableCell>${fmtUSDT(m.dailyRevenue)}</TableCell>
-                                    <TableCell>${fmtUSDT(m.pricePerDay)}</TableCell>
-                                    <TableCell>{m.profitSharePct}%</TableCell>
-                                    <TableCell><Badge className={statusColor(m.status)} variant="outline">{statusLabel(m.status)}</Badge></TableCell>
+                                    <TableCell className="text-zinc-400">{m.specialty || '-'}</TableCell>
+                                    <TableCell>{m.winRate || '-'}%</TableCell>
+                                    <TableCell>{m.monthlyRoi || '-'}%</TableCell>
+                                    <TableCell>${fmtUSDT(m.totalPnl || '0')}</TableCell>
+                                    <TableCell><Badge variant="outline" className={m.riskLevel === 'low' ? 'border-emerald-500/30 text-emerald-400' : m.riskLevel === 'medium' ? 'border-amber-500/30 text-amber-400' : 'border-red-500/30 text-red-400'}>{m.riskLevel || '-'}</Badge></TableCell>
+                                    <TableCell>{m.isActive ? <CheckCircle2 className="h-4 w-4 text-cyan-400" /> : <XCircle className="h-4 w-4 text-red-400" />}</TableCell>
                                     <TableCell>
                                       <div className="flex gap-1">
                                         <Button variant="ghost" size="icon" className="h-10 w-10" onClick={() => setTraderDialog({ open: true, trader: m })}><Pencil className="h-4 w-4" /></Button>

@@ -129,20 +129,48 @@ export async function PUT(request: NextRequest) {
   }
 }
 
-// DELETE /api/admin/plans — Soft delete investment plan (admin)
+// DELETE /api/admin/plans — Delete investment plan (admin)
+// ?id=xxx — soft delete (set isActive=false)
+// ?id=xxx&hard=true — hard delete (permanent, only if no investments)
 export async function DELETE(request: NextRequest) {
   try {
     const session = await requireAdmin();
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
+    const hardDelete = searchParams.get('hard') === 'true';
 
     if (!id) {
       return apiError('ID do plano é obrigatório');
     }
 
-    const existing = await db.investmentPlan.findUnique({ where: { id } });
+    const existing = await db.investmentPlan.findUnique({
+      where: { id },
+      include: { _count: { select: { investments: true } } },
+    });
     if (!existing) {
       return apiError('Plano não encontrado', 404);
+    }
+
+    if (hardDelete) {
+      // Hard delete: only allowed if plan has no investments
+      if (existing._count.investments > 0) {
+        return apiError('Não é possível excluir permanentemente um plano que possui investimentos. Desative-o.');
+      }
+      await db.investmentPlan.delete({ where: { id } });
+
+      // Log
+      await db.adminLog.create({
+        data: {
+          adminId: session.userId,
+          action: 'delete',
+          entity: 'plan',
+          entityId: id,
+          oldValue: JSON.stringify(existing),
+          description: `Plano de investimento excluído permanentemente: ${existing.name}`,
+        },
+      });
+
+      return apiSuccess({ deleted: true });
     }
 
     // Soft delete
