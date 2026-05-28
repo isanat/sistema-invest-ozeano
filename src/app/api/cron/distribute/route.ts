@@ -73,6 +73,7 @@ export async function POST(request: NextRequest) {
 
     const today = new Date();
     today.setUTCHours(0, 0, 0, 0);
+    const now = new Date(); // Current time for "has started" check
 
     for (const investment of activeInvestments) {
       try {
@@ -86,8 +87,9 @@ export async function POST(request: NextRequest) {
           continue;
         }
 
-        // Check if investment hasn't started yet
-        if (new Date(investment.startDate) > today) {
+        // Check if investment hasn't started yet (compare against NOW, not midnight)
+        // Investments created today after midnight should still receive ROI
+        if (new Date(investment.startDate) > now) {
           skipped++;
           continue;
         }
