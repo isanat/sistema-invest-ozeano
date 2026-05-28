@@ -122,3 +122,35 @@ Stage Summary:
 - No fallback text or site name in place of logo - only actual image
 - All favicon files updated with new ActionCash branding
 - Production deployment verified at https://actioncash.app
+
+---
+Task ID: 2
+Agent: Main Agent
+Task: Enlarge logo in sidebar/landing, replace all PLATAFORMA ROI with ActionCash
+
+Work Log:
+- Analyzed user screenshots showing logo too small in sidebar and landing page
+- Increased sidebar logo: h-12 → h-16 with max-w-[200px] and centered alignment
+- Increased page.tsx desktop sidebar logo: h-11 → h-14 with max-w-[180px] and centered
+- Increased mobile sidebar overlay logo: h-10 → h-12 with max-w-[160px]
+- Increased mobile header logo: h-8 → h-10
+- Increased landing page navbar logo: h-9 → h-11 sm:h-12
+- Increased landing page fixed nav logo: h-9 sm:h-10 → h-11 sm:h-12
+- Increased landing footer logo: h-10 → h-12
+- Searched ALL files for 'PLATAFORMA ROI' and replaced with 'ActionCash' (0 remaining in src/)
+- Updated translation files (es.ts, pt.ts, translations.ts, i18n/translations.ts)
+- Updated API routes (site config, landing, setup, migrate, reset-seed, restore, nowpayments)
+- Updated layout.tsx metadata (title, authors, openGraph)
+- Updated page.tsx (default siteName, hero text, footer, share message, admin placeholder)
+- Updated site.webmanifest (name, short_name)
+- Updated prisma/seed.ts and scripts/restore-test-user.js
+- Updated production database site_name via SQL: 'PLATAFORMA ROI' → 'ActionCash'
+- Verified API returns siteName: ActionCash
+- Committed and pushed to GitHub
+- Triggered Coolify deployment (in progress)
+
+Stage Summary:
+- Logo is now significantly larger in all locations
+- Zero occurrences of 'PLATAFORMA ROI' remain in codebase (confirmed via grep)
+- Production DB updated to 'ActionCash'
+- Deployment to production in progress
