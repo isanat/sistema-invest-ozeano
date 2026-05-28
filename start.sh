@@ -62,14 +62,18 @@ done
 
 echo "Database schema applied."
 
+# Run migration scripts (idempotent — safe to run on every deploy)
+echo "[2/4] Running migration scripts..."
+node /app/scripts/add-transfer-configs.js 2>/dev/null || echo "Transfer config migration skipped (may already exist)"
+
 # Start cron runner in the background
-echo "[2/3] Starting cron scheduler in background..."
+echo "[3/4] Starting cron scheduler in background..."
 /app/cron-runner.sh &
 CRON_PID=$!
 echo "Cron runner started (PID: ${CRON_PID})"
 
 # Start Next.js server in the foreground
-echo "[3/3] Starting Next.js server..."
+echo "[4/4] Starting Next.js server..."
 echo "node version: $(node --version)"
 
 # Handle shutdown gracefully
