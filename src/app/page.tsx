@@ -33,7 +33,7 @@ import {
   Trophy, Target, Crown, Star, Share2, Medal, Award,
   Info, MessageSquare, Ticket, LineChart, Calculator,
   Lock, Image, Upload, ImagePlus,
-  Calendar, Gem,
+  Calendar, Gem, LogIn,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -1929,7 +1929,7 @@ export default function PlataformaROI() {
     try {
       const form = e.currentTarget;
       const body: any = { id: userDialog.user.id };
-      const fields = ['name', 'role', 'balance', 'affiliateBalance', 'walletAddress', 'pixKey'];
+      const fields = ['name', 'role', 'balance', 'affiliateBalance', 'totalInvested', 'totalRoi', 'totalDeposited', 'totalWithdrawn', 'walletAddress', 'pixKey'];
       fields.forEach(f => {
         const el = (form as any)[f] as HTMLInputElement;
         if (el) body[f] = el.value;
@@ -4181,92 +4181,8 @@ export default function PlataformaROI() {
                       </div>
                     </motion.div>
 
-                    {/* ── 1. INVESTMENT SIMULATOR ── */}
+                    {/* ── INVESTMENT STATS BAR ── */}
                     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.1 }}>
-                      <div className="glass-card gradient-border rounded-2xl overflow-hidden">
-                        <div className="p-5 sm:p-6">
-                          <div className="flex items-center gap-2 mb-5">
-                            <Calculator className="h-5 w-5 text-emerald-400" />
-                            <h3 className="text-lg font-bold text-white">Simulador de Investimento</h3>
-                          </div>
-                          {/* Amount Input */}
-                          <div className="mb-5">
-                            <label className="text-sm text-zinc-400 mb-2 block">Quanto você quer investir?</label>
-                            <div className="relative">
-                              <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-emerald-400" />
-                              <Input
-                                type="number"
-                                min="10"
-                                step="10"
-                                value={simulatorAmount}
-                                onChange={e => setSimulatorAmount(e.target.value)}
-                                className="bg-zinc-800/80 border-emerald-500/30 focus:border-emerald-400 pl-11 h-13 text-lg font-semibold text-white rounded-xl"
-                                placeholder="100.00"
-                              />
-                              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-medium text-emerald-400">USDT</span>
-                            </div>
-                          </div>
-                          {/* Calculations */}
-                          {(() => {
-                            const simAmt = Math.max(0, parseFloat(simulatorAmount) || 0);
-                            const roiPct = dbPlans.filter(p => p.isActive).length > 0 ? d(dbPlans.filter(p => p.isActive)[0].dailyRoiPct) / 100 : 0.033;
-                            const dailyRoi = simAmt * roiPct;
-                            const weeklyRoi = dailyRoi * 7;
-                            const monthlyRoi = dailyRoi * 30;
-                            const daysToDouble = simAmt > 0 && dailyRoi > 0 ? Math.ceil(simAmt / dailyRoi) : 0;
-                            return (
-                              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                                <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3 text-center stat-card-hover">
-                                  <div className="text-[10px] sm:text-xs text-emerald-400/70 mb-1 flex items-center justify-center gap-1"><Clock4 className="h-3 w-3" /> Diário</div>
-                                  <div className="text-lg sm:text-xl font-bold text-emerald-400 animate-count-glow">${fmtUSDT(dailyRoi)}</div>
-                                </div>
-                                <div className="bg-cyan-500/10 border border-cyan-500/20 rounded-xl p-3 text-center stat-card-hover">
-                                  <div className="text-[10px] sm:text-xs text-cyan-400/70 mb-1 flex items-center justify-center gap-1"><BarChart3 className="h-3 w-3" /> Semanal</div>
-                                  <div className="text-lg sm:text-xl font-bold text-cyan-400">${fmtUSDT(weeklyRoi)}</div>
-                                </div>
-                                <div className="bg-teal-500/10 border border-teal-500/20 rounded-xl p-3 text-center stat-card-hover">
-                                  <div className="text-[10px] sm:text-xs text-teal-400/70 mb-1 flex items-center justify-center gap-1"><TrendingUp className="h-3 w-3" /> Mensal</div>
-                                  <div className="text-lg sm:text-xl font-bold text-teal-400">${fmtUSDT(monthlyRoi)}</div>
-                                </div>
-                                <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 text-center stat-card-hover">
-                                  <div className="text-[10px] sm:text-xs text-amber-400/70 mb-1 flex items-center justify-center gap-1"><Zap className="h-3 w-3" /> Dobra em</div>
-                                  <div className="text-lg sm:text-xl font-bold text-amber-400">{daysToDouble} dias</div>
-                                </div>
-                              </div>
-                            );
-                          })()}
-                          {/* Team Bonus Calculator */}
-                          <div className="mt-4 p-3 rounded-xl bg-zinc-800/50 border border-zinc-700/50">
-                            <div className="flex items-center gap-2 mb-3">
-                              <Crown className="h-4 w-4 text-amber-400" />
-                              <span className="text-sm font-medium text-zinc-300">Bônus de Equipe (ROI Extra)</span>
-                            </div>
-                            <div className="grid grid-cols-3 gap-2">
-                              {[
-                                { rank: 'Bronze', bonus: 1, color: 'text-orange-400', border: 'border-orange-500/20', bg: 'bg-orange-500/10', icon: Medal },
-                                { rank: 'Prata', bonus: 2, color: 'text-zinc-300', border: 'border-zinc-400/20', bg: 'bg-zinc-400/10', icon: Award },
-                                { rank: 'Ouro', bonus: 3, color: 'text-amber-400', border: 'border-amber-500/20', bg: 'bg-amber-500/10', icon: Crown },
-                              ].map(tier => {
-                                const simAmt = Math.max(0, parseFloat(simulatorAmount) || 0);
-                                // Team bonus is +N percentage points added to daily ROI (e.g. Bronze +1% = invested × 1%)
-                                const extraDaily = simAmt * (tier.bonus / 100);
-                                return (
-                                  <div key={tier.rank} className={`${tier.bg} border ${tier.border} rounded-lg p-2.5 text-center stat-card-hover`}>
-                                    <tier.icon className={`h-4 w-4 ${tier.color} mx-auto mb-1`} />
-                                    <div className="text-[10px] text-zinc-400">{tier.rank}</div>
-                                    <div className={`text-xs font-bold ${tier.color}`}>+{tier.bonus}%</div>
-                                    <div className="text-[10px] text-zinc-500 mt-0.5">+${fmtUSDT(extraDaily)}/dia</div>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </motion.div>
-
-                    {/* ── 2. INVESTMENT STATS BAR ── */}
-                    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.15 }}>
                       <div className="grid grid-cols-3 gap-3">
                         <div className="glass-card gradient-border rounded-xl p-3 sm:p-4 text-center stat-card-hover">
                           <div className="text-[10px] sm:text-xs text-zinc-500 mb-1 flex items-center justify-center gap-1"><Coins className="h-3 w-3" /> Total Investido</div>
@@ -6323,40 +6239,7 @@ export default function PlataformaROI() {
                           </motion.div>
                         )}
 
-                        {/* ═══════════════ CONTESTS — PREMIUM MODULE ═══════════════ */}
-                        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.32 }}>
-                          <div className="glass-card rounded-2xl p-5 sm:p-6 border border-amber-500/10 relative overflow-hidden">
-                            {/* Lock overlay */}
-                            <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 via-transparent to-cyan-500/5 pointer-events-none" />
-                            <div className="relative">
-                              <div className="flex items-center gap-2 mb-4">
-                                <div className="relative">
-                                  <Trophy className="h-5 w-5 text-amber-400" />
-                                  <Lock className="h-3 w-3 text-amber-400 absolute -top-1 -right-1" />
-                                </div>
-                                <h3 className="text-lg font-bold text-white">{t('affiliates.activeContests')}</h3>
-                                <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30" variant="outline">PREMIUM</Badge>
-                              </div>
-                              <div className="bg-gradient-to-r from-amber-500/5 to-cyan-500/5 border border-amber-500/20 rounded-xl p-6 text-center">
-                                <div className="text-4xl mb-3">🏆</div>
-                                <h4 className="text-lg font-bold text-white mb-2">Concursos de Afiliado</h4>
-                                <p className="text-sm text-zinc-400 mb-4">Crie competições entre afiliados com rankings em tempo real e distribuição automática de prêmios. Motive sua rede a crescer!</p>
-                                <div className="flex flex-col items-center gap-3">
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-2xl font-bold text-amber-400">$100</span>
-                                    <span className="text-sm text-zinc-400">USDT</span>
-                                  </div>
-                                  <div className="flex flex-wrap justify-center gap-2 text-xs text-zinc-500">
-                                    <span className="bg-zinc-800/80 px-2 py-1 rounded-full">🏆 Rankings automáticos</span>
-                                    <span className="bg-zinc-800/80 px-2 py-1 rounded-full">💰 Distribuição de prêmios</span>
-                                    <span className="bg-zinc-800/80 px-2 py-1 rounded-full">📊 Métricas variadas</span>
-                                    <span className="bg-zinc-800/80 px-2 py-1 rounded-full">🎯 Metas personalizadas</span>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </motion.div>
+
 
                         {/* ═══════════════ LEADERBOARD ═══════════════ */}
                         {affiliateData.leaderboard && affiliateData.leaderboard.length > 0 && (
@@ -6858,7 +6741,7 @@ export default function PlataformaROI() {
                             <TableHeader><TableRow className="border-zinc-800 hover:bg-transparent">
                               <TableHead className="text-zinc-400">{t('admin.name')}</TableHead><TableHead className="text-zinc-400">{t('admin.email')}</TableHead>
                               <TableHead className="text-zinc-400">{t('admin.role')}</TableHead><TableHead className="text-zinc-400">{t('admin.balance')}</TableHead>
-                              <TableHead className="text-zinc-400">{t('dashboard.totalInvested')}</TableHead><TableHead className="text-zinc-400">{t('admin.active')}</TableHead>
+                              <TableHead className="text-zinc-400">Afiliado</TableHead><TableHead className="text-zinc-400">{t('admin.active')}</TableHead>
                               <TableHead className="text-zinc-400">{t('admin.action')}</TableHead>
                             </TableRow></TableHeader>
                             <TableBody>
@@ -6868,9 +6751,14 @@ export default function PlataformaROI() {
                                   <TableCell className="text-zinc-400 text-sm">{u.email}</TableCell>
                                   <TableCell><Badge variant="outline" className={u.role === 'admin' ? 'border-amber-500/30 text-amber-400' : 'border-zinc-600'}>{u.role}</Badge></TableCell>
                                   <TableCell>${fmtUSDT(u.balance)}</TableCell>
-                                  <TableCell>${fmtUSDT(u.totalInvested)}</TableCell>
+                                  <TableCell>${fmtUSDT(u.affiliateBalance || '0')}</TableCell>
                                   <TableCell>{u.isActive ? <CheckCircle2 className="h-4 w-4 text-cyan-400" /> : <XCircle className="h-4 w-4 text-red-400" />}</TableCell>
-                                  <TableCell><Button variant="ghost" size="icon" className="h-10 w-10" onClick={() => setUserDialog({ open: true, user: u })}><Pencil className="h-4 w-4" /></Button></TableCell>
+                                  <TableCell>
+                                    <div className="flex gap-1">
+                                      <Button variant="ghost" size="icon" className="h-10 w-10" title="Editar" onClick={() => setUserDialog({ open: true, user: u })}><Pencil className="h-4 w-4" /></Button>
+                                      <Button variant="ghost" size="icon" className="h-10 w-10 text-cyan-400" title="Logar como este usuário" onClick={async () => { try { const res = await api('/api/auth/login-as', { method: 'POST', body: JSON.stringify({ userId: u.id }) }); if (res.user) { toast.success(`Logado como ${res.user.name}`); setUser(res.user); } } catch(e: any) { toast.error(e.message || 'Erro ao logar como usuário'); } }}><LogIn className="h-4 w-4" /></Button>
+                                    </div>
+                                  </TableCell>
                                 </TableRow>
                               ))}
                             </TableBody>
@@ -7886,72 +7774,67 @@ export default function PlataformaROI() {
                       </div>
                     )}
 
-                    {/* Admin Affiliate Ranks */}
+                    {/* Admin Affiliate Ranks — PREMIUM MODULE */}
                     {adminTab === 'affiliateRanks' && (
                       <div className="space-y-6">
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
                           <h3 className="text-lg font-semibold">{t('admin.affiliateRanks')}</h3>
-                          <Button className="bg-emerald-600 hover:bg-cyan-700 min-h-[44px]" onClick={() => setRankDialog({ open: true, rank: null })}><Plus className="mr-2 h-4 w-4" />{t('admin.newRank')}</Button>
+                          <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30" variant="outline">PREMIUM</Badge>
                         </div>
-                        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                          {adminRanks.sort((a, b) => a.sortOrder - b.sortOrder).map(rank => (
-                            <Card key={rank.id} className="bg-zinc-900 border-zinc-800">
-                              <CardContent className="p-4">
-                                <div className="flex items-center gap-3 mb-3">
-                                  <span className="text-3xl" style={{ filter: `drop-shadow(0 0 8px ${rank.color}40)` }}>{rank.icon}</span>
-                                  <div>
-                                    <div className="font-semibold" style={{ color: rank.color }}>{rank.name}</div>
-                                    <div className="text-xs text-zinc-500">{rank.sortOrder}</div>
-                                  </div>
-                                </div>
-                                <div className="space-y-1 text-sm">
-                                  <div className="flex justify-between"><span className="text-zinc-400">{t('admin.minReferrals')}</span><span>{rank.minReferrals}</span></div>
-                                  <div className="flex justify-between"><span className="text-zinc-400">{t('admin.minEarnings')}</span><span>${fmtUSDT(rank.minEarnings)}</span></div>
-                                  <div className="flex justify-between"><span className="text-zinc-400">{t('admin.bonusAmount')}</span><span className="text-cyan-400">${fmtUSDT(rank.bonusAmount)}</span></div>
-                                  <div className="flex justify-between"><span className="text-zinc-400">{t('admin.commissionBoost')}</span><span>+{rank.commissionBoost}%</span></div>
-                                </div>
-                                <div className="flex gap-2 mt-3">
-                                  <Button size="sm" variant="outline" className="flex-1 border-zinc-700 min-h-[44px]" onClick={() => setRankDialog({ open: true, rank })}><Pencil className="h-3.5 w-3.5 mr-1" />{t('admin.edit')}</Button>
-                                </div>
-                              </CardContent>
-                            </Card>
-                          ))}
-                        </div>
+                        <Card className="bg-zinc-900 border-amber-500/20 overflow-hidden relative">
+                          <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 via-transparent to-cyan-500/5 pointer-events-none" />
+                          <CardContent className="relative p-8 text-center">
+                            <div className="text-5xl mb-4">🏅</div>
+                            <h4 className="text-xl font-bold text-white mb-2">Módulo Ranks de Afiliado</h4>
+                            <p className="text-sm text-zinc-400 mb-6 max-w-lg mx-auto">Sistema de ranks com bônus progressivos (Bronze, Prata, Ouro). Afiliados ganham +1%/+2%/+3% de ROI extra conforme sobem de rank. Inclui bonificação automática e incremento de comissão.</p>
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6 max-w-xl mx-auto">
+                              <div className="bg-zinc-800/80 rounded-lg p-3"><div className="text-lg mb-1">🥉</div><div className="text-xs text-zinc-400">Bronze +1% ROI</div></div>
+                              <div className="bg-zinc-800/80 rounded-lg p-3"><div className="text-lg mb-1">🥈</div><div className="text-xs text-zinc-400">Prata +2% ROI</div></div>
+                              <div className="bg-zinc-800/80 rounded-lg p-3"><div className="text-lg mb-1">🥇</div><div className="text-xs text-zinc-400">Ouro +3% ROI</div></div>
+                              <div className="bg-zinc-800/80 rounded-lg p-3"><div className="text-lg mb-1">💰</div><div className="text-xs text-zinc-400">Bonificação automática</div></div>
+                            </div>
+                            <div className="inline-flex flex-col items-center gap-2 bg-amber-500/10 border border-amber-500/20 rounded-xl px-8 py-4">
+                              <Lock className="h-5 w-5 text-amber-400" />
+                              <div className="flex items-baseline gap-1">
+                                <span className="text-3xl font-bold text-amber-400">$100</span>
+                                <span className="text-sm text-zinc-400">USDT</span>
+                              </div>
+                              <span className="text-xs text-zinc-500">Ative este módulo para desbloquear</span>
+                            </div>
+                          </CardContent>
+                        </Card>
                       </div>
                     )}
 
-                    {/* Admin Affiliate Milestones */}
+                    {/* Admin Affiliate Milestones — PREMIUM MODULE */}
                     {adminTab === 'affiliateMilestones' && (
                       <div className="space-y-6">
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
                           <h3 className="text-lg font-semibold">{t('admin.affiliateMilestones')}</h3>
-                          <Button className="bg-emerald-600 hover:bg-cyan-700 min-h-[44px]" onClick={() => setMilestoneDialog({ open: true, milestone: null })}><Plus className="mr-2 h-4 w-4" />{t('admin.newMilestone')}</Button>
+                          <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30" variant="outline">PREMIUM</Badge>
                         </div>
-                        <div className="grid gap-4">
-                          {adminMilestones.sort((a, b) => a.sortOrder - b.sortOrder).map(m => (
-                            <Card key={m.id} className="bg-zinc-900 border-zinc-800">
-                              <CardContent className="p-4">
-                                <div className="flex items-center justify-between">
-                                  <div className="flex items-center gap-3">
-                                    <span className="text-2xl">{m.icon}</span>
-                                    <div>
-                                      <div className="font-semibold">{m.name}</div>
-                                      {m.description && <div className="text-xs text-zinc-500">{m.description}</div>}
-                                    </div>
-                                  </div>
-                                  <div className="flex items-center gap-3">
-                                    <div className="text-right text-sm">
-                                      <div>{m.targetCount} {t('common.referrals')}</div>
-                                      {m.rewardType === 'cash' && <div className="text-cyan-400">${fmtUSDT(m.rewardValue)}</div>}
-                                      {m.rewardType === 'boost' && <div className="text-cyan-400">+{m.rewardValue}%</div>}
-                                    </div>
-                                    <Button size="sm" variant="outline" className="border-zinc-700 min-h-[44px]" onClick={() => setMilestoneDialog({ open: true, milestone: m })}><Pencil className="h-3.5 w-3.5" /></Button>
-                                  </div>
-                                </div>
-                              </CardContent>
-                            </Card>
-                          ))}
-                        </div>
+                        <Card className="bg-zinc-900 border-amber-500/20 overflow-hidden relative">
+                          <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 via-transparent to-cyan-500/5 pointer-events-none" />
+                          <CardContent className="relative p-8 text-center">
+                            <div className="text-5xl mb-4">🎯</div>
+                            <h4 className="text-xl font-bold text-white mb-2">Módulo Marcos de Afiliado</h4>
+                            <p className="text-sm text-zinc-400 mb-6 max-w-lg mx-auto">Crie metas para afiliados com recompensas automáticas. Primeira indicação, 5 indicações, 15 indicações e mais. Premiações em USDT liberadas automaticamente ao atingir o objetivo.</p>
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6 max-w-xl mx-auto">
+                              <div className="bg-zinc-800/80 rounded-lg p-3"><div className="text-lg mb-1">🎯</div><div className="text-xs text-zinc-400">Metas personalizáveis</div></div>
+                              <div className="bg-zinc-800/80 rounded-lg p-3"><div className="text-lg mb-1">💰</div><div className="text-xs text-zinc-400">Premiação em USDT</div></div>
+                              <div className="bg-zinc-800/80 rounded-lg p-3"><div className="text-lg mb-1">⚡</div><div className="text-xs text-zinc-400">Liberação automática</div></div>
+                              <div className="bg-zinc-800/80 rounded-lg p-3"><div className="text-lg mb-1">📊</div><div className="text-xs text-zinc-400">Acompanhamento em tempo real</div></div>
+                            </div>
+                            <div className="inline-flex flex-col items-center gap-2 bg-amber-500/10 border border-amber-500/20 rounded-xl px-8 py-4">
+                              <Lock className="h-5 w-5 text-amber-400" />
+                              <div className="flex items-baseline gap-1">
+                                <span className="text-3xl font-bold text-amber-400">$100</span>
+                                <span className="text-sm text-zinc-400">USDT</span>
+                              </div>
+                              <span className="text-xs text-zinc-500">Ative este módulo para desbloquear</span>
+                            </div>
+                          </CardContent>
+                        </Card>
                       </div>
                     )}
 
@@ -9592,25 +9475,60 @@ export default function PlataformaROI() {
 
       {/* Admin User Dialog */}
       <Dialog open={userDialog.open} onOpenChange={() => setUserDialog({ open: false })}>
-        <DialogContent className="bg-zinc-900 border-zinc-800 text-white max-w-md w-[95vw] sm:w-full">
-          <DialogHeader><DialogTitle>{t('admin.edit')} {t('admin.users')}</DialogTitle><DialogDescription className="text-zinc-400">{userDialog.user?.email}</DialogDescription></DialogHeader>
+        <DialogContent className="bg-zinc-900 border-zinc-800 text-white max-w-lg w-[95vw] sm:w-full max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{t('admin.edit')} {t('admin.users')}</DialogTitle>
+            <DialogDescription className="text-zinc-400">{userDialog.user?.email}</DialogDescription>
+          </DialogHeader>
           <form onSubmit={handleAdminUserUpdate} className="space-y-3">
-            <div><Label className="text-zinc-300 text-xs">{t('admin.name')}</Label><Input name="name" defaultValue={userDialog.user?.name || ''} className="bg-zinc-800 border-zinc-700 mt-1" /></div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div><Label className="text-zinc-300 text-xs">{t('admin.role')}</Label>
-                <Select name="role" defaultValue={userDialog.user?.role || 'user'}>
-                  <SelectTrigger className="bg-zinc-800 border-zinc-700 mt-1"><SelectValue /></SelectTrigger>
-                  <SelectContent className="bg-zinc-800"><SelectItem value="user">{t('admin.user')}</SelectItem><SelectItem value="admin">{t('admin.admin')}</SelectItem></SelectContent>
-                </Select>
+            {/* Basic Info */}
+            <div className="bg-zinc-800/50 rounded-lg p-3 space-y-3">
+              <div className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Informações Básicas</div>
+              <div><Label className="text-zinc-300 text-xs">{t('admin.name')}</Label><Input name="name" defaultValue={userDialog.user?.name || ''} className="bg-zinc-800 border-zinc-700 mt-1" /></div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div><Label className="text-zinc-300 text-xs">{t('admin.role')}</Label>
+                  <Select name="role" defaultValue={userDialog.user?.role || 'user'}>
+                    <SelectTrigger className="bg-zinc-800 border-zinc-700 mt-1"><SelectValue /></SelectTrigger>
+                    <SelectContent className="bg-zinc-800"><SelectItem value="user">{t('admin.user')}</SelectItem><SelectItem value="admin">{t('admin.admin')}</SelectItem></SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-end gap-3">
+                  <label className="flex items-center gap-2 text-sm text-zinc-300 py-2 cursor-pointer"><input type="checkbox" name="isActive" defaultChecked={userDialog.user?.isActive ?? true} className="accent-cyan-500" /> {t('admin.active')}</label>
+                  <label className="flex items-center gap-2 text-sm text-zinc-300 py-2 cursor-pointer"><input type="checkbox" name="linkUnlocked" defaultChecked={userDialog.user?.linkUnlocked ?? false} className="accent-cyan-500" /> Link</label>
+                </div>
               </div>
-              <div><Label className="text-zinc-300 text-xs">{t('admin.balance')} (USDT)</Label><Input name="balance" defaultValue={userDialog.user?.balance || '0'} className="bg-zinc-800 border-zinc-700 mt-1" /></div>
             </div>
-            <div><Label className="text-zinc-300 text-xs">{t('dashboard.affiliateBalance')} (USDT)</Label><Input name="affiliateBalance" defaultValue={userDialog.user?.affiliateBalance || '0'} className="bg-zinc-800 border-zinc-700 mt-1" /></div>
-            <div><Label className="text-zinc-300 text-xs">{t('admin.walletAddress')}</Label><Input name="walletAddress" defaultValue={userDialog.user?.walletAddress || ''} className="bg-zinc-800 border-zinc-700 mt-1" /></div>
-            <div><Label className="text-zinc-300 text-xs">{t('admin.pixKey')}</Label><Input name="pixKey" defaultValue={userDialog.user?.pixKey || ''} className="bg-zinc-800 border-zinc-700 mt-1" /></div>
-            <div className="flex items-center gap-4">
-              <label className="flex items-center gap-2 text-sm text-zinc-300 py-2 cursor-pointer"><input type="checkbox" name="isActive" defaultChecked={userDialog.user?.isActive ?? true} className="accent-cyan-500" /> {t('admin.active')}</label>
-              <label className="flex items-center gap-2 text-sm text-zinc-300 py-2 cursor-pointer"><input type="checkbox" name="linkUnlocked" defaultChecked={userDialog.user?.linkUnlocked ?? false} className="accent-cyan-500" /> {t('admin.linkUnlocked')}</label>
+            {/* Balances */}
+            <div className="bg-zinc-800/50 rounded-lg p-3 space-y-3">
+              <div className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Saldos (USDT)</div>
+              <div className="grid grid-cols-2 gap-3">
+                <div><Label className="text-zinc-300 text-xs">Saldo Principal</Label><Input name="balance" defaultValue={userDialog.user?.balance || '0'} className="bg-zinc-800 border-zinc-700 mt-1" /></div>
+                <div><Label className="text-zinc-300 text-xs">Saldo Afiliado</Label><Input name="affiliateBalance" defaultValue={userDialog.user?.affiliateBalance || '0'} className="bg-zinc-800 border-zinc-700 mt-1" /></div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div><Label className="text-zinc-300 text-xs">Total Investido</Label><Input name="totalInvested" defaultValue={userDialog.user?.totalInvested || '0'} className="bg-zinc-800 border-zinc-700 mt-1" /></div>
+                <div><Label className="text-zinc-300 text-xs">Total ROI</Label><Input name="totalRoi" defaultValue={userDialog.user?.totalRoi || '0'} className="bg-zinc-800 border-zinc-700 mt-1" /></div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div><Label className="text-zinc-300 text-xs">Total Depositado</Label><Input name="totalDeposited" defaultValue={userDialog.user?.totalDeposited || '0'} className="bg-zinc-800 border-zinc-700 mt-1" /></div>
+                <div><Label className="text-zinc-300 text-xs">Total Sacado</Label><Input name="totalWithdrawn" defaultValue={userDialog.user?.totalWithdrawn || '0'} className="bg-zinc-800 border-zinc-700 mt-1" /></div>
+              </div>
+            </div>
+            {/* Wallets */}
+            <div className="bg-zinc-800/50 rounded-lg p-3 space-y-3">
+              <div className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Carteiras</div>
+              <div><Label className="text-zinc-300 text-xs">{t('admin.walletAddress')} (TRC20)</Label><Input name="walletAddress" defaultValue={userDialog.user?.walletAddress || ''} className="bg-zinc-800 border-zinc-700 mt-1" /></div>
+              <div><Label className="text-zinc-300 text-xs">{t('admin.pixKey')}</Label><Input name="pixKey" defaultValue={userDialog.user?.pixKey || ''} className="bg-zinc-800 border-zinc-700 mt-1" /></div>
+            </div>
+            {/* Actions */}
+            <div className="flex gap-2">
+              <Button type="button" variant="outline" className="flex-1 border-cyan-700 text-cyan-400 hover:bg-cyan-500/10 min-h-[44px]" onClick={async () => {
+                if (!userDialog.user) return;
+                try {
+                  const res = await api('/api/auth/login-as', { method: 'POST', body: JSON.stringify({ userId: userDialog.user.id }) });
+                  if (res.user) { toast.success(`Logado como ${res.user.name}`); setUser(res.user); setUserDialog({ open: false }); }
+                } catch(e: any) { toast.error(e.message || 'Erro ao logar'); }
+              }}><LogIn className="mr-2 h-4 w-4" /> Logar como este usuário</Button>
             </div>
             <DialogFooter>
               <Button variant="outline" className="border-zinc-700" type="button" onClick={() => setUserDialog({ open: false })}>{t('common.cancel')}</Button>
