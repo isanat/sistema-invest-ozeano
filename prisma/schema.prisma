@@ -106,6 +106,7 @@ model Investment {
   dailyRoi    String  @default("0")  // Daily ROI amount in USDT
   dailyRoiPct String  @default("0")  // ROI percentage
   totalRoi    String  @default("0")  // Total expected ROI
+  accumulatedRoi String @default("0") // Actual accumulated ROI earned so far (updated by cron)
 
   startDate DateTime  @default(now())
   endDate   DateTime  @default(now())

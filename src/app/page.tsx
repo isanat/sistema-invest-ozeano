@@ -106,7 +106,7 @@ interface InvestmentPlan {
 interface UserInvestment {
   id: string; userId: string; planId?: string | null;
   startDate: string; endDate: string; amount: string; dailyRoiPct: string;
-  dailyRoi: string; totalRoi: string;
+  dailyRoi: string; totalRoi: string; accumulatedRoi: string;
   teamBonusPct: string;
   status: string; createdAt: string; updatedAt: string;
   plan?: { id: string; name: string; dailyRoiPct: string; durationDays: number; coin?: string; model?: string; pool?: string };
@@ -2235,10 +2235,16 @@ export default function PlataformaROI() {
     if (activeInvestments.length === 0) return 0;
     const now = Date.now();
     return activeInvestments.reduce((sum, r) => {
+      // Use real accumulated ROI from database + real-time increment since last cron
+      const dbAccumulated = d(r.accumulatedRoi);
       const start = new Date(r.startDate).getTime();
       const elapsedSeconds = Math.max(0, (now - start) / 1000);
-      const earned = d(r.dailyRoi) * (elapsedSeconds / 86400);
-      return sum + earned;
+      // Calculate seconds since the last full day (for real-time tick)
+      const fullDaysSeconds = Math.floor(elapsedSeconds / 86400) * 86400;
+      const partialSeconds = elapsedSeconds - fullDaysSeconds;
+      // Real-time earnings = database accumulated + partial day increment
+      const realTimeEarnings = dbAccumulated + (d(r.dailyRoi) * (partialSeconds / 86400));
+      return sum + realTimeEarnings;
     }, 0);
   }, [activeInvestments]);
 
@@ -2247,9 +2253,12 @@ export default function PlataformaROI() {
     if (activeInvestments.length === 0) return [];
     const now = Date.now();
     return activeInvestments.map(r => {
+      const dbAccumulated = d(r.accumulatedRoi);
       const start = new Date(r.startDate).getTime();
       const elapsedSeconds = Math.max(0, (now - start) / 1000);
-      return d(r.dailyRoi) * (elapsedSeconds / 86400);
+      const fullDaysSeconds = Math.floor(elapsedSeconds / 86400) * 86400;
+      const partialSeconds = elapsedSeconds - fullDaysSeconds;
+      return dbAccumulated + (d(r.dailyRoi) * (partialSeconds / 86400));
     });
   }, [activeInvestments]);
 

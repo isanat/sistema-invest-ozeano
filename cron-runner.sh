@@ -68,6 +68,10 @@ call_cron() {
   fi
 }
 
+# Run daily ROI distribution on startup (catch up on missed runs)
+echo "[cron-runner] Running startup daily ROI distribution (catch-up)..."
+call_cron "/api/cron/distribute" "Startup Daily ROI Distribution"
+
 # Main loop — check every 60 seconds
 while true; do
   NOW=$(date -u +%s)

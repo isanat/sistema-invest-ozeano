@@ -53,14 +53,15 @@ export async function acquireRowLock(
 }
 
 /**
- * Acquire a PostgreSQL advisory lock to prevent concurrent cron execution.
- * On non-PostgreSQL this is a no-op (cron deduplication handled differently).
+ * Try to acquire a PostgreSQL advisory lock (non-blocking).
+ * Uses pg_try_advisory_lock which returns immediately with true/false.
+ * Unlike pg_advisory_lock, this won't block if the lock is already held.
  */
 export async function acquireAdvisoryLock(lockId: number): Promise<boolean> {
   if (isPostgres()) {
     try {
-      await db.$queryRaw`SELECT pg_advisory_lock(${lockId})`;
-      return true;
+      const result = await db.$queryRaw<Array<{ pg_try_advisory_lock: boolean }>>`SELECT pg_try_advisory_lock(${lockId}) as "pg_try_advisory_lock"`;
+      return result[0]?.pg_try_advisory_lock === true;
     } catch {
       return false;
     }

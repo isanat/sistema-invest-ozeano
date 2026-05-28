@@ -150,6 +150,9 @@ export async function POST(request: NextRequest) {
           // Credit user balance atomically using raw SQL (PostgreSQL)
           await tx.$executeRaw`UPDATE "User" SET balance = CAST((CAST(balance AS NUMERIC) + ${totalRoiForToday}) AS TEXT), "totalRoi" = CAST((CAST("totalRoi" AS NUMERIC) + ${totalRoiForToday}) AS TEXT) WHERE id = ${investment.userId}`;
 
+          // Update investment accumulated ROI
+          await tx.$executeRaw`UPDATE "Investment" SET "accumulatedRoi" = CAST((CAST("accumulatedRoi" AS NUMERIC) + ${totalRoiForToday}) AS TEXT) WHERE id = ${investment.id}`;
+
           // Create transaction record
           const planName = investment.plan?.name || 'Plano';
           await tx.transaction.create({

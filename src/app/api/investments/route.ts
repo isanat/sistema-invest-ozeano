@@ -24,6 +24,7 @@ export async function GET(request: NextRequest) {
     const activeInvestments = investments.filter(i => i.status === 'active');
     const totalActiveAmount = activeInvestments.reduce((sum, i) => sum + d(i.amount), 0);
     const totalActiveDailyRoi = activeInvestments.reduce((sum, i) => sum + d(i.dailyRoi), 0);
+    const totalAccumulatedRoi = investments.reduce((sum, i) => sum + d(i.accumulatedRoi), 0);
 
     return apiSuccess({
       investments,
@@ -31,6 +32,7 @@ export async function GET(request: NextRequest) {
         activeCount: activeInvestments.length,
         totalActiveAmount: dusdt(totalActiveAmount),
         totalDailyRoi: dusdt(totalActiveDailyRoi),
+        totalAccumulatedRoi: dusdt(totalAccumulatedRoi),
         totalCount: investments.length,
       },
     });
