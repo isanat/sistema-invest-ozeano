@@ -4248,8 +4248,8 @@ export default function PlataformaROI() {
                                 { rank: 'Ouro', bonus: 3, color: 'text-amber-400', border: 'border-amber-500/20', bg: 'bg-amber-500/10', icon: Crown },
                               ].map(tier => {
                                 const simAmt = Math.max(0, parseFloat(simulatorAmount) || 0);
-                                const roiPct2 = dbPlans.filter(p => p.isActive).length > 0 ? d(dbPlans.filter(p => p.isActive)[0].dailyRoiPct) / 100 : 0.033;
-                                const extraDaily = simAmt * roiPct2 * (tier.bonus / 100);
+                                // Team bonus is +N percentage points added to daily ROI (e.g. Bronze +1% = invested × 1%)
+                                const extraDaily = simAmt * (tier.bonus / 100);
                                 return (
                                   <div key={tier.rank} className={`${tier.bg} border ${tier.border} rounded-lg p-2.5 text-center stat-card-hover`}>
                                     <tier.icon className={`h-4 w-4 ${tier.color} mx-auto mb-1`} />
