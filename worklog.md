@@ -154,3 +154,37 @@ Stage Summary:
 - Zero occurrences of 'PLATAFORMA ROI' remain in codebase (confirmed via grep)
 - Production DB updated to 'ActionCash'
 - Deployment to production in progress
+
+---
+Task ID: 1
+Agent: Main Agent
+Task: Fix referral system, add Transfer tab, add Reinvest button, commit/push/deploy
+
+Work Log:
+- Committed and pushed existing changes to GitHub (logo/favicon updates)
+- Analyzed referral system: Landing page doesn't read ?ref= URL params
+- Added useSearchParams import and urlReferralCode state to page.tsx
+- Auto-populate referral code in landing page auth dialog (defaultValue={urlReferralCode})
+- Auto-open register dialog when ?ref=CODE is in URL
+- Updated auth-modals.tsx to also read and pre-populate referral code from URL
+- Added Transferência tab to investor sidebar nav items
+- Added transfer state variables (email, amount, lookup, config, history)
+- Added fetchTransferData, handleTransferLookup, handleTransferSend functions
+- Added full Transfer tab UI with: form, email lookup, amount input, fee calculation, limits info, send button, transfer history
+- Added Reinvestir button on home dashboard (visible when balance >= $5, uses amber/orange gradient)
+- Added transfer config labels to CONFIG_LABELS for admin panel
+- Added transfer category to admin config UI (icon, label, description)
+- Added 'transfer' category to adminConfigSchema validation
+- Added transfer configs to setup route (for new installations)
+- Created scripts/add-transfer-configs.js migration script
+- Added migration script to start.sh (runs on every deploy, idempotent)
+- Committed and pushed all changes (2 commits)
+- Triggered Coolify deployment (3 deployments total)
+
+Stage Summary:
+- Referral system fixed: ?ref=CODE auto-populates and auto-opens register
+- Transfer tab added with full P2P transfer UI (lookup, send, history)
+- Reinvestir button added on home dashboard (conditional on balance >= $5)
+- Transfer configs added to admin config panel and setup route
+- Migration script ensures transfer configs exist in production DB
+- Deployment in progress
