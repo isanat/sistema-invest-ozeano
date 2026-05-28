@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, isPostgres } from '@/lib/db';
-import { requireAdmin, d, ds, dusdt } from '@/lib/auth';
+import { requireAdmin, d, ds, dusdt, hashPassword } from '@/lib/auth';
 import { adminUserUpdateSchema } from '@/lib/validations';
 import { apiError, apiSuccess, handleApiError, sanitizePagination } from '@/lib/api-utils';
 
@@ -49,14 +49,20 @@ export async function GET(request: NextRequest) {
           isActive: true,
           balance: true,
           affiliateBalance: true,
+          voucherBalance: true,
           totalRoi: true,
           totalInvested: true,
           totalDeposited: true,
           totalWithdrawn: true,
+          totalAffiliateEarnings: true,
+          teamBonusPct: true,
+          referralLevel: true,
           affiliateCode: true,
           referredBy: true,
           hasInvested: true,
           linkUnlocked: true,
+          walletAddress: true,
+          pixKey: true,
           createdAt: true,
           updatedAt: true,
           _count: {
@@ -100,6 +106,12 @@ export async function PUT(request: NextRequest) {
     }
 
     const data = adminUserUpdateSchema.parse(updateData);
+
+    // Hash password if provided
+    if (data.newPassword) {
+      (data as any).hashedPassword = await hashPassword(data.newPassword);
+      delete data.newPassword;
+    }
 
     // Guard: admin cannot change their own role
     if (id === session.userId && data.role !== undefined && data.role !== 'admin') {
@@ -155,6 +167,20 @@ export async function PUT(request: NextRequest) {
         });
       }
 
+      if (data.voucherBalance !== undefined && d(data.voucherBalance) !== d(lockedUser.voucherBalance)) {
+        const diff = d(data.voucherBalance) - d(lockedUser.voucherBalance);
+        await tx.transaction.create({
+          data: {
+            userId: id,
+            type: 'admin_adjust',
+            amount: ds(Math.abs(diff)),
+            status: 'completed',
+            description: `Ajuste admin no saldo voucher: ${diff >= 0 ? '+' : ''}${dusdt(diff)} USDT`,
+            referenceType: 'AdminAction',
+          },
+        });
+      }
+
       // Update user
       const user = await tx.user.update({
         where: { id },
@@ -162,15 +188,22 @@ export async function PUT(request: NextRequest) {
           ...(data.name !== undefined && { name: data.name }),
           ...(data.role !== undefined && { role: data.role }),
           ...(data.isActive !== undefined && { isActive: data.isActive }),
+          ...(data.hasInvested !== undefined && { hasInvested: data.hasInvested }),
           ...(data.balance !== undefined && { balance: data.balance }),
           ...(data.affiliateBalance !== undefined && { affiliateBalance: data.affiliateBalance }),
+          ...(data.voucherBalance !== undefined && { voucherBalance: data.voucherBalance }),
           ...(data.totalInvested !== undefined && { totalInvested: data.totalInvested }),
           ...(data.totalRoi !== undefined && { totalRoi: data.totalRoi }),
           ...(data.totalDeposited !== undefined && { totalDeposited: data.totalDeposited }),
           ...(data.totalWithdrawn !== undefined && { totalWithdrawn: data.totalWithdrawn }),
+          ...(data.totalAffiliateEarnings !== undefined && { totalAffiliateEarnings: data.totalAffiliateEarnings }),
+          ...(data.teamBonusPct !== undefined && { teamBonusPct: data.teamBonusPct }),
+          ...(data.referralLevel !== undefined && { referralLevel: data.referralLevel }),
+          ...(data.affiliateCode !== undefined && { affiliateCode: data.affiliateCode || null }),
           ...(data.walletAddress !== undefined && { walletAddress: data.walletAddress || null }),
           ...(data.pixKey !== undefined && { pixKey: data.pixKey || null }),
           ...(data.linkUnlocked !== undefined && { linkUnlocked: data.linkUnlocked }),
+          ...((data as any).hashedPassword && { password: (data as any).hashedPassword }),
         },
         select: {
           id: true,

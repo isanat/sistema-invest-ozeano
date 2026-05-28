@@ -667,7 +667,7 @@ export default function PlataformaROI() {
   const [investmentDuration, setInvestmentDuration] = useState(7);
   const [selectedPlanId, setSelectedPlanId] = useState<string | undefined>(undefined);
   const [investLoading, setInvestLoading] = useState(false);
-  const [simulatorAmount, setSimulatorAmount] = useState<string>('100');
+
   const [investAmount, setInvestAmount] = useState<string>('');
   const [useVoucherForInvest, setUseVoucherForInvest] = useState(false);
   const [selectedVoucherId, setSelectedVoucherId] = useState<string>('');
@@ -1929,13 +1929,24 @@ export default function PlataformaROI() {
     try {
       const form = e.currentTarget;
       const body: any = { id: userDialog.user.id };
-      const fields = ['name', 'role', 'balance', 'affiliateBalance', 'totalInvested', 'totalRoi', 'totalDeposited', 'totalWithdrawn', 'walletAddress', 'pixKey'];
-      fields.forEach(f => {
+      const stringFields = ['name', 'balance', 'affiliateBalance', 'voucherBalance', 'totalInvested', 'totalRoi', 'totalDeposited', 'totalWithdrawn', 'totalAffiliateEarnings', 'teamBonusPct', 'walletAddress', 'pixKey', 'affiliateCode'];
+      stringFields.forEach(f => {
         const el = (form as any)[f] as HTMLInputElement;
-        if (el) body[f] = el.value;
+        if (el && el.value !== undefined) body[f] = el.value;
+      });
+      const numFields = ['referralLevel'];
+      numFields.forEach(f => {
+        const el = (form as any)[f] as HTMLInputElement;
+        if (el && el.value) body[f] = parseInt(el.value);
       });
       body.isActive = (form.isActive as HTMLInputElement).checked;
       body.linkUnlocked = (form.linkUnlocked as HTMLInputElement).checked;
+      body.hasInvested = (form.hasInvested as HTMLInputElement).checked;
+      // Only send newPassword if filled
+      const newPwEl = (form as any).newPassword as HTMLInputElement;
+      if (newPwEl && newPwEl.value && newPwEl.value.length >= 6) {
+        body.newPassword = newPwEl.value;
+      }
       await api('/api/admin/users', { method: 'PUT', body: JSON.stringify(body) });
       toast.success(t('toast.adminUserUpdateSuccess'));
       setUserDialog({ open: false });
@@ -9475,50 +9486,71 @@ export default function PlataformaROI() {
 
       {/* Admin User Dialog */}
       <Dialog open={userDialog.open} onOpenChange={() => setUserDialog({ open: false })}>
-        <DialogContent className="bg-zinc-900 border-zinc-800 text-white max-w-lg w-[95vw] sm:w-full max-h-[85vh] overflow-y-auto">
+        <DialogContent className="bg-zinc-900 border-zinc-800 text-white max-w-2xl w-[95vw] sm:w-full max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{t('admin.edit')} {t('admin.users')}</DialogTitle>
-            <DialogDescription className="text-zinc-400">{userDialog.user?.email}</DialogDescription>
+            <DialogTitle className="flex items-center gap-2"><UserCog className="h-5 w-5 text-cyan-400" /> {t('admin.edit')} {t('admin.users')}</DialogTitle>
+            <DialogDescription className="text-zinc-400">{userDialog.user?.email} — ID: {userDialog.user?.id?.slice(0,12)}…</DialogDescription>
           </DialogHeader>
           <form onSubmit={handleAdminUserUpdate} className="space-y-3">
             {/* Basic Info */}
             <div className="bg-zinc-800/50 rounded-lg p-3 space-y-3">
               <div className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Informações Básicas</div>
-              <div><Label className="text-zinc-300 text-xs">{t('admin.name')}</Label><Input name="name" defaultValue={userDialog.user?.name || ''} className="bg-zinc-800 border-zinc-700 mt-1" /></div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div><Label className="text-zinc-300 text-xs">{t('admin.name')}</Label><Input name="name" defaultValue={userDialog.user?.name || ''} className="bg-zinc-800 border-zinc-700 mt-1" /></div>
+                <div><Label className="text-zinc-300 text-xs">Email</Label><Input name="email" defaultValue={userDialog.user?.email || ''} className="bg-zinc-800 border-zinc-700 mt-1" readOnly /></div>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <div><Label className="text-zinc-300 text-xs">{t('admin.role')}</Label>
                   <Select name="role" defaultValue={userDialog.user?.role || 'user'}>
                     <SelectTrigger className="bg-zinc-800 border-zinc-700 mt-1"><SelectValue /></SelectTrigger>
                     <SelectContent className="bg-zinc-800"><SelectItem value="user">{t('admin.user')}</SelectItem><SelectItem value="admin">{t('admin.admin')}</SelectItem></SelectContent>
                   </Select>
                 </div>
-                <div className="flex items-end gap-3">
-                  <label className="flex items-center gap-2 text-sm text-zinc-300 py-2 cursor-pointer"><input type="checkbox" name="isActive" defaultChecked={userDialog.user?.isActive ?? true} className="accent-cyan-500" /> {t('admin.active')}</label>
-                  <label className="flex items-center gap-2 text-sm text-zinc-300 py-2 cursor-pointer"><input type="checkbox" name="linkUnlocked" defaultChecked={userDialog.user?.linkUnlocked ?? false} className="accent-cyan-500" /> Link</label>
+                <div className="flex flex-col justify-end gap-2">
+                  <label className="flex items-center gap-2 text-sm text-zinc-300 cursor-pointer"><input type="checkbox" name="isActive" defaultChecked={userDialog.user?.isActive ?? true} className="accent-cyan-500" /> Ativo</label>
+                  <label className="flex items-center gap-2 text-sm text-zinc-300 cursor-pointer"><input type="checkbox" name="hasInvested" defaultChecked={userDialog.user?.hasInvested ?? false} className="accent-cyan-500" /> Investiu</label>
                 </div>
+                <div className="flex flex-col justify-end gap-2">
+                  <label className="flex items-center gap-2 text-sm text-zinc-300 cursor-pointer"><input type="checkbox" name="linkUnlocked" defaultChecked={userDialog.user?.linkUnlocked ?? false} className="accent-cyan-500" /> Link</label>
+                </div>
+                <div><Label className="text-zinc-300 text-xs">Nível Ref.</Label><Input name="referralLevel" type="number" min={1} max={11} defaultValue={userDialog.user?.referralLevel || 1} className="bg-zinc-800 border-zinc-700 mt-1" /></div>
               </div>
             </div>
             {/* Balances */}
             <div className="bg-zinc-800/50 rounded-lg p-3 space-y-3">
               <div className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Saldos (USDT)</div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-3 gap-3">
                 <div><Label className="text-zinc-300 text-xs">Saldo Principal</Label><Input name="balance" defaultValue={userDialog.user?.balance || '0'} className="bg-zinc-800 border-zinc-700 mt-1" /></div>
                 <div><Label className="text-zinc-300 text-xs">Saldo Afiliado</Label><Input name="affiliateBalance" defaultValue={userDialog.user?.affiliateBalance || '0'} className="bg-zinc-800 border-zinc-700 mt-1" /></div>
+                <div><Label className="text-zinc-300 text-xs">Saldo Voucher</Label><Input name="voucherBalance" defaultValue={userDialog.user?.voucherBalance || '0'} className="bg-zinc-800 border-zinc-700 mt-1" /></div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-3 gap-3">
                 <div><Label className="text-zinc-300 text-xs">Total Investido</Label><Input name="totalInvested" defaultValue={userDialog.user?.totalInvested || '0'} className="bg-zinc-800 border-zinc-700 mt-1" /></div>
                 <div><Label className="text-zinc-300 text-xs">Total ROI</Label><Input name="totalRoi" defaultValue={userDialog.user?.totalRoi || '0'} className="bg-zinc-800 border-zinc-700 mt-1" /></div>
+                <div><Label className="text-zinc-300 text-xs">Total Afiliado</Label><Input name="totalAffiliateEarnings" defaultValue={userDialog.user?.totalAffiliateEarnings || '0'} className="bg-zinc-800 border-zinc-700 mt-1" /></div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-3 gap-3">
                 <div><Label className="text-zinc-300 text-xs">Total Depositado</Label><Input name="totalDeposited" defaultValue={userDialog.user?.totalDeposited || '0'} className="bg-zinc-800 border-zinc-700 mt-1" /></div>
                 <div><Label className="text-zinc-300 text-xs">Total Sacado</Label><Input name="totalWithdrawn" defaultValue={userDialog.user?.totalWithdrawn || '0'} className="bg-zinc-800 border-zinc-700 mt-1" /></div>
+                <div><Label className="text-zinc-300 text-xs">Team Bonus %</Label><Input name="teamBonusPct" defaultValue={userDialog.user?.teamBonusPct || '0'} className="bg-zinc-800 border-zinc-700 mt-1" /></div>
               </div>
             </div>
-            {/* Wallets */}
+            {/* Wallets & Affiliate */}
             <div className="bg-zinc-800/50 rounded-lg p-3 space-y-3">
-              <div className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Carteiras</div>
-              <div><Label className="text-zinc-300 text-xs">{t('admin.walletAddress')} (TRC20)</Label><Input name="walletAddress" defaultValue={userDialog.user?.walletAddress || ''} className="bg-zinc-800 border-zinc-700 mt-1" /></div>
-              <div><Label className="text-zinc-300 text-xs">{t('admin.pixKey')}</Label><Input name="pixKey" defaultValue={userDialog.user?.pixKey || ''} className="bg-zinc-800 border-zinc-700 mt-1" /></div>
+              <div className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Carteiras & Afiliado</div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div><Label className="text-zinc-300 text-xs">{t('admin.walletAddress')} (TRC20)</Label><Input name="walletAddress" defaultValue={userDialog.user?.walletAddress || ''} className="bg-zinc-800 border-zinc-700 mt-1" /></div>
+                <div><Label className="text-zinc-300 text-xs">{t('admin.pixKey')}</Label><Input name="pixKey" defaultValue={userDialog.user?.pixKey || ''} className="bg-zinc-800 border-zinc-700 mt-1" /></div>
+              </div>
+              <div><Label className="text-zinc-300 text-xs">Código Afiliado</Label><Input name="affiliateCode" defaultValue={userDialog.user?.affiliateCode || ''} className="bg-zinc-800 border-zinc-700 mt-1" placeholder="Gerado automaticamente se vazio" /></div>
+            </div>
+            {/* Password Reset */}
+            <div className="bg-zinc-800/50 rounded-lg p-3 space-y-3">
+              <div className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Redefinir Senha</div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div><Label className="text-zinc-300 text-xs">Nova Senha</Label><Input name="newPassword" type="password" placeholder="Deixe vazio para manter a atual" className="bg-zinc-800 border-zinc-700 mt-1" /></div>
+                <div className="flex items-end"><p className="text-xs text-zinc-500 pb-2">Mínimo 6 caracteres. Apenas preencha se quiser alterar.</p></div>
+              </div>
             </div>
             {/* Actions */}
             <div className="flex gap-2">

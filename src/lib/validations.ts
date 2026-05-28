@@ -74,17 +74,25 @@ export const adminConfigSchema = z.object({
 
 export const adminUserUpdateSchema = z.object({
   name: z.string().optional(),
+  email: z.string().optional(),
   role: z.enum(['user', 'admin']).optional(),
   isActive: z.boolean().optional(),
+  hasInvested: z.boolean().optional(),
   balance: z.string().refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, 'Saldo deve ser um número válido e não negativo').optional(),
   affiliateBalance: z.string().refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, 'Saldo afiliado deve ser um número válido e não negativo').optional(),
+  voucherBalance: z.string().refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, 'Saldo voucher deve ser um número válido e não negativo').optional(),
   totalInvested: z.string().refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, 'Total investido deve ser um número válido e não negativo').optional(),
   totalRoi: z.string().refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, 'Total ROI deve ser um número válido e não negativo').optional(),
   totalDeposited: z.string().refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, 'Total depositado deve ser um número válido e não negativo').optional(),
   totalWithdrawn: z.string().refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, 'Total sacado deve ser um número válido e não negativo').optional(),
+  totalAffiliateEarnings: z.string().refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, 'Total afiliado deve ser um número válido e não negativo').optional(),
+  teamBonusPct: z.string().refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, 'Team bonus % deve ser um número válido').optional(),
+  referralLevel: z.number().int().min(1).max(11).optional(),
+  affiliateCode: z.string().optional(),
   walletAddress: z.string().optional(),
   pixKey: z.string().optional(),
   linkUnlocked: z.boolean().optional(),
+  newPassword: z.string().min(6, 'Senha deve ter no mínimo 6 caracteres').optional(),
 });
 
 export const adminDepositActionSchema = z.object({
