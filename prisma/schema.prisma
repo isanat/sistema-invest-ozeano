@@ -13,7 +13,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -115,6 +115,10 @@ model Investment {
   teamBonusPct String @default("0") // Team bonus % from affiliate rank
   source       String  @default("deposit") // "deposit" (own balance), "voucher" (voucher balance), or "daymond" (Action Daymond package)
 
+  // ROI distribution tracking — each investment gets ROI every 24h from its own startDate
+  lastRoiAt     DateTime? // Timestamp of last ROI distribution (null = never distributed)
+  distributedPeriods Int @default(0) // Number of 24h periods already distributed (idempotency counter)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -128,29 +132,33 @@ model Investment {
   @@index([status])
   @@index([userId, status])
   @@index([source])
+  @@index([lastRoiAt])
 }
 
 model RoiHistory {
   id            String   @id @default(cuid())
   userId        String
   investmentId  String
-  date          DateTime
+
+  // 24-hour period tracking — each investment gets ROI at its own 24h marks
+  periodIndex   Int      // Which 24-hour period this ROI represents (1, 2, 3, ...)
+  distributedAt DateTime // When this ROI was actually distributed
 
   roiAmount String  // ROI paid in USDT
   roiPct    String  // Percentage applied
   teamBonus String  @default("0") // Team bonus from rank
-  totalRoi  String  // Total paid that day including bonus
+  totalRoi  String  // Total paid that period including bonus
 
   createdAt DateTime @default(now())
 
   user       User       @relation(fields: [userId], references: [id], onDelete: Restrict)
   investment Investment @relation(fields: [investmentId], references: [id], onDelete: Cascade)
 
-  @@unique([investmentId, date])
+  @@unique([investmentId, periodIndex])
   @@index([userId])
-  @@index([date])
+  @@index([distributedAt])
   @@index([investmentId])
-  @@index([investmentId, date])
+  @@index([investmentId, periodIndex])
 }
 
 model Deposit {

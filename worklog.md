@@ -47,3 +47,27 @@ Stage Summary:
 - All 5 active plans now correctly show 3.3% ROI and 60 days duration
 - Admin table displays proper columns matching the InvestmentPlan model
 - Frontend plan cards render from database, not hardcoded values
+---
+Task ID: 1
+Agent: main
+Task: Fix daily ROI distribution to be 24h per investment instead of midnight UTC for all
+
+Work Log:
+- Analyzed the current system: ROI was distributed at midnight UTC for all investments (wrong)
+- Updated Prisma schema: Added `lastRoiAt` and `distributedPeriods` to Investment model
+- Changed RoiHistory model: Replaced `date` with `periodIndex` (Int) and `distributedAt` (DateTime)
+- Rewrote `/api/cron/distribute/route.ts` with 24h-per-investment logic
+- Updated `/api/roi-history/route.ts` to use `distributedAt` instead of `date`
+- Updated `/api/admin/payments/route.ts` to use `distributedAt` and new missed-periods detection
+- Updated `/api/investments/[id]/route.ts` orderBy to use `distributedAt`
+- Updated `cron-runner.sh` to run ROI distribution every 15 minutes (was once daily)
+- Updated frontend countdown in `page.tsx` to calculate next ROI per investment
+- Updated translations in pt/en/es/zh for "Próximo ROI (24h)" label
+- Ran `db:push` successfully, API routes tested and working
+
+Stage Summary:
+- Each investment now gets ROI exactly 24h after its own startDate, not at a fixed midnight time
+- Cron runs every 15 min to catch each investment's 24-hour mark
+- Idempotency: `@@unique([investmentId, periodIndex])` prevents double distribution
+- Catch-up: If cron was down, all missed periods are distributed on next run
+- Investment auto-completes after all `durationDays` periods are distributed

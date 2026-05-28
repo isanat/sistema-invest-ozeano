@@ -1,9 +1,11 @@
 #!/bin/sh
 # ============================================================================
-# ActionCash - Cron Job Runner
+# ActionCash - Cron Job Runner (24h-per-investment ROI model)
 # ============================================================================
 # Runs alongside Next.js inside the Docker container.
-# Calls the cron API endpoints on schedule using curl.
+# - ROI Distribution: every 15 minutes (each investment gets ROI at its own 24h marks)
+# - Weekly Bonuses: every Sunday at 00:10 UTC
+# - Monthly Daymond: 1st of each month at 00:15 UTC
 # ============================================================================
 
 # Wait for the Next.js server to be ready
@@ -26,14 +28,14 @@ AUTH_HEADER="Authorization: Bearer ${CRON_SECRET}"
 BASE_URL="http://localhost:3000"
 
 # Track last run times (in seconds since epoch)
-LAST_DAILY=0
+LAST_ROI=0
 LAST_WEEKLY=0
 LAST_MONTHLY=0
 
 # Interval constants (in seconds)
-DAILY_INTERVAL=86400      # 24 hours
-WEEKLY_INTERVAL=604800    # 7 days
-MONTHLY_INTERVAL=2592000  # 30 days
+ROI_INTERVAL=900         # 15 minutes — runs frequently to catch each investment's 24h mark
+WEEKLY_INTERVAL=604800   # 7 days
+MONTHLY_INTERVAL=2592000 # 30 days
 
 # Get current day of week (0=Sunday)
 get_dow() {
@@ -68,9 +70,9 @@ call_cron() {
   fi
 }
 
-# Run daily ROI distribution on startup (catch up on missed runs)
-echo "[cron-runner] Running startup daily ROI distribution (catch-up)..."
-call_cron "/api/cron/distribute" "Startup Daily ROI Distribution"
+# Run ROI distribution on startup (catch up on missed distributions)
+echo "[cron-runner] Running startup ROI distribution (catch-up)..."
+call_cron "/api/cron/distribute" "Startup ROI Distribution"
 
 # Main loop — check every 60 seconds
 while true; do
@@ -79,11 +81,11 @@ while true; do
   DOM=$(get_dom)
   HOUR=$(get_hour)
   
-  # ── DAILY ROI DISTRIBUTION ──
-  # Run every day at 00:05 UTC (or first check after midnight)
-  if [ "$HOUR" = "00" ] && [ $((NOW - LAST_DAILY)) -ge $DAILY_INTERVAL ]; then
-    call_cron "/api/cron/distribute" "Daily ROI Distribution"
-    LAST_DAILY=$NOW
+  # ── ROI DISTRIBUTION (every 15 minutes) ──
+  # Each investment gets ROI at its own 24h marks, so we need to run frequently
+  if [ $((NOW - LAST_ROI)) -ge $ROI_INTERVAL ]; then
+    call_cron "/api/cron/distribute" "ROI Distribution (24h-per-investment)"
+    LAST_ROI=$NOW
   fi
   
   # ── WEEKLY BONUSES (Sunday at 00:10 UTC) ──

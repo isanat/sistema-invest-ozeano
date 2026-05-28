@@ -19,7 +19,7 @@ export async function GET(
       include: {
         plan: true,
         roiHistory: {
-          orderBy: { date: 'desc' },
+          orderBy: { distributedAt: 'desc' },
         },
       },
     });

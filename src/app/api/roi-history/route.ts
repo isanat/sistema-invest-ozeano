@@ -1,7 +1,6 @@
 import { NextRequest } from 'next/server';
 import { db } from '@/lib/db';
-import { requireAuth } from '@/lib/auth';
-import { d } from '@/lib/auth';
+import { requireAuth, d } from '@/lib/auth';
 import { apiError, apiSuccess, handleApiError } from '@/lib/api-utils';
 
 // GET /api/roi-history — Returns ROI history for the authenticated user
@@ -14,17 +13,13 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(url.searchParams.get('limit') || '30');
     const investmentId = url.searchParams.get('investmentId') || undefined;
 
-    // Get today's date (start of day UTC)
-    const today = new Date();
-    today.setUTCHours(0, 0, 0, 0);
-
-    // Fetch ROI history
+    // Fetch ROI history (ordered by most recent distribution)
     const whereClause: any = { userId };
     if (investmentId) whereClause.investmentId = investmentId;
 
     const history = await db.roiHistory.findMany({
       where: whereClause,
-      orderBy: { date: 'desc' },
+      orderBy: { distributedAt: 'desc' },
       take: limit,
       include: {
         investment: {
@@ -33,11 +28,16 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    // Calculate today's total earnings
+    // Calculate today's total earnings (based on distributedAt being today)
+    const today = new Date();
+    today.setUTCHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
     const todayHistory = await db.roiHistory.findMany({
       where: {
         userId,
-        date: { gte: today },
+        distributedAt: { gte: today, lt: tomorrow },
       },
     });
 
@@ -53,15 +53,15 @@ export async function GET(request: NextRequest) {
     const weeklyHistory = await db.roiHistory.findMany({
       where: {
         userId,
-        date: { gte: sevenDaysAgo },
+        distributedAt: { gte: sevenDaysAgo },
       },
-      orderBy: { date: 'asc' },
+      orderBy: { distributedAt: 'asc' },
     });
 
     // Group by day
     const weeklyEarnings: Record<string, number> = {};
     weeklyHistory.forEach(h => {
-      const dayKey = new Date(h.date).toISOString().split('T')[0];
+      const dayKey = new Date(h.distributedAt).toISOString().split('T')[0];
       const val = parseFloat(h.totalRoi || '0');
       weeklyEarnings[dayKey] = (weeklyEarnings[dayKey] || 0) + (isNaN(val) ? 0 : val);
     });

@@ -30,10 +30,10 @@ export async function GET(request: NextRequest) {
 
       // ROI stats - use findMany + manual sum (aggregate._sum not available in SQLite)
       const [todayRecords, yesterdayRecords, weekRecords, monthRecords, allRecords] = await Promise.all([
-        db.roiHistory.findMany({ where: { date: { gte: today } }, select: { totalRoi: true } }),
-        db.roiHistory.findMany({ where: { date: { gte: yesterday, lt: today } }, select: { totalRoi: true } }),
-        db.roiHistory.findMany({ where: { date: { gte: sevenDaysAgo } }, select: { totalRoi: true } }),
-        db.roiHistory.findMany({ where: { date: { gte: thirtyDaysAgo } }, select: { totalRoi: true } }),
+        db.roiHistory.findMany({ where: { distributedAt: { gte: today } }, select: { totalRoi: true } }),
+        db.roiHistory.findMany({ where: { distributedAt: { gte: yesterday, lt: today } }, select: { totalRoi: true } }),
+        db.roiHistory.findMany({ where: { distributedAt: { gte: sevenDaysAgo } }, select: { totalRoi: true } }),
+        db.roiHistory.findMany({ where: { distributedAt: { gte: thirtyDaysAgo } }, select: { totalRoi: true } }),
         db.roiHistory.findMany({ select: { totalRoi: true } }),
       ]);
 
@@ -122,9 +122,9 @@ export async function GET(request: NextRequest) {
       if (userId) where.userId = userId;
       if (investmentId) where.investmentId = investmentId;
       if (startDate || endDate) {
-        where.date = {};
-        if (startDate) where.date.gte = new Date(startDate);
-        if (endDate) where.date.lte = new Date(endDate);
+        where.distributedAt = {};
+        if (startDate) where.distributedAt.gte = new Date(startDate);
+        if (endDate) where.distributedAt.lte = new Date(endDate);
       }
 
       const [records, total] = await Promise.all([
@@ -132,7 +132,7 @@ export async function GET(request: NextRequest) {
           where,
           skip,
           take: limit,
-          orderBy: { date: 'desc' },
+          orderBy: { distributedAt: 'desc' },
           include: {
             user: { select: { id: true, name: true, email: true } },
             investment: {
@@ -146,7 +146,8 @@ export async function GET(request: NextRequest) {
       return apiSuccess({
         records: records.map(r => ({
           id: r.id,
-          date: r.date,
+          periodIndex: r.periodIndex,
+          distributedAt: r.distributedAt,
           userId: r.userId,
           userName: r.user?.name || '-',
           userEmail: r.user?.email || '-',
@@ -251,54 +252,34 @@ export async function GET(request: NextRequest) {
 // MISSED DAYS DETECTION
 // ============================================================================
 async function detectMissedDays() {
-  const today = new Date();
-  today.setUTCHours(0, 0, 0, 0);
+  const now = new Date();
+  const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
   const activeInvestments = await db.investment.findMany({
     where: { status: 'active' },
     include: {
       user: { select: { id: true, name: true, email: true } },
-      plan: { select: { name: true } },
+      plan: { select: { name: true, durationDays: true } },
     },
   });
 
   const missedDays: any[] = [];
 
   for (const inv of activeInvestments) {
-    const start = new Date(inv.startDate);
-    start.setUTCHours(0, 0, 0, 0);
+    const startDate = new Date(inv.startDate);
+    const durationDays = inv.plan?.durationDays || 30;
+    const completedPeriods = Math.floor((now.getTime() - startDate.getTime()) / MS_PER_DAY);
+    const distributedPeriods = inv.distributedPeriods || 0;
 
-    if (start > today) continue;
-
-    const end = new Date(inv.endDate);
-    end.setUTCHours(0, 0, 0, 0);
-    const checkUntil = end < today ? end : today;
-
-    const roiRecords = await db.roiHistory.findMany({
-      where: { investmentId: inv.id },
-      select: { date: true },
-      orderBy: { date: 'asc' },
-    });
-
-    const paidDates = new Set(
-      roiRecords.map(r => {
-        const rd = new Date(r.date);
-        rd.setUTCHours(0, 0, 0, 0);
-        return rd.toISOString().split('T')[0];
-      })
-    );
-
-    const gaps: string[] = [];
-    const current = new Date(start);
-    while (current <= checkUntil) {
-      const dateStr = current.toISOString().split('T')[0];
-      if (!paidDates.has(dateStr)) {
-        gaps.push(dateStr);
+    // Find missing periods (periods that should have been distributed but weren't)
+    const missingPeriods: number[] = [];
+    for (let p = 1; p <= Math.min(completedPeriods, durationDays); p++) {
+      if (p > distributedPeriods) {
+        missingPeriods.push(p);
       }
-      current.setUTCDate(current.getUTCDate() + 1);
     }
 
-    if (gaps.length > 0) {
+    if (missingPeriods.length > 0) {
       missedDays.push({
         investmentId: inv.id,
         userId: inv.userId,
@@ -309,9 +290,11 @@ async function detectMissedDays() {
         dailyRoi: inv.dailyRoi,
         startDate: inv.startDate,
         endDate: inv.endDate,
-        missedDates: gaps,
-        missedDaysCount: gaps.length,
-        estimatedLoss: dusdt(d(inv.dailyRoi) * gaps.length),
+        distributedPeriods,
+        expectedPeriods: Math.min(completedPeriods, durationDays),
+        missingPeriods,
+        missedDaysCount: missingPeriods.length,
+        estimatedLoss: dusdt(d(inv.dailyRoi) * missingPeriods.length),
       });
     }
   }

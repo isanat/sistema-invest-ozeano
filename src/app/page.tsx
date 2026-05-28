@@ -108,6 +108,7 @@ interface UserInvestment {
   startDate: string; endDate: string; amount: string; dailyRoiPct: string;
   dailyRoi: string; totalRoi: string; accumulatedRoi: string;
   teamBonusPct: string;
+  lastRoiAt?: string | null; distributedPeriods: number;
   status: string; createdAt: string; updatedAt: string;
   plan?: { id: string; name: string; dailyRoiPct: string; durationDays: number; coin?: string; model?: string; pool?: string };
 }
@@ -1429,26 +1430,45 @@ export default function PlataformaROI() {
   }, [user?.id, user?.balance]);
 
   // ==========================================
-  // COUNTDOWN: Next distribution timer
-  // Updates every second (uses userInvestments directly, not activeInvestments which is computed later)
+  // COUNTDOWN: Next 24h ROI timer (per-investment)
+  // Each investment gets ROI 24h after its own startDate
   // ==========================================
+  const MS_PER_DAY = 24 * 60 * 60 * 1000;
   const hasActiveRentals = userInvestments.some(r => r.status === 'active');
   useEffect(() => {
     if (!user || !hasActiveRentals) return;
 
     const updateCountdown = () => {
       const now = new Date();
-      const nextMidnight = new Date(now);
-      nextMidnight.setUTCDate(nextMidnight.getUTCDate() + 1);
-      nextMidnight.setUTCHours(0, 0, 0, 0);
+      let minDiff = Infinity;
 
-      const diff = nextMidnight.getTime() - now.getTime();
-      if (diff <= 0) return;
+      // Find the soonest next ROI across all active investments
+      for (const inv of userInvestments) {
+        if (inv.status !== 'active') continue;
+        const startDate = new Date(inv.startDate);
+        const durationDays = inv.plan?.durationDays || 30;
+        const nextPeriodIndex = (inv.distributedPeriods || 0) + 1;
+
+        // If all periods are done, skip
+        if (nextPeriodIndex > durationDays) continue;
+
+        // Next ROI time = startDate + (nextPeriodIndex * 24h)
+        const nextRoiAt = new Date(startDate.getTime() + nextPeriodIndex * MS_PER_DAY);
+        const diff = nextRoiAt.getTime() - now.getTime();
+        if (diff > 0 && diff < minDiff) {
+          minDiff = diff;
+        }
+      }
+
+      if (minDiff === Infinity || minDiff <= 0) {
+        setNextDistribution({ hours: 0, minutes: 0, seconds: 0 });
+        return;
+      }
 
       setNextDistribution({
-        hours: Math.floor(diff / (1000 * 60 * 60)),
-        minutes: Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)),
-        seconds: Math.floor((diff % (1000 * 60)) / 1000),
+        hours: Math.floor(minDiff / (1000 * 60 * 60)),
+        minutes: Math.floor((minDiff % (1000 * 60 * 60)) / (1000 * 60)),
+        seconds: Math.floor((minDiff % (1000 * 60)) / 1000),
       });
     };
 
@@ -1456,7 +1476,7 @@ export default function PlataformaROI() {
     const countdownInterval = setInterval(updateCountdown, 1000);
 
     return () => clearInterval(countdownInterval);
-  }, [user, hasActiveRentals]);
+  }, [user, hasActiveRentals, userInvestments]);
 
   // ==========================================
   // TODAY'S EARNINGS: Fetch from ROI history
