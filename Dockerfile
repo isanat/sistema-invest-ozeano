@@ -66,9 +66,10 @@ COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/scripts ./scripts
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/start.sh ./start.sh
+COPY --from=builder /app/cron-runner.sh ./cron-runner.sh
 COPY --from=builder /app/next.config.ts ./next.config.ts
 
-RUN chmod +x /app/start.sh
+RUN chmod +x /app/start.sh /app/cron-runner.sh
 
 EXPOSE 3000
 

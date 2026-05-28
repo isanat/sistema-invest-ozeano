@@ -10,6 +10,7 @@ echo "PORT: ${PORT:-}"
 echo "HOSTNAME: ${HOSTNAME:-}"
 echo "DATABASE_URL is set: $([ -n "${DATABASE_URL:-}" ] && echo 'yes' || echo 'no')"
 echo "JWT_SECRET is set: $([ -n "${JWT_SECRET:-}" ] && echo 'yes' || echo 'no')"
+echo "CRON_SECRET is set: $([ -n "${CRON_SECRET:-}" ] && echo 'yes' || echo 'no')"
 echo "PWD: $(pwd)"
 
 cd /app
@@ -45,7 +46,7 @@ esac
 MAX_ATTEMPTS=5
 ATTEMPT=1
 
-echo "[1/2] Applying database schema with prisma db push..."
+echo "[1/3] Applying database schema with prisma db push..."
 until npx prisma db push --skip-generate --accept-data-loss 2>&1; do
   if [ "$ATTEMPT" -ge "$MAX_ATTEMPTS" ]; then
     echo "WARNING: Prisma db push failed after ${MAX_ATTEMPTS} attempts. Continuing anyway..."
@@ -58,7 +59,22 @@ done
 
 echo "Database schema applied."
 
-echo "[2/2] Starting Next.js server..."
+# Start cron runner in the background
+echo "[2/3] Starting cron scheduler in background..."
+/app/cron-runner.sh &
+CRON_PID=$!
+echo "Cron runner started (PID: ${CRON_PID})"
+
+# Start Next.js server in the foreground
+echo "[3/3] Starting Next.js server..."
 echo "node version: $(node --version)"
+
+# Handle shutdown gracefully
+cleanup() {
+  echo "Shutting down..."
+  kill ${CRON_PID} 2>/dev/null || true
+  exit 0
+}
+trap cleanup SIGTERM SIGINT
 
 exec npx next start -p 3000 -H 0.0.0.0

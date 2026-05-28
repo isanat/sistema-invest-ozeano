@@ -6323,34 +6323,40 @@ export default function PlataformaROI() {
                           </motion.div>
                         )}
 
-                        {/* ═══════════════ CONTESTS ═══════════════ */}
-                        {affiliateData.contests && affiliateData.contests.length > 0 && (
-                          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.32 }}>
-                            <div className="glass-card rounded-2xl p-5 sm:p-6 border border-amber-500/10">
+                        {/* ═══════════════ CONTESTS — PREMIUM MODULE ═══════════════ */}
+                        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.32 }}>
+                          <div className="glass-card rounded-2xl p-5 sm:p-6 border border-amber-500/10 relative overflow-hidden">
+                            {/* Lock overlay */}
+                            <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 via-transparent to-cyan-500/5 pointer-events-none" />
+                            <div className="relative">
                               <div className="flex items-center gap-2 mb-4">
-                                <Trophy className="h-5 w-5 text-amber-400" />
+                                <div className="relative">
+                                  <Trophy className="h-5 w-5 text-amber-400" />
+                                  <Lock className="h-3 w-3 text-amber-400 absolute -top-1 -right-1" />
+                                </div>
                                 <h3 className="text-lg font-bold text-white">{t('affiliates.activeContests')}</h3>
+                                <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30" variant="outline">PREMIUM</Badge>
                               </div>
-                              <div className="space-y-3">
-                                {affiliateData.contests.map((c) => (
-                                  <div key={c.id} className="bg-gradient-to-r from-amber-500/5 to-cyan-500/5 border border-amber-500/20 rounded-lg p-4">
-                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                                      <div>
-                                        <div className="font-semibold">{c.name}</div>
-                                        {c.description && <div className="text-sm text-zinc-400 mt-0.5">{c.description}</div>}
-                                        <div className="text-xs text-zinc-500 mt-1">{t('affiliates.contestEnds')}: {fmtDateTime(c.endDate)}</div>
-                                      </div>
-                                      <div className="text-right">
-                                        <div className="text-lg font-bold text-amber-400">${fmtUSDT(c.rewardPool)}</div>
-                                        <div className="text-xs text-zinc-400">{t('affiliates.contestReward')}</div>
-                                      </div>
-                                    </div>
+                              <div className="bg-gradient-to-r from-amber-500/5 to-cyan-500/5 border border-amber-500/20 rounded-xl p-6 text-center">
+                                <div className="text-4xl mb-3">🏆</div>
+                                <h4 className="text-lg font-bold text-white mb-2">Concursos de Afiliado</h4>
+                                <p className="text-sm text-zinc-400 mb-4">Crie competições entre afiliados com rankings em tempo real e distribuição automática de prêmios. Motive sua rede a crescer!</p>
+                                <div className="flex flex-col items-center gap-3">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-2xl font-bold text-amber-400">$100</span>
+                                    <span className="text-sm text-zinc-400">USDT</span>
                                   </div>
-                                ))}
+                                  <div className="flex flex-wrap justify-center gap-2 text-xs text-zinc-500">
+                                    <span className="bg-zinc-800/80 px-2 py-1 rounded-full">🏆 Rankings automáticos</span>
+                                    <span className="bg-zinc-800/80 px-2 py-1 rounded-full">💰 Distribuição de prêmios</span>
+                                    <span className="bg-zinc-800/80 px-2 py-1 rounded-full">📊 Métricas variadas</span>
+                                    <span className="bg-zinc-800/80 px-2 py-1 rounded-full">🎯 Metas personalizadas</span>
+                                  </div>
+                                </div>
                               </div>
                             </div>
-                          </motion.div>
-                        )}
+                          </div>
+                        </motion.div>
 
                         {/* ═══════════════ LEADERBOARD ═══════════════ */}
                         {affiliateData.leaderboard && affiliateData.leaderboard.length > 0 && (
@@ -7949,41 +7955,47 @@ export default function PlataformaROI() {
                       </div>
                     )}
 
-                    {/* Admin Affiliate Contests */}
+                    {/* Admin Affiliate Contests — PREMIUM MODULE */}
                     {adminTab === 'affiliateContests' && (
                       <div className="space-y-6">
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
                           <h3 className="text-lg font-semibold">{t('admin.affiliateContests')}</h3>
-                          <Button className="bg-emerald-600 hover:bg-cyan-700 min-h-[44px]" onClick={() => setContestDialog({ open: true, contest: null })}><Plus className="mr-2 h-4 w-4" />{t('admin.newContest')}</Button>
+                          <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30" variant="outline">PREMIUM</Badge>
                         </div>
-                        <div className="overflow-x-auto">
-                          <Table className="min-w-[700px]">
-                            <TableHeader>
-                              <TableRow className="border-zinc-800">
-                                <TableHead className="text-zinc-400">{t('admin.contestName')}</TableHead>
-                                <TableHead className="text-zinc-400">{t('admin.rewardPool')}</TableHead>
-                                <TableHead className="text-zinc-400">{t('admin.contestMetric')}</TableHead>
-                                <TableHead className="text-zinc-400">{t('admin.startDate')}</TableHead>
-                                <TableHead className="text-zinc-400">{t('admin.endDate')}</TableHead>
-                                <TableHead className="text-zinc-400">{t('admin.status')}</TableHead>
-                                <TableHead className="text-zinc-400">{t('admin.action')}</TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {adminContests.map(c => (
-                                <TableRow key={c.id} className="border-zinc-800">
-                                  <TableCell className="font-medium">{c.name}</TableCell>
-                                  <TableCell className="text-cyan-400">${fmtUSDT(c.rewardPool)}</TableCell>
-                                  <TableCell className="text-sm">{c.metric}</TableCell>
-                                  <TableCell className="text-sm">{fmtDate(c.startDate)}</TableCell>
-                                  <TableCell className="text-sm">{fmtDate(c.endDate)}</TableCell>
-                                  <TableCell><Badge className={c.isActive ? 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30' : 'bg-zinc-500/20 text-zinc-400 border-zinc-500/30'} variant="outline">{c.isActive ? t('status.active') : t('status.offline')}</Badge></TableCell>
-                                  <TableCell><Button size="sm" variant="outline" className="border-zinc-700 min-h-[44px]" onClick={() => setContestDialog({ open: true, contest: c })}><Pencil className="h-3.5 w-3.5" /></Button></TableCell>
-                                </TableRow>
-                              ))}
-                            </TableBody>
-                          </Table>
-                        </div>
+                        <Card className="bg-zinc-900 border-amber-500/20 overflow-hidden relative">
+                          <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 via-transparent to-cyan-500/5 pointer-events-none" />
+                          <CardContent className="relative p-8 text-center">
+                            <div className="text-5xl mb-4">🏆</div>
+                            <h4 className="text-xl font-bold text-white mb-2">Módulo Concursos de Afiliado</h4>
+                            <p className="text-sm text-zinc-400 mb-6 max-w-lg mx-auto">Crie competições entre afiliados com rankings em tempo real, distribuição automática de prêmios e métricas personalizáveis. Motive sua rede a crescer com desafios excitantes!</p>
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6 max-w-xl mx-auto">
+                              <div className="bg-zinc-800/80 rounded-lg p-3">
+                                <div className="text-lg mb-1">📊</div>
+                                <div className="text-xs text-zinc-400">Rankings em tempo real</div>
+                              </div>
+                              <div className="bg-zinc-800/80 rounded-lg p-3">
+                                <div className="text-lg mb-1">💰</div>
+                                <div className="text-xs text-zinc-400">Distribuição automática</div>
+                              </div>
+                              <div className="bg-zinc-800/80 rounded-lg p-3">
+                                <div className="text-lg mb-1">🎯</div>
+                                <div className="text-xs text-zinc-400">Métricas variadas</div>
+                              </div>
+                              <div className="bg-zinc-800/80 rounded-lg p-3">
+                                <div className="text-lg mb-1">⚡</div>
+                                <div className="text-xs text-zinc-400">Metas personalizadas</div>
+                              </div>
+                            </div>
+                            <div className="inline-flex flex-col items-center gap-2 bg-amber-500/10 border border-amber-500/20 rounded-xl px-8 py-4">
+                              <Lock className="h-5 w-5 text-amber-400" />
+                              <div className="flex items-baseline gap-1">
+                                <span className="text-3xl font-bold text-amber-400">$100</span>
+                                <span className="text-sm text-zinc-400">USDT</span>
+                              </div>
+                              <span className="text-xs text-zinc-500">Ative este módulo para desbloquear</span>
+                            </div>
+                          </CardContent>
+                        </Card>
                       </div>
                     )}
 
