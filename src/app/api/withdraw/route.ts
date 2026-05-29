@@ -32,15 +32,16 @@ export async function calculateWithdrawalBreakdown(userId: string) {
   const totalWithdrawn = d(user.totalWithdrawn);
 
   // Include pending withdrawals to prevent voucher lock bypass
-  const pendingWithdrawals = await db.deposit.aggregate({
+  // NOTE: Can't use _sum because 'amount' is String, not numeric — sum in JS
+  const pendingWithdrawals = await db.deposit.findMany({
     where: {
       userId,
       type: 'withdrawal',
       status: { in: ['pending', 'confirmed'] },
     },
-    _sum: { amount: true },
+    select: { amount: true },
   });
-  const effectiveTotalWithdrawn = totalWithdrawn + d(pendingWithdrawals._sum.amount || '0');
+  const effectiveTotalWithdrawn = totalWithdrawn + pendingWithdrawals.reduce((sum, w) => sum + d(w.amount), 0);
 
   // Check for active vouchers
   const activeVouchers = await db.voucher.findMany({
@@ -63,11 +64,12 @@ export async function calculateWithdrawalBreakdown(userId: string) {
   const maxUnlockPct = Math.max(...activeVouchers.map(v => d(v.withdrawalUnlockPct)), 0);
 
   // Calculate total invested from own balance (source='deposit')
-  const ownInvestmentsResult = await db.investment.aggregate({
+  // NOTE: Can't use _sum because 'amount' is String, not numeric — sum in JS
+  const ownInvestments = await db.investment.findMany({
     where: { userId, source: 'deposit' },
-    _sum: { amount: true },
+    select: { amount: true },
   });
-  const totalInvestedFromBalance = d(ownInvestmentsResult._sum.amount);
+  const totalInvestedFromBalance = ownInvestments.reduce((sum, i) => sum + d(i.amount), 0);
 
   // Calculate profits by source
   // Own profits: ROI from investments with source='deposit'
@@ -85,19 +87,21 @@ export async function calculateWithdrawalBreakdown(userId: string) {
   let totalVoucherProfits = 0;
 
   if (depositInvestmentIds.length > 0) {
-    const ownProfitsResult = await db.roiHistory.aggregate({
+    // NOTE: Can't use _sum because 'totalRoi' is String, not numeric — sum in JS
+    const ownProfits = await db.roiHistory.findMany({
       where: { userId, investmentId: { in: depositInvestmentIds } },
-      _sum: { totalRoi: true },
+      select: { totalRoi: true },
     });
-    totalOwnProfits = d(ownProfitsResult._sum.totalRoi);
+    totalOwnProfits = ownProfits.reduce((sum, r) => sum + d(r.totalRoi), 0);
   }
 
   if (voucherInvestmentIds.length > 0) {
-    const voucherProfitsResult = await db.roiHistory.aggregate({
+    // NOTE: Can't use _sum because 'totalRoi' is String, not numeric — sum in JS
+    const voucherProfits = await db.roiHistory.findMany({
       where: { userId, investmentId: { in: voucherInvestmentIds } },
-      _sum: { totalRoi: true },
+      select: { totalRoi: true },
     });
-    totalVoucherProfits = d(voucherProfitsResult._sum.totalRoi);
+    totalVoucherProfits = voucherProfits.reduce((sum, r) => sum + d(r.totalRoi), 0);
   }
 
   // Calculate own sources in balance using FIFO:

@@ -11,6 +11,10 @@
 // 3. All thresholds/percentages are configurable via SystemConfig category 'team_bonus'
 // 4. Idempotency via unique constraints on (userId, weekDate/monthDate)
 // ============================================================================
+// IMPORTANT: The Investment.amount field is String (precision-safe for USDT).
+// Prisma _sum does NOT work on String fields in PostgreSQL.
+// Use findMany + JS reduce instead of aggregate _sum.
+// ============================================================================
 
 import { db } from './db';
 import { d } from './auth';
@@ -72,6 +76,19 @@ export async function getTeamBonusConfig(): Promise<TeamBonusConfig> {
 }
 
 // ============================================================================
+// HELPER: Sum String amounts from Investment records
+// (Prisma _sum does NOT work on String fields in PostgreSQL)
+// ============================================================================
+
+async function sumInvestments(where: any): Promise<number> {
+  const investments = await db.investment.findMany({
+    where,
+    select: { amount: true },
+  });
+  return investments.reduce((sum, inv) => sum + d(inv.amount), 0);
+}
+
+// ============================================================================
 // CORE: Calculate team's active capital (used by all 3 features)
 // ============================================================================
 // Walks down the referral tree up to maxDepth levels.
@@ -105,16 +122,14 @@ export async function calculateTeamActiveCapital(
 
     // Sum active investments of these referrals, EXCLUDING daymond source
     // CRITICAL: source != 'daymond' prevents inflation cascade
-    const result = await db.investment.aggregate({
-      _sum: { amount: true },
-      where: {
-        userId: { in: referralIds },
-        status: 'active',
-        source: { notIn: ['daymond', 'daymond_premium'] },
-      },
+    // NOTE: Can't use _sum because 'amount' is String, not numeric
+    const levelCapital = await sumInvestments({
+      userId: { in: referralIds },
+      status: 'active',
+      source: { notIn: ['daymond', 'daymond_premium'] },
     });
 
-    totalCapital += d(result._sum.amount || '0');
+    totalCapital += levelCapital;
     currentLevelIds = referralIds;
   }
 
@@ -153,13 +168,13 @@ export async function checkTeamBonusDailyCap(
   const today = new Date();
   today.setUTCHours(0, 0, 0, 0);
 
-  // Sum from WeeklySalary
+  // Sum from WeeklySalary (salaryAmount is String — sum manually)
   const salaryPayments = await db.weeklySalary.findMany({
     where: { createdAt: { gte: today }, status: 'paid' },
     select: { salaryAmount: true },
   });
 
-  // Sum from ActionGoldPayment
+  // Sum from ActionGoldPayment (goldAmount is String — sum manually)
   const goldPayments = await db.actionGoldPayment.findMany({
     where: { createdAt: { gte: today }, status: 'paid' },
     select: { goldAmount: true },
@@ -235,16 +250,13 @@ export async function getTeamStats(userId: string, maxDepth: number = 6): Promis
     const referralIds = referrals.map(r => r.id);
     referralIds.forEach(id => visited.add(id));
 
-    const capitalResult = await db.investment.aggregate({
-      _sum: { amount: true },
-      where: {
-        userId: { in: referralIds },
-        status: 'active',
-        source: { notIn: ['daymond', 'daymond_premium'] },
-      },
+    // NOTE: Can't use _sum because 'amount' is String, not numeric
+    const levelCapital = await sumInvestments({
+      userId: { in: referralIds },
+      status: 'active',
+      source: { notIn: ['daymond', 'daymond_premium'] },
     });
 
-    const levelCapital = d(capitalResult._sum.amount || '0');
     totalMembers += referrals.length;
     totalActiveCapital += levelCapital;
 

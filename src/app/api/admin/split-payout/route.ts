@@ -31,21 +31,21 @@ export async function GET(request: NextRequest) {
       db.splitLog.count({ where }),
     ]);
 
-    // Stats
-    const totalAccumulated = await db.splitLog.aggregate({
+    // Stats — NOTE: Can't use _sum because 'amount' is String, not numeric — sum in JS
+    const accumulatedLogs = await db.splitLog.findMany({
       where: { status: 'accumulated' },
-      _sum: { amount: true },
+      select: { amount: true },
     });
-    const totalPaid = await db.splitLog.aggregate({
+    const paidLogs = await db.splitLog.findMany({
       where: { status: 'paid' },
-      _sum: { amount: true },
+      select: { amount: true },
     });
 
     return apiSuccess({
       logs,
       stats: {
-        totalAccumulated: d(totalAccumulated._sum.amount || '0'),
-        totalPaid: d(totalPaid._sum.amount || '0'),
+        totalAccumulated: accumulatedLogs.reduce((sum, l) => sum + d(l.amount), 0),
+        totalPaid: paidLogs.reduce((sum, l) => sum + d(l.amount), 0),
       },
       pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
     });

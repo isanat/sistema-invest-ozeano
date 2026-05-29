@@ -112,11 +112,12 @@ export async function PUT(request: NextRequest) {
         if (investment.status !== 'active') throw new Error('Apenas investimentos ativos podem ser cancelados');
 
         // Calculate total ROI already paid — must be deducted from refund
-        const roiPaidResult = await tx.roiHistory.aggregate({
+        // NOTE: Can't use _sum because 'totalRoi' is String, not numeric — sum in JS
+        const roiPaidRecords = await tx.roiHistory.findMany({
           where: { investmentId: investment.id },
-          _sum: { totalRoi: true },
-        } as any);
-        const totalRoiPaid = d((roiPaidResult as any)._sum?.totalRoi);
+          select: { totalRoi: true },
+        });
+        const totalRoiPaid = roiPaidRecords.reduce((sum, r) => sum + d(r.totalRoi), 0);
         const investmentAmount = d(investment.amount);
 
         // Refund only the net principal (principal minus ROI already distributed)

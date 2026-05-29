@@ -146,17 +146,12 @@ export async function GET(request: NextRequest) {
     if (section === 'all' || section === 'stats') {
       try {
         const [
-          totalDeposits,
-          totalPayouts,
           pendingDeposits,
           pendingPayouts,
-          totalSplit,
           totalDepositRecords,
           totalPayoutRecords,
           totalSubAccounts,
         ] = await Promise.all([
-          db.nowPaymentsDeposit.aggregate({ _sum: { priceAmount: true } }),
-          db.nowPaymentsPayout.aggregate({ _sum: { amount: true } }),
           db.nowPaymentsDeposit.count({
             where: {
               paymentStatus: { in: ['waiting', 'confirming', 'confirmed'] },
@@ -169,18 +164,22 @@ export async function GET(request: NextRequest) {
               },
             },
           }),
-          db.nowPaymentsDeposit.aggregate({ _sum: { splitTotalAmount: true } }),
           db.nowPaymentsDeposit.count(),
           db.nowPaymentsPayout.count(),
           db.nowPaymentsSubAccount.count(),
         ]);
 
+        // NOTE: Can't use _sum on String fields in PostgreSQL — sum in JS instead
+        const payoutRecords = await db.nowPaymentsPayout.findMany({ select: { amount: true } });
+        const depositAmounts = await db.nowPaymentsDeposit.findMany({ select: { priceAmount: true } });
+        const splitAmounts = await db.nowPaymentsDeposit.findMany({ select: { splitTotalAmount: true } });
+
         result.stats = {
-          totalDeposited: d(totalDeposits._sum.priceAmount || '0'),
-          totalPaidOut: d(totalPayouts._sum.amount || '0'),
+          totalDeposited: depositAmounts.reduce((sum, d) => sum + d(d.priceAmount), 0),
+          totalPaidOut: payoutRecords.reduce((sum, p) => sum + d(p.amount), 0),
           pendingDepositCount: pendingDeposits,
           pendingPayoutCount: pendingPayouts,
-          totalSplitReceived: d(totalSplit._sum.splitTotalAmount || '0'),
+          totalSplitReceived: splitAmounts.reduce((sum, s) => sum + d(s.splitTotalAmount), 0),
           totalDepositRecords,
           totalPayoutRecords,
           totalSubAccounts,
