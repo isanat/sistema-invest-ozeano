@@ -40,52 +40,67 @@ export async function GET(request: NextRequest) {
     const hasOwnInvestment = await hasActiveInvestment(userId);
 
     // ── AC-09: Salary ───────────────────────────────────────
-    const lastSalary = await db.weeklySalary.findFirst({
-      where: { userId, status: 'paid' },
-      orderBy: { createdAt: 'desc' },
-    });
-
-    const salaryHistory = await db.weeklySalary.findMany({
-      where: { userId },
-      orderBy: { weekDate: 'desc' },
-      take: 12,
-    });
+    let lastSalary: any = null;
+    let salaryHistory: any[] = [];
+    try {
+      lastSalary = await db.weeklySalary.findFirst({
+        where: { userId, status: 'paid' },
+        orderBy: { createdAt: 'desc' },
+      });
+      salaryHistory = await db.weeklySalary.findMany({
+        where: { userId },
+        orderBy: { weekDate: 'desc' },
+        take: 12,
+      });
+    } catch (e) {
+      console.error('[team-bonus] Salary query error:', e);
+    }
 
     const salaryQualified = teamStats.totalActiveCapital >= config.salaryMinTeamCapital && hasOwnInvestment;
     const estimatedSalary = salaryQualified ? teamStats.totalActiveCapital * (config.salaryPct / 100) : 0;
 
     // ── AC-10: Gold ─────────────────────────────────────────
-    const lastGold = await db.actionGoldPayment.findFirst({
-      where: { userId, status: 'paid' },
-      orderBy: { createdAt: 'desc' },
-    });
+    let lastGold: any = null;
+    let goldHistory: any[] = [];
+    let directsSalaryInfo = { count: 0, totalSalary: 0 };
+    try {
+      lastGold = await db.actionGoldPayment.findFirst({
+        where: { userId, status: 'paid' },
+        orderBy: { createdAt: 'desc' },
+      });
+      goldHistory = await db.actionGoldPayment.findMany({
+        where: { userId },
+        orderBy: { weekDate: 'desc' },
+        take: 12,
+        include: {
+          fromUser: { select: { name: true } },
+        },
+      });
+      directsSalaryInfo = await getDirectsSalaryInfo(userId, weekDate);
+    } catch (e) {
+      console.error('[team-bonus] Gold query error:', e);
+    }
 
-    const goldHistory = await db.actionGoldPayment.findMany({
-      where: { userId },
-      orderBy: { weekDate: 'desc' },
-      take: 12,
-      include: {
-        fromUser: { select: { name: true } },
-      },
-    });
-
-    // Get info about direct referrals' salaries this week for estimation
-    const directsSalaryInfo = await getDirectsSalaryInfo(userId, weekDate);
     const goldQualified = teamStats.totalActiveCapital >= config.goldMinTeamCapital && hasOwnInvestment;
     const estimatedGold = goldQualified ? directsSalaryInfo.totalSalary * (config.goldPct / 100) : 0;
 
     // ── AC-11: Daymond ─────────────────────────────────────
-    const currentDaymondPkg = await db.daymondPackage.findUnique({
-      where: { userId_monthDate: { userId, monthDate } },
-      include: { investment: { select: { id: true, status: true, dailyRoi: true, endDate: true } } },
-    });
-
-    const daymondHistory = await db.daymondPackage.findMany({
-      where: { userId },
-      orderBy: { monthDate: 'desc' },
-      take: 12,
-      include: { investment: { select: { id: true, status: true, dailyRoi: true } } },
-    });
+    let currentDaymondPkg: any = null;
+    let daymondHistory: any[] = [];
+    try {
+      currentDaymondPkg = await db.daymondPackage.findUnique({
+        where: { userId_monthDate: { userId, monthDate } },
+        include: { investment: { select: { id: true, status: true, dailyRoi: true, endDate: true } } },
+      });
+      daymondHistory = await db.daymondPackage.findMany({
+        where: { userId },
+        orderBy: { monthDate: 'desc' },
+        take: 12,
+        include: { investment: { select: { id: true, status: true, dailyRoi: true } } },
+      });
+    } catch (e) {
+      console.error('[team-bonus] Daymond query error:', e);
+    }
 
     const daymondQualified = teamStats.totalActiveCapital >= config.daymondMinTeamCapital && hasOwnInvestment;
 
@@ -136,7 +151,7 @@ export async function GET(request: NextRequest) {
           weekDate: lastSalary.weekDate,
           teamCapital: d(lastSalary.teamActiveCapital),
         } : null,
-        history: salaryHistory.map(s => ({
+        history: salaryHistory.map((s: any) => ({
           weekDate: s.weekDate,
           teamCapital: d(s.teamActiveCapital),
           salaryPct: d(s.salaryPct),
@@ -156,9 +171,9 @@ export async function GET(request: NextRequest) {
           amount: d(lastGold.goldAmount),
           weekDate: lastGold.weekDate,
         } : null,
-        history: goldHistory.map(g => ({
+        history: goldHistory.map((g: any) => ({
           weekDate: g.weekDate,
-          fromUserName: g.fromUser.name,
+          fromUserName: g.fromUser?.name || '***',
           fromSalaryAmount: d(g.fromSalaryAmount),
           goldPct: d(g.goldPct),
           amount: d(g.goldAmount),
@@ -182,7 +197,7 @@ export async function GET(request: NextRequest) {
             endDate: currentDaymondPkg.investment.endDate,
           } : null,
         } : null,
-        history: daymondHistory.map(dp => ({
+        history: daymondHistory.map((dp: any) => ({
           monthDate: dp.monthDate,
           teamCapital: d(dp.teamActiveCapital),
           status: dp.status,
@@ -208,6 +223,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
+    console.error('[team-bonus] Unhandled error:', error);
     return handleApiError(error);
   }
 }

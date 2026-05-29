@@ -130,7 +130,7 @@ export async function hasActiveInvestment(userId: string): Promise<boolean> {
     where: {
       userId,
       status: 'active',
-      source: { in: ['deposit', 'voucher'] },
+      source: { in: ['deposit', 'voucher', 'reinvestment'] },
     },
   });
   return count > 0;
