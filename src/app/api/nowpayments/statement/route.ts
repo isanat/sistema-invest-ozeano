@@ -49,6 +49,7 @@ export async function GET(request: NextRequest) {
           totalWithdrawn: true,
           totalAffiliateEarnings: true,
           affiliateBalance: true,
+          totalDeposited: true,
         },
       }),
     ]);
@@ -58,7 +59,7 @@ export async function GET(request: NextRequest) {
       id: string;
       date: string;
       type: string;
-      category: 'income' | 'expense';
+      category: 'income' | 'expense' | 'investment';
       description: string;
       amount: number;
       status: string;
@@ -72,16 +73,36 @@ export async function GET(request: NextRequest) {
 
     // Add transaction entries
     for (const tx of transactions) {
-      const isIncome = [
-        'deposit',
-        'roi_profit',
-        'affiliate_commission',
-      ].includes(tx.type);
+      let category: 'income' | 'expense' | 'investment';
+
+      if (tx.type === 'investment') {
+        // Investments are a conversion (balance → active plan), NOT a true expense
+        category = 'investment';
+      } else if (tx.type === 'admin_adjust') {
+        // Admin adjustments: positive = income, negative = expense
+        // The amount field is always stored as positive (absolute value),
+        // so we check the description for the sign indicator.
+        // Description format: "Ajuste admin no saldo: +98 USDT" or "Ajuste admin no saldo: -50 USDT"
+        // Also: "Ajuste admin no saldo afiliado:" and "Ajuste admin no saldo voucher:"
+        const desc = tx.description || '';
+        // Match the sign after the colon — "+98" means credit, "-50" means debit
+        const signMatch = desc.match(/:\s*([+-])/);
+        const isCredit = signMatch ? signMatch[1] === '+' : true; // Default to credit if no sign found
+        category = isCredit ? 'income' : 'expense';
+      } else {
+        const isIncome = [
+          'deposit',
+          'roi_profit',
+          'affiliate_commission',
+        ].includes(tx.type);
+        category = isIncome ? 'income' : 'expense';
+      }
+
       entries.push({
         id: tx.id,
         date: tx.createdAt instanceof Date ? tx.createdAt.toISOString() : String(tx.createdAt),
         type: tx.type,
-        category: isIncome ? 'income' : 'expense',
+        category,
         description: tx.description,
         amount: d(tx.amount),
         status: tx.status,
@@ -121,10 +142,37 @@ export async function GET(request: NextRequest) {
     );
 
     // Calculate running balance (from oldest to newest)
+    // Investments also affect balance (they deduct from available balance)
     const ascending = [...entries].sort(
       (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
     );
-    let balance = 0;
+
+    // Calculate what the balance SHOULD be based on recorded transactions
+    let calculatedBalance = 0;
+    for (const entry of ascending) {
+      if (
+        entry.status === 'completed' ||
+        entry.status === 'confirmed' ||
+        entry.status === 'approved'
+      ) {
+        if (entry.category === 'income') {
+          calculatedBalance += entry.amount;
+        } else {
+          // Both 'expense' and 'investment' deduct from balance
+          calculatedBalance -= entry.amount;
+        }
+      }
+    }
+
+    // The real balance comes from the User record.
+    // If calculatedBalance != real balance, there's a "gap" from missing transactions
+    // (e.g., admin set balance directly, or deposit wasn't recorded as a transaction).
+    // We handle this by starting the running balance with an offset.
+    const realBalance = d(user?.balance || '0');
+    const gap = realBalance - calculatedBalance;
+
+    // Re-calculate running balance with the gap offset
+    let balance = gap; // Start with gap to account for missing income
     const balanceMap = new Map<string, number>();
     for (const entry of ascending) {
       if (
@@ -132,8 +180,12 @@ export async function GET(request: NextRequest) {
         entry.status === 'confirmed' ||
         entry.status === 'approved'
       ) {
-        balance +=
-          entry.category === 'income' ? entry.amount : -entry.amount;
+        if (entry.category === 'income') {
+          balance += entry.amount;
+        } else {
+          // Both 'expense' and 'investment' deduct from balance
+          balance -= entry.amount;
+        }
       }
       balanceMap.set(entry.id, balance);
     }
@@ -145,6 +197,7 @@ export async function GET(request: NextRequest) {
     }));
 
     // Calculate summary
+    // Income: deposits + ROI profits + affiliate commissions + positive admin adjustments
     const totalIncome = entries
       .filter(
         (e) =>
@@ -154,6 +207,8 @@ export async function GET(request: NextRequest) {
             e.status === 'approved')
       )
       .reduce((s, e) => s + e.amount, 0);
+
+    // Expenses: only real money OUT of the platform (withdrawals, negative admin adjusts)
     const totalExpense = entries
       .filter(
         (e) =>
@@ -164,16 +219,31 @@ export async function GET(request: NextRequest) {
       )
       .reduce((s, e) => s + e.amount, 0);
 
+    // Investments: balance converted to active plans (NOT lost money)
+    const totalInvestedFromEntries = entries
+      .filter(
+        (e) =>
+          e.category === 'investment' &&
+          (e.status === 'completed' ||
+            e.status === 'confirmed' ||
+            e.status === 'approved')
+      )
+      .reduce((s, e) => s + e.amount, 0);
+
     const summary = {
-      currentBalance: d(user?.balance || '0'),
+      currentBalance: realBalance,
       affiliateBalance: d(user?.affiliateBalance || '0'),
       totalIncome,
       totalExpense,
-      netBalance: totalIncome - totalExpense,
+      totalInvestedFromEntries,
+      netBalance: totalIncome - totalExpense - totalInvestedFromEntries,
       totalInvested: d(user?.totalInvested || '0'),
+      totalDeposited: d(user?.totalDeposited || '0'),
       totalRoi: d(user?.totalRoi || '0'),
       totalWithdrawn: d(user?.totalWithdrawn || '0'),
       totalAffiliateEarnings: d(user?.totalAffiliateEarnings || '0'),
+      // Include gap info for debugging/transparency
+      balanceGap: gap,
     };
 
     // Paginate

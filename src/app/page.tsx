@@ -5600,7 +5600,8 @@ export default function PlataformaROI() {
                             <SelectItem value="withdrawal">Saques</SelectItem>
                             <SelectItem value="roi_profit">Lucros</SelectItem>
                             <SelectItem value="affiliate_commission">Comissões</SelectItem>
-                            <SelectItem value="investment">Aluguéis</SelectItem>
+                            <SelectItem value="investment">Investimentos</SelectItem>
+                            <SelectItem value="admin_adjust">Ajustes</SelectItem>
                           </SelectContent>
                         </Select>
                         <Button variant="ghost" size="sm" onClick={fetchStatement} disabled={statementLoading}>
@@ -5610,45 +5611,59 @@ export default function PlataformaROI() {
                     </div>
 
                     {/* Balance Overview */}
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                       <Card className="bg-gradient-to-br from-emerald-900/30 to-zinc-900 border-cyan-500/20">
-                        <CardContent className="p-5">
+                        <CardContent className="p-4">
                           <div className="flex items-center gap-2 mb-2">
-                            <div className="w-8 h-8 rounded-lg bg-cyan-500/20 flex items-center justify-center">
-                              <TrendingUp className="h-4 w-4 text-cyan-400" />
+                            <div className="w-7 h-7 rounded-lg bg-cyan-500/20 flex items-center justify-center">
+                              <TrendingUp className="h-3.5 w-3.5 text-cyan-400" />
                             </div>
-                            <span className="text-zinc-400 text-sm">Entradas</span>
+                            <span className="text-zinc-400 text-xs sm:text-sm">Entradas</span>
                           </div>
-                          <p className="text-cyan-400 font-bold text-2xl">
+                          <p className="text-cyan-400 font-bold text-lg sm:text-2xl">
                             +${(statementSummary?.totalIncome || 0).toFixed(2)}
                           </p>
-                          <p className="text-zinc-500 text-xs mt-1">Depósitos + Lucros + Comissões</p>
+                          <p className="text-zinc-500 text-[10px] sm:text-xs mt-1">Depósitos + Lucros + Comissões</p>
+                        </CardContent>
+                      </Card>
+                      <Card className="bg-gradient-to-br from-amber-900/30 to-zinc-900 border-amber-500/20">
+                        <CardContent className="p-4">
+                          <div className="flex items-center gap-2 mb-2">
+                            <div className="w-7 h-7 rounded-lg bg-amber-500/20 flex items-center justify-center">
+                              <Zap className="h-3.5 w-3.5 text-amber-400" />
+                            </div>
+                            <span className="text-zinc-400 text-xs sm:text-sm">Investimentos</span>
+                          </div>
+                          <p className="text-amber-400 font-bold text-lg sm:text-2xl">
+                            ${(statementSummary?.totalInvestedFromEntries || 0).toFixed(2)}
+                          </p>
+                          <p className="text-zinc-500 text-[10px] sm:text-xs mt-1">Saldo convertido em planos</p>
                         </CardContent>
                       </Card>
                       <Card className="bg-gradient-to-br from-red-900/30 to-zinc-900 border-red-500/20">
-                        <CardContent className="p-5">
+                        <CardContent className="p-4">
                           <div className="flex items-center gap-2 mb-2">
-                            <div className="w-8 h-8 rounded-lg bg-red-500/20 flex items-center justify-center">
-                              <TrendingDown className="h-4 w-4 text-red-400" />
+                            <div className="w-7 h-7 rounded-lg bg-red-500/20 flex items-center justify-center">
+                              <TrendingDown className="h-3.5 w-3.5 text-red-400" />
                             </div>
-                            <span className="text-zinc-400 text-sm">Saídas</span>
+                            <span className="text-zinc-400 text-xs sm:text-sm">Saídas</span>
                           </div>
-                          <p className="text-red-400 font-bold text-2xl">
+                          <p className="text-red-400 font-bold text-lg sm:text-2xl">
                             -${(statementSummary?.totalExpense || 0).toFixed(2)}
                           </p>
-                          <p className="text-zinc-500 text-xs mt-1">Saques + Aluguéis</p>
+                          <p className="text-zinc-500 text-[10px] sm:text-xs mt-1">Saques realizados</p>
                         </CardContent>
                       </Card>
                       <Card className="bg-gradient-to-br from-zinc-800 to-zinc-900 border-zinc-700">
-                        <CardContent className="p-5">
+                        <CardContent className="p-4">
                           <div className="flex items-center gap-2 mb-2">
-                            <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center">
-                              <DollarSign className="h-4 w-4 text-white" />
+                            <div className="w-7 h-7 rounded-lg bg-white/10 flex items-center justify-center">
+                              <DollarSign className="h-3.5 w-3.5 text-white" />
                             </div>
-                            <span className="text-zinc-400 text-sm">Saldo Atual</span>
+                            <span className="text-zinc-400 text-xs sm:text-sm">Saldo Atual</span>
                           </div>
-                          <p className="text-white font-bold text-2xl">${fmtUSDT(statementSummary?.currentBalance?.toString() || user?.balance || '0')}</p>
-                          <p className="text-zinc-500 text-xs mt-1">≈ R$ {((statementSummary?.currentBalance || d(user?.balance || '0')) * usdtBrlRate).toFixed(2)}</p>
+                          <p className="text-white font-bold text-lg sm:text-2xl">${fmtUSDT(statementSummary?.currentBalance?.toString() || user?.balance || '0')}</p>
+                          <p className="text-zinc-500 text-[10px] sm:text-xs mt-1">≈ R$ {((statementSummary?.currentBalance || d(user?.balance || '0')) * usdtBrlRate).toFixed(2)}</p>
                         </CardContent>
                       </Card>
                     </div>
@@ -5664,7 +5679,15 @@ export default function PlataformaROI() {
                             <ArrowDownLeft className="h-4 w-4 text-cyan-400" />
                             <span className="text-zinc-300 text-sm">Total Depositado</span>
                           </div>
-                          <span className="text-cyan-400 font-semibold">${fmtUSDT(statementSummary?.totalInvested?.toString() || user?.totalInvested || '0')}</span>
+                          <span className="text-cyan-400 font-semibold">${fmtUSDT(statementSummary?.totalDeposited?.toString() || user?.totalDeposited || user?.totalInvested || '0')}</span>
+                        </div>
+                        <Separator className="bg-zinc-800" />
+                        <div className="flex justify-between items-center">
+                          <div className="flex items-center gap-2">
+                            <Zap className="h-4 w-4 text-amber-400" />
+                            <span className="text-zinc-300 text-sm">Total Investido</span>
+                          </div>
+                          <span className="text-amber-400 font-semibold">${fmtUSDT(statementSummary?.totalInvested?.toString() || user?.totalInvested || '0')}</span>
                         </div>
                         <Separator className="bg-zinc-800" />
                         <div className="flex justify-between items-center">
@@ -5723,15 +5746,23 @@ export default function PlataformaROI() {
                           <div className="divide-y divide-zinc-800 max-h-[600px] overflow-y-auto">
                             {statementData.map((entry: any) => {
                               const isPositive = entry.category === 'income';
+                              const isInvestment = entry.category === 'investment';
                               const IconComp = isPositive
                                 ? (entry.type === 'deposit' ? ArrowDownLeft :
                                    entry.type === 'roi_profit' ? Bot :
                                    entry.type === 'affiliate_commission' ? Users : TrendingUp)
-                                : (entry.type === 'withdrawal' ? ArrowUpRight : Clock);
+                                : isInvestment
+                                  ? (entry.description?.startsWith('Reinvestimento') ? RefreshCw : Zap)
+                                  : (entry.type === 'withdrawal' ? ArrowUpRight : Clock);
+                              const entryColor = isPositive ? 'cyan' : isInvestment ? 'amber' : 'red';
                               return (
                                 <div key={entry.id} className="flex items-center justify-between gap-3 p-3 sm:p-4 hover:bg-zinc-800/30">
                                   <div className="flex items-center gap-3 min-w-0 flex-1">
-                                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${isPositive ? 'bg-cyan-500/10 text-cyan-400' : 'bg-red-500/10 text-red-400'}`}>
+                                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                                      entryColor === 'cyan' ? 'bg-cyan-500/10 text-cyan-400' :
+                                      entryColor === 'amber' ? 'bg-amber-500/10 text-amber-400' :
+                                      'bg-red-500/10 text-red-400'
+                                    }`}>
                                       <IconComp className="h-5 w-5" />
                                     </div>
                                     <div className="min-w-0">
@@ -5742,6 +5773,7 @@ export default function PlataformaROI() {
                                           entry.type === 'roi_profit' ? 'bg-blue-500/10 text-blue-400' :
                                           entry.type === 'affiliate_commission' ? 'bg-purple-500/10 text-purple-400' :
                                           entry.type === 'withdrawal' ? 'bg-red-500/10 text-red-400' :
+                                          entry.type === 'admin_adjust' ? 'bg-emerald-500/10 text-emerald-400' :
                                           entry.type === 'investment' && entry.description?.startsWith('Reinvestimento') ? 'bg-emerald-500/10 text-emerald-400' :
                                           entry.type === 'investment' ? 'bg-amber-500/10 text-amber-400' :
                                           'bg-zinc-500/10 text-zinc-400'
@@ -5750,6 +5782,7 @@ export default function PlataformaROI() {
                                            entry.type === 'roi_profit' ? 'Lucro ROI' :
                                            entry.type === 'affiliate_commission' ? 'Comissão' :
                                            entry.type === 'withdrawal' ? 'Saque' :
+                                           entry.type === 'admin_adjust' ? 'Ajuste' :
                                            entry.type === 'investment' && entry.description?.startsWith('Reinvestimento') ? 'Reinvestimento' :
                                            entry.type === 'investment' ? 'Investimento' :
                                            entry.type}
@@ -5762,7 +5795,11 @@ export default function PlataformaROI() {
                                     </div>
                                   </div>
                                   <div className="text-right flex-shrink-0">
-                                    <div className={`font-semibold text-sm ${isPositive ? 'text-cyan-400' : 'text-red-400'}`}>
+                                    <div className={`font-semibold text-sm ${
+                                      entryColor === 'cyan' ? 'text-cyan-400' :
+                                      entryColor === 'amber' ? 'text-amber-400' :
+                                      'text-red-400'
+                                    }`}>
                                       {isPositive ? '+' : '-'}${fmtUSDT(entry.amount)}
                                     </div>
                                     <div className="text-[10px] text-zinc-500">
