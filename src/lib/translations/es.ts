@@ -683,8 +683,17 @@ export const es = {
     withdrawal: 'Retiro',
     roi_profit: 'ROI Diario',
     investment: 'Inversión',
+    reinvestment: 'Reinversión',
     affiliate_commission: 'Comisión Afiliado',
     admin_adjust: 'Ajuste Admin',
+  },
+
+  // === INVESTMENT SOURCE LABELS ===
+  source: {
+    deposit: 'Depósito',
+    voucher: 'Voucher',
+    reinvestment: 'Reinversión',
+    daymond: 'Daymond',
   },
 
   // === METHOD LABELS ===

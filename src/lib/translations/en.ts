@@ -683,8 +683,17 @@ export const en = {
     withdrawal: 'Withdrawal',
     roi_profit: 'Daily ROI',
     investment: 'Investment',
+    reinvestment: 'Reinvestment',
     affiliate_commission: 'Affiliate Commission',
     admin_adjust: 'Admin Adjust',
+  },
+
+  // === INVESTMENT SOURCE LABELS ===
+  source: {
+    deposit: 'Deposit',
+    voucher: 'Voucher',
+    reinvestment: 'Reinvestment',
+    daymond: 'Daymond',
   },
 
   // === METHOD LABELS ===

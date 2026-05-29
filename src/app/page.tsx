@@ -4197,6 +4197,11 @@ export default function PlataformaROI() {
                                                 Voucher
                                               </Badge>
                                             )}
+                                            {r.source === 'reinvestment' && (
+                                              <Badge className="bg-emerald-500/15 text-emerald-400 border-emerald-500/25 text-[10px]" variant="outline">
+                                                Reinvestimento
+                                              </Badge>
+                                            )}
                                           </div>
                                         </div>
                                       </div>
@@ -5707,6 +5712,7 @@ export default function PlataformaROI() {
                                           entry.type === 'roi_profit' ? 'bg-blue-500/10 text-blue-400' :
                                           entry.type === 'affiliate_commission' ? 'bg-purple-500/10 text-purple-400' :
                                           entry.type === 'withdrawal' ? 'bg-red-500/10 text-red-400' :
+                                          entry.type === 'investment' && entry.description?.startsWith('Reinvestimento') ? 'bg-emerald-500/10 text-emerald-400' :
                                           entry.type === 'investment' ? 'bg-amber-500/10 text-amber-400' :
                                           'bg-zinc-500/10 text-zinc-400'
                                         }`}>
@@ -5714,6 +5720,7 @@ export default function PlataformaROI() {
                                            entry.type === 'roi_profit' ? 'Lucro ROI' :
                                            entry.type === 'affiliate_commission' ? 'Comissão' :
                                            entry.type === 'withdrawal' ? 'Saque' :
+                                           entry.type === 'investment' && entry.description?.startsWith('Reinvestimento') ? 'Reinvestimento' :
                                            entry.type === 'investment' ? 'Investimento' :
                                            entry.type}
                                         </span>

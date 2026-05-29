@@ -210,6 +210,12 @@ export async function POST(request: NextRequest) {
           throw new BusinessError(`Saldo insuficiente. Necessário: ${dusdt(amount)} USDT, Disponível: ${dusdt(currentBalance)} USDT`);
         }
 
+        // Check if user already has active investments (for reinvestment marking)
+        const activeInvestmentCount = await tx.investment.count({
+          where: { userId: session.userId, status: 'active' },
+        });
+        const investmentSource = activeInvestmentCount > 0 ? 'reinvestment' : 'deposit';
+
         // Deduct balance atomically (PostgreSQL)
         await tx.$executeRaw`UPDATE "User" SET balance = CAST((CAST(balance AS NUMERIC) - ${amount}) AS TEXT), "totalInvested" = CAST((CAST("totalInvested" AS NUMERIC) + ${amount}) AS TEXT), "hasInvested" = true, "linkUnlocked" = true WHERE id = ${session.userId} AND CAST(balance AS NUMERIC) >= ${amount}`;
         // Verify the deduction actually happened
@@ -235,7 +241,7 @@ export async function POST(request: NextRequest) {
             endDate,
             teamBonusPct: ds(rankBonusPct),
             status: 'active',
-            source: 'deposit', // Investment funded by own balance
+            source: investmentSource, // 'deposit' (first investment) or 'reinvestment' (has active investments)
           },
           include: {
             plan: { select: { id: true, name: true, dailyRoiPct: true, durationDays: true } },
@@ -249,7 +255,9 @@ export async function POST(request: NextRequest) {
             type: 'investment',
             amount: ds(amount),
             status: 'completed',
-            description: `Investimento ${planName} - ${durationDays} dias`,
+            description: investmentSource === 'reinvestment'
+              ? `Reinvestimento ${planName} - ${durationDays} dias`
+              : `Investimento ${planName} - ${durationDays} dias`,
             referenceId: investment.id,
             referenceType: 'Investment',
           },

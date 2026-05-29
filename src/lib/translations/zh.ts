@@ -683,8 +683,17 @@ export const zh = {
     withdrawal: '提现',
     roi_profit: '每日ROI',
     investment: '投资',
+    reinvestment: '复投',
     affiliate_commission: '推荐佣金',
     admin_adjust: '管理员调整',
+  },
+
+  // === INVESTMENT SOURCE LABELS ===
+  source: {
+    deposit: '充值',
+    voucher: 'Voucher',
+    reinvestment: '复投',
+    daymond: 'Daymond',
   },
 
   // === 方式标签 ===
