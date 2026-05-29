@@ -397,6 +397,7 @@ const CONFIG_LABELS: Record<string, {
   min_affiliate_withdrawal: { label: 'Saque Mínimo Afiliado', description: 'Valor mínimo para saque de comissões em USDT', type: 'number', unit: 'USDT' },
   affiliate_withdrawal_fee_pct: { label: 'Taxa Saque Afiliado (%)', description: 'Percentual cobrado em saques de afiliado', type: 'number', unit: '%' },
   affiliate_daily_cap_usd: { label: 'Cap Diário Afiliado', description: 'Cap diário de comissões em USDT (0 = sem limite)', type: 'number', unit: 'USDT' },
+  affiliate_link_requires_investment: { label: 'Link exige investimento', description: 'Exigir que o usuário tenha investimento ativo para desbloquear o link de afiliado', type: 'boolean' },
   // NowPayments
   nowpayments_enabled: { label: 'NowPayments Habilitado', description: 'Ativar integração com NowPayments para depósitos automáticos', type: 'boolean' },
   // Team Bonus
@@ -422,6 +423,7 @@ const HIDDEN_CONFIG_KEYS = new Set<string>([
   'affiliate_daily_cap_usd',
   'min_affiliate_withdrawal',
   'affiliate_withdrawal_fee_pct',
+  'affiliate_link_requires_investment',
   // NowPayments credentials — MUST be in Coolify env vars, NOT in database
   'nowpayments_api_key',
   'nowpayments_email',
@@ -613,6 +615,7 @@ export default function PlataformaROI() {
     siteName: string;
     siteLogo: string;
     teamBonusRanksVisible: boolean;
+    affiliateLinkRequiresInvestment: boolean;
   }>({
     hasPix: false, hasUsdt: false,
     manualDepositEnabled: false, nowpaymentsEnabled: false,
@@ -622,6 +625,7 @@ export default function PlataformaROI() {
     siteName: 'ActionCash',
     siteLogo: '',
     teamBonusRanksVisible: false,
+    affiliateLinkRequiresInvestment: true,
   });
 
   // Admin Data
@@ -894,6 +898,7 @@ export default function PlataformaROI() {
             siteName: data.siteName ?? 'ActionCash',
             siteLogo: data.siteLogo ?? '',
             teamBonusRanksVisible: data.teamBonusRanksVisible ?? false,
+            affiliateLinkRequiresInvestment: data.affiliateLinkRequiresInvestment ?? true,
           }));
         }
       })
@@ -5843,7 +5848,7 @@ export default function PlataformaROI() {
                           </div>
                         </div>
                       </motion.div>
-                    ) : !affiliateData?.linkUnlocked ? (
+                    ) : siteConfig.affiliateLinkRequiresInvestment && !affiliateData?.linkUnlocked ? (
                       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
                         <div className="glass-card gradient-border rounded-2xl p-8 text-center glow-emerald">
                           <div className="text-6xl mb-4">🔗</div>
@@ -5956,10 +5961,26 @@ export default function PlataformaROI() {
                                 </div>
                               </div>
                             </div>
+
+                            {/* Motivational banner for non-invested users with free affiliate link */}
+                            {!user.hasInvested && !siteConfig.affiliateLinkRequiresInvestment && (
+                              <div className="mt-4 p-4 rounded-xl bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/20">
+                                <div className="flex items-start gap-3">
+                                  <div className="w-8 h-8 bg-amber-500/20 rounded-lg flex items-center justify-center shrink-0 mt-0.5">
+                                    <TrendingUp className="h-4 w-4 text-amber-400" />
+                                  </div>
+                                  <div className="flex-1">
+                                    <h4 className="text-sm font-semibold text-amber-400">{t('affiliates.investToEarnTitle')}</h4>
+                                    <p className="text-xs text-zinc-400 mt-1">{t('affiliates.investToEarnDesc')}</p>
+                                    <Button size="sm" className="mt-2 bg-amber-600 hover:bg-amber-700 text-white h-8 text-xs" onClick={() => setActiveTab('investir')}>
+                                      <TrendingUp className="mr-1 h-3 w-3" /> {t('dashboard.investNow')}
+                                    </Button>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
                           </div>
                         </motion.div>
-
-                        {/* ═══════════════ 2. TEAM BONUS RANKS VISUALIZATION ═══════════════ */}
                         {siteConfig.teamBonusRanksVisible && (
                         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
                           <div className="glass-card gradient-border rounded-2xl p-5 sm:p-6">
@@ -8091,6 +8112,48 @@ export default function PlataformaROI() {
                                         </>
                                       )}
                                     </div>
+                                    {/* Affiliate Link Settings */}
+                                    <div className="border-t border-zinc-700 pt-4 mt-4">
+                                      <h4 className="text-sm font-medium text-zinc-300 mb-3 flex items-center gap-2">
+                                        <Link2 className="h-4 w-4 text-cyan-400" />
+                                        Configurações do Link de Afiliado
+                                      </h4>
+                                      <div className="grid grid-cols-1 gap-4">
+                                        <div className="flex items-center justify-between">
+                                          <div className="flex items-center gap-2">
+                                            <Label className="text-zinc-400 text-sm">Link exige investimento</Label>
+                                            <Popover>
+                                              <PopoverTrigger asChild><button className="text-zinc-600 hover:text-zinc-400 transition-colors"><Info className="h-3.5 w-3.5" /></button></PopoverTrigger>
+                                              <PopoverContent className="bg-zinc-800 border-zinc-700 text-zinc-300 text-xs max-w-xs" side="top">Se ATIVADO: o usuário precisa investir antes de compartilhar seu link de afiliado (comportamento original). Se DESATIVADO: qualquer usuário pode compartilhar seu link desde o registro — as comissões continuam exigindo investimento ativo. Recomendado: DESATIVADO — libera crescimento viral, pois o portão de comissão já protege contra abuso.</PopoverContent>
+                                            </Popover>
+                                          </div>
+                                          <button
+                                            onClick={() => {
+                                              const currentVal = configEdits['affiliate_link_requires_investment'] ?? (adminConfigs.find(c => c.key === 'affiliate_link_requires_investment')?.value ?? 'true');
+                                              const newVal = currentVal === 'true' ? 'false' : 'true';
+                                              setConfigEdits(prev => ({ ...prev, affiliate_link_requires_investment: newVal }));
+                                            }}
+                                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${(
+                                              configEdits['affiliate_link_requires_investment'] ?? (adminConfigs.find(c => c.key === 'affiliate_link_requires_investment')?.value ?? 'true')
+                                            ) === 'true' ? 'bg-emerald-500' : 'bg-zinc-600'}`}
+                                          >
+                                            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${(
+                                              configEdits['affiliate_link_requires_investment'] ?? (adminConfigs.find(c => c.key === 'affiliate_link_requires_investment')?.value ?? 'true')
+                                            ) === 'true' ? 'translate-x-6' : 'translate-x-1'}`} />
+                                          </button>
+                                        </div>
+                                        <div className="text-xs text-zinc-500">
+                                          {(
+                                            configEdits['affiliate_link_requires_investment'] ?? (adminConfigs.find(c => c.key === 'affiliate_link_requires_investment')?.value ?? 'true')
+                                          ) === 'true' ? (
+                                            <span className="text-amber-400">🔒 Link bloqueado até investir — os usuários precisam investir para compartilhar</span>
+                                          ) : (
+                                            <span className="text-emerald-400">🔓 Link livre desde o registro — qualquer usuário pode indicar (comissões ainda exigem investimento)</span>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+
                                     {/* Additional affiliate settings */}
                                     <div className="border-t border-zinc-700 pt-4 mt-4">
                                       <h4 className="text-sm font-medium text-zinc-300 mb-3">Limites e Taxas de Saque</h4>
@@ -8146,6 +8209,7 @@ export default function PlataformaROI() {
                                           const capVal = configEdits['affiliate_daily_cap_usd'] ?? (adminConfigs.find(c => c.key === 'affiliate_daily_cap_usd')?.value ?? '0');
                                           const minWithdrawVal = configEdits['min_affiliate_withdrawal'] ?? (adminConfigs.find(c => c.key === 'min_affiliate_withdrawal')?.value ?? '10');
                                           const feeVal = configEdits['affiliate_withdrawal_fee_pct'] ?? (adminConfigs.find(c => c.key === 'affiliate_withdrawal_fee_pct')?.value ?? '0');
+                                          const linkRequiresInvestmentVal = configEdits['affiliate_link_requires_investment'] ?? (adminConfigs.find(c => c.key === 'affiliate_link_requires_investment')?.value ?? 'true');
                                           try {
                                             const configsToSave = [
                                               { key: 'affiliate_commission_mode', value: modeVal, type: 'string', description: 'Modo de comissão: system_margin, investment_profit, revenue_pool', category: 'affiliate' },
@@ -8155,6 +8219,7 @@ export default function PlataformaROI() {
                                               { key: 'affiliate_daily_cap_usd', value: capVal, type: 'number', description: 'Cap diário de comissões em USDT (0 = sem limite)', category: 'affiliate' },
                                               { key: 'min_affiliate_withdrawal', value: minWithdrawVal, type: 'number', description: 'Valor mínimo para saque de comissões em USDT', category: 'affiliate' },
                                               { key: 'affiliate_withdrawal_fee_pct', value: feeVal, type: 'number', description: 'Percentual cobrado em saques de afiliado', category: 'affiliate' },
+                                              { key: 'affiliate_link_requires_investment', value: linkRequiresInvestmentVal, type: 'boolean', description: 'Exigir investimento ativo para desbloquear link de afiliado', category: 'affiliate' },
                                             ];
                                             await api('/api/admin/config', {
                                               method: 'PUT',

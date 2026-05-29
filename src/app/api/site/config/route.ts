@@ -28,6 +28,7 @@ export async function GET() {
       'usdt_brl_rate',
       'maintenance_mode',
       'team_bonus_ranks_visible',
+      'affiliate_link_requires_investment',
     ];
 
     const configs = await db.systemConfig.findMany({
@@ -66,6 +67,7 @@ export async function GET() {
       usdtBrlRate: Number(configMap.usdt_brl_rate) || 5.50,
       maintenanceMode: configMap.maintenance_mode === 'true',
       teamBonusRanksVisible: configMap.team_bonus_ranks_visible === 'true',
+      affiliateLinkRequiresInvestment: configMap.affiliate_link_requires_investment !== 'false', // default true (backward compat)
     });
   } catch (error) {
     return handleApiError(error);

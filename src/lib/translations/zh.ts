@@ -408,6 +408,8 @@ export const zh = {
     unlockTitle: '解锁推荐计划',
     unlockDesc: '您需要至少有一个活跃投资才能解锁推荐链接。',
     unlockBtn: '解锁链接',
+    investToEarnTitle: '投资即可赚取佣金！',
+    investToEarnDesc: '您的推荐人已经在投资，但您需要活跃投资才能获得佣金。立即投资，开始赚钱！',
     level: '级别',
     amount: '金额',
     from: '来自',

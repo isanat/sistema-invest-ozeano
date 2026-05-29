@@ -408,6 +408,8 @@ export const pt = {
     unlockTitle: 'Desbloquear Programa de Afiliados',
     unlockDesc: 'Você precisa ter pelo menos um investimento ativo para desbloquear seu link de afiliado.',
     unlockBtn: 'Desbloquear Link',
+    investToEarnTitle: 'Invista para receber comissões!',
+    investToEarnDesc: 'Seus referidos já estão investindo, mas você precisa de um investimento ativo para receber comissões. Invista agora e comece a ganhar!',
     level: 'Nível',
     amount: 'Valor',
     from: 'De',

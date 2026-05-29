@@ -408,6 +408,8 @@ export const en = {
     unlockTitle: 'Unlock Affiliate Program',
     unlockDesc: 'You need at least one active investment to unlock your affiliate link.',
     unlockBtn: 'Unlock Link',
+    investToEarnTitle: 'Invest to earn commissions!',
+    investToEarnDesc: 'Your referrals are already investing, but you need an active investment to receive commissions. Invest now and start earning!',
     level: 'Level',
     amount: 'Amount',
     from: 'From',

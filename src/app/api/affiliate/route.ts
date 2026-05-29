@@ -531,10 +531,22 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Check if affiliate link requires investment (admin configurable)
+    const linkRequiresInvestmentConfig = await db.systemConfig.findUnique({
+      where: { key: 'affiliate_link_requires_investment' },
+    });
+    const linkRequiresInvestment = linkRequiresInvestmentConfig?.value !== 'false'; // default true
+
+    // If link doesn't require investment and user doesn't have linkUnlocked, auto-unlock it
+    let effectiveLinkUnlocked = user.linkUnlocked;
+    if (!linkRequiresInvestment && !user.linkUnlocked && user.affiliateCode) {
+      effectiveLinkUnlocked = true;
+    }
+
     return apiSuccess({
       affiliate: {
         code: user.affiliateCode,
-        linkUnlocked: user.linkUnlocked,
+        linkUnlocked: effectiveLinkUnlocked,
         hasInvested: user.hasInvested,
         totalEarnings: d(user.totalAffiliateEarnings),
         affiliateBalance: d(user.affiliateBalance),
@@ -686,7 +698,13 @@ export async function POST(request: NextRequest) {
       return apiError('Usuário não encontrado', 404);
     }
 
-    if (!user.hasInvested) {
+    // Check if affiliate link requires investment (admin configurable)
+    const linkRequiresInvestment = await db.systemConfig.findUnique({
+      where: { key: 'affiliate_link_requires_investment' },
+    });
+    const requiresInvestment = linkRequiresInvestment?.value !== 'false'; // default true
+
+    if (requiresInvestment && !user.hasInvested) {
       return apiError('Você precisa ter um investimento ativo para desbloquear o link de afiliado', 403);
     }
 
