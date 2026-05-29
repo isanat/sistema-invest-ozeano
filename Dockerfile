@@ -19,7 +19,7 @@ ARG NODE_ENV=development
 ENV NODE_ENV=development
 
 # Cache bust - increment this to force Docker cache invalidation
-ARG CACHE_BUST=20260529v3
+ARG CACHE_BUST=20260529v4
 
 # Copy ALL source code FIRST
 COPY . .
