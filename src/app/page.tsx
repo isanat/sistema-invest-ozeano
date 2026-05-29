@@ -5714,7 +5714,7 @@ export default function PlataformaROI() {
                                            entry.type === 'roi_profit' ? 'Lucro ROI' :
                                            entry.type === 'affiliate_commission' ? 'Comissão' :
                                            entry.type === 'withdrawal' ? 'Saque' :
-                                           entry.type === 'investment' ? 'Aluguel' :
+                                           entry.type === 'investment' ? 'Investimento' :
                                            entry.type}
                                         </span>
                                         <span>{fmtDateTime(entry.date)}</span>
