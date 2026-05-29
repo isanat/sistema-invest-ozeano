@@ -6542,7 +6542,7 @@ export default function PlataformaROI() {
                         )}
 
                         {/* ═══════════════ BADGES / CONQUISTAS ═══════════════ */}
-                        {affiliateData.badges && affiliateData.badges.length > 0 && (
+                        {affiliateData?.badges && affiliateData.badges.length > 0 && (
                           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.28 }}>
                             <div className="glass-card rounded-2xl p-5 sm:p-6 border border-white/5">
                               <div className="flex items-center gap-2 mb-4">
@@ -6582,7 +6582,7 @@ export default function PlataformaROI() {
                         )}
 
                         {/* ═══════════════ MILESTONES ═══════════════ */}
-                        {affiliateData.milestones && affiliateData.milestones.length > 0 && (
+                        {affiliateData?.milestones && affiliateData.milestones.length > 0 && (
                           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
                             <div className="glass-card rounded-2xl p-5 sm:p-6 border border-white/5">
                               <div className="flex items-center gap-2 mb-4">
@@ -6627,7 +6627,7 @@ export default function PlataformaROI() {
 
 
                         {/* ═══════════════ LEADERBOARD ═══════════════ */}
-                        {affiliateData.leaderboard && affiliateData.leaderboard.length > 0 && (
+                        {affiliateData?.leaderboard && affiliateData.leaderboard.length > 0 && (
                           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.34 }}>
                             <div className="glass-card rounded-2xl p-5 sm:p-6 border border-white/5">
                               <div className="flex items-center gap-2 mb-4">
