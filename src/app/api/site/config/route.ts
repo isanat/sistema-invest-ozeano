@@ -29,6 +29,7 @@ export async function GET() {
       'maintenance_mode',
       'team_bonus_ranks_visible',
       'affiliate_link_requires_investment',
+      'affiliate_withdrawal_fee_pct',
     ];
 
     const configs = await db.systemConfig.findMany({
@@ -68,6 +69,7 @@ export async function GET() {
       maintenanceMode: configMap.maintenance_mode === 'true',
       teamBonusRanksVisible: configMap.team_bonus_ranks_visible === 'true',
       affiliateLinkRequiresInvestment: configMap.affiliate_link_requires_investment !== 'false', // default true (backward compat)
+      affiliateWithdrawalFeePct: Number(configMap.affiliate_withdrawal_fee_pct) || 0,
     });
   } catch (error) {
     return handleApiError(error);

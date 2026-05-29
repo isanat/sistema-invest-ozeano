@@ -111,6 +111,7 @@ interface UserInvestment {
   teamBonusPct: string;
   lastRoiAt?: string | null; distributedPeriods: number;
   status: string; createdAt: string; updatedAt: string;
+  source?: string;
   plan?: { id: string; name: string; dailyRoiPct: string; durationDays: number; coin?: string; model?: string; pool?: string };
 }
 
@@ -335,6 +336,7 @@ const txTypeIcon = (type: string) => {
     deposit: ArrowDownLeft, withdrawal: ArrowUpRight,
     roi_profit: TrendingUp, investment: Clock,
     affiliate_commission: Users, admin_adjust: Shield,
+    transfer: ArrowUpRight, team_bonus: Trophy,
   };
   return icons[type] || DollarSign;
 };
@@ -508,6 +510,7 @@ export default function PlataformaROI() {
       deposit: t('txType.deposit'), withdrawal: t('txType.withdrawal'),
       roi_profit: t('txType.roi_profit'), investment: t('txType.investment'),
       affiliate_commission: t('txType.affiliate_commission'), admin_adjust: t('txType.admin_adjust'),
+      transfer: t('txType.transfer') || 'Transferência', team_bonus: t('txType.team_bonus') || 'Bônus de Equipe',
     };
     return labels[type] || type;
   };
@@ -584,9 +587,9 @@ export default function PlataformaROI() {
   // Live Trading state
   const [liveEarnings, setLiveEarnings] = useState(0); // cumulative per-second earnings
   const [liveShares, setLiveShares] = useState<{ valid: number; invalid: number }[]>([]); // per investment
-  const [liveVolatility, setLiveVolatility] = useState<number[]>([]); // per investment
+  const [liveVolatility, setLiveVolatility] = useState<number[]>([]); // per investment (reserved for future use)
   const [liveWinRates, setLiveWinRates] = useState<number[]>([]); // per investment (fluctuating)
-  const [liveBlocks, setLiveBlocks] = useState(0); // total blocks found
+  const [liveBlocks, setLiveBlocks] = useState(0); // total blocks found (reserved for future use)
   const [liveEarningsFeed, setLiveEarningsFeed] = useState<{ id: number; amount: number; time: string; coin: string }[]>([]); // recent micro-earnings
   const [liveEarningsCounter, setLiveEarningsCounter] = useState(0); // incrementing counter for feed IDs
 
@@ -616,16 +619,18 @@ export default function PlataformaROI() {
     siteLogo: string;
     teamBonusRanksVisible: boolean;
     affiliateLinkRequiresInvestment: boolean;
+    affiliateWithdrawalFeePct: number;
   }>({
     hasPix: false, hasUsdt: false,
     manualDepositEnabled: false, nowpaymentsEnabled: false,
     manualWithdrawalEnabled: false, nowpaymentsWithdrawalEnabled: false,
     minDepositUsdt: 5, maxDepositUsdt: 100000,
-    minWithdrawalUsdt: 5, maxWithdrawalUsdt: 50000, withdrawalFeePct: 5,
+    minWithdrawalUsdt: 5, maxWithdrawalUsdt: 50000, withdrawalFeePct: 0,
     siteName: 'ActionCash',
     siteLogo: '',
     teamBonusRanksVisible: false,
     affiliateLinkRequiresInvestment: true,
+    affiliateWithdrawalFeePct: 0,
   });
 
   // Admin Data
@@ -727,6 +732,12 @@ export default function PlataformaROI() {
   const [availableWithdrawCurrencies, setAvailableWithdrawCurrencies] = useState<string[]>([]);
   const [currencyLabels, setCurrencyLabels] = useState<Record<string, string>>({});
   const [pixEnabled, setPixEnabled] = useState(false);
+  // Manual deposit payment info — shown after successful deposit creation
+  const [manualDepositPaymentInfo, setManualDepositPaymentInfo] = useState<{
+    method: string; walletAddress?: string; pixKey?: string; pixAddress?: string;
+    network?: string; brlAmount?: string; usdtRate?: string; amount?: number;
+  } | null>(null);
+  const [paymentInfoCopied, setPaymentInfoCopied] = useState(false);
 
   // Currency label helper — uses dynamic labels from NowPayments API when available
   const currencyLabel = (code: string): string => {
@@ -899,6 +910,7 @@ export default function PlataformaROI() {
             siteLogo: data.siteLogo ?? '',
             teamBonusRanksVisible: data.teamBonusRanksVisible ?? false,
             affiliateLinkRequiresInvestment: data.affiliateLinkRequiresInvestment ?? true,
+            affiliateWithdrawalFeePct: data.affiliateWithdrawalFeePct ?? 0,
           }));
         }
       })
@@ -1019,8 +1031,8 @@ export default function PlataformaROI() {
     if (!user) return;
     setTeamBonusLoading(true);
     try {
-      const data = await api<{ success: boolean; data: any }>('/api/team-bonus');
-      if (data.success) setTeamBonusData(data.data);
+      const data = await api<any>('/api/team-bonus');
+      if (data.success) setTeamBonusData(data);
     } catch (err) {
       console.error('Team bonus fetch error:', err);
     } finally {
@@ -1559,7 +1571,7 @@ export default function PlataformaROI() {
       for (const inv of userInvestments) {
         if (inv.status !== 'active') continue;
         const startDate = new Date(inv.startDate);
-        const durationDays = inv.plan?.durationDays || 30;
+        const durationDays = inv.plan?.durationDays || 60;
         const nextPeriodIndex = (inv.distributedPeriods || 0) + 1;
 
         // If all periods are done, skip
@@ -1747,16 +1759,32 @@ export default function PlataformaROI() {
     setDepositLoading(true);
     try {
       const form = e.currentTarget;
+      const depositAmount = parseFloat((form.amount as HTMLInputElement).value);
+      const depositMethod = (form.method as HTMLSelectElement).value;
       const data = await api('/api/deposit', {
         method: 'POST',
         body: JSON.stringify({
-          amount: parseFloat((form.amount as HTMLInputElement).value),
-          method: (form.method as HTMLSelectElement).value,
+          amount: depositAmount,
+          method: depositMethod,
           txHash: (form.txHash as HTMLInputElement)?.value || undefined,
         }),
       });
       toast.success(data.message || t('toast.depositSuccess'));
-      setDepositDialog(false);
+      // Show payment info instead of closing the dialog
+      if (data.paymentInfo) {
+        setManualDepositPaymentInfo({
+          method: depositMethod,
+          walletAddress: data.paymentInfo.walletAddress,
+          pixKey: data.paymentInfo.pixKey,
+          pixAddress: data.paymentInfo.pixAddress,
+          network: data.paymentInfo.network,
+          brlAmount: data.paymentInfo.brlAmount,
+          usdtRate: data.paymentInfo.usdtRate,
+          amount: depositAmount,
+        });
+      } else {
+        setDepositDialog(false);
+      }
       fetchDashboardData();
       checkAuth();
     } catch (err: any) {
@@ -1840,12 +1868,16 @@ export default function PlataformaROI() {
         const status = data.deposit?.paymentStatus;
         if (status && status !== npDepositStatus) {
           setNpDepositStatus(status);
-          if (['finished', 'confirmed', 'sending'].includes(status)) {
+          if (status === 'finished') {
             toast.success('Depósito confirmado! Saldo creditado.');
             setDepositDialog(false);
             resetNpDeposit();
             fetchDashboardData();
             checkAuth();
+          } else if (['confirmed', 'sending'].includes(status)) {
+            // Intermediate states — don't close dialog or show "creditado" toast
+            // The status display already updates via setNpDepositStatus above
+            toast.info('Confirmado — processando...');
           } else if (['failed', 'expired', 'refunded'].includes(status)) {
             toast.error('Depósito falhou ou expirou.');
             setNpDepositStatus(status);
@@ -2410,7 +2442,7 @@ export default function PlataformaROI() {
     const initShares = activeInvestments.map(() => ({ valid: Math.floor(Math.random() * 5000) + 2000, invalid: Math.floor(Math.random() * 50) + 10 }));
     const initVolatility = activeInvestments.map(() => 15 + Math.random() * 30); // 15-45% volatility index
     const initWinRates = activeInvestments.map(r => {
-      const base = parseFloat(r.plan?.winRate || '0');
+      const base = parseFloat(r.plan?.dailyRoiPct || '0');
       return base * (0.97 + Math.random() * 0.06); // ±3% fluctuation
     });
     setLiveShares(initShares);
@@ -2425,7 +2457,7 @@ export default function PlataformaROI() {
     let feedIdCounter = 0;
     let blockCounter = 0;
 
-    // Main 1-second tick for the live trading simulation
+    // Main 10-second tick for the live trading simulation
     const liveInterval = setInterval(() => {
       // Update cumulative earnings (daily rate / 86400 seconds)
       const totalDailyRate = activeInvestments.reduce((sum, r) => sum + d(r.dailyRoi), 0);
@@ -2493,7 +2525,7 @@ export default function PlataformaROI() {
     if (selectedPlan && selectedPlan.dailyRoiPct !== undefined) {
       const amount = parseFloat(investAmount) || 0;
       const dailyRoiPct = d(selectedPlan.dailyRoiPct);
-      const durationDays = selectedPlan.durationDays || selectedPlan.days || 35;
+      const durationDays = selectedPlan.durationDays || selectedPlan.days || 60;
       const dailyReturn = amount * (dailyRoiPct / 100);
       const totalReturn = dailyReturn * durationDays;
       return { totalPrice: amount, dailyReturn, totalReturn };
@@ -2666,7 +2698,7 @@ export default function PlataformaROI() {
                 <div className="flex gap-4 sm:gap-6 text-xs sm:text-sm">
                   <div><span className="text-xl sm:text-2xl font-bold text-white animate-count-glow">{landingStats?.totalUsers || 0}+</span><p className="text-zinc-500">{t('landing.stats.users')}</p></div>
                   <div><span className="text-xl sm:text-2xl font-bold text-emerald-400">{landingStats?.totalRoi ? `$${(landingStats.totalRoi / 1000).toFixed(0)}k+` : '$0'}</span><p className="text-zinc-500">{t('landing.stats.mined')}</p></div>
-                  <div><span className="text-xl sm:text-2xl font-bold text-cyan-400">3.3%</span><p className="text-zinc-500">{t('common.perDay')}</p></div>
+                  <div><span className="text-xl sm:text-2xl font-bold text-cyan-400">{d(landingConfig?.dailyRoiPct || '3.3').toFixed(1)}%</span><p className="text-zinc-500">{t('common.perDay')}</p></div>
                 </div>
               </motion.div>
 
@@ -2715,7 +2747,7 @@ export default function PlataformaROI() {
                       <div className="text-[10px] text-zinc-500 uppercase tracking-wider">{t('landing.badges.trading')}</div>
                     </div>
                     <div className="bg-white/[0.03] rounded-lg p-3 text-center">
-                      <div className="text-lg font-bold text-green-400">3.3%</div>
+                      <div className="text-lg font-bold text-green-400">{d(landingConfig?.dailyRoiPct || '3.3').toFixed(1)}%</div>
                       <div className="text-[10px] text-zinc-500 uppercase tracking-wider">{t('landing.badges.dailyRoi')}</div>
                     </div>
                   </div>
@@ -3035,7 +3067,7 @@ export default function PlataformaROI() {
               <motion.div initial={{ opacity: 0, scale: 0.95 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }}>
                 <div className="glass-card gradient-border glow-emerald rounded-xl p-5 text-center">
                   <div className="text-3xl font-bold text-emerald-400 animate-count-glow">
-                    {landingAffiliateLevels.find(l => l.level === 1)?.percentage || '5'}%
+                    {landingAffiliateLevels.find(l => l.level === 1)?.percentage || '—'}%
                   </div>
                   <div className="text-sm text-emerald-400 font-medium mt-1">L1 — Direct</div>
                   <div className="text-xs text-zinc-500">{t('landing.affiliate.directReferrals')}</div>
@@ -3047,7 +3079,7 @@ export default function PlataformaROI() {
                   <motion.div key={lvl} initial={{ opacity: 0, y: 10 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: lvl * 0.05 }} viewport={{ once: true }}>
                     <div className="glass-card rounded-xl p-3 text-center border border-white/5 stat-card-hover">
                       <div className="text-xl font-bold text-cyan-400">
-                        {landingAffiliateLevels.find(l => l.level === lvl)?.percentage || ['','3','1','1','1'][lvl]}%
+                        {landingAffiliateLevels.find(l => l.level === lvl)?.percentage || '—'}%
                       </div>
                       <div className="text-[10px] text-zinc-500 mt-0.5">{t('landing.unilevel.level')} {lvl}</div>
                     </div>
@@ -3060,7 +3092,7 @@ export default function PlataformaROI() {
                   <motion.div key={lvl} initial={{ opacity: 0, y: 10 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: lvl * 0.04 }} viewport={{ once: true }}>
                     <div className="glass-card rounded-xl p-3 text-center border border-white/5 stat-card-hover">
                       <div className="text-lg font-bold text-amber-400">
-                        {landingAffiliateLevels.find(l => l.level === lvl)?.percentage || '2'}%
+                        {landingAffiliateLevels.find(l => l.level === lvl)?.percentage || '—'}%
                       </div>
                       <div className="text-[10px] text-zinc-500">{t('landing.unilevel.level')} {lvl}</div>
                     </div>
@@ -3074,7 +3106,7 @@ export default function PlataformaROI() {
                   <span className="text-lg font-bold text-emerald-400">
                     {landingAffiliateLevels.length > 0
                       ? landingAffiliateLevels.reduce((sum, l) => sum + d(l.percentage), 0).toFixed(1)
-                      : '13'}% {t('landing.unilevel.inLevels').replace('{n}', '6')}
+                      : '—'}% {t('landing.unilevel.inLevels').replace('{n}', String(landingAffiliateLevels.length || 6))}
                   </span>
                 </div>
                 <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden">
@@ -3768,7 +3800,7 @@ export default function PlataformaROI() {
                             </div>
                             <h3 className="text-xl sm:text-2xl font-bold text-white mb-2">Comece a Investir Agora</h3>
                             <p className="text-zinc-400 text-sm max-w-md mx-auto mb-6">
-                              Deposite USDT na sua conta e comece a ganhar <span className="text-emerald-400 font-semibold">3.3% de ROI diário</span> automaticamente. O processo é simples e rápido!
+                              Deposite USDT na sua conta e comece a ganhar <span className="text-emerald-400 font-semibold">{d(dbPlans.find(p => p.isActive)?.dailyRoiPct || '3.3').toFixed(1)}% de ROI diário</span> automaticamente. O processo é simples e rápido!
                             </p>
                             
                             {/* Steps */}
@@ -3785,13 +3817,13 @@ export default function PlataformaROI() {
                                   <Target className="h-4 w-4 text-cyan-400" />
                                 </div>
                                 <div className="text-xs font-semibold text-white mb-0.5">2. Escolha um Plano</div>
-                                <div className="text-[10px] text-zinc-500">A partir de $10 USDT</div>
+                                <div className="text-[10px] text-zinc-500">A partir de ${fmtUSDT(dbPlans.filter(p => p.isActive).sort((a,b) => d(a.minAmount) - d(b.minAmount))[0]?.minAmount || siteConfig.minDepositUsdt)} USDT</div>
                               </div>
                               <div className="bg-white/[0.03] rounded-xl p-3 border border-white/[0.04]">
                                 <div className="w-8 h-8 bg-amber-500/15 rounded-lg flex items-center justify-center mx-auto mb-2">
                                   <TrendingUp className="h-4 w-4 text-amber-400" />
                                 </div>
-                                <div className="text-xs font-semibold text-white mb-0.5">3. Ganhe 3.3%/dia</div>
+                                <div className="text-xs font-semibold text-white mb-0.5">3. Ganhe {d(dbPlans.find(p => p.isActive)?.dailyRoiPct || '3.3').toFixed(1)}%/dia</div>
                                 <div className="text-[10px] text-zinc-500">ROI diário automático</div>
                               </div>
                             </div>
@@ -3892,9 +3924,9 @@ export default function PlataformaROI() {
                             {/* Live Operation Stats Bar */}
                             <div className="grid grid-cols-3 gap-3 mt-4">
                               <div className="bg-white/[0.03] rounded-lg p-2.5 text-center border border-white/[0.04]">
-                                <div className="text-[10px] sm:text-xs text-zinc-500 uppercase tracking-wider">ROI Total</div>
+                                <div className="text-[10px] sm:text-xs text-zinc-500 uppercase tracking-wider">ROI Médio</div>
                                 <div className="text-sm font-semibold text-emerald-400 font-mono">
-                                  {activeInvestments.reduce((sum, r, i) => sum + (liveWinRates[i] || parseFloat(r.plan?.dailyRoiPct || '0')), 0).toFixed(1)}%
+                                  {activeInvestments.length > 0 ? (activeInvestments.reduce((sum, r) => sum + d(r.dailyRoiPct), 0) / activeInvestments.length).toFixed(1) : '0.0'}%
                                 </div>
                               </div>
                               <div className="bg-white/[0.03] rounded-lg p-2.5 text-center border border-white/[0.04]">
@@ -3904,9 +3936,9 @@ export default function PlataformaROI() {
                                 </div>
                               </div>
                               <div className="bg-white/[0.03] rounded-lg p-2.5 text-center border border-white/[0.04]">
-                                <div className="text-[10px] sm:text-xs text-zinc-500 uppercase tracking-wider">{t('trading.tradesAccepted')}</div>
+                                <div className="text-[10px] sm:text-xs text-zinc-500 uppercase tracking-wider">Investimentos Ativos</div>
                                 <div className="text-sm font-semibold text-cyan-400 font-mono">
-                                  {liveShares.reduce((sum, s) => sum + (s?.valid || 0), 0).toLocaleString()}
+                                  {activeInvestments.length}
                                 </div>
                               </div>
                             </div>
@@ -3917,7 +3949,7 @@ export default function PlataformaROI() {
 
                     {/* ====== QUICK ACTION BUTTONS ====== */}
                     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-                      <div className={`grid ${d(user.balance) >= 5 ? 'grid-cols-2 sm:grid-cols-5' : 'grid-cols-2 sm:grid-cols-4'} gap-3`}>
+                      <div className={`grid ${d(user.balance) >= Math.min(...dbPlans.filter(p => p.isActive).map(p => d(p.minAmount)), 5) ? 'grid-cols-2 sm:grid-cols-5' : 'grid-cols-2 sm:grid-cols-4'} gap-3`}>
                         <button
                           onClick={() => setDepositDialog(true)}
                           className="glass-card gradient-border rounded-xl p-4 stat-card-hover flex items-center gap-3 group cursor-pointer"
@@ -3953,12 +3985,12 @@ export default function PlataformaROI() {
                           </div>
                           <div className="text-left">
                             <div className="text-sm font-semibold text-white group-hover:text-cyan-400 transition-colors">{t('dashboard.investNow')}</div>
-                            <div className="text-[10px] text-zinc-500">3.3% ROI/dia</div>
+                            <div className="text-[10px] text-zinc-500">{d(dbPlans.find(p => p.isActive)?.dailyRoiPct || '3.3').toFixed(1)}% ROI/dia</div>
                           </div>
                         </button>
 
                         {/* Reinvestir button - only shows when user has balance >= $5 */}
-                        {d(user.balance) >= 5 && (
+                        {d(user.balance) >= Math.min(...dbPlans.filter(p => p.isActive).map(p => d(p.minAmount)), 5) && (
                           <button
                             onClick={() => setActiveTab('investir')}
                             className="glass-card rounded-xl p-4 stat-card-hover flex items-center gap-3 border border-amber-500/20 group cursor-pointer"
@@ -3982,7 +4014,7 @@ export default function PlataformaROI() {
                           </div>
                           <div className="text-left">
                             <div className="text-sm font-semibold text-white group-hover:text-emerald-400 transition-colors">Afiliados</div>
-                            <div className="text-[10px] text-zinc-500">6 níveis</div>
+                            <div className="text-[10px] text-zinc-500">{affiliateData?.affiliateLevels?.length || 6} níveis</div>
                           </div>
                         </button>
                       </div>
@@ -4044,7 +4076,7 @@ export default function PlataformaROI() {
                                         name: plan.name,
                                         avatar: null,
                                         specialty: plan.description || 'Copy Trading',
-                                        winRate: '85',
+                                        winRate: d(plan.dailyRoiPct).toFixed(1),
                                         monthlyRoi: String(d(plan.dailyRoiPct) * 30),
                                         totalPnl: String(totalReturn),
                                         riskLevel: 'low',
@@ -4152,8 +4184,7 @@ export default function PlataformaROI() {
 
                           <div className="max-h-96 overflow-y-auto space-y-3 custom-scrollbar pr-1">
                             {activeInvestments.map((r, idx) => {
-                              const baseWinRate = parseFloat((r.plan as any)?.winRate || r.plan?.dailyRoiPct || '0');
-                              const currentWR = liveWinRates[idx] || baseWinRate;
+                              const baseWinRate = parseFloat(r.plan?.dailyRoiPct || '0');
                               const teamBonus = d(r.teamBonusPct);
                               const MS_PER_DAY = 24 * 60 * 60 * 1000;
                               const invStart = new Date(r.startDate).getTime();
@@ -4319,7 +4350,7 @@ export default function PlataformaROI() {
                             <div className="max-h-64 overflow-y-auto space-y-2 custom-scrollbar">
                               {transactions.slice(0, 5).map(tx => {
                                 const Icon = txTypeIcon(tx.type);
-                                const isPositive = ['deposit', 'roi_profit', 'affiliate_commission'].includes(tx.type);
+                                const isPositive = ['deposit', 'roi_profit', 'affiliate_commission'].includes(tx.type) || (tx.type === 'admin_adjust' && d(tx.amount) > 0);
                                 return (
                                   <div key={tx.id} className="flex items-center justify-between gap-3 bg-white/[0.02] rounded-lg px-3 py-2.5 border border-white/[0.03] hover:border-white/[0.06] transition-colors">
                                     <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -4377,7 +4408,7 @@ export default function PlataformaROI() {
                           <div className="text-base sm:text-lg font-bold text-cyan-400">{dbPlans.filter(p => p.isActive).length > 0 ? d(dbPlans.filter(p => p.isActive)[0].dailyRoiPct).toFixed(1) : '3.3'}%</div>
                         </div>
                         <div className="glass-card gradient-border rounded-xl p-3 sm:p-4 text-center stat-card-hover">
-                          <div className="text-[10px] sm:text-xs text-zinc-500 mb-1 flex items-center justify-center gap-1"><Users className="h-3 w-3" /> Investidores</div>
+                          <div className="text-[10px] sm:text-xs text-zinc-500 mb-1 flex items-center justify-center gap-1"><Users className="h-3 w-3" /> Meus Investimentos</div>
                           <div className="text-base sm:text-lg font-bold text-teal-400">{activeInvestments.length}</div>
                         </div>
                       </div>
@@ -4463,7 +4494,7 @@ export default function PlataformaROI() {
                                             name: plan.name,
                                             avatar: null,
                                             specialty: plan.description || 'Copy Trading',
-                                            winRate: '85',
+                                            winRate: d(plan.dailyRoiPct).toFixed(1),
                                             monthlyRoi: String(d(plan.dailyRoiPct) * 30),
                                             totalPnl: String(totalReturn),
                                             riskLevel: 'low',
@@ -4494,58 +4525,52 @@ export default function PlataformaROI() {
                                       >
                                         <Zap className="mr-2 h-4 w-4" /> {t('plans.investNow')}
                                       </Button>
-                                      {/* Voucher activation checkbox — shown if user has active vouchers */}
+                                      {/* Voucher activation — shown if user has active vouchers */}
                                       {userVouchers.filter((v: any) => v.status === 'active').length > 0 && (
-                                        <div className="mt-2 flex items-center gap-2 p-2 rounded-lg bg-purple-500/10 border border-purple-500/20">
-                                          <input
-                                            type="checkbox"
-                                            id={`voucher-plan-${plan.id}`}
-                                            checked={false}
-                                            onChange={(e) => {
-                                              if (e.target.checked) {
-                                                setInvestDialogPlan({
-                                                  id: `plan-wrapper-${plan.id}`,
-                                                  name: plan.name,
-                                                  avatar: null,
-                                                  specialty: plan.description || 'Copy Trading',
-                                                  winRate: '85',
-                                                  monthlyRoi: String(d(plan.dailyRoiPct) * 30),
-                                                  totalPnl: String(totalReturn),
-                                                  riskLevel: 'low',
-                                                  isActive: true,
-                                                  isFeatured: plan.isFeatured,
-                                                  sortOrder: plan.sortOrder,
-                                                  createdAt: plan.createdAt,
-                                                  updatedAt: plan.updatedAt,
-                                                  plans: [{
-                                                    id: plan.id,
-                                                    name: plan.name,
-                                                    description: plan.description || null,
-                                                    minAmount: plan.minAmount,
-                                                    maxAmount: plan.maxAmount,
-                                                    dailyRoiPct: plan.dailyRoiPct,
-                                                    durationDays: plan.durationDays,
-                                                    isActive: plan.isActive,
-                                                    isFeatured: plan.isFeatured,
-                                                    sortOrder: plan.sortOrder,
-                                                    createdAt: plan.createdAt,
-                                                    updatedAt: plan.updatedAt,
-                                                  }],
-                                                } as CopyTrader);
-                                                setSelectedPlanId(plan.id);
-                                                setInvestmentDuration(plan.durationDays);
-                                                setInvestAmount(String(d(plan.minAmount) || 5));
-                                                setUseVoucherForInvest(true);
-                                                const firstActive = userVouchers.find((v: any) => v.status === 'active');
-                                                if (firstActive) setSelectedVoucherId(firstActive.id);
-                                              }
-                                            }}
-                                            className="rounded accent-purple-500"
-                                          />
-                                          <Label htmlFor={`voucher-plan-${plan.id}`} className="text-purple-400 text-xs font-medium cursor-pointer">
-                                            🎫 {t('plans.activateWithVoucher')}
-                                          </Label>
-                                        </div>
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          className="mt-2 w-full border-purple-500/30 bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 hover:text-purple-300"
+                                          onClick={() => {
+                                            setInvestDialogPlan({
+                                              id: `plan-wrapper-${plan.id}`,
+                                              name: plan.name,
+                                              avatar: null,
+                                              specialty: plan.description || 'Copy Trading',
+                                              winRate: d(plan.dailyRoiPct).toFixed(1),
+                                              monthlyRoi: String(d(plan.dailyRoiPct) * 30),
+                                              totalPnl: String(totalReturn),
+                                              riskLevel: 'low',
+                                              isActive: true,
+                                              isFeatured: plan.isFeatured,
+                                              sortOrder: plan.sortOrder,
+                                              createdAt: plan.createdAt,
+                                              updatedAt: plan.updatedAt,
+                                              plans: [{
+                                                id: plan.id,
+                                                name: plan.name,
+                                                description: plan.description || null,
+                                                minAmount: plan.minAmount,
+                                                maxAmount: plan.maxAmount,
+                                                dailyRoiPct: plan.dailyRoiPct,
+                                                durationDays: plan.durationDays,
+                                                isActive: plan.isActive,
+                                                isFeatured: plan.isFeatured,
+                                                sortOrder: plan.sortOrder,
+                                                createdAt: plan.createdAt,
+                                                updatedAt: plan.updatedAt,
+                                              }],
+                                            } as CopyTrader);
+                                            setSelectedPlanId(plan.id);
+                                            setInvestmentDuration(plan.durationDays);
+                                            setInvestAmount(String(d(plan.minAmount) || 5));
+                                            setUseVoucherForInvest(true);
+                                            const firstActive = userVouchers.find((v: any) => v.status === 'active');
+                                            if (firstActive) setSelectedVoucherId(firstActive.id);
+                                          }}
+                                        >
+                                          <Ticket className="mr-2 h-4 w-4" /> 🎫 {t('plans.activateWithVoucher')}
+                                        </Button>
                                       )}
                                     </div>
                                   </div>
@@ -4983,14 +5008,14 @@ export default function PlataformaROI() {
                                     <div className="w-10 h-10 bg-cyan-500/10 rounded-lg flex items-center justify-center text-lg font-bold text-cyan-400">{assetIcon(r.plan?.name || 'USDT')}</div>
                                     <div>
                                       <div className="font-medium">{r.plan?.name || t('plans.plan')}</div>
-                                      <div className="text-sm text-zinc-400">{r.plan?.name || '-'} • {r.plan?.name || 'USDT'}</div>
+                                      <div className="text-sm text-zinc-400">{d(r.dailyRoiPct).toFixed(1)}%/dia • USDT</div>
                                     </div>
                                   </div>
                               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs sm:text-sm">
                                     <div><span className="text-zinc-400 block text-xs">Início</span>{fmtDate(r.startDate)}</div>
                                     <div><span className="text-zinc-400 block text-xs">Fim</span>{fmtDate(r.endDate)}</div>
                                     <div><span className="text-zinc-400 block text-xs">{t('copyTraders.dailyReturn')}</span><span className="text-cyan-400">${fmtUSDT(r.dailyRoi)}</span></div>
-                                    <div><span className="text-zinc-400 block text-xs">{t('plans.totalPrice')}</span><span className="text-cyan-400">${fmtUSDT(r.totalRoi)}</span></div>
+                                    <div><span className="text-zinc-400 block text-xs">Retorno Total</span><span className="text-cyan-400">${fmtUSDT(r.totalRoi)}</span></div>
                                   </div>
                                   <Badge className={statusColor(r.status)} variant="outline">{statusLabel(r.status)}</Badge>
                                 </div>
@@ -5412,7 +5437,7 @@ export default function PlataformaROI() {
                             <SelectItem value="rejected">Rejeitados</SelectItem>
                           </SelectContent>
                         </Select>
-                        <Button className="bg-emerald-600 hover:bg-cyan-700" onClick={() => { setWithdrawDialog(true); fetchWithdrawalBreakdown(); }} disabled={d(user?.balance || '0') < 10}>
+                        <Button className="bg-emerald-600 hover:bg-cyan-700" onClick={() => { setWithdrawDialog(true); fetchWithdrawalBreakdown(); }} disabled={d(user?.balance || '0') < siteConfig.minWithdrawalUsdt}>
                           <ArrowUpRight className="h-4 w-4 mr-2" /> Solicitar Saque
                         </Button>
                       </div>
@@ -5776,7 +5801,7 @@ export default function PlataformaROI() {
                           <div className="divide-y divide-zinc-800">
                             {transactions.map(tx => {
                               const Icon = txTypeIcon(tx.type);
-                              const isPositive = ['deposit', 'roi_profit', 'affiliate_commission'].includes(tx.type);
+                              const isPositive = ['deposit', 'roi_profit', 'affiliate_commission'].includes(tx.type) || (tx.type === 'admin_adjust' && d(tx.amount) > 0);
                               return (
                                 <div key={tx.id} className="flex items-center justify-between gap-3 p-3 sm:p-4 hover:bg-zinc-800/30">
                                   <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -5814,7 +5839,7 @@ export default function PlataformaROI() {
                       </div>
                       <div>
                         <h2 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">{t('affiliates.title')}</h2>
-                        <p className="text-xs text-zinc-500">Unilevel 6 Níveis · Bônus de Equipe · Saque Diário</p>
+                        <p className="text-xs text-zinc-500">Unilevel {affiliateData?.affiliateLevels?.length || 6} Níveis · Bônus de Equipe · Saque Diário</p>
                       </div>
                     </motion.div>
 
@@ -5916,7 +5941,7 @@ export default function PlataformaROI() {
                                       {affiliateData?.currentRank?.name || 'Iniciante'}
                                     </div>
                                     {affiliateData?.currentRank && d(affiliateData.currentRank.commissionBoost) > 0 && (
-                                      <div className="text-xs text-emerald-400">+{affiliateData.currentRank.commissionBoost}% bônus ROI diário</div>
+                                      <div className="text-xs text-emerald-400">+{affiliateData.currentRank.commissionBoost}% bônus comissões</div>
                                     )}
                                   </div>
                                 </div>
@@ -5991,27 +6016,34 @@ export default function PlataformaROI() {
                             </div>
 
                             {/* Rank Cards Row */}
-                            <div className="grid grid-cols-3 gap-3 sm:gap-4 mb-5">
+                            <div className={`grid gap-3 sm:gap-4 mb-5 ${affiliateData?.ranks?.length && affiliateData.ranks.length > 3 ? 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-' + Math.min(affiliateData.ranks.length, 5) : 'grid-cols-3'}`}>
                               {(() => {
                                 const directRefs = affiliateData?.directReferrals ?? (affiliateData?.referralTree?.[1]?.length || 0);
-                                const rankDefs = [
-                                  { name: 'Bronze', medal: '🥉', minRef: 10, bonusPct: 1, color: '#cd7f32', glow: 'rgba(205,127,50,0.3)', borderColor: 'border-amber-700/40', bgColor: 'bg-amber-900/10' },
-                                  { name: 'Prata', medal: '🥈', minRef: 20, bonusPct: 2, color: '#c0c0c0', glow: 'rgba(192,192,192,0.3)', borderColor: 'border-zinc-400/40', bgColor: 'bg-zinc-500/10' },
-                                  { name: 'Ouro', medal: '🥇', minRef: 30, bonusPct: 3, color: '#ffd700', glow: 'rgba(255,215,0,0.3)', borderColor: 'border-yellow-500/40', bgColor: 'bg-yellow-500/10' },
-                                ];
-                                const currentRankName = affiliateData?.currentRank?.name || 'Iniciante';
+                                const rankDefs = affiliateData?.ranks?.length > 0
+                                  ? affiliateData.ranks.map(rank => ({
+                                      name: rank.name,
+                                      medal: rank.icon || '🏅',
+                                      minRef: rank.minReferrals,
+                                      bonusPct: d(rank.commissionBoost),
+                                      color: rank.color || '#cd7f32',
+                                      glow: `${rank.color || '#cd7f32'}4D`,
+                                      isCurrent: affiliateData?.currentRank?.id === rank.id,
+                                    }))
+                                  : [
+                                      { name: 'Bronze', medal: '🥉', minRef: 10, bonusPct: 1, color: '#cd7f32', glow: 'rgba(205,127,50,0.3)', isCurrent: false },
+                                      { name: 'Prata', medal: '🥈', minRef: 20, bonusPct: 2, color: '#c0c0c0', glow: 'rgba(192,192,192,0.3)', isCurrent: false },
+                                      { name: 'Ouro', medal: '🥇', minRef: 30, bonusPct: 3, color: '#ffd700', glow: 'rgba(255,215,0,0.3)', isCurrent: false },
+                                    ];
                                 return rankDefs.map((rank) => {
-                                  const isCurrentRank = currentRankName.toLowerCase() === rank.name.toLowerCase();
+                                  const isCurrentRank = rank.isCurrent;
                                   const isUnlocked = directRefs >= rank.minRef;
-                                  const isNext = !isUnlocked && (
-                                    (rank.name === 'Bronze' && directRefs < 10) ||
-                                    (rank.name === 'Prata' && directRefs >= 10 && directRefs < 20) ||
-                                    (rank.name === 'Ouro' && directRefs >= 20 && directRefs < 30)
+                                  const isNext = !isUnlocked && !isCurrentRank && (
+                                    rankDefs.every(r => directRefs < r.minRef) && rank.minRef === Math.min(...rankDefs.filter(r => directRefs < r.minRef).map(r => r.minRef))
                                   );
                                   const progressPct = Math.min(100, (directRefs / rank.minRef) * 100);
                                   return (
                                     <div key={rank.name} className={`stat-card-hover relative rounded-xl border p-4 text-center transition-all ${
-                                      isCurrentRank ? `${rank.borderColor} ${rank.bgColor}` :
+                                      isCurrentRank ? 'border-amber-500/40 bg-amber-900/10' :
                                       isUnlocked ? 'border-emerald-500/30 bg-emerald-500/5' :
                                       isNext ? 'border-amber-500/20 bg-amber-500/5' :
                                       'border-zinc-800/50 bg-zinc-900/30 opacity-50'
@@ -6026,7 +6058,7 @@ export default function PlataformaROI() {
                                         <div className="text-sm font-bold" style={{ color: isUnlocked || isCurrentRank ? rank.color : undefined }}>{rank.name}</div>
                                         <div className="text-[10px] text-zinc-500 mt-0.5">{rank.minRef} indicações</div>
                                         <div className="mt-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                                          <TrendingUp className="h-3 w-3" /> +{rank.bonusPct}% ROI
+                                          <TrendingUp className="h-3 w-3" /> +{rank.bonusPct}% comissões
                                         </div>
                                         {!isUnlocked && !isCurrentRank && (
                                           <div className="mt-2">
@@ -6056,15 +6088,22 @@ export default function PlataformaROI() {
                                     <span className="text-sm font-medium text-zinc-300">Próximo: <span style={{ color: affiliateData.nextRank.color }}>{affiliateData.nextRank.icon} {affiliateData.nextRank.name}</span></span>
                                   </div>
                                   <span className="text-xs text-zinc-500">
-                                    {affiliateData.nextRankReferralsNeeded! > 0 && <span>+{affiliateData.nextRankReferralsNeeded} referrals</span>}
-                                    {affiliateData.nextRankReferralsNeeded! > 0 && affiliateData.nextRankEarningsNeeded! > 0 && <span> · </span>}
-                                    {affiliateData.nextRankEarningsNeeded! > 0 && <span>+${fmtUSDT(affiliateData.nextRankEarningsNeeded)} earnings</span>}
+                                    {(affiliateData.nextRank.referralsNeeded ?? 0) > 0 && <span>+{affiliateData.nextRank.referralsNeeded} referrals</span>}
+                                    {(affiliateData.nextRank.referralsNeeded ?? 0) > 0 && (affiliateData.nextRank.earningsNeeded ?? 0) > 0 && <span> · </span>}
+                                    {(affiliateData.nextRank.earningsNeeded ?? 0) > 0 && <span>+${fmtUSDT(affiliateData.nextRank.earningsNeeded)} earnings</span>}
                                   </span>
                                 </div>
-                                <Progress
-                                  value={Math.max(0, 100 - ((affiliateData.nextRankReferralsNeeded! + affiliateData.nextRankEarningsNeeded!) / (affiliateData.nextRank.minReferrals + d(affiliateData.nextRank.minEarnings)) * 100))}
-                                  className="h-2 bg-zinc-800 [&>[data-slot=indicator]]:bg-gradient-to-r [&>[data-slot=indicator]]:from-emerald-500 [&>[data-slot=indicator]]:to-cyan-500"
-                                />
+                                {(() => {
+                                  const refProgress = affiliateData.nextRank.minReferrals > 0 ? ((affiliateData?.totalReferrals || 0) / affiliateData.nextRank.minReferrals) * 100 : 100;
+                                  const earnProgress = d(affiliateData.nextRank.minEarnings) > 0 ? ((affiliateData?.totalEarnings || 0) / d(affiliateData.nextRank.minEarnings)) * 100 : 100;
+                                  const rankProgress = Math.min(100, Math.min(refProgress, earnProgress));
+                                  return (
+                                    <Progress
+                                      value={rankProgress}
+                                      className="h-2 bg-zinc-800 [&>[data-slot=indicator]]:bg-gradient-to-r [&>[data-slot=indicator]]:from-emerald-500 [&>[data-slot=indicator]]:to-cyan-500"
+                                    />
+                                  );
+                                })()}
                               </div>
                             )}
                             {!affiliateData?.nextRank && affiliateData?.currentRank && (
@@ -6105,11 +6144,11 @@ export default function PlataformaROI() {
                                     <div>
                                       <div className="text-[10px] uppercase tracking-wider text-zinc-500">Capital Ativo da Equipe</div>
                                       <div className="text-2xl font-bold text-emerald-400" style={{ textShadow: '0 0 15px rgba(16,185,129,0.3)' }}>
-                                        ${fmtUSDT(teamBonusData?.teamCapital || 0)}
+                                        ${fmtUSDT(teamBonusData?.teamActiveCapital || 0)}
                                       </div>
                                     </div>
                                     <div className="text-right">
-                                      <div className="text-sm text-zinc-400">{teamBonusData?.teamMemberCount || 0} membros</div>
+                                      <div className="text-sm text-zinc-400">{teamBonusData?.teamMembers || 0} membros</div>
                                       <div className="text-[10px] text-zinc-500">na equipe</div>
                                     </div>
                                   </div>
@@ -6119,17 +6158,17 @@ export default function PlataformaROI() {
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
                                   {/* Salário Semanal */}
                                   <div className={`glass-card rounded-xl p-4 border transition-all ${
-                                    teamBonusData?.salaryQualified ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-white/5 opacity-70'
+                                    teamBonusData?.salary?.qualified ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-white/5 opacity-70'
                                   }`}>
                                     <div className="flex items-center gap-2 mb-3">
                                       <span className="text-xl">📅</span>
                                       <div>
                                         <div className="text-sm font-bold text-white">Salário Semanal</div>
-                                        <div className="text-[10px] text-zinc-500">0.5% do capital</div>
+                                        <div className="text-[10px] text-zinc-500">{teamBonusData?.salary?.salaryPct || 0.5}% do capital</div>
                                       </div>
                                     </div>
                                     <div className="mb-2">
-                                      {teamBonusData?.salaryQualified ? (
+                                      {teamBonusData?.salary?.qualified ? (
                                         <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30" variant="outline">
                                           <CheckCircle2 className="h-3 w-3 mr-1" /> Qualificado
                                         </Badge>
@@ -6140,33 +6179,33 @@ export default function PlataformaROI() {
                                       )}
                                     </div>
                                     <div className="text-xl font-bold text-emerald-400 mb-1">
-                                      ~${fmtUSDT(teamBonusData?.estimatedSalary || 0)}
+                                      ~${fmtUSDT(teamBonusData?.salary?.estimatedWeeklySalary || 0)}
                                     </div>
                                     <div className="text-[10px] text-zinc-500 mb-2">
-                                      Mín. $2,000 capital equipe
+                                      Mín. ${fmtUSDT(teamBonusData?.salary?.minTeamCapital || 2000)} capital equipe
                                     </div>
                                     <Progress
-                                      value={Math.min(100, (d(teamBonusData?.teamCapital) / 2000) * 100)}
+                                      value={Math.min(100, (d(teamBonusData?.teamActiveCapital) / (teamBonusData?.salary?.minTeamCapital || 2000)) * 100)}
                                       className="h-1.5 bg-zinc-800 [&>[data-slot=indicator]]:bg-emerald-500"
                                     />
                                     <div className="text-[9px] text-zinc-600 mt-1">
-                                      ${fmtUSDT(Math.min(d(teamBonusData?.teamCapital), 2000))}/$2,000
+                                      ${fmtUSDT(Math.min(d(teamBonusData?.teamActiveCapital), teamBonusData?.salary?.minTeamCapital || 2000))}/${fmtUSDT(teamBonusData?.salary?.minTeamCapital || 2000)}
                                     </div>
                                   </div>
 
                                   {/* Action Gold */}
                                   <div className={`glass-card rounded-xl p-4 border transition-all ${
-                                    teamBonusData?.goldQualified ? 'border-amber-500/30 bg-amber-500/5' : 'border-white/5 opacity-70'
+                                    teamBonusData?.gold?.qualified ? 'border-amber-500/30 bg-amber-500/5' : 'border-white/5 opacity-70'
                                   }`}>
                                     <div className="flex items-center gap-2 mb-3">
                                       <span className="text-xl">🥇</span>
                                       <div>
                                         <div className="text-sm font-bold text-white">Action Gold</div>
-                                        <div className="text-[10px] text-zinc-500">50% dos diretos</div>
+                                        <div className="text-[10px] text-zinc-500">{teamBonusData?.gold?.goldPct || 50}% dos diretos</div>
                                       </div>
                                     </div>
                                     <div className="mb-2">
-                                      {teamBonusData?.goldQualified ? (
+                                      {teamBonusData?.gold?.qualified ? (
                                         <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30" variant="outline">
                                           <CheckCircle2 className="h-3 w-3 mr-1" /> Qualificado
                                         </Badge>
@@ -6177,33 +6216,33 @@ export default function PlataformaROI() {
                                       )}
                                     </div>
                                     <div className="text-xl font-bold text-amber-400 mb-1">
-                                      ~${fmtUSDT(teamBonusData?.estimatedGold || 0)}
+                                      ~${fmtUSDT(teamBonusData?.gold?.estimatedWeeklyGold || 0)}
                                     </div>
                                     <div className="text-[10px] text-zinc-500 mb-2">
-                                      Mín. $4,000 capital equipe
+                                      Mín. ${fmtUSDT(teamBonusData?.gold?.minTeamCapital || 4000)} capital equipe
                                     </div>
                                     <Progress
-                                      value={Math.min(100, (d(teamBonusData?.teamCapital) / 4000) * 100)}
+                                      value={Math.min(100, (d(teamBonusData?.teamActiveCapital) / (teamBonusData?.gold?.minTeamCapital || 4000)) * 100)}
                                       className="h-1.5 bg-zinc-800 [&>[data-slot=indicator]]:bg-amber-500"
                                     />
                                     <div className="text-[9px] text-zinc-600 mt-1">
-                                      ${fmtUSDT(Math.min(d(teamBonusData?.teamCapital), 4000))}/$4,000
+                                      ${fmtUSDT(Math.min(d(teamBonusData?.teamActiveCapital), teamBonusData?.gold?.minTeamCapital || 4000))}/${fmtUSDT(teamBonusData?.gold?.minTeamCapital || 4000)}
                                     </div>
                                   </div>
 
                                   {/* Action Daymond */}
                                   <div className={`glass-card rounded-xl p-4 border transition-all ${
-                                    teamBonusData?.daymondQualified ? 'border-cyan-500/30 bg-cyan-500/5' : 'border-white/5 opacity-70'
+                                    teamBonusData?.daymond?.qualified ? 'border-cyan-500/30 bg-cyan-500/5' : 'border-white/5 opacity-70'
                                   }`}>
                                     <div className="flex items-center gap-2 mb-3">
                                       <span className="text-xl">💎</span>
                                       <div>
                                         <div className="text-sm font-bold text-white">Action Daymond</div>
-                                        <div className="text-[10px] text-zinc-500">$1,000/mês</div>
+                                        <div className="text-[10px] text-zinc-500">${fmtUSDT(teamBonusData?.daymond?.packageAmount || 1000)}/mês</div>
                                       </div>
                                     </div>
                                     <div className="mb-2">
-                                      {teamBonusData?.daymondQualified ? (
+                                      {teamBonusData?.daymond?.qualified ? (
                                         <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30" variant="outline">
                                           <CheckCircle2 className="h-3 w-3 mr-1" /> Qualificado
                                         </Badge>
@@ -6214,17 +6253,17 @@ export default function PlataformaROI() {
                                       )}
                                     </div>
                                     <div className="text-xl font-bold text-cyan-400 mb-1">
-                                      ${fmtUSDT(teamBonusData?.daymondPackageAmount || 1000)}
+                                      ${fmtUSDT(teamBonusData?.daymond?.packageAmount || 1000)}
                                     </div>
                                     <div className="text-[10px] text-zinc-500 mb-2">
-                                      Mín. $20,000 capital equipe
+                                      Mín. ${fmtUSDT(teamBonusData?.daymond?.minTeamCapital || 20000)} capital equipe
                                     </div>
                                     <Progress
-                                      value={Math.min(100, (d(teamBonusData?.teamCapital) / 20000) * 100)}
+                                      value={Math.min(100, (d(teamBonusData?.teamActiveCapital) / (teamBonusData?.daymond?.minTeamCapital || 20000)) * 100)}
                                       className="h-1.5 bg-zinc-800 [&>[data-slot=indicator]]:bg-cyan-500"
                                     />
                                     <div className="text-[9px] text-zinc-600 mt-1">
-                                      ${fmtUSDT(Math.min(d(teamBonusData?.teamCapital), 20000))}/$20,000
+                                      ${fmtUSDT(Math.min(d(teamBonusData?.teamActiveCapital), teamBonusData?.daymond?.minTeamCapital || 20000))}/${fmtUSDT(teamBonusData?.daymond?.minTeamCapital || 20000)}
                                     </div>
                                   </div>
 
@@ -6236,7 +6275,7 @@ export default function PlataformaROI() {
                                       <span className="text-xl">👑</span>
                                       <div>
                                         <div className="text-sm font-bold text-white">Daymond Premium</div>
-                                        <div className="text-[10px] text-zinc-500">$2,000/mês</div>
+                                        <div className="text-[10px] text-zinc-500">${fmtUSDT(teamBonusData?.daymondPremium?.packageAmount || 2000)}/mês</div>
                                       </div>
                                     </div>
                                     <div className="mb-2">
@@ -6257,20 +6296,25 @@ export default function PlataformaROI() {
                                       Cap: ${fmtUSDT(teamBonusData?.daymondPremium?.dailyCapUsd || 99)}/dia
                                     </div>
                                     <div className="text-[10px] text-zinc-500 mb-2">
-                                      Mín. $50,000 capital equipe
+                                      Mín. ${fmtUSDT(teamBonusData?.daymondPremium?.minTeamCapital || 50000)} capital equipe
                                     </div>
                                     <Progress
-                                      value={Math.min(100, (d(teamBonusData?.teamActiveCapital || teamBonusData?.teamCapital) / 50000) * 100)}
+                                      value={Math.min(100, (d(teamBonusData?.teamActiveCapital) / (teamBonusData?.daymondPremium?.minTeamCapital || 50000)) * 100)}
                                       className="h-1.5 bg-zinc-800 [&>[data-slot=indicator]]:bg-violet-500"
                                     />
                                     <div className="text-[9px] text-zinc-600 mt-1">
-                                      ${fmtUSDT(Math.min(d(teamBonusData?.teamActiveCapital || teamBonusData?.teamCapital), 50000))}/$50,000
+                                      ${fmtUSDT(Math.min(d(teamBonusData?.teamActiveCapital), teamBonusData?.daymondPremium?.minTeamCapital || 50000))}/${fmtUSDT(teamBonusData?.daymondPremium?.minTeamCapital || 50000)}
                                     </div>
                                   </div>
                                 </div>
 
                                 {/* Payment History */}
-                                {teamBonusData?.paymentHistory && teamBonusData.paymentHistory.length > 0 && (
+                                {(() => {
+                                  const salaryHist = (teamBonusData?.salary?.history || []).map((h: any) => ({ ...h, _type: 'salary' as const, _date: h.weekDate }));
+                                  const goldHist = (teamBonusData?.gold?.history || []).map((h: any) => ({ ...h, _type: 'gold' as const, _date: h.weekDate }));
+                                  const daymondHist = (teamBonusData?.daymond?.history || []).map((h: any) => ({ ...h, _type: 'daymond' as const, _date: h.monthDate }));
+                                  const allHistory = [...salaryHist, ...goldHist, ...daymondHist].sort((a: any, b: any) => new Date(b._date).getTime() - new Date(a._date).getTime());
+                                  return allHistory.length > 0 ? (
                                   <div className="mb-4">
                                     <div className="flex items-center gap-2 mb-3">
                                       <Clock4 className="h-4 w-4 text-zinc-400" />
@@ -6288,16 +6332,16 @@ export default function PlataformaROI() {
                                           </TableRow>
                                         </TableHeader>
                                         <TableBody>
-                                          {teamBonusData.paymentHistory.map((p: any, idx: number) => (
+                                          {allHistory.map((p: any, idx: number) => (
                                             <TableRow key={idx} className="border-zinc-800/50">
-                                              <TableCell className="text-xs text-zinc-400 whitespace-nowrap">{fmtDate(p.createdAt)}</TableCell>
+                                              <TableCell className="text-xs text-zinc-400 whitespace-nowrap">{fmtDate(p._date)}</TableCell>
                                               <TableCell className="text-xs">
                                                 <Badge variant="outline" className={`text-[9px] ${
-                                                  p.type === 'salary' ? 'border-emerald-500/30 text-emerald-400' :
-                                                  p.type === 'gold' ? 'border-amber-500/30 text-amber-400' :
+                                                  p._type === 'salary' ? 'border-emerald-500/30 text-emerald-400' :
+                                                  p._type === 'gold' ? 'border-amber-500/30 text-amber-400' :
                                                   'border-cyan-500/30 text-cyan-400'
                                                 }`}>
-                                                  {p.type === 'salary' ? 'Salário' : p.type === 'gold' ? 'Gold' : 'Daymond'}
+                                                  {p._type === 'salary' ? 'Salário' : p._type === 'gold' ? 'Gold' : 'Daymond'}
                                                 </Badge>
                                               </TableCell>
                                               <TableCell className="text-xs text-zinc-300">${fmtUSDT(p.teamCapital || 0)}</TableCell>
@@ -6311,7 +6355,8 @@ export default function PlataformaROI() {
                                       </Table>
                                     </div>
                                   </div>
-                                )}
+                                  ) : null;
+                                })()}
 
                                 {/* Countdown to next Sunday */}
                                 {weeklyCountdown && (
@@ -6335,7 +6380,7 @@ export default function PlataformaROI() {
                           <div className="glass-card gradient-border rounded-2xl p-5 sm:p-6">
                             <div className="flex items-center gap-2 mb-4">
                               <Activity className="h-5 w-5 text-cyan-400" />
-                              <h3 className="text-lg font-bold text-white">Unilevel 6 Níveis</h3>
+                              <h3 className="text-lg font-bold text-white">Unilevel {affiliateData?.affiliateLevels?.length || 6} Níveis</h3>
                               {affiliateData?.commissionMode && (
                                 <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30 ml-auto text-[10px]" variant="outline">
                                   {affiliateData.commissionMode === 'system_margin' ? 'System Margin' : affiliateData.commissionMode === 'investment_profit' ? 'Trading Profit' : 'Revenue Pool'}
@@ -6345,9 +6390,10 @@ export default function PlataformaROI() {
 
                             {/* L1 - Direct (highlighted) */}
                             {(() => {
+                              const allLevels = affiliateData?.affiliateLevels?.length ? affiliateData.affiliateLevels : [];
                               const lvl1Refs = affiliateData?.referralTree?.[1] || [];
                               const lvl1Comm = affiliateData?.commissionByLevel?.find(c => c.level === 1);
-                              const lvl1Pct = affiliateData?.affiliateLevels?.find(l => l.level === 1);
+                              const lvl1Pct = allLevels.find(l => l.level === 1);
                               const lvl1Active = lvl1Refs.length > 0;
                               return (
                                 <div className={`glass-card rounded-xl p-4 mb-3 border transition-all ${lvl1Active ? 'border-emerald-500/30 glow-emerald' : 'border-white/5'}`}>
@@ -6358,7 +6404,7 @@ export default function PlataformaROI() {
                                       </div>
                                       <div>
                                         <div className="flex items-center gap-2">
-                                          <span className="text-lg font-bold text-emerald-400">{lvl1Pct?.percentage || '5'}%</span>
+                                          <span className="text-lg font-bold text-emerald-400">{lvl1Pct?.percentage || '—'}%</span>
                                           <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 text-[9px]" variant="outline">DIRECT</Badge>
                                         </div>
                                         <div className="text-xs text-zinc-500">{lvl1Refs.length} {t('common.referrals')}</div>
@@ -6373,53 +6419,79 @@ export default function PlataformaROI() {
                               );
                             })()}
 
-                            {/* L2-L5 Row */}
-                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-2">
-                              {[2, 3, 4, 5].map((level) => {
-                                const refs = affiliateData?.referralTree?.[level] || [];
-                                const comm = affiliateData?.commissionByLevel?.find(c => c.level === level);
-                                const levelPct = affiliateData?.affiliateLevels?.find(l => l.level === level);
-                                const isActive = refs.length > 0;
+                            {/* L2+ Levels — dynamic grid from affiliateLevels */}
+                            {(() => {
+                              const allLevels = affiliateData?.affiliateLevels?.length ? affiliateData.affiliateLevels : [];
+                              const higherLevels = allLevels.filter(l => l.level >= 2);
+                              if (higherLevels.length === 0) {
+                                // Fallback: show L2-L6 with dashes if no level data
                                 return (
-                                  <div key={level} className={`stat-card-hover glass-card rounded-xl p-3 border transition-all ${isActive ? 'border-cyan-500/20' : 'border-white/5 opacity-50'}`}>
-                                    <div className="flex items-center gap-2 mb-1">
-                                      <div className={`flex items-center justify-center w-7 h-7 rounded-md text-xs font-bold ${isActive ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30' : 'bg-zinc-800 text-zinc-500 border border-zinc-700'}`}>
-                                        L{level}
+                                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-2">
+                                    {[2, 3, 4, 5].map((level) => (
+                                      <div key={level} className="stat-card-hover glass-card rounded-xl p-3 border border-white/5 opacity-50">
+                                        <div className="flex items-center gap-2 mb-1">
+                                          <div className="flex items-center justify-center w-7 h-7 rounded-md text-xs font-bold bg-zinc-800 text-zinc-500 border border-zinc-700">L{level}</div>
+                                          <span className="text-base font-bold text-zinc-500">—%</span>
+                                        </div>
+                                        <div className="text-[10px] text-zinc-500">{affiliateData?.referralTree?.[level]?.length || 0} {t('common.referrals')}</div>
+                                        <div className="text-sm font-semibold mt-1 text-zinc-600">${fmtUSDT(affiliateData?.commissionByLevel?.find(c => c.level === level)?._sum?.commissionAmount || 0)}</div>
                                       </div>
-                                      <span className={`text-base font-bold ${isActive ? 'text-cyan-400' : 'text-zinc-500'}`}>{levelPct?.percentage || '?'}%</span>
-                                    </div>
-                                    <div className="text-[10px] text-zinc-500">{refs.length} {t('common.referrals')}</div>
-                                    <div className={`text-sm font-semibold mt-1 ${isActive ? 'text-cyan-400' : 'text-zinc-600'}`}>${fmtUSDT(comm?._sum?.commissionAmount || 0)}</div>
+                                    ))}
                                   </div>
                                 );
-                              })}
-                            </div>
-
-                            {/* L6 Row */}
-                            <div className="grid grid-cols-1 gap-2">
-                              {[6].map((level) => {
-                                const refs = affiliateData?.referralTree?.[level] || [];
-                                const comm = affiliateData?.commissionByLevel?.find(c => c.level === level);
-                                const levelPct = affiliateData?.affiliateLevels?.find(l => l.level === level);
-                                const isActive = refs.length > 0;
-                                return (
-                                  <div key={level} className={`stat-card-hover glass-card rounded-lg p-2.5 border transition-all ${isActive ? 'border-emerald-500/20' : 'border-white/5 opacity-40'}`}>
-                                    <div className="flex items-center justify-center gap-1 mb-0.5">
-                                      <span className={`text-[10px] font-bold ${isActive ? 'text-emerald-400' : 'text-zinc-600'}`}>L{level}</span>
-                                      <span className={`text-sm font-bold ${isActive ? 'text-emerald-300' : 'text-zinc-600'}`}>{levelPct?.percentage || '2'}%</span>
-                                    </div>
-                                    <div className="text-[9px] text-zinc-600 text-center">{refs.length} ref</div>
-                                    <div className={`text-xs font-semibold text-center mt-0.5 ${isActive ? 'text-emerald-400' : 'text-zinc-700'}`}>${fmtUSDT(comm?._sum?.commissionAmount || 0)}</div>
+                              }
+                              // Split into rows: first row up to 4 items, remaining in another row
+                              const firstRow = higherLevels.slice(0, 4);
+                              const remaining = higherLevels.slice(4);
+                              return (
+                                <>
+                                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-2">
+                                    {firstRow.map((lvl) => {
+                                      const refs = affiliateData?.referralTree?.[lvl.level] || [];
+                                      const comm = affiliateData?.commissionByLevel?.find(c => c.level === lvl.level);
+                                      const isActive = refs.length > 0;
+                                      return (
+                                        <div key={lvl.level} className={`stat-card-hover glass-card rounded-xl p-3 border transition-all ${isActive ? 'border-cyan-500/20' : 'border-white/5 opacity-50'}`}>
+                                          <div className="flex items-center gap-2 mb-1">
+                                            <div className={`flex items-center justify-center w-7 h-7 rounded-md text-xs font-bold ${isActive ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30' : 'bg-zinc-800 text-zinc-500 border border-zinc-700'}`}>
+                                              L{lvl.level}
+                                            </div>
+                                            <span className={`text-base font-bold ${isActive ? 'text-cyan-400' : 'text-zinc-500'}`}>{lvl.percentage}%</span>
+                                          </div>
+                                          <div className="text-[10px] text-zinc-500">{refs.length} {t('common.referrals')}</div>
+                                          <div className={`text-sm font-semibold mt-1 ${isActive ? 'text-cyan-400' : 'text-zinc-600'}`}>${fmtUSDT(comm?._sum?.commissionAmount || 0)}</div>
+                                        </div>
+                                      );
+                                    })}
                                   </div>
-                                );
-                              })}
-                            </div>
+                                  {remaining.length > 0 && (
+                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-2">
+                                      {remaining.map((lvl) => {
+                                        const refs = affiliateData?.referralTree?.[lvl.level] || [];
+                                        const comm = affiliateData?.commissionByLevel?.find(c => c.level === lvl.level);
+                                        const isActive = refs.length > 0;
+                                        return (
+                                          <div key={lvl.level} className={`stat-card-hover glass-card rounded-lg p-2.5 border transition-all ${isActive ? 'border-emerald-500/20' : 'border-white/5 opacity-40'}`}>
+                                            <div className="flex items-center justify-center gap-1 mb-0.5">
+                                              <span className={`text-[10px] font-bold ${isActive ? 'text-emerald-400' : 'text-zinc-600'}`}>L{lvl.level}</span>
+                                              <span className={`text-sm font-bold ${isActive ? 'text-emerald-300' : 'text-zinc-600'}`}>{lvl.percentage}%</span>
+                                            </div>
+                                            <div className="text-[9px] text-zinc-600 text-center">{refs.length} ref</div>
+                                            <div className={`text-xs font-semibold text-center mt-0.5 ${isActive ? 'text-emerald-400' : 'text-zinc-700'}`}>${fmtUSDT(comm?._sum?.commissionAmount || 0)}</div>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  )}
+                                </>
+                              );
+                            })()}
 
                             {/* Total */}
                             <div className="mt-3 flex items-center justify-between px-2 py-2 rounded-lg bg-zinc-800/30 border border-zinc-700/30">
                               <span className="text-xs text-zinc-400">Total Unilevel</span>
                               <span className="text-sm font-bold text-emerald-400">
-                                {affiliateData?.affiliateLevels?.length ? affiliateData.affiliateLevels.reduce((sum, l) => sum + d(l.percentage), 0).toFixed(1) : '13'}% · ${fmtUSDT(affiliateData?.commissionByLevel?.reduce((sum, c) => sum + (c._sum?.commissionAmount || 0), 0) || 0)}
+                                {affiliateData?.affiliateLevels?.length ? affiliateData.affiliateLevels.reduce((sum, l) => sum + d(l.percentage), 0).toFixed(1) : '—'}% · ${fmtUSDT(affiliateData?.commissionByLevel?.reduce((sum, c) => sum + (c._sum?.commissionAmount || 0), 0) || 0)}
                               </span>
                             </div>
 
@@ -6525,7 +6597,7 @@ export default function PlataformaROI() {
                                       <div className="flex items-center gap-3">
                                         <Badge variant="outline" className={`text-[9px] font-bold ${colorClass}`}>L{comm.level}</Badge>
                                         <div>
-                                          <div className="text-sm text-zinc-300">{comm.user?.name || '***'}</div>
+                                          <div className="text-sm text-zinc-300">{comm.fromUser?.name || '***'}</div>
                                           <div className="text-[10px] text-zinc-500">{comm.percentage}% de ${fmtUSDT(comm.baseAmount)}</div>
                                         </div>
                                       </div>
@@ -6656,6 +6728,44 @@ export default function PlataformaROI() {
                           </motion.div>
                         )}
 
+                        {/* ═══════════════ CONTESTS ═══════════════ */}
+                        {affiliateData?.contests && affiliateData.contests.length > 0 && (
+                          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}>
+                            <div className="glass-card rounded-2xl p-5 sm:p-6 border border-white/5">
+                              <div className="flex items-center gap-2 mb-4">
+                                <Trophy className="h-5 w-5 text-amber-400" />
+                                <h3 className="text-lg font-bold text-white">Concursos</h3>
+                                <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 ml-auto" variant="outline">Ativo</Badge>
+                              </div>
+                              <div className="space-y-3">
+                                {affiliateData.contests.map((contest: any) => (
+                                  <div key={contest.id} className="rounded-xl p-4 border border-amber-500/20 bg-gradient-to-r from-amber-500/5 to-orange-500/5">
+                                    <div className="flex items-start justify-between gap-3">
+                                      <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2">
+                                          <span className="text-sm font-bold text-white truncate">{contest.name}</span>
+                                          {contest.isFeatured && <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 text-[9px]" variant="outline">⭐ Destaque</Badge>}
+                                        </div>
+                                        {contest.description && (
+                                          <div className="text-xs text-zinc-400 mt-1 line-clamp-2">{contest.description}</div>
+                                        )}
+                                        <div className="flex flex-wrap items-center gap-3 mt-2 text-[10px] text-zinc-500">
+                                          <span>📅 {new Date(contest.startDate).toLocaleDateString('pt-BR')} — {new Date(contest.endDate).toLocaleDateString('pt-BR')}</span>
+                                          <span>📊 {contest.metric === 'referrals' ? 'Indicações' : contest.metric === 'earnings' ? 'Ganhos' : 'Indicações Ativas'}</span>
+                                        </div>
+                                      </div>
+                                      <div className="text-right shrink-0">
+                                        <div className="text-lg font-bold text-amber-400">${fmtUSDT(d(contest.rewardPool))}</div>
+                                        <div className="text-[10px] text-zinc-500">Prêmio Total</div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </motion.div>
+                        )}
+
                         {/* ═══════════════ 6. AFFILIATE WITHDRAWAL SECTION ═══════════════ */}
                         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.36 }}>
                           <div className="glass-card gradient-border rounded-2xl p-5 sm:p-6">
@@ -6664,7 +6774,7 @@ export default function PlataformaROI() {
                               <h3 className="text-lg font-bold text-white">{t('affiliates.withdraw')}</h3>
                               <div className="ml-auto flex items-center gap-2">
                                 <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30" variant="outline">Saque Diário</Badge>
-                                <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30" variant="outline">0% Taxa</Badge>
+                                <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30" variant="outline">{siteConfig.affiliateWithdrawalFeePct ?? 0}% Taxa</Badge>
                               </div>
                             </div>
 
@@ -9467,7 +9577,7 @@ export default function PlataformaROI() {
           <DialogHeader>
             <DialogTitle>{t('copyTraders.invest')} — {investDialogPlan?.name}</DialogTitle>
             <DialogDescription className="text-zinc-400">
-              {investDialogPlan?.specialty || t('copyTraders.copyTrader')} • {investDialogPlan?.plans?.[0]?.dailyRoiPct || 5}% {t('landing.badges.dailyRoi')}/{t('copyTraders.days').replace('dias','dia').replace('días','día')}
+              {investDialogPlan?.specialty || t('copyTraders.copyTrader')} • {investDialogPlan?.plans?.[0]?.dailyRoiPct || '3.3'}% {t('landing.badges.dailyRoi')}/{t('copyTraders.days').replace('dias','dia').replace('días','día')}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -9491,7 +9601,7 @@ export default function PlataformaROI() {
               const plan = selectedPlanId ? investDialogPlan?.plans?.find((p: any) => p.id === selectedPlanId) : investDialogPlan?.plans?.[0];
               const minAmt = d(plan?.minAmount) || 10;
               const maxAmt = d(plan?.maxAmount) || 100000;
-              const durationDays = plan?.durationDays || plan?.days || 35;
+              const durationDays = plan?.durationDays || plan?.days || 60;
               return (
                 <div>
                   <Label className="text-zinc-300 text-sm">{t('copyTraders.totalInvestment')} (USDT)</Label>
@@ -9637,7 +9747,7 @@ export default function PlataformaROI() {
       </Dialog>
 
       {/* Deposit Dialog */}
-      <Dialog open={depositDialog} onOpenChange={(open) => { setDepositDialog(open); if (!open) resetNpDeposit(); }}>
+      <Dialog open={depositDialog} onOpenChange={(open) => { setDepositDialog(open); if (!open) { resetNpDeposit(); setManualDepositPaymentInfo(null); } }}>
         <DialogContent className="bg-zinc-900 border-zinc-800 text-white max-w-lg w-[95vw] sm:w-full">
           <DialogHeader>
             <DialogTitle>{t('dashboard.deposit')}</DialogTitle>
@@ -9702,7 +9812,7 @@ export default function PlataformaROI() {
               )}
 
               {/* Manual Deposit — ONLY if enabled in admin settings */}
-              {siteConfig.manualDepositEnabled && (() => {
+              {siteConfig.manualDepositEnabled && !manualDepositPaymentInfo && (() => {
                 const manualMethods = [];
                 if (siteConfig.hasPix) manualMethods.push({ value: 'pix', label: 'PIX' });
                 if (siteConfig.hasUsdt) {
@@ -9726,6 +9836,86 @@ export default function PlataformaROI() {
                   </form>
                 );
               })()}
+
+              {/* Manual Deposit Payment Info — shown after successful deposit creation */}
+              {manualDepositPaymentInfo && (
+                <div className="space-y-4">
+                  <div className="bg-cyan-500/10 border border-cyan-500/20 rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <CheckCircle2 className="h-5 w-5 text-cyan-400" />
+                      <span className="text-cyan-400 font-semibold text-sm">Solicitação de depósito criada!</span>
+                    </div>
+                    <p className="text-zinc-300 text-xs mb-4">Envie o valor para as informações abaixo para que seu depósito seja confirmado:</p>
+
+                    {manualDepositPaymentInfo.method === 'pix' ? (
+                      <>
+                        <div className="bg-zinc-800 rounded-lg p-3 space-y-2">
+                          <div className="flex justify-between items-center">
+                            <span className="text-zinc-400 text-xs">Valor (BRL):</span>
+                            <span className="text-white font-bold">R$ {manualDepositPaymentInfo.brlAmount || '—'}</span>
+                          </div>
+                          {manualDepositPaymentInfo.usdtRate && (
+                            <div className="flex justify-between items-center">
+                              <span className="text-zinc-400 text-xs">Cotação USDT/BRL:</span>
+                              <span className="text-zinc-300 text-xs">{manualDepositPaymentInfo.usdtRate}</span>
+                            </div>
+                          )}
+                          {manualDepositPaymentInfo.pixKey && (
+                            <div className="flex justify-between items-center gap-2">
+                              <span className="text-zinc-400 text-xs">Chave PIX:</span>
+                              <div className="flex items-center gap-1 min-w-0">
+                                <span className="text-cyan-400 font-mono text-xs break-all">{manualDepositPaymentInfo.pixKey}</span>
+                                <Button size="sm" variant="ghost" className="h-6 w-6 p-0 flex-shrink-0" onClick={() => { navigator.clipboard.writeText(manualDepositPaymentInfo.pixKey!); setPaymentInfoCopied(true); setTimeout(() => setPaymentInfoCopied(false), 2000); }}>
+                                  {paymentInfoCopied ? <Check className="h-3 w-3 text-green-400" /> : <Copy className="h-3 w-3 text-zinc-400" />}
+                                </Button>
+                              </div>
+                            </div>
+                          )}
+                          {manualDepositPaymentInfo.pixAddress && (
+                            <div className="flex justify-between items-center gap-2">
+                              <span className="text-zinc-400 text-xs">Endereço PIX:</span>
+                              <div className="flex items-center gap-1 min-w-0">
+                                <span className="text-cyan-400 font-mono text-xs break-all">{manualDepositPaymentInfo.pixAddress}</span>
+                                <Button size="sm" variant="ghost" className="h-6 w-6 p-0 flex-shrink-0" onClick={() => { navigator.clipboard.writeText(manualDepositPaymentInfo.pixAddress!); setPaymentInfoCopied(true); setTimeout(() => setPaymentInfoCopied(false), 2000); }}>
+                                  {paymentInfoCopied ? <Check className="h-3 w-3 text-green-400" /> : <Copy className="h-3 w-3 text-zinc-400" />}
+                                </Button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="bg-zinc-800 rounded-lg p-3 space-y-2">
+                          <div className="flex justify-between items-center">
+                            <span className="text-zinc-400 text-xs">Valor USDT:</span>
+                            <span className="text-white font-bold">{manualDepositPaymentInfo.amount} USDT</span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-zinc-400 text-xs">Rede:</span>
+                            <span className="text-zinc-300 text-xs">{manualDepositPaymentInfo.network || '—'}</span>
+                          </div>
+                          {manualDepositPaymentInfo.walletAddress && (
+                            <div className="space-y-1">
+                              <span className="text-zinc-400 text-xs">Endereço da carteira:</span>
+                              <div className="flex items-center gap-2 bg-zinc-900 rounded-lg p-2">
+                                <span className="text-cyan-400 font-mono text-xs break-all flex-1">{manualDepositPaymentInfo.walletAddress}</span>
+                                <Button size="sm" variant="ghost" className="h-6 w-6 p-0 flex-shrink-0" onClick={() => { navigator.clipboard.writeText(manualDepositPaymentInfo.walletAddress!); setPaymentInfoCopied(true); setTimeout(() => setPaymentInfoCopied(false), 2000); }}>
+                                  {paymentInfoCopied ? <Check className="h-3 w-3 text-green-400" /> : <Copy className="h-3 w-3 text-zinc-400" />}
+                                </Button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </>
+                    )}
+                  </div>
+
+                  <Button className="w-full" variant="outline" onClick={() => { setManualDepositPaymentInfo(null); setDepositDialog(false); }}>
+                    Entendido
+                  </Button>
+                </div>
+              )}
 
               {/* Neither option available */}
               {!siteConfig.nowpaymentsEnabled && !siteConfig.manualDepositEnabled && (
@@ -9938,7 +10128,7 @@ export default function PlataformaROI() {
                 </div>
               </>
             )}
-            {siteConfig.manualWithdrawalEnabled && !siteConfig.nowpaymentsWithdrawalEnabled && (() => {
+            {siteConfig.manualWithdrawalEnabled && (() => {
               const manualMethods = [];
               if (siteConfig.hasPix) manualMethods.push({ value: 'pix', label: 'PIX' });
               if (siteConfig.hasUsdt) {

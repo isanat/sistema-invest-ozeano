@@ -330,3 +330,226 @@ Stage Summary:
 - Transfer: Already existed in page.tsx, added to component dashboard too
 - Old /api/transfer route removed
 - Production deployment triggered
+
+---
+Task ID: 5
+Agent: Fix Team Bonus
+Task: Fix Team Bonus data loading and field name mismatches
+
+Work Log:
+- Fixed Problem 1: Changed `api<{ success: boolean; data: any }>('/api/team-bonus')` to `api<any>('/api/team-bonus')` and `data.data` to `data` — apiSuccess() spreads data flat, so `data.data` was always undefined
+- Fixed Problem 2: Replaced all flat field name references with correct nested access:
+  - `teamBonusData?.teamCapital` → `teamBonusData?.teamActiveCapital`
+  - `teamBonusData?.teamMemberCount` → `teamBonusData?.teamMembers`
+  - `teamBonusData?.salaryQualified` → `teamBonusData?.salary?.qualified`
+  - `teamBonusData?.estimatedSalary` → `teamBonusData?.salary?.estimatedWeeklySalary`
+  - `teamBonusData?.goldQualified` → `teamBonusData?.gold?.qualified`
+  - `teamBonusData?.estimatedGold` → `teamBonusData?.gold?.estimatedWeeklyGold`
+  - `teamBonusData?.daymondQualified` → `teamBonusData?.daymond?.qualified`
+  - `teamBonusData?.daymondPackageAmount` → `teamBonusData?.daymond?.packageAmount`
+- Fixed Problem 3: Replaced all hardcoded thresholds with dynamic API values:
+  - Progress bars now use `teamBonusData?.salary?.minTeamCapital || 2000` (and similar for gold/daymond/daymondPremium)
+  - Labels now use `teamBonusData?.salary?.salaryPct || 0.5`%, `teamBonusData?.gold?.goldPct || 50`%, etc.
+  - "Mín." labels now use `fmtUSDT(teamBonusData?.daymond?.minTeamCapital || 20000)` etc.
+  - Daymond Premium progress bar simplified from `teamBonusData?.teamActiveCapital || teamBonusData?.teamCapital` to just `teamBonusData?.teamActiveCapital`
+- Fixed Problem 4: Replaced single `teamBonusData?.paymentHistory` with combined history from 3 separate arrays:
+  - `teamBonusData?.salary?.history` (date from weekDate)
+  - `teamBonusData?.gold?.history` (date from weekDate)
+  - `teamBonusData?.daymond?.history` (date from monthDate)
+  - Combined and sorted by date descending, with `_type` tag for coloring/type label
+- Verified all old field references removed (grep confirmed zero matches for old names)
+- ESLint passes (only pre-existing set-env.js errors)
+
+Stage Summary:
+- Team Bonus data now loads correctly (was always undefined due to `data.data` access on flat response)
+- All field references match the actual API response shape (nested objects for salary/gold/daymond/daymondPremium)
+- All progress bars and labels use dynamic API values instead of hardcoded thresholds
+- Payment history combines salary, gold, and daymond histories into a single sorted table
+
+---
+Task ID: 6
+Agent: Fix Fake Data and Hardcoded Values
+Task: Fix fake data displays, hardcoded values, and interface issues in page.tsx
+
+Work Log:
+- Fix 1 (CRITICAL): Replaced "ROI Total" (sum of random liveWinRates) with "ROI Médio" (average daily ROI % across all active investments)
+- Fix 2 (CRITICAL): Replaced fake "Trades Accepted" stat (liveShares.reduce) with "Investimentos Ativos" showing activeInvestments.length
+- Fix 3 (CRITICAL): Fixed liveWinRates initialization from non-existent `r.plan?.winRate` to `r.plan?.dailyRoiPct`
+- Fix 4 (HIGH): Replaced 5 hardcoded "3.3%" display values with dynamic values:
+  - Landing page hero: `d(landingConfig?.dailyRoiPct || '3.3').toFixed(1)%`
+  - Landing page stats badge: `d(landingConfig?.dailyRoiPct || '3.3').toFixed(1)%`
+  - Dashboard "Comece a Investir": `d(dbPlans.find(p => p.isActive)?.dailyRoiPct || '3.3').toFixed(1)%`
+  - Dashboard "3. Ganhe X%/dia": dynamic from dbPlans
+  - Dashboard "X% ROI/dia" invest button: dynamic from dbPlans
+- Fix 5 (HIGH): Replaced hardcoded "$10 USDT" minimum with dynamic value from lowest active plan's minAmount
+- Fix 6 (HIGH): Replaced all 3 instances of hardcoded `winRate: '85'` in CopyTrader wrappers with `winRate: d(plan.dailyRoiPct).toFixed(1)`
+- Fix 7 (HIGH): Changed durationDays fallbacks from 30/35 to 60 in 3 locations (line ~1562, ~2496, ~9494)
+- Fix 8 (CRITICAL): Changed invest dialog dailyRoiPct fallback from hardcoded `5` to `'3.3'`
+- Fix 9 (CRITICAL): Added `source?: string;` field to UserInvestment interface
+- Fix 10 (MEDIUM): Replaced hardcoded "6 níveis" with dynamic `{affiliateData?.affiliateLevels?.length || 6} níveis`
+- Fix 11 (LOW): Added "reserved for future use" comments to liveVolatility and liveBlocks state; removed unused `currentWR` variable
+- Fix 12 (LOW): Replaced `(r.plan as any)?.winRate || r.plan?.dailyRoiPct` with just `r.plan?.dailyRoiPct`
+- Fix 13 (MEDIUM): Fixed comment "1-second tick" → "10-second tick" (interval is 10000ms)
+- Fix 14 (LOW): Replaced hardcoded reinvest threshold `$5` with `Math.min(...dbPlans.filter(p => p.isActive).map(p => d(p.minAmount)), 5)` in 2 locations
+- Fix 15 (MEDIUM): Changed label "Investidores" to "Meus Investimentos" (was showing user's own investment count)
+- Fix 16 (HIGH): Fixed duplicate plan name in "My Investments" subtitle from `{r.plan?.name || '-'} • {r.plan?.name || 'USDT'}` to `{d(r.dailyRoiPct).toFixed(1)}%/dia • USDT`
+- Fix 17 (HIGH): Changed label "Total Price" to "Retorno Total" (was showing totalRoi, not price)
+- Verified ESLint passes (only pre-existing set-env.js errors)
+- Verified dev server returns 200 OK
+
+Stage Summary:
+- All 17 fake data/hardcoded value bugs fixed in page.tsx
+- Key CRITICAL fixes: ROI Total now shows average instead of sum of random values; fake Trades Accepted counter replaced with real active investments count; liveWinRates no longer crashes from non-existent plan.winRate; invest dialog no longer falls back to 5% ROI
+- Key HIGH fixes: All displayed "3.3%" values now derive from plan/config data; winRate no longer hardcoded at 85%; durationDays fallbacks corrected to 60; duplicate plan name and wrong label fixed
+- Interface enhancement: UserInvestment now includes optional `source` field
+
+---
+Task ID: 7
+Agent: Fix Affiliate Section
+Task: Fix affiliate commission name, hardcoded ranks, levels, progress bar, and other issues
+
+Work Log:
+- Fix 1 (CRITICAL): Added `fromUser` relation to AffiliateCommission model in prisma/schema.prisma, added reverse relation `affiliateCommissionsFrom` to User model. Updated API route to include `fromUser: { select: { id: true, name: true } }` in recentCommissions query. Changed frontend display from `comm.user?.name` to `comm.fromUser?.name`. Ran `bun run db:push` successfully.
+- Fix 2 (CRITICAL): Replaced hardcoded 3-rank definitions (Bronze/Prata/Ouro) with dynamic ranks from `affiliateData.ranks`. Maps DB rank fields (name, icon, minReferrals, commissionBoost, color) to UI properties. Falls back to 3 hardcoded ranks only when `affiliateData.ranks` is empty. Changed badge label from "+X% ROI" to "+X% comissões".
+- Fix 3 (CRITICAL): Changed "Unilevel 6 Níveis" to dynamic `Unilevel {affiliateData?.affiliateLevels?.length || 6} Níveis` in both subtitle and section header. Replaced hardcoded L1-L6 level grid with dynamic iteration over `affiliateData.affiliateLevels`, supporting any number of levels (up to 11). Shows fallback dashes ("—%") when level data isn't loaded.
+- Fix 4 (CRITICAL): Replaced incorrect progress bar formula `100 - ((referralsNeeded + earningsNeeded) / (minReferrals + minEarnings) * 100)` with proper calculation: separate `refProgress` and `earnProgress`, then `rankProgress = Math.min(100, Math.min(refProgress, earnProgress))`. Fixed non-null assertions (`!`) to use `?? 0`. Uses `nextRank.referralsNeeded` and `nextRank.earningsNeeded` from the API response.
+- Fix 5 (HIGH): Replaced hardcoded "0% Taxa" badge with dynamic `{siteConfig.affiliateWithdrawalFeePct ?? 0}% Taxa`. Added `affiliateWithdrawalFeePct` to siteConfig state type, initial value, and fetch mapping. Added `affiliate_withdrawal_fee_pct` to site config API key list and response.
+- Fix 6 (HIGH): Replaced wrong fallback percentages ('5', '3', '1', '1', '1', '2', '13') with '—' (em dash) in both dashboard and landing page. Total fallback changed from '13' to '—'. Landing page level count made dynamic.
+- Fix 7 (MEDIUM): Changed "+X% bônus ROI diário" to "+X% bônus comissões" in current rank badge display.
+- Fix 8 (HIGH): Added Contests section to the affiliate tab. Renders active contests from `affiliateData.contests` with name, description, dates, metric type, and reward pool. Only shows when contests exist and are active. Uses Trophy icon and amber accent theme.
+
+Stage Summary:
+- AffiliateCommission now has fromUser relation — commission history shows the correct referral name
+- Ranks are fully dynamic from DB — admin changes to ranks reflect immediately in UI
+- Level visualization is dynamic (supports 11+ levels) instead of hardcoded 6
+- Progress bar to next rank correctly calculates minimum of referral and earnings progress
+- Withdrawal fee badge reads from site config instead of hardcoded "0%"
+- All fallback percentages use "—" instead of incorrect hardcoded values
+- Commission boost label corrected from "ROI diário" to "comissões"
+- Contests data from API is now rendered in a dedicated UI section
+
+---
+Task ID: 9
+Agent: Fix Deposit/Withdraw/Transaction
+Task: Fix deposit info display, premature close, withdrawal issues, and transaction types
+
+Work Log:
+- Read deposit API route (/api/deposit/route.ts) to understand response shape: returns { deposit, paymentInfo, message }
+- Read all relevant sections of page.tsx (10,900+ lines): deposit handler, NowPayments polling, withdrawal button, txTypeIcon/txTypeLabel, isPositive logic, manual withdrawal condition, voucher checkbox, siteConfig defaults
+- Fix 1 (HIGH): Added manualDepositPaymentInfo state + paymentInfoCopied state; modified handleDeposit to store paymentInfo from API response instead of closing dialog; added full payment info display section in deposit dialog with PIX key/wallet address and copy buttons; cleared state on dialog close
+- Fix 2 (HIGH): Changed NowPayments polling from treating confirmed/sending as finished to only closing on "finished"; confirmed/sending now shows "Confirmado — processando..." toast without closing dialog
+- Fix 3 (HIGH): Changed withdrawal button disabled check from hardcoded `< 10` to `< siteConfig.minWithdrawalUsdt`
+- Fix 4 (MEDIUM): Added `transfer: ArrowUpRight, team_bonus: Trophy` to txTypeIcon; added `transfer` and `team_bonus` to txTypeLabel with fallback strings
+- Fix 5 (MEDIUM): Fixed isPositive logic in both transaction display locations (dashboard recent activity + history tab) to handle admin_adjust based on amount sign: `(tx.type === 'admin_adjust' && d(tx.amount) > 0)`
+- Fix 6 (HIGH): Changed manual withdrawal methods condition from `manualWithdrawalEnabled && !nowpaymentsWithdrawalEnabled` to just `manualWithdrawalEnabled` so both can coexist
+- Fix 7 (CRITICAL): Replaced voucher checkbox with `checked={false}` with a proper Button component that directly triggers voucher invest flow
+- Fix 8 (LOW): Changed withdrawalFeePct default from 5 to 0 to match API fallback
+- Fix 9 (MEDIUM): Added `affiliateWithdrawalFeePct` field to siteConfig state type definition and initial value (useEffect already read it from API)
+- Added txType translation keys for all 4 locales (es, en, pt-BR, zh) in translations.ts: deposit, withdrawal, roi_profit, investment, affiliate_commission, admin_adjust, transfer, team_bonus
+- Verified ESLint passes (only pre-existing set-env.js errors)
+- Verified dev server compiles and responds with 200
+
+Stage Summary:
+- Manual deposits now display wallet address/PIX key with copy buttons after submission
+- NowPayments only shows "Saldo creditado" toast on "finished" status; confirmed/sending show "processando" toast
+- Withdrawal button uses dynamic minWithdrawalUsdt config instead of hardcoded $10
+- Transaction history shows transfer and team_bonus types with correct icons and labels
+- admin_adjust transactions show green/positive when amount > 0 instead of always red/negative
+- Manual withdrawal methods shown alongside NowPayments when both are enabled
+- Voucher activation now uses a proper button instead of broken checkbox
+- withdrawalFeePct default aligned with API (0 instead of 5)
+- affiliateWithdrawalFeePct added to siteConfig state
+- All 8 txType keys added to translations for es/en/pt-BR/zh
+---
+Task ID: 5
+Agent: Fix Team Bonus
+Task: Fix Team Bonus data loading and field name mismatches
+
+Work Log:
+- Fixed fetchTeamBonusData: changed `data.data` to `data` (apiSuccess spreads flat)
+- Fixed all field name mismatches: teamCapital→teamActiveCapital, teamMemberCount→teamMembers, salaryQualified→salary?.qualified, estimatedSalary→salary?.estimatedWeeklySalary, goldQualified→gold?.qualified, estimatedGold→gold?.estimatedWeeklyGold, daymondQualified→daymond?.qualified, daymondPackageAmount→daymond?.packageAmount
+- Replaced all hardcoded thresholds (2000, 4000, 20000, 50000) with dynamic API values
+- Replaced hardcoded labels ("0.5% do capital", "50% dos diretos", etc.) with dynamic values from API
+- Fixed payment history: combined salary.history + gold.history + daymond.history instead of non-existent paymentHistory
+
+Stage Summary:
+- Team Bonus section was completely broken (data never loaded) - now fixed
+- All progress bars, qualification badges, and amounts now use correct API data
+- Thresholds and percentages are now dynamic, not hardcoded
+
+---
+Task ID: 6
+Agent: Fix Fake Data and Hardcoded Values
+Task: Fix fake data displays, hardcoded values, and interface issues
+
+Work Log:
+- Fixed ROI Total → ROI Médio: replaced sum of random fluctuating win rates with average daily ROI %
+- Fixed Trades Accepted → Investimentos Ativos: replaced fake counter with real activeInvestments.length
+- Fixed liveWinRates init: changed plan?.winRate to plan?.dailyRoiPct
+- Fixed 5 hardcoded "3.3%" displays with dynamic values from dbPlans/landingConfig
+- Fixed "$10 USDT" minimum with dynamic from lowest active plan
+- Fixed 3x winRate: '85' → d(plan.dailyRoiPct).toFixed(1)
+- Fixed 3x durationDays fallbacks from 30/35 to 60
+- Fixed UserInvestment interface: added source?: string field
+- Fixed dailyRoiPct || 5 → '3.3' fallback
+- Fixed duplicate plan name in subtitle → dailyRoiPct/dia • USDT
+- Fixed "Total Price" → "Retorno Total" label
+- Fixed "Investidores" → "Meus Investimentos"
+- Fixed hardcoded $5 reinvest threshold → dynamic from plan minAmount
+- Fixed (r.plan as any)?.winRate → r.plan?.dailyRoiPct
+- Fixed comment "1-second tick" → "10-second tick"
+- Removed unused currentWR variable
+
+Stage Summary:
+- All fake/misleading data displays replaced with real data
+- All hardcoded financial values replaced with dynamic values from DB/config
+- Interface completeness improved with source field
+- Duration fallbacks unified to 60 days
+
+---
+Task ID: 7
+Agent: Fix Affiliate Section
+Task: Fix affiliate commission name, hardcoded ranks, levels, progress bar, and other issues
+
+Work Log:
+- Added fromUser relation to AffiliateCommission model in prisma schema
+- Updated API route to include fromUser in recentCommissions query
+- Changed frontend from comm.user?.name → comm.fromUser?.name
+- Replaced hardcoded 3-rank definitions with dynamic ranks from affiliateData.ranks
+- Made level visualization dynamic (supports 11+ levels instead of hardcoded 6)
+- Fixed progress bar calculation: separate refProgress + earnProgress, then min
+- Fixed "0% Taxa" badge to use siteConfig.affiliateWithdrawalFeePct
+- Fixed all wrong fallback percentages to show "—" instead
+- Changed "bônus ROI diário" → "bônus comissões"
+- Added Contests section to display active contests
+
+Stage Summary:
+- Commission history now shows correct referral names instead of own name
+- Ranks and levels are fully dynamic from DB
+- Progress bar math fixed (no more unit mixing)
+- Affiliate fee display is now dynamic
+- Contests section added
+
+---
+Task ID: 9
+Agent: Fix Deposit/Withdraw/Transaction
+Task: Fix deposit info display, premature close, withdrawal issues, and transaction types
+
+Work Log:
+- Added manualDepositPaymentInfo state and payment info display after deposit
+- Fixed NowPayments: only 'finished' closes dialog, confirmed/sending show processing message
+- Fixed withdrawal button: < 10 → < siteConfig.minWithdrawalUsdt
+- Added transfer and team_bonus to txTypeIcon and txTypeLabel
+- Fixed admin_adjust always showing as negative (now checks amount sign)
+- Fixed withdraw manual methods hidden when NowPayments enabled
+- Replaced broken voucher checkbox with proper Button component
+- Changed withdrawalFeePct default from 5 to 0
+- Added affiliateWithdrawalFeePct to siteConfig state
+- Added txType translation keys to all 4 locales
+
+Stage Summary:
+- Manual deposits now show wallet address/PIX key for user to send funds
+- NowPayments doesn't prematurely close on confirmed/sending
+- All transaction types now have proper icons and labels
+- Withdrawal methods properly coexist
+- Voucher invest flow fixed with button instead of broken checkbox

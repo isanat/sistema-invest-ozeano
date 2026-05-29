@@ -188,6 +188,7 @@ export async function GET(request: NextRequest) {
             orderBy: { createdAt: 'desc' },
             include: {
               user: { select: { id: true, name: true } },
+              fromUser: { select: { id: true, name: true } },
             },
           });
         } catch (e) {

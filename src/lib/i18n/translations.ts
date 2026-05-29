@@ -349,6 +349,16 @@ type TranslationKeys = {
   'nowpayments.amount': string
   'nowpayments.scanQr': string
   'nowpayments.sendExact': string
+
+  // Transaction types
+  'txType.deposit': string
+  'txType.withdrawal': string
+  'txType.roi_profit': string
+  'txType.investment': string
+  'txType.affiliate_commission': string
+  'txType.admin_adjust': string
+  'txType.transfer': string
+  'txType.team_bonus': string
 }
 
 export const translations: Record<Locale, TranslationKeys> = {
@@ -687,6 +697,16 @@ export const translations: Record<Locale, TranslationKeys> = {
     'nowpayments.amount': 'Monto',
     'nowpayments.scanQr': 'Escanea el QR',
     'nowpayments.sendExact': 'Envía exactamente este monto a la dirección',
+
+    // Transaction types
+    'txType.deposit': 'Depósito',
+    'txType.withdrawal': 'Retiro',
+    'txType.roi_profit': 'Ganancia ROI',
+    'txType.investment': 'Inversión',
+    'txType.affiliate_commission': 'Comisión de Afiliado',
+    'txType.admin_adjust': 'Ajuste Admin',
+    'txType.transfer': 'Transferencia',
+    'txType.team_bonus': 'Bono de Equipo',
   },
 
   en: {
@@ -1005,6 +1025,16 @@ export const translations: Record<Locale, TranslationKeys> = {
     'nowpayments.amount': 'Amount',
     'nowpayments.scanQr': 'Scan QR',
     'nowpayments.sendExact': 'Send exactly this amount to the address',
+
+    // Transaction types
+    'txType.deposit': 'Deposit',
+    'txType.withdrawal': 'Withdrawal',
+    'txType.roi_profit': 'ROI Profit',
+    'txType.investment': 'Investment',
+    'txType.affiliate_commission': 'Affiliate Commission',
+    'txType.admin_adjust': 'Admin Adjust',
+    'txType.transfer': 'Transfer',
+    'txType.team_bonus': 'Team Bonus',
   },
 
   'pt-BR': {
@@ -1323,6 +1353,16 @@ export const translations: Record<Locale, TranslationKeys> = {
     'nowpayments.amount': 'Valor',
     'nowpayments.scanQr': 'Escaneie o QR',
     'nowpayments.sendExact': 'Envie exatamente este valor para o endereço',
+
+    // Transaction types
+    'txType.deposit': 'Depósito',
+    'txType.withdrawal': 'Saque',
+    'txType.roi_profit': 'Lucro ROI',
+    'txType.investment': 'Investimento',
+    'txType.affiliate_commission': 'Comissão de Afiliado',
+    'txType.admin_adjust': 'Ajuste Admin',
+    'txType.transfer': 'Transferência',
+    'txType.team_bonus': 'Bônus de Equipe',
   },
 
   zh: {
@@ -1641,5 +1681,15 @@ export const translations: Record<Locale, TranslationKeys> = {
     'nowpayments.amount': '金额',
     'nowpayments.scanQr': '扫描二维码',
     'nowpayments.sendExact': '请将精确金额发送至该地址',
+
+    // Transaction types
+    'txType.deposit': '充值',
+    'txType.withdrawal': '提现',
+    'txType.roi_profit': 'ROI收益',
+    'txType.investment': '投资',
+    'txType.affiliate_commission': '推荐佣金',
+    'txType.admin_adjust': '管理员调整',
+    'txType.transfer': '转账',
+    'txType.team_bonus': '团队奖金',
   },
 }
