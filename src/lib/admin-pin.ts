@@ -159,10 +159,8 @@ export function requiresPinVerification(
 ): boolean {
   return PIN_REQUIRED_FIELDS.some((field) => {
     if (updateData[field] === undefined) return false;
-    // For role changes, always require PIN
-    if (field === 'role') return updateData[field] !== undefined;
-    // For balance fields, require PIN if value is actually changing
-    return String(updateData[field]) !== String(existingData[field] ?? '0');
+    // For ALL fields (including role), require PIN only if value is actually changing
+    return String(updateData[field]) !== String(existingData[field] ?? (field === 'role' ? '' : '0'));
   });
 }
 
