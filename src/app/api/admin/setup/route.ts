@@ -2,12 +2,18 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { hashPassword, d, ds } from '@/lib/auth';
 import { generateAffiliateCode } from '@/lib/affiliate';
-import { apiError, apiSuccess, handleApiError } from '@/lib/api-utils';
+import { apiError, apiSuccess, handleApiError, getIpFromRequest } from '@/lib/api-utils';
 
 export async function GET(request: NextRequest) {
   try {
+    // Require admin auth to check system state — don't leak system info to unauthenticated users
+    const adminId = await requireAdmin(request);
+    if (!adminId) {
+      return apiError('Não autorizado', 401);
+    }
+
     // Check if system is already set up
-    const adminCount = await db.user.count({ where: { role: 'admin' } });
+    const adminCount = await db.user.count({ where: { role: { in: ['admin', 'super_admin'] } } });
     const configCount = await db.systemConfig.count();
     const planCount = await db.investmentPlan.count();
     const affiliateLevelCount = await db.affiliateLevel.count();
@@ -33,7 +39,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     // Only allow setup if no admin exists
-    const adminCount = await db.user.count({ where: { role: 'admin' } });
+    const adminCount = await db.user.count({ where: { role: { in: ['admin', 'super_admin'] } } });
     if (adminCount > 0) {
       return apiError('Sistema já inicializado', 400);
     }
@@ -51,7 +57,7 @@ export async function POST(request: NextRequest) {
         email: body.adminEmail || 'admin@ozeano.com',
         password: hashedPassword,
         name: body.adminName || 'Administrator',
-        role: 'admin',
+        role: 'super_admin',
         affiliateCode: generateAffiliateCode(body.adminName || 'Administrator'),
         hasInvested: true,
         linkUnlocked: true,
@@ -347,6 +353,7 @@ export async function POST(request: NextRequest) {
           tradingPools: tradingPools.length,
           affiliateRanks: affiliateRanks.length,
         }),
+        ipAddress: getIpFromRequest(request),
       },
     });
 

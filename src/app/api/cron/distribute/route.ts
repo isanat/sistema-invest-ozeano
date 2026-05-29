@@ -172,6 +172,23 @@ export async function POST(request: NextRequest) {
       errors.push('Team bonus update error');
     }
 
+    // Mark expired admin invitations
+    try {
+      const expiredResult = await db.adminInvitation.updateMany({
+        where: {
+          status: 'pending',
+          expiresAt: { lt: now },
+        },
+        data: { status: 'expired' },
+      });
+      if (expiredResult.count > 0) {
+        console.info(`[CRON] Marked ${expiredResult.count} admin invitations as expired`);
+      }
+    } catch (expireErr) {
+      console.error('[CRON] Invitation expiration error:', expireErr);
+      errors.push('Invitation expiration error');
+    }
+
     return apiSuccess({
       message: `Distribuição concluída: ${totalProcessed} períodos processados`,
       processed: totalProcessed,

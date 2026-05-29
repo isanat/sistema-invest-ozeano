@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAuth, verifyPassword, hashPassword } from '@/lib/auth';
-import { apiError, apiSuccess, handleApiError } from '@/lib/api-utils';
+import { apiError, apiSuccess, handleApiError, getIpFromRequest } from '@/lib/api-utils';
 
 export async function POST(request: NextRequest) {
   try {
@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Log for admin
-    if (session.role === 'admin') {
+    if (session.role === 'admin' || session.role === 'super_admin') {
       await db.adminLog.create({
         data: {
           adminId: session.userId,
@@ -49,6 +49,7 @@ export async function POST(request: NextRequest) {
           entity: 'user',
           entityId: session.userId,
           description: 'Senha alterada pelo próprio usuário',
+          ipAddress: getIpFromRequest(request),
         },
       });
     }

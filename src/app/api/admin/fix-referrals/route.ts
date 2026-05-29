@@ -4,7 +4,7 @@
 // ============================================================================
 import { NextRequest } from 'next/server';
 import { db } from '@/lib/db';
-import { apiSuccess, handleApiError, BusinessError } from '@/lib/api-utils';
+import { apiSuccess, handleApiError, BusinessError, getClientIp } from '@/lib/api-utils';
 import { requireAdmin } from '@/lib/auth';
 
 // GET /api/admin/fix-referrals — Find orphaned users (no referredBy but likely referred)
@@ -81,7 +81,7 @@ export async function GET(request: NextRequest) {
 // Body: { userId: string, sponsorAffiliateCode: string }
 export async function POST(request: NextRequest) {
   try {
-    await requireAdmin();
+    const session = await requireAdmin();
 
     const body = await request.json();
     const { userId, sponsorAffiliateCode } = body;
@@ -130,12 +130,14 @@ export async function POST(request: NextRequest) {
     // Log the action
     await db.adminLog.create({
       data: {
+        adminId: session.userId,
         action: 'fix_referral',
         entity: 'user',
         entityId: userId,
         oldValue: JSON.stringify({ referredBy: null }),
         newValue: JSON.stringify({ referredBy: sponsor.id, sponsorName: sponsor.name, sponsorEmail: sponsor.email }),
         description: `Atribuído patrocinador: ${sponsor.name} (${sponsor.affiliateCode}) → ${user.name} (${user.email})`,
+        ipAddress: getClientIp(request),
       },
     });
 
@@ -163,7 +165,7 @@ export async function POST(request: NextRequest) {
 // Body: { userId: string, sponsorAffiliateCode: string }
 export async function PUT(request: NextRequest) {
   try {
-    await requireAdmin();
+    const session = await requireAdmin();
 
     const body = await request.json();
     const { userId, sponsorAffiliateCode } = body;
@@ -210,12 +212,14 @@ export async function PUT(request: NextRequest) {
     // Log the action
     await db.adminLog.create({
       data: {
+        adminId: session.userId,
         action: 'change_referral',
         entity: 'user',
         entityId: userId,
         oldValue: JSON.stringify({ referredBy: oldReferredBy }),
         newValue: JSON.stringify({ referredBy: sponsor.id, sponsorName: sponsor.name, sponsorEmail: sponsor.email }),
         description: `Patrocinador alterado: ${sponsor.name} (${sponsor.affiliateCode}) → ${user.name} (${user.email})`,
+        ipAddress: getClientIp(request),
       },
     });
 

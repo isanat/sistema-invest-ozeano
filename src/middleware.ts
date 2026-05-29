@@ -29,6 +29,8 @@ const PUBLIC_API_ROUTES = [
   '/api/site/config', // Public site configuration (deposit methods, etc.)
   '/api/nowpayments/currencies', // Public: available currencies for deposit/withdrawal
   '/api/bitget/', // Public: Bitget trader ranking/search data (no auth needed)
+  '/api/admin/invitations/accept', // Public: Accept invite token
+  '/api/admin/invitations/register', // Public: Register via invite token
 ];
 
 // Rate limiting: simple in-memory store (per-instance, resets on redeploy)
@@ -157,9 +159,9 @@ export async function middleware(request: NextRequest) {
       return NextResponse.json({ error: 'Sessão inválida' }, { status: 401 });
     }
 
-    // For admin routes, verify admin role
+    // For admin routes, verify admin role (admin or super_admin)
     if (pathname.startsWith('/api/admin/')) {
-      if (payload.role !== 'admin') {
+      if (payload.role !== 'admin' && payload.role !== 'super_admin') {
         return NextResponse.json({ error: 'Acesso negado' }, { status: 403 });
       }
     }

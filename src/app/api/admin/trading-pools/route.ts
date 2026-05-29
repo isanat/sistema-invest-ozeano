@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAdmin } from '@/lib/auth';
-import { apiSuccess, apiError, handleApiError } from '@/lib/api-utils';
+import { apiSuccess, apiError, handleApiError, getIpFromRequest } from '@/lib/api-utils';
 
 export async function GET(request: NextRequest) {
   try {
@@ -73,6 +73,7 @@ export async function PUT(request: NextRequest) {
         oldValue: JSON.stringify(existing),
         newValue: JSON.stringify(data),
         description: `Trading pool atualizado: ${pool.name}`,
+        ipAddress: getIpFromRequest(request),
       },
     });
 
@@ -106,6 +107,7 @@ export async function DELETE(request: NextRequest) {
         entity: 'trading_pool',
         entityId: id,
         description: `Trading pool desativado: ${pool.name}`,
+        ipAddress: getIpFromRequest(request),
       },
     });
 

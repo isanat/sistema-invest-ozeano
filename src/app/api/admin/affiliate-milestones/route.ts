@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAdmin } from '@/lib/auth';
-import { apiError, apiSuccess, handleApiError } from '@/lib/api-utils';
+import { apiError, apiSuccess, handleApiError, getIpFromRequest } from '@/lib/api-utils';
 
 // Default milestone seeds
 const DEFAULT_MILESTONES = [
@@ -141,6 +141,7 @@ export async function POST(request: NextRequest) {
         entityId: milestone.id,
         newValue: JSON.stringify(body),
         description: `Marco de afiliado criado: ${milestone.name}`,
+        ipAddress: getIpFromRequest(request),
       },
     });
 
@@ -191,6 +192,7 @@ export async function PUT(request: NextRequest) {
         oldValue: JSON.stringify(existing),
         newValue: JSON.stringify(updateData),
         description: `Marco de afiliado atualizado: ${milestone.name}`,
+        ipAddress: getIpFromRequest(request),
       },
     });
 
@@ -230,6 +232,7 @@ export async function DELETE(request: NextRequest) {
         entityId: milestone.id,
         oldValue: JSON.stringify(existing),
         description: `Marco de afiliado desativado: ${milestone.name}`,
+        ipAddress: getIpFromRequest(request),
       },
     });
 

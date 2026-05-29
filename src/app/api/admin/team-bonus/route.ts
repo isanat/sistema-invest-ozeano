@@ -6,7 +6,7 @@ import { NextRequest } from 'next/server';
 import { db } from '@/lib/db';
 import { d } from '@/lib/auth';
 import { getTeamBonusConfig, type TeamBonusConfig } from '@/lib/team-bonus';
-import { requireAdmin, apiSuccess, handleApiError, BusinessError } from '@/lib/api-utils';
+import { requireAdmin, apiSuccess, handleApiError, BusinessError, getIpFromRequest } from '@/lib/api-utils';
 
 // ─── GET: Dashboard stats + config + recent payments ──────────────────
 export async function GET(request: NextRequest) {
@@ -171,6 +171,7 @@ export async function PUT(request: NextRequest) {
         entity: 'team_bonus_config',
         description: 'Configurações de bônus de equipe atualizadas',
         newValue: JSON.stringify(body),
+        ipAddress: getIpFromRequest(request),
       },
     });
 

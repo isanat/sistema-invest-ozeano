@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db, isPostgres } from '@/lib/db';
 import { requireAdmin, d, ds, dusdt } from '@/lib/auth';
 import { adminWithdrawalActionSchema } from '@/lib/validations';
-import { apiError, apiSuccess, handleApiError, sanitizePagination } from '@/lib/api-utils';
+import { apiError, apiSuccess, handleApiError, sanitizePagination, getIpFromRequest } from '@/lib/api-utils';
+import { verifyAdminPin } from '@/lib/admin-pin';
 
 export async function GET(request: NextRequest) {
   try {
@@ -61,10 +62,19 @@ export async function PUT(request: NextRequest) {
   try {
     const session = await requireAdmin();
     const body = await request.json();
-    const { id, ...actionData } = body;
+    const { id, pin, ...actionData } = body;
 
     if (!id) {
       return apiError('ID do saque é obrigatório');
+    }
+
+    // Require PIN for approve/reject actions
+    if (!pin) {
+      return apiError('PIN de segurança é obrigatório para esta ação', 403);
+    }
+    const pinValid = await verifyAdminPin(session.userId, pin);
+    if (!pinValid) {
+      return apiError('PIN de segurança inválido', 403);
     }
 
     const data = adminWithdrawalActionSchema.parse(actionData);
@@ -102,6 +112,7 @@ export async function PUT(request: NextRequest) {
           oldValue: JSON.stringify({ status: 'pending' }),
           newValue: JSON.stringify({ status: 'confirmed' }),
           description: 'Saque aprovado',
+          ipAddress: getIpFromRequest(request),
         },
       });
 
@@ -136,6 +147,7 @@ export async function PUT(request: NextRequest) {
           entity: 'withdrawal',
           entityId: id,
           description: 'Saque completado',
+          ipAddress: getIpFromRequest(request),
         },
       });
 
@@ -200,6 +212,7 @@ export async function PUT(request: NextRequest) {
           oldValue: JSON.stringify({ status: 'pending' }),
           newValue: JSON.stringify({ status: 'rejected' }),
           description: 'Saque rejeitado e valor reembolsado',
+          ipAddress: getIpFromRequest(request),
         },
       });
 

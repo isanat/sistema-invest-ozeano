@@ -75,7 +75,7 @@ export const adminConfigSchema = z.object({
 export const adminUserUpdateSchema = z.object({
   name: z.string().optional(),
   email: z.string().optional(),
-  role: z.enum(['user', 'admin']).optional(),
+  role: z.enum(['user', 'admin', 'super_admin']).optional(),
   isActive: z.boolean().optional(),
   hasInvested: z.boolean().optional(),
   balance: z.string().refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, 'Saldo deve ser um número válido e não negativo').optional(),

@@ -34,7 +34,7 @@ import {
   Trophy, Target, Crown, Star, Share2, Medal, Award,
   Info, MessageSquare, Ticket, LineChart, Calculator,
   Lock, Image, Upload, ImagePlus,
-  Calendar, Gem, LogIn, Key,
+  Calendar, Gem, LogIn, Key, UserPlus, MailCheck, UserMinus, Ban,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -544,6 +544,7 @@ export default function PlataformaROI() {
 
   const searchParams = useSearchParams();
   const urlReferralCode = searchParams.get('ref') || '';
+  const urlAdminInviteToken = searchParams.get('admin-invite') || '';
 
   const [showAuth, setShowAuth] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
@@ -697,6 +698,18 @@ export default function PlataformaROI() {
   const [voucherLoading, setVoucherLoading] = useState(false);
   const [userVouchersLoading, setUserVouchersLoading] = useState(false);
 
+  // Admin Invitation State
+  const [adminInvitations, setAdminInvitations] = useState<any[]>([]);
+  const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
+  const [inviteForm, setInviteForm] = useState({ email: '', name: '', role: 'admin', pin: '' });
+  const [inviteLoading, setInviteLoading] = useState(false);
+  const [inviteActionLoading, setInviteActionLoading] = useState<string | null>(null);
+  const [adminInviteToken, setAdminInviteToken] = useState<string | null>(null);
+  const [adminInviteData, setAdminInviteData] = useState<any>(null);
+  const [adminInviteLoading, setAdminInviteLoading] = useState(false);
+  const [adminInviteForm, setAdminInviteForm] = useState({ name: '', password: '', confirmPassword: '', pin: '', confirmPin: '' });
+  const [adminInviteSubmitting, setAdminInviteSubmitting] = useState(false);
+
   // Dialog State
   const [loginLoading, setLoginLoading] = useState(false);
   const [investDialogPlan, setInvestDialogPlan] = useState<CopyTrader | null>(null);
@@ -785,6 +798,92 @@ export default function PlataformaROI() {
   const [notesDialog, setNotesDialog] = useState<{ open: boolean; id: string; action: 'approve' | 'reject' | 'complete'; type: 'deposit' | 'withdrawal' }>({ open: false, id: '', action: 'approve', type: 'deposit' });
   const [adminNotes, setAdminNotes] = useState('');
 
+  // PIN Modal state — for admin sensitive action verification
+  const [pinModalOpen, setPinModalOpen] = useState(false);
+  const [pinCallback, setPinCallback] = useState<((pin: string) => void) | null>(null);
+  const [pinLoading, setPinLoading] = useState(false);
+  const [pinError, setPinError] = useState('');
+  const [pinDigits, setPinDigits] = useState<string[]>(['', '', '', '', '', '']);
+  const [adminHasPin, setAdminHasPin] = useState<boolean | null>(null);
+  const [pinSetupOpen, setPinSetupOpen] = useState(false);
+  const [pinSetupPin, setPinSetupPin] = useState('');
+  const [pinSetupConfirm, setPinSetupConfirm] = useState('');
+  const [pinSetupLoading, setPinSetupLoading] = useState(false);
+
+  // Request PIN from admin before a sensitive action
+  const requestPin = useCallback((): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      // If admin doesn't have PIN set, prompt setup first
+      if (adminHasPin === false) {
+        setPinSetupOpen(true);
+        reject(new Error('PIN de segurança não configurado. Configure seu PIN primeiro.'));
+        return;
+      }
+      setPinDigits(['', '', '', '', '', '']);
+      setPinError('');
+      setPinModalOpen(true);
+      setPinCallback(() => (pin: string) => {
+        resolve(pin);
+      });
+    });
+  }, [adminHasPin]);
+
+  // Submit PIN from the modal
+  const handlePinSubmit = useCallback(() => {
+    const pin = pinDigits.join('');
+    if (pin.length !== 6) {
+      setPinError('PIN deve conter 6 dígitos');
+      return;
+    }
+    setPinLoading(true);
+    // Verify the PIN with the server
+    api('/api/admin/pin/verify', {
+      method: 'POST',
+      body: JSON.stringify({ pin }),
+    }).then((res: any) => {
+      if (res.verified) {
+        setPinModalOpen(false);
+        setPinLoading(false);
+        if (pinCallback) pinCallback(pin);
+        setPinCallback(null);
+      } else {
+        setPinError('PIN incorreto');
+        setPinLoading(false);
+      }
+    }).catch(() => {
+      setPinError('Erro ao verificar PIN');
+      setPinLoading(false);
+    });
+  }, [pinDigits, pinCallback]);
+
+  // Handle PIN setup
+  const handlePinSetup = useCallback(async () => {
+    if (pinSetupPin.length !== 6 || pinSetupConfirm.length !== 6) {
+      toast.error('PIN deve conter 6 dígitos');
+      return;
+    }
+    if (pinSetupPin !== pinSetupConfirm) {
+      toast.error('PIN e confirmação não conferem');
+      return;
+    }
+    setPinSetupLoading(true);
+    try {
+      await api('/api/admin/pin/setup', {
+        method: 'POST',
+        body: JSON.stringify({ pin: pinSetupPin, confirmPin: pinSetupConfirm }),
+      });
+      toast.success('PIN configurado com sucesso');
+      setAdminHasPin(true);
+      setPinSetupOpen(false);
+      setPinSetupPin('');
+      setPinSetupConfirm('');
+    } catch (err: any) {
+      toast.error(err.message || 'Erro ao configurar PIN');
+    } finally {
+      setPinSetupLoading(false);
+    }
+  }, [pinSetupPin, pinSetupConfirm]);
+
   // Deposits/Payouts/Statement state (for Faturas, Saques, Extrato tabs)
   const [userDeposits, setUserDeposits] = useState<any[]>([]);
   const [userDepositStats, setUserDepositStats] = useState<any>(null);
@@ -859,7 +958,7 @@ export default function PlataformaROI() {
         if (data.success && data.user) {
           setUser(data.user);
           // Set initial tab based on role: admin goes to overview, user goes to home
-          if (data.user.role === 'admin') {
+          if (data.user.role === 'admin' || data.user.role === 'super_admin') {
             setActiveTab('overview');
             setAdminTab('overview');
           }
@@ -1331,7 +1430,7 @@ export default function PlataformaROI() {
 
   // Load split data when section is selected
   useEffect(() => {
-    if (adminNpSection === 'split' && user?.role === 'admin' && !splitLoading && splitRecipients.length === 0) {
+    if (adminNpSection === 'split' && (user?.role === 'admin' || user?.role === 'super_admin') && !splitLoading && splitRecipients.length === 0) {
       fetchSplitData();
     }
   }, [adminNpSection, user]);
@@ -1356,8 +1455,8 @@ export default function PlataformaROI() {
 
   // Load admin data when admin tab is selected
   // For admin users, activeTab IS the admin section ID directly (e.g., 'overview', 'users')
-  const adminTabIds = ['overview', 'copyTraders', 'plans', 'users', 'deposits', 'withdrawals', 'nowpayments', 'affiliates', 'affiliateWithdrawals', 'affiliateRanks', 'affiliateMilestones', 'affiliateContests', 'affiliateBadges', 'teamBonus', 'vouchers', 'config', 'logs'];
-  const isAdminUser = user?.role === 'admin';
+  const adminTabIds = ['overview', 'copyTraders', 'plans', 'users', 'deposits', 'withdrawals', 'nowpayments', 'affiliates', 'affiliateWithdrawals', 'affiliateRanks', 'affiliateMilestones', 'affiliateContests', 'affiliateBadges', 'teamBonus', 'vouchers', 'adminManagement', 'config', 'logs'];
+  const isAdminUser = user?.role === 'admin' || user?.role === 'super_admin';
   // Admin tab is only active if the admin is in admin view mode AND the tab is an admin tab
   const isAdminTab = isAdminUser && adminViewMode === 'admin' && adminTabIds.includes(activeTab);
 
@@ -1372,6 +1471,54 @@ export default function PlataformaROI() {
     if (isAdminUser && isAdminTab) fetchAdminData();
     if (isAdminUser && activeTab === 'teamBonus') fetchAdminTeamBonusData();
   }, [activeTab, isAdminUser]);
+
+  // Check if admin has PIN set on admin panel load
+  useEffect(() => {
+    if (isAdminUser && adminHasPin === null) {
+      api('/api/admin/pin/status').then((res: any) => {
+        setAdminHasPin(res.hasPin);
+      }).catch(() => {
+        // Ignore error — PIN check is non-critical
+      });
+    }
+  }, [isAdminUser, adminHasPin]);
+
+  // Handle admin-invite URL param (public invitation acceptance)
+  useEffect(() => {
+    if (urlAdminInviteToken && !user && !authLoading) {
+      setAdminInviteToken(urlAdminInviteToken);
+      setAdminInviteLoading(true);
+      api(`/api/admin/invitations/accept?token=${urlAdminInviteToken}`)
+        .then((res: any) => {
+          if (res.invitation) {
+            setAdminInviteData(res.invitation);
+            setAdminInviteForm(prev => ({ ...prev, name: res.invitation.name || '' }));
+          }
+        })
+        .catch((err: any) => {
+          toast.error(err.message || 'Convite inválido ou expirado');
+          setAdminInviteToken(null);
+        })
+        .finally(() => setAdminInviteLoading(false));
+    }
+  }, [urlAdminInviteToken, user, authLoading]);
+
+  // Fetch invitations when adminManagement tab is active (super_admin only)
+  const fetchAdminInvitations = useCallback(async () => {
+    if (user?.role !== 'super_admin') return;
+    try {
+      const data = await api<any>('/api/admin/invitations');
+      setAdminInvitations(data.invitations || []);
+    } catch (e) {
+      console.error('Failed to fetch invitations:', e);
+    }
+  }, [user?.role]);
+
+  useEffect(() => {
+    if (isAdminUser && activeTab === 'adminManagement') {
+      fetchAdminInvitations();
+    }
+  }, [activeTab, isAdminUser, fetchAdminInvitations]);
 
   // Initialize investAmount when investment dialog opens or plan changes
   // Also auto-select voucher if user has active vouchers
@@ -2112,6 +2259,29 @@ export default function PlataformaROI() {
       if (newPwEl && newPwEl.value && newPwEl.value.length >= 6) {
         body.newPassword = newPwEl.value;
       }
+      // Get the role from the Select component — it's not a native input
+      const roleSelect = form.querySelector('[name="role"]') as HTMLInputElement;
+      if (roleSelect) body.role = roleSelect.value;
+
+      // Check if sensitive fields are being changed — require PIN
+      const sensitiveFields = ['balance', 'affiliateBalance', 'voucherBalance', 'totalInvested', 'totalRoi', 'totalWithdrawn', 'totalAffiliateEarnings', 'role'];
+      const origUser = userDialog.user;
+      const needsPin = sensitiveFields.some(f => {
+        if (body[f] === undefined) return false;
+        return String(body[f]) !== String((origUser as any)[f] ?? '0');
+      });
+
+      if (needsPin) {
+        try {
+          const pin = await requestPin();
+          body.pin = pin;
+        } catch (pinErr: any) {
+          toast.error(pinErr.message || 'PIN de segurança é obrigatório');
+          setAdminActionLoading(false);
+          return;
+        }
+      }
+
       await api('/api/admin/users', { method: 'PUT', body: JSON.stringify(body) });
       toast.success(t('toast.adminUserUpdateSuccess'));
       setUserDialog({ open: false });
@@ -2258,18 +2428,26 @@ export default function PlataformaROI() {
   const handleNotesAction = async () => {
     const { id, action, type } = notesDialog;
     try {
-      if (type === 'deposit') {
+      if (type === 'withdrawal') {
+        // Require PIN for withdrawal actions
+        let pin = '';
+        try {
+          pin = await requestPin();
+        } catch (pinErr: any) {
+          toast.error(pinErr.message || 'PIN de segurança é obrigatório');
+          return;
+        }
+        await api('/api/admin/withdrawals', {
+          method: 'PUT',
+          body: JSON.stringify({ id, action, adminNotes, pin }),
+        });
+        toast.success(action === 'approve' ? t('toast.adminWithdrawApproveSuccess') : action === 'complete' ? t('toast.adminWithdrawCompleteSuccess') : t('toast.adminWithdrawRejectSuccess'));
+      } else {
         await api('/api/admin/deposits', {
           method: 'PUT',
           body: JSON.stringify({ id, action, adminNotes }),
         });
         toast.success(action === 'approve' ? t('toast.adminDepositApproveSuccess') : t('toast.adminDepositRejectSuccess'));
-      } else {
-        await api('/api/admin/withdrawals', {
-          method: 'PUT',
-          body: JSON.stringify({ id, action, adminNotes }),
-        });
-        toast.success(action === 'approve' ? t('toast.adminWithdrawApproveSuccess') : action === 'complete' ? t('toast.adminWithdrawCompleteSuccess') : t('toast.adminWithdrawRejectSuccess'));
       }
       setNotesDialog({ open: false, id: '', action: 'approve', type: 'deposit' });
       setAdminNotes('');
@@ -2559,6 +2737,167 @@ export default function PlataformaROI() {
   // ============================================================================
   // NOT AUTHENTICATED → LANDING PAGE (DeFi Futuristic Design)
   // ============================================================================
+
+  // Admin Invitation Acceptance Form (shown when ?admin-invite=TOKEN)
+  if (!user && adminInviteToken) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#0a0a0f] text-white p-4">
+        <Card className="w-full max-w-md bg-zinc-900 border-zinc-800">
+          <CardHeader className="text-center">
+            <div className="mx-auto mb-3 h-14 w-14 rounded-full bg-cyan-500/20 flex items-center justify-center">
+              <UserPlus className="h-7 w-7 text-cyan-400" />
+            </div>
+            <CardTitle className="text-xl text-white">Criar Conta de Administrador</CardTitle>
+            <CardDescription className="text-zinc-400">
+              Você foi convidado para a administração do ActionCash
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {adminInviteLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin text-cyan-400" />
+              </div>
+            ) : adminInviteData ? (
+              <form onSubmit={async (e) => {
+                e.preventDefault();
+                if (adminInviteForm.password !== adminInviteForm.confirmPassword) {
+                  toast.error('As senhas não coincidem');
+                  return;
+                }
+                if (adminInviteForm.pin !== adminInviteForm.confirmPin) {
+                  toast.error('Os PINs não coincidem');
+                  return;
+                }
+                if (adminInviteForm.password.length < 8) {
+                  toast.error('A senha deve ter pelo menos 8 caracteres');
+                  return;
+                }
+                if (!/^\d{6}$/.test(adminInviteForm.pin)) {
+                  toast.error('O PIN deve ter exatamente 6 dígitos');
+                  return;
+                }
+                setAdminInviteSubmitting(true);
+                try {
+                  await api('/api/admin/invitations/accept', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      token: adminInviteToken,
+                      name: adminInviteForm.name,
+                      password: adminInviteForm.password,
+                      pin: adminInviteForm.pin,
+                    }),
+                  });
+                  toast.success('Conta de administrador criada com sucesso! Faça login para continuar.');
+                  setAdminInviteToken(null);
+                  setAdminInviteData(null);
+                  // Show login dialog
+                  setShowAuth(true);
+                  setAuthMode('login');
+                } catch (err: any) {
+                  toast.error(err.message || 'Erro ao criar conta');
+                } finally {
+                  setAdminInviteSubmitting(false);
+                }
+              }} className="space-y-4">
+                {/* Pre-filled info */}
+                <div className="bg-cyan-500/10 border border-cyan-500/30 rounded-lg p-3 space-y-1">
+                  <div className="flex items-center gap-2 text-sm">
+                    <MailCheck className="h-4 w-4 text-cyan-400" />
+                    <span className="text-zinc-300">{adminInviteData.email}</span>
+                  </div>
+                  <div className="text-xs text-zinc-500">
+                    Convite por: {adminInviteData.inviterName} • Papel: {adminInviteData.role === 'super_admin' ? 'Super Admin' : 'Admin'}
+                  </div>
+                  {adminInviteData.expiresAt && (
+                    <div className="text-xs text-amber-400">
+                      Expira em: {new Date(adminInviteData.expiresAt).toLocaleString('pt-BR')}
+                    </div>
+                  )}
+                </div>
+
+                {/* Name field */}
+                <div className="space-y-2">
+                  <Label className="text-zinc-300 text-sm">Nome</Label>
+                  <Input
+                    value={adminInviteForm.name}
+                    onChange={e => setAdminInviteForm(prev => ({ ...prev, name: e.target.value }))}
+                    required minLength={2}
+                    className="bg-zinc-800 border-zinc-700 text-white"
+                    placeholder="Seu nome completo"
+                  />
+                </div>
+
+                {/* Password fields */}
+                <div className="space-y-2">
+                  <Label className="text-zinc-300 text-sm">Senha (mín. 8 caracteres)</Label>
+                  <Input
+                    type="password"
+                    value={adminInviteForm.password}
+                    onChange={e => setAdminInviteForm(prev => ({ ...prev, password: e.target.value }))}
+                    required minLength={8}
+                    className="bg-zinc-800 border-zinc-700 text-white"
+                    placeholder="Sua senha"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-zinc-300 text-sm">Confirmar Senha</Label>
+                  <Input
+                    type="password"
+                    value={adminInviteForm.confirmPassword}
+                    onChange={e => setAdminInviteForm(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                    required
+                    className="bg-zinc-800 border-zinc-700 text-white"
+                    placeholder="Confirme sua senha"
+                  />
+                </div>
+
+                {/* PIN fields */}
+                <div className="space-y-2">
+                  <Label className="text-zinc-300 text-sm">PIN de Segurança (6 dígitos)</Label>
+                  <Input
+                    type="password"
+                    value={adminInviteForm.pin}
+                    onChange={e => setAdminInviteForm(prev => ({ ...prev, pin: e.target.value.replace(/\D/g, '').slice(0, 6) }))}
+                    required
+                    maxLength={6}
+                    className="bg-zinc-800 border-zinc-700 text-white"
+                    placeholder="000000"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-zinc-300 text-sm">Confirmar PIN</Label>
+                  <Input
+                    type="password"
+                    value={adminInviteForm.confirmPin}
+                    onChange={e => setAdminInviteForm(prev => ({ ...prev, confirmPin: e.target.value.replace(/\D/g, '').slice(0, 6) }))}
+                    required
+                    maxLength={6}
+                    className="bg-zinc-800 border-zinc-700 text-white"
+                    placeholder="000000"
+                  />
+                </div>
+
+                <Button
+                  type="submit"
+                  className="w-full bg-gradient-to-r from-cyan-600 to-emerald-500 hover:from-cyan-500 hover:to-emerald-400 text-white font-semibold"
+                  disabled={adminInviteSubmitting}
+                >
+                  {adminInviteSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Criar Conta de Administrador
+                </Button>
+              </form>
+            ) : (
+              <div className="text-center py-8 text-zinc-500">
+                Convite inválido ou expirado
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   if (!user) {
     return (
       <div className="min-h-screen flex flex-col bg-[#0a0a0f] text-white">
@@ -3342,7 +3681,7 @@ export default function PlataformaROI() {
   // AUTHENTICATED → DASHBOARD
   // ============================================================================
   // For admin users, show admin navigation directly instead of investor navigation
-  const isAdmin = user.role === 'admin';
+  const isAdmin = user.role === 'admin' || user.role === 'super_admin';
 
   const investorNavItems = [
     { id: 'home', label: t('sidebar.home'), icon: Home },
@@ -3373,6 +3712,7 @@ export default function PlataformaROI() {
     { id: 'affiliateBadges', label: t('admin.affiliateBadges') || 'Badges', icon: Award },
     { id: 'teamBonus', label: 'Bônus Equipe', icon: Trophy },
     { id: 'vouchers', label: 'Vouchers', icon: Ticket },
+    ...(user.role === 'super_admin' ? [{ id: 'adminManagement', label: 'Administração', icon: UserPlus }] : []),
     { id: 'config', label: t('adminSidebar.config'), icon: Settings },
 
     { id: 'logs', label: t('adminSidebar.logs'), icon: FileText },
@@ -7050,7 +7390,7 @@ export default function PlataformaROI() {
                           <form onSubmit={handleProfileUpdate} className="space-y-4">
                             <div><Label className="text-zinc-400">{t('profile.name')}</Label><Input name="name" defaultValue={user.name} required className="bg-zinc-800 border-zinc-700 mt-1" /></div>
                             <div><Label className="text-zinc-400">{t('profile.email')}</Label><Input value={user.email} disabled className="bg-zinc-800 border-zinc-700 mt-1 text-zinc-500" /></div>
-                            <div><Label className="text-zinc-400">{t('admin.role')}</Label><Input value={user.role === 'admin' ? t('admin.admin') : t('admin.user')} disabled className="bg-zinc-800 border-zinc-700 mt-1 text-zinc-500" /></div>
+                            <div><Label className="text-zinc-400">{t('admin.role')}</Label><Input value={user.role === 'super_admin' ? 'Super Admin' : user.role === 'admin' ? t('admin.admin') : t('admin.user')} disabled className="bg-zinc-800 border-zinc-700 mt-1 text-zinc-500" /></div>
                             <div className="flex flex-col sm:flex-row gap-3">
                               <Button type="submit" className="bg-emerald-600 hover:bg-cyan-700 flex-1">{t('profile.save')}</Button>
                               <Button type="button" variant="outline" className="border-zinc-700 flex-1" onClick={() => setChangePasswordDialog(true)}>
@@ -7184,6 +7524,34 @@ export default function PlataformaROI() {
                             </CardContent>
                           </Card>
                         </div>
+                        {/* PIN Security Status */}
+                        {adminHasPin === false && (
+                          <Card className="bg-amber-950/30 border-amber-700/50">
+                            <CardContent className="p-5">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                  <div className="h-10 w-10 rounded-full bg-amber-600/20 flex items-center justify-center"><Key className="h-5 w-5 text-amber-400" /></div>
+                                  <div>
+                                    <div className="text-sm font-semibold text-amber-400">PIN de Segurança Não Configurado</div>
+                                    <div className="text-xs text-zinc-400 mt-0.5">Proteja ações sensíveis configurando um PIN de 6 dígitos</div>
+                                  </div>
+                                </div>
+                                <Button className="bg-amber-600 hover:bg-amber-700" onClick={() => setPinSetupOpen(true)}><Key className="mr-2 h-4 w-4" /> Configurar PIN</Button>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        )}
+                        {adminHasPin === true && (
+                          <Card className="bg-emerald-950/20 border-emerald-700/30">
+                            <CardContent className="p-4">
+                              <div className="flex items-center gap-3">
+                                <Lock className="h-5 w-5 text-emerald-400" />
+                                <div className="text-sm text-emerald-400">PIN de segurança ativo</div>
+                                <Button variant="outline" size="sm" className="ml-auto border-zinc-700 text-zinc-300 text-xs h-8" onClick={() => setPinSetupOpen(true)}>Alterar PIN</Button>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        )}
                       </div>
                     )}
 
@@ -7292,14 +7660,14 @@ export default function PlataformaROI() {
                                   <TableRow key={u.id} className="border-zinc-800">
                                     <TableCell className="font-medium">{u.name}</TableCell>
                                     <TableCell className="text-zinc-400 text-sm">{u.email}</TableCell>
-                                    <TableCell><Badge variant="outline" className={u.role === 'admin' ? 'border-amber-500/30 text-amber-400' : 'border-zinc-600'}>{u.role}</Badge></TableCell>
+                                    <TableCell><Badge variant="outline" className={u.role === 'super_admin' ? 'border-red-500/30 text-red-400' : u.role === 'admin' ? 'border-amber-500/30 text-amber-400' : 'border-zinc-600'}>{u.role === 'super_admin' ? 'Super Admin' : u.role === 'admin' ? 'Admin' : u.role}</Badge></TableCell>
                                     <TableCell>${fmtUSDT(u.balance)}</TableCell>
                                     <TableCell>${fmtUSDT(u.affiliateBalance || '0')}</TableCell>
                                     <TableCell>{u.isActive ? <CheckCircle2 className="h-4 w-4 text-cyan-400" /> : <XCircle className="h-4 w-4 text-red-400" />}</TableCell>
                                     <TableCell>
                                       <div className="flex gap-1">
                                         <Button variant="ghost" size="icon" className="h-10 w-10" title="Editar" onClick={() => setUserDialog({ open: true, user: u })}><Pencil className="h-4 w-4" /></Button>
-                                        <Button variant="ghost" size="icon" className="h-10 w-10 text-cyan-400" title="Logar como este usuário" onClick={async () => { try { const res = await api('/api/auth/login-as', { method: 'POST', body: JSON.stringify({ userId: u.id }) }); if (res.user) { toast.success(`Logado como ${res.user.name}`); setUser(res.user); } } catch(e: any) { toast.error(e.message || 'Erro ao logar como usuário'); } }}><LogIn className="h-4 w-4" /></Button>
+                                        <Button variant="ghost" size="icon" className="h-10 w-10 text-cyan-400" title="Logar como este usuário" onClick={async () => { try { const pin = await requestPin(); const res = await api('/api/auth/login-as', { method: 'POST', body: JSON.stringify({ userId: u.id, pin }) }); if (res.user) { toast.success(`Logado como ${res.user.name}`); setUser(res.user); } } catch(e: any) { toast.error(e.message || 'Erro ao logar como usuário'); } }}><LogIn className="h-4 w-4" /></Button>
                                       </div>
                                     </TableCell>
                                   </TableRow>
@@ -9366,6 +9734,368 @@ export default function PlataformaROI() {
                       </div>
                     )}
 
+                    {/* Admin Management (Administração) — super_admin only */}
+                    {adminTab === 'adminManagement' && user?.role === 'super_admin' && (
+                      <div className="space-y-6">
+                        {/* Section Header */}
+                        <div className="flex items-center justify-between flex-wrap gap-2">
+                          <h3 className="text-lg font-semibold flex items-center gap-2">
+                            <UserPlus className="h-5 w-5 text-cyan-400" />
+                            Convites de Administrador
+                          </h3>
+                          <div className="flex gap-2">
+                            <Button variant="outline" size="sm" className="border-zinc-700" onClick={fetchAdminInvitations}>
+                              <RefreshCw className="mr-2 h-4 w-4" /> Atualizar
+                            </Button>
+                            <Button size="sm" className="bg-cyan-600 hover:bg-cyan-700" onClick={() => {
+                              setInviteForm({ email: '', name: '', role: 'admin', pin: '' });
+                              setInviteDialogOpen(true);
+                            }}>
+                              <Plus className="mr-2 h-4 w-4" /> Novo Convite
+                            </Button>
+                          </div>
+                        </div>
+
+                        {/* Invitations List */}
+                        <Card className="bg-zinc-900 border-zinc-800">
+                          <CardContent className="p-0 overflow-x-auto">
+                            <Table className="min-w-[700px]">
+                              <TableHeader>
+                                <TableRow className="border-zinc-800 hover:bg-transparent">
+                                  <TableHead className="text-zinc-400">Email</TableHead>
+                                  <TableHead className="text-zinc-400">Nome</TableHead>
+                                  <TableHead className="text-zinc-400">Papel</TableHead>
+                                  <TableHead className="text-zinc-400">Status</TableHead>
+                                  <TableHead className="text-zinc-400">Expira</TableHead>
+                                  <TableHead className="text-zinc-400">Convidado por</TableHead>
+                                  <TableHead className="text-zinc-400 text-right">Ações</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {adminInvitations.map((inv: any) => {
+                                  const isExpired = inv.status === 'expired' || new Date(inv.expiresAt) < new Date();
+                                  const isPending = inv.status === 'pending' && !isExpired;
+                                  const isApproved = inv.status === 'approved';
+                                  const isUsed = inv.status === 'used';
+                                  const inviteUrl = `${typeof window !== 'undefined' ? window.location.origin : 'https://actioncash.app'}?admin-invite=${inv.token}`;
+                                  const expiresIn = inv.expiresAt ? Math.max(0, new Date(inv.expiresAt).getTime() - Date.now()) : 0;
+                                  const expireHrs = Math.floor(expiresIn / 3600000);
+                                  const expireMins = Math.floor((expiresIn % 3600000) / 60000);
+
+                                  return (
+                                    <TableRow key={inv.id} className="border-zinc-800">
+                                      <TableCell className="text-sm">{inv.email}</TableCell>
+                                      <TableCell className="text-sm">{inv.name}</TableCell>
+                                      <TableCell>
+                                        <Badge variant="outline" className={inv.role === 'super_admin' ? 'border-amber-500/30 text-amber-400' : 'border-cyan-500/30 text-cyan-400'}>
+                                          {inv.role === 'super_admin' ? 'Super Admin' : 'Admin'}
+                                        </Badge>
+                                      </TableCell>
+                                      <TableCell>
+                                        <Badge variant="outline" className={
+                                          inv.status === 'pending' ? 'border-yellow-500/30 text-yellow-400' :
+                                          inv.status === 'approved' ? 'border-emerald-500/30 text-emerald-400' :
+                                          inv.status === 'rejected' ? 'border-red-500/30 text-red-400' :
+                                          inv.status === 'expired' ? 'border-zinc-500/30 text-zinc-400' :
+                                          inv.status === 'cancelled' ? 'border-zinc-500/30 text-zinc-400' :
+                                          inv.status === 'used' ? 'border-blue-500/30 text-blue-400' :
+                                          'border-zinc-500/30 text-zinc-400'
+                                        }>
+                                          {inv.status === 'pending' ? 'Pendente' :
+                                           inv.status === 'approved' ? 'Aprovado' :
+                                           inv.status === 'rejected' ? 'Rejeitado' :
+                                           inv.status === 'expired' ? 'Expirado' :
+                                           inv.status === 'cancelled' ? 'Cancelado' :
+                                           inv.status === 'used' ? 'Usado' : inv.status}
+                                        </Badge>
+                                      </TableCell>
+                                      <TableCell className="text-sm whitespace-nowrap">
+                                        {isUsed ? '-' : isExpired ? 'Expirado' : (
+                                          <span className={expiresIn < 3600000 ? 'text-amber-400' : 'text-zinc-400'}>
+                                            {expireHrs}h {expireMins}m
+                                          </span>
+                                        )}
+                                      </TableCell>
+                                      <TableCell className="text-sm text-zinc-400">
+                                        {inv.inviter?.name || '-'}
+                                      </TableCell>
+                                      <TableCell className="text-right">
+                                        <div className="flex items-center justify-end gap-1">
+                                          {isPending && (
+                                            <>
+                                              <Tooltip><TooltipTrigger asChild>
+                                                <Button variant="ghost" size="icon" className="h-8 w-8 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10"
+                                                  disabled={inviteActionLoading === inv.id}
+                                                  onClick={async () => {
+                                                    const pin = prompt('Digite seu PIN de segurança para aprovar:');
+                                                    if (!pin) return;
+                                                    setInviteActionLoading(inv.id);
+                                                    try {
+                                                      await api(`/api/admin/invitations/${inv.id}`, {
+                                                        method: 'PUT',
+                                                        headers: { 'Content-Type': 'application/json' },
+                                                        body: JSON.stringify({ action: 'approve', pin }),
+                                                      });
+                                                      toast.success('Convite aprovado!');
+                                                      fetchAdminInvitations();
+                                                    } catch (err: any) { toast.error(err.message || 'Erro'); }
+                                                    finally { setInviteActionLoading(null); }
+                                                  }}>
+                                                  <CheckCircle2 className="h-4 w-4" />
+                                                </Button>
+                                              </TooltipTrigger><TooltipContent>Aprovar</TooltipContent></Tooltip>
+                                              <Tooltip><TooltipTrigger asChild>
+                                                <Button variant="ghost" size="icon" className="h-8 w-8 text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                                                  disabled={inviteActionLoading === inv.id}
+                                                  onClick={async () => {
+                                                    const pin = prompt('Digite seu PIN de segurança para rejeitar:');
+                                                    if (!pin) return;
+                                                    setInviteActionLoading(inv.id);
+                                                    try {
+                                                      await api(`/api/admin/invitations/${inv.id}`, {
+                                                        method: 'PUT',
+                                                        headers: { 'Content-Type': 'application/json' },
+                                                        body: JSON.stringify({ action: 'reject', pin }),
+                                                      });
+                                                      toast.success('Convite rejeitado');
+                                                      fetchAdminInvitations();
+                                                    } catch (err: any) { toast.error(err.message || 'Erro'); }
+                                                    finally { setInviteActionLoading(null); }
+                                                  }}>
+                                                  <XCircle className="h-4 w-4" />
+                                                </Button>
+                                              </TooltipTrigger><TooltipContent>Rejeitar</TooltipContent></Tooltip>
+                                              <Tooltip><TooltipTrigger asChild>
+                                                <Button variant="ghost" size="icon" className="h-8 w-8 text-zinc-400 hover:text-zinc-300 hover:bg-zinc-500/10"
+                                                  disabled={inviteActionLoading === inv.id}
+                                                  onClick={async () => {
+                                                    const pin = prompt('Digite seu PIN de segurança para cancelar:');
+                                                    if (!pin) return;
+                                                    setInviteActionLoading(inv.id);
+                                                    try {
+                                                      await api(`/api/admin/invitations/${inv.id}`, {
+                                                        method: 'PUT',
+                                                        headers: { 'Content-Type': 'application/json' },
+                                                        body: JSON.stringify({ action: 'cancel', pin }),
+                                                      });
+                                                      toast.success('Convite cancelado');
+                                                      fetchAdminInvitations();
+                                                    } catch (err: any) { toast.error(err.message || 'Erro'); }
+                                                    finally { setInviteActionLoading(null); }
+                                                  }}>
+                                                  <Ban className="h-4 w-4" />
+                                                </Button>
+                                              </TooltipTrigger><TooltipContent>Cancelar</TooltipContent></Tooltip>
+                                            </>
+                                          )}
+                                          {(isPending || isApproved) && !isUsed && (
+                                            <Tooltip><TooltipTrigger asChild>
+                                              <Button variant="ghost" size="icon" className="h-8 w-8 text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10"
+                                                onClick={() => {
+                                                  navigator.clipboard.writeText(inviteUrl);
+                                                  toast.success('Link do convite copiado!');
+                                                }}>
+                                                <Copy className="h-4 w-4" />
+                                              </Button>
+                                            </TooltipTrigger><TooltipContent>Copiar link</TooltipContent></Tooltip>
+                                          )}
+                                          <Tooltip><TooltipTrigger asChild>
+                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                                              onClick={async () => {
+                                                if (!confirm('Deletar este convite?')) return;
+                                                try {
+                                                  await api(`/api/admin/invitations/${inv.id}`, { method: 'DELETE' });
+                                                  toast.success('Convite deletado');
+                                                  fetchAdminInvitations();
+                                                } catch (err: any) { toast.error(err.message || 'Erro'); }
+                                              }}>
+                                              <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                          </TooltipTrigger><TooltipContent>Deletar</TooltipContent></Tooltip>
+                                        </div>
+                                      </TableCell>
+                                    </TableRow>
+                                  );
+                                })}
+                                {adminInvitations.length === 0 && (
+                                  <TableRow>
+                                    <TableCell colSpan={7} className="text-center text-zinc-500 py-8">
+                                      Nenhum convite encontrado
+                                    </TableCell>
+                                  </TableRow>
+                                )}
+                              </TableBody>
+                            </Table>
+                          </CardContent>
+                        </Card>
+
+                        {/* Current Admins Section */}
+                        <div className="space-y-4">
+                          <h3 className="text-lg font-semibold flex items-center gap-2">
+                            <Shield className="h-5 w-5 text-cyan-400" />
+                            Administradores Atuais
+                          </h3>
+                          <Card className="bg-zinc-900 border-zinc-800">
+                            <CardContent className="p-0 overflow-x-auto">
+                              <Table className="min-w-[600px]">
+                                <TableHeader>
+                                  <TableRow className="border-zinc-800 hover:bg-transparent">
+                                    <TableHead className="text-zinc-400">Nome</TableHead>
+                                    <TableHead className="text-zinc-400">Email</TableHead>
+                                    <TableHead className="text-zinc-400">Papel</TableHead>
+                                    <TableHead className="text-zinc-400">PIN</TableHead>
+                                    <TableHead className="text-zinc-400">Último Login</TableHead>
+                                    <TableHead className="text-zinc-400 text-right">Ações</TableHead>
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  {adminUsers
+                                    .filter((u: any) => u.role === 'admin' || u.role === 'super_admin')
+                                    .map((admin: any) => (
+                                    <TableRow key={admin.id} className="border-zinc-800">
+                                      <TableCell className="text-sm font-medium">{admin.name}</TableCell>
+                                      <TableCell className="text-sm text-zinc-400">{admin.email}</TableCell>
+                                      <TableCell>
+                                        <Badge variant="outline" className={admin.role === 'super_admin' ? 'border-amber-500/30 text-amber-400' : 'border-cyan-500/30 text-cyan-400'}>
+                                          {admin.role === 'super_admin' ? 'Super Admin' : 'Admin'}
+                                        </Badge>
+                                      </TableCell>
+                                      <TableCell>
+                                        <Badge variant="outline" className="border-zinc-600 text-zinc-400">
+                                          {admin.adminPin ? '✓ Configurado' : '✗ Não configurado'}
+                                        </Badge>
+                                      </TableCell>
+                                      <TableCell className="text-sm text-zinc-400 whitespace-nowrap">
+                                        {admin.updatedAt ? fmtDateTime(admin.updatedAt) : '-'}
+                                      </TableCell>
+                                      <TableCell className="text-right">
+                                        {admin.id !== user.id && (
+                                          <Tooltip><TooltipTrigger asChild>
+                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-amber-400 hover:text-amber-300 hover:bg-amber-500/10"
+                                              onClick={async () => {
+                                                const pin = prompt('Digite seu PIN de segurança para rebaixar este administrador:');
+                                                if (!pin) return;
+                                                try {
+                                                  await api('/api/admin/users', {
+                                                    method: 'PUT',
+                                                    headers: { 'Content-Type': 'application/json' },
+                                                    body: JSON.stringify({ id: admin.id, role: 'user', pin }),
+                                                  });
+                                                  toast.success(`${admin.name} rebaixado para usuário`);
+                                                  fetchAdminData();
+                                                } catch (err: any) { toast.error(err.message || 'Erro ao rebaixar'); }
+                                              }}>
+                                              <UserMinus className="h-4 w-4" />
+                                            </Button>
+                                          </TooltipTrigger><TooltipContent>Rebaixar para usuário</TooltipContent></Tooltip>
+                                        )}
+                                        {admin.id === user.id && (
+                                          <span className="text-xs text-zinc-600">Você</span>
+                                        )}
+                                      </TableCell>
+                                    </TableRow>
+                                  ))}
+                                </TableBody>
+                              </Table>
+                            </CardContent>
+                          </Card>
+                        </div>
+
+                        {/* Create Invitation Dialog */}
+                        <Dialog open={inviteDialogOpen} onOpenChange={setInviteDialogOpen}>
+                          <DialogContent className="bg-zinc-900 border-zinc-800 text-white max-w-md">
+                            <DialogHeader>
+                              <DialogTitle className="flex items-center gap-2">
+                                <UserPlus className="h-5 w-5 text-cyan-400" />
+                                Novo Convite de Administrador
+                              </DialogTitle>
+                              <DialogDescription className="text-zinc-400">
+                                Convide um novo administrador para a plataforma. O convite expira em 48 horas.
+                              </DialogDescription>
+                            </DialogHeader>
+                            <form onSubmit={async (e) => {
+                              e.preventDefault();
+                              if (!inviteForm.email || !inviteForm.name || !inviteForm.pin) {
+                                toast.error('Preencha todos os campos');
+                                return;
+                              }
+                              setInviteLoading(true);
+                              try {
+                                await api('/api/admin/invitations', {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify(inviteForm),
+                                });
+                                toast.success('Convite criado com sucesso!');
+                                setInviteDialogOpen(false);
+                                setInviteForm({ email: '', name: '', role: 'admin', pin: '' });
+                                fetchAdminInvitations();
+                              } catch (err: any) {
+                                toast.error(err.message || 'Erro ao criar convite');
+                              } finally {
+                                setInviteLoading(false);
+                              }
+                            }} className="space-y-4">
+                              <div className="space-y-2">
+                                <Label className="text-zinc-300">Email</Label>
+                                <Input
+                                  type="email"
+                                  value={inviteForm.email}
+                                  onChange={e => setInviteForm(prev => ({ ...prev, email: e.target.value }))}
+                                  required
+                                  className="bg-zinc-800 border-zinc-700 text-white"
+                                  placeholder="admin@example.com"
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label className="text-zinc-300">Nome</Label>
+                                <Input
+                                  value={inviteForm.name}
+                                  onChange={e => setInviteForm(prev => ({ ...prev, name: e.target.value }))}
+                                  required minLength={2}
+                                  className="bg-zinc-800 border-zinc-700 text-white"
+                                  placeholder="Nome completo"
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label className="text-zinc-300">Papel</Label>
+                                <Select value={inviteForm.role} onValueChange={v => setInviteForm(prev => ({ ...prev, role: v }))}>
+                                  <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent className="bg-zinc-800">
+                                    <SelectItem value="admin">Admin</SelectItem>
+                                    <SelectItem value="super_admin">Super Admin</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div className="space-y-2">
+                                <Label className="text-zinc-300">PIN de Segurança</Label>
+                                <Input
+                                  type="password"
+                                  value={inviteForm.pin}
+                                  onChange={e => setInviteForm(prev => ({ ...prev, pin: e.target.value }))}
+                                  required
+                                  maxLength={6}
+                                  className="bg-zinc-800 border-zinc-700 text-white"
+                                  placeholder="Seu PIN de 6 dígitos"
+                                />
+                              </div>
+                              <DialogFooter>
+                                <Button type="button" variant="outline" className="border-zinc-700" onClick={() => setInviteDialogOpen(false)}>
+                                  Cancelar
+                                </Button>
+                                <Button type="submit" className="bg-cyan-600 hover:bg-cyan-700" disabled={inviteLoading}>
+                                  {inviteLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                  Criar Convite
+                                </Button>
+                              </DialogFooter>
+                            </form>
+                          </DialogContent>
+                        </Dialog>
+                      </div>
+                    )}
+
                     {/* Admin Config */}
                     {adminTab === 'config' && (
                       <div className="space-y-4">
@@ -10281,7 +11011,7 @@ export default function PlataformaROI() {
                 <div><Label className="text-zinc-300 text-xs">{t('admin.role')}</Label>
                   <Select name="role" defaultValue={userDialog.user?.role || 'user'}>
                     <SelectTrigger className="bg-zinc-800 border-zinc-700 mt-1"><SelectValue /></SelectTrigger>
-                    <SelectContent className="bg-zinc-800"><SelectItem value="user">{t('admin.user')}</SelectItem><SelectItem value="admin">{t('admin.admin')}</SelectItem></SelectContent>
+                    <SelectContent className="bg-zinc-800"><SelectItem value="user">{t('admin.user')}</SelectItem><SelectItem value="admin">{t('admin.admin')}</SelectItem><SelectItem value="super_admin">Super Admin</SelectItem></SelectContent>
                   </Select>
                 </div>
                 <div className="flex flex-col justify-end gap-2">
@@ -10335,7 +11065,8 @@ export default function PlataformaROI() {
               <Button type="button" variant="outline" className="flex-1 border-cyan-700 text-cyan-400 hover:bg-cyan-500/10 min-h-[44px]" onClick={async () => {
                 if (!userDialog.user) return;
                 try {
-                  const res = await api('/api/auth/login-as', { method: 'POST', body: JSON.stringify({ userId: userDialog.user.id }) });
+                  const pin = await requestPin();
+                  const res = await api('/api/auth/login-as', { method: 'POST', body: JSON.stringify({ userId: userDialog.user.id, pin }) });
                   if (res.user) { toast.success(`Logado como ${res.user.name}`); setUser(res.user); setUserDialog({ open: false }); }
                 } catch(e: any) { toast.error(e.message || 'Erro ao logar'); }
               }}><LogIn className="mr-2 h-4 w-4" /> Logar como este usuário</Button>
@@ -10723,7 +11454,7 @@ export default function PlataformaROI() {
                     <SelectValue placeholder="Selecione o lider..." />
                   </SelectTrigger>
                   <SelectContent>
-                    {adminUsers.filter((u: any) => u.role !== 'admin').map((u: any) => (
+                    {adminUsers.filter((u: any) => u.role !== 'admin' && u.role !== 'super_admin').map((u: any) => (
                       <SelectItem key={u.id} value={u.id}>{u.name} ({u.email})</SelectItem>
                     ))}
                   </SelectContent>
@@ -10955,6 +11686,104 @@ export default function PlataformaROI() {
                 toast.error(e.message || 'Erro ao atualizar');
               }
             }}>Salvar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* PIN Verification Modal */}
+      <Dialog open={pinModalOpen} onOpenChange={(open) => { if (!open) { setPinModalOpen(false); setPinCallback(null); } }}>
+        <DialogContent className="bg-zinc-900 border-zinc-700 max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-amber-400"><Lock className="h-5 w-5" /> Verificação de Segurança</DialogTitle>
+            <DialogDescription className="text-zinc-400">Digite seu PIN de 6 dígitos para confirmar esta ação</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="flex justify-center gap-2">
+              {pinDigits.map((digit, idx) => (
+                <Input
+                  key={idx}
+                  id={`pin-digit-${idx}`}
+                  type="password"
+                  inputMode="numeric"
+                  maxLength={1}
+                  value={digit}
+                  className="w-12 h-14 text-center text-2xl bg-zinc-800 border-zinc-600 focus:border-cyan-500 focus:ring-cyan-500"
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/\D/g, '');
+                    const newDigits = [...pinDigits];
+                    newDigits[idx] = val;
+                    setPinDigits(newDigits);
+                    // Auto-focus next input
+                    if (val && idx < 5) {
+                      const next = document.getElementById(`pin-digit-${idx + 1}`);
+                      if (next) next.focus();
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Backspace' && !pinDigits[idx] && idx > 0) {
+                      const prev = document.getElementById(`pin-digit-${idx - 1}`);
+                      if (prev) prev.focus();
+                    }
+                    if (e.key === 'Enter') {
+                      handlePinSubmit();
+                    }
+                  }}
+                  autoFocus={idx === 0}
+                />
+              ))}
+            </div>
+            {pinError && <p className="text-red-400 text-sm text-center">{pinError}</p>}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" className="border-zinc-700" onClick={() => { setPinModalOpen(false); setPinCallback(null); }}>Cancelar</Button>
+            <Button className="bg-amber-600 hover:bg-amber-700" onClick={handlePinSubmit} disabled={pinLoading || pinDigits.join('').length < 6}>
+              {pinLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Lock className="mr-2 h-4 w-4" />} Confirmar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* PIN Setup Dialog */}
+      <Dialog open={pinSetupOpen} onOpenChange={setPinSetupOpen}>
+        <DialogContent className="bg-zinc-900 border-zinc-700 max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-amber-400"><Key className="h-5 w-5" /> Configurar PIN de Segurança</DialogTitle>
+            <DialogDescription className="text-zinc-400">Crie um PIN de 6 dígitos para proteger ações sensíveis no painel administrativo</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <Label className="text-zinc-300 text-sm">Novo PIN (6 dígitos)</Label>
+              <Input
+                type="password"
+                inputMode="numeric"
+                maxLength={6}
+                value={pinSetupPin}
+                onChange={(e) => setPinSetupPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                className="bg-zinc-800 border-zinc-700 mt-1"
+                placeholder="• • • • • •"
+              />
+            </div>
+            <div>
+              <Label className="text-zinc-300 text-sm">Confirmar PIN</Label>
+              <Input
+                type="password"
+                inputMode="numeric"
+                maxLength={6}
+                value={pinSetupConfirm}
+                onChange={(e) => setPinSetupConfirm(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                className="bg-zinc-800 border-zinc-700 mt-1"
+                placeholder="• • • • • •"
+              />
+            </div>
+            {pinSetupPin && pinSetupConfirm && pinSetupPin !== pinSetupConfirm && (
+              <p className="text-red-400 text-sm">PIN e confirmação não conferem</p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" className="border-zinc-700" onClick={() => setPinSetupOpen(false)}>Cancelar</Button>
+            <Button className="bg-amber-600 hover:bg-amber-700" onClick={handlePinSetup} disabled={pinSetupLoading || pinSetupPin.length !== 6 || pinSetupPin !== pinSetupConfirm}>
+              {pinSetupLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Key className="mr-2 h-4 w-4" />} Configurar PIN
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

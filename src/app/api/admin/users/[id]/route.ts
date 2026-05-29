@@ -1,56 +1,189 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { requireAdmin } from '@/lib/auth';
+import { NextRequest } from 'next/server';
+import { db, isPostgres } from '@/lib/db';
+import { requireAdmin, d, ds, dusdt, hashPassword } from '@/lib/auth';
+import { adminUserUpdateSchema } from '@/lib/validations';
+import { apiError, apiSuccess, handleApiError, getClientIp } from '@/lib/api-utils';
+import { verifyAdminPin, requiresPinVerification, getPinActionForUserUpdate } from '@/lib/admin-pin';
+import { verifyPinForAction } from '@/lib/admin-pin-middleware';
 
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const adminId = await requireAdmin(request);
-    if (!adminId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
+    const session = await requireAdmin();
     const { id } = await params;
     const body = await request.json();
-    const { name, email, balance, totalInvested, totalRoi, isActive, role, teamBonusPct, hasInvested } = body;
+    const { pin, ...updateBody } = body;
 
-    const updateData: Record<string, unknown> = {};
-    if (name !== undefined) updateData.name = name;
-    if (email !== undefined) updateData.email = email;
-    if (balance !== undefined) updateData.balance = balance.toString();
-    if (totalInvested !== undefined) updateData.totalInvested = totalInvested.toString();
-    if (totalRoi !== undefined) updateData.totalRoi = totalRoi.toString();
-    if (isActive !== undefined) updateData.isActive = isActive;
-    if (role !== undefined) updateData.role = role;
-    if (teamBonusPct !== undefined) updateData.teamBonusPct = teamBonusPct.toString();
-    if (hasInvested !== undefined) updateData.hasInvested = hasInvested;
+    if (!id) {
+      return apiError('ID do usuário é obrigatório');
+    }
 
-    const user = await db.user.update({
-      where: { id },
-      data: updateData,
+    const existing = await db.user.findUnique({ where: { id } });
+    if (!existing) {
+      return apiError('Usuário não encontrado', 404);
+    }
+
+    const data = adminUserUpdateSchema.parse(updateBody);
+
+    // Require PIN for sensitive fields (balance, role changes)
+    if (requiresPinVerification(data, existing)) {
+      // Try x-admin-pin header first (new middleware approach)
+      const headerPin = request.headers.get('x-admin-pin');
+      if (headerPin) {
+        const pinAction = getPinActionForUserUpdate(data, existing) || 'balance_change';
+        const pinResult = await verifyPinForAction(request, pinAction);
+        if (!pinResult.success) {
+          return apiError(pinResult.error!, 403);
+        }
+      } else if (pin) {
+        // Fallback to body PIN (backward compatibility)
+        const pinValid = await verifyAdminPin(session.userId, pin);
+        if (!pinValid) {
+          return apiError('PIN de segurança inválido', 403);
+        }
+      } else {
+        return apiError('PIN de segurança é obrigatório para esta ação', 403);
+      }
+    }
+
+    // Hash password if provided
+    if (data.newPassword) {
+      (data as any).hashedPassword = await hashPassword(data.newPassword);
+      delete data.newPassword;
+    }
+
+    // Guard: admin cannot change their own role
+    if (id === session.userId && data.role !== undefined && data.role !== 'admin' && data.role !== 'super_admin') {
+      return apiError('Você não pode alterar seu próprio papel');
+    }
+
+    // Guard: cannot demote the last admin/super_admin
+    if (data.role !== undefined && data.role !== 'admin' && data.role !== 'super_admin') {
+      if (existing.role === 'admin' || existing.role === 'super_admin') {
+        const adminCount = await db.user.count({ where: { role: { in: ['admin', 'super_admin'] } } });
+        if (adminCount <= 1) {
+          return apiError('Não é possível remover o último administrador do sistema');
+        }
+      }
+    }
+
+    const ipAddress = getClientIp(request);
+
+    // Use transaction with row lock for balance changes to create audit trail and prevent race conditions
+    const result = await db.$transaction(async (tx) => {
+      // PostgreSQL: acquire row-level lock to prevent concurrent modifications
+      if (isPostgres()) {
+        await tx.$queryRaw`SELECT 1 FROM "User" WHERE id = ${id} FOR UPDATE`;
+      }
+      const lockedUser = await tx.user.findUnique({ where: { id } });
+      if (!lockedUser) throw new Error('Usuário não encontrado');
+
+      // Create AdminLog first so we can use its ID as referenceId for Transaction records
+      const adminLog = await tx.adminLog.create({
+        data: {
+          adminId: session.userId,
+          action: 'update',
+          entity: 'user',
+          entityId: id,
+          oldValue: JSON.stringify(existing),
+          newValue: JSON.stringify(data),
+          description: `Usuário atualizado: ${existing.name} (${existing.email})`,
+          ipAddress,
+        },
+      });
+
+      // Handle balance changes — link Transaction records to the AdminLog via referenceId
+      if (data.balance !== undefined && d(data.balance) !== d(lockedUser.balance)) {
+        const diff = d(data.balance) - d(lockedUser.balance);
+        await tx.transaction.create({
+          data: {
+            userId: id,
+            type: 'admin_adjust',
+            amount: ds(Math.abs(diff)),
+            status: 'completed',
+            description: `Ajuste admin no saldo: ${diff >= 0 ? '+' : ''}${dusdt(diff)} USDT`,
+            referenceType: 'AdminAction',
+            referenceId: adminLog.id,
+          },
+        });
+      }
+
+      if (data.affiliateBalance !== undefined && d(data.affiliateBalance) !== d(lockedUser.affiliateBalance)) {
+        const diff = d(data.affiliateBalance) - d(lockedUser.affiliateBalance);
+        await tx.transaction.create({
+          data: {
+            userId: id,
+            type: 'admin_adjust',
+            amount: ds(Math.abs(diff)),
+            status: 'completed',
+            description: `Ajuste admin no saldo afiliado: ${diff >= 0 ? '+' : ''}${dusdt(diff)} USDT`,
+            referenceType: 'AdminAction',
+            referenceId: adminLog.id,
+          },
+        });
+      }
+
+      if (data.voucherBalance !== undefined && d(data.voucherBalance) !== d(lockedUser.voucherBalance)) {
+        const diff = d(data.voucherBalance) - d(lockedUser.voucherBalance);
+        await tx.transaction.create({
+          data: {
+            userId: id,
+            type: 'admin_adjust',
+            amount: ds(Math.abs(diff)),
+            status: 'completed',
+            description: `Ajuste admin no saldo voucher: ${diff >= 0 ? '+' : ''}${dusdt(diff)} USDT`,
+            referenceType: 'AdminAction',
+            referenceId: adminLog.id,
+          },
+        });
+      }
+
+      // Update user
+      const user = await tx.user.update({
+        where: { id },
+        data: {
+          ...(data.name !== undefined && { name: data.name }),
+          ...(data.role !== undefined && { role: data.role }),
+          ...(data.isActive !== undefined && { isActive: data.isActive }),
+          ...(data.hasInvested !== undefined && { hasInvested: data.hasInvested }),
+          ...(data.balance !== undefined && { balance: data.balance }),
+          ...(data.affiliateBalance !== undefined && { affiliateBalance: data.affiliateBalance }),
+          ...(data.voucherBalance !== undefined && { voucherBalance: data.voucherBalance }),
+          ...(data.totalInvested !== undefined && { totalInvested: data.totalInvested }),
+          ...(data.totalRoi !== undefined && { totalRoi: data.totalRoi }),
+          ...(data.totalDeposited !== undefined && { totalDeposited: data.totalDeposited }),
+          ...(data.totalWithdrawn !== undefined && { totalWithdrawn: data.totalWithdrawn }),
+          ...(data.totalAffiliateEarnings !== undefined && { totalAffiliateEarnings: data.totalAffiliateEarnings }),
+          ...(data.teamBonusPct !== undefined && { teamBonusPct: data.teamBonusPct }),
+          ...(data.referralLevel !== undefined && { referralLevel: data.referralLevel }),
+          ...(data.affiliateCode !== undefined && { affiliateCode: data.affiliateCode || null }),
+          ...(data.walletAddress !== undefined && { walletAddress: data.walletAddress || null }),
+          ...(data.pixKey !== undefined && { pixKey: data.pixKey || null }),
+          ...(data.linkUnlocked !== undefined && { linkUnlocked: data.linkUnlocked }),
+          ...((data as any).hashedPassword && { password: (data as any).hashedPassword }),
+        },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          role: true,
+          isActive: true,
+          balance: true,
+          affiliateBalance: true,
+          voucherBalance: true,
+          walletAddress: true,
+          pixKey: true,
+          linkUnlocked: true,
+        },
+      });
+
+      return user;
     });
 
-    return NextResponse.json({
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        role: user.role,
-        balance: user.balance,
-        totalInvested: user.totalInvested,
-        totalRoi: user.totalRoi,
-        isActive: user.isActive,
-        teamBonusPct: user.teamBonusPct,
-        hasInvested: user.hasInvested,
-      },
-    });
+    return apiSuccess({ user: result });
   } catch (error) {
-    console.error('Admin update user error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return handleApiError(error);
   }
 }

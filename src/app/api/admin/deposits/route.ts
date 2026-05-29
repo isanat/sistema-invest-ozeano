@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db, isPostgres } from '@/lib/db';
 import { requireAdmin, d, ds, dusdt } from '@/lib/auth';
 import { adminDepositActionSchema } from '@/lib/validations';
-import { apiError, apiSuccess, handleApiError, sanitizePagination } from '@/lib/api-utils';
+import { apiError, apiSuccess, handleApiError, sanitizePagination, getIpFromRequest } from '@/lib/api-utils';
 import { processCommissions } from '@/lib/affiliate';
 import { BusinessError } from '@/lib/api-utils';
 
@@ -152,6 +152,7 @@ export async function PUT(request: NextRequest) {
           oldValue: JSON.stringify({ status: 'pending' }),
           newValue: JSON.stringify({ status: 'confirmed' }),
           description: depositRecord ? `Depósito aprovado: ${dusdt(depositRecord.amount)} USDT para ${depositRecord.userId}` : 'Depósito aprovado',
+          ipAddress: getIpFromRequest(request),
         },
       });
 
@@ -195,6 +196,7 @@ export async function PUT(request: NextRequest) {
           oldValue: JSON.stringify({ status: 'pending' }),
           newValue: JSON.stringify({ status: 'rejected' }),
           description: 'Depósito rejeitado',
+          ipAddress: getIpFromRequest(request),
         },
       });
 

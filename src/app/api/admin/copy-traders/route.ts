@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { db } from '@/lib/db';
-import { requireAdmin, apiSuccess, apiError, handleApiError } from '@/lib/api-utils';
+import { requireAdmin } from '@/lib/auth';
+import { apiSuccess, apiError, handleApiError, getIpFromRequest } from '@/lib/api-utils';
 
 export async function GET(request: NextRequest) {
   try {
@@ -41,6 +42,19 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    // Audit log
+    await db.adminLog.create({
+      data: {
+        adminId,
+        action: 'create',
+        entity: 'copy_trader',
+        entityId: trader.id,
+        newValue: JSON.stringify(body),
+        description: `Copy trader criado: ${trader.name}`,
+        ipAddress: getIpFromRequest(request),
+      },
+    });
+
     return apiSuccess({ trader }, 'Copy trader criado com sucesso');
   } catch (error) {
     return handleApiError(error);
@@ -76,6 +90,20 @@ export async function PUT(request: NextRequest) {
       },
     });
 
+    // Audit log
+    await db.adminLog.create({
+      data: {
+        adminId,
+        action: 'update',
+        entity: 'copy_trader',
+        entityId: id,
+        oldValue: JSON.stringify(existing),
+        newValue: JSON.stringify(body),
+        description: `Copy trader atualizado: ${trader.name}`,
+        ipAddress: getIpFromRequest(request),
+      },
+    });
+
     return apiSuccess({ trader }, 'Copy trader atualizado com sucesso');
   } catch (error) {
     return handleApiError(error);
@@ -96,6 +124,19 @@ export async function DELETE(request: NextRequest) {
     if (!existing) return apiError('Copy trader não encontrado', 404);
 
     await db.copyTrader.delete({ where: { id } });
+
+    // Audit log
+    await db.adminLog.create({
+      data: {
+        adminId,
+        action: 'delete',
+        entity: 'copy_trader',
+        entityId: id,
+        oldValue: JSON.stringify(existing),
+        description: `Copy trader excluído: ${existing.name}`,
+        ipAddress: getIpFromRequest(request),
+      },
+    });
 
     return apiSuccess({ id }, 'Copy trader excluído com sucesso');
   } catch (error) {

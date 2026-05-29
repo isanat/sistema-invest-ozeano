@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { db, isPostgres } from '@/lib/db';
 import { requireAdmin, d, ds, dusdt } from '@/lib/auth';
-import { apiError, apiSuccess, handleApiError } from '@/lib/api-utils';
+import { apiError, apiSuccess, handleApiError, getIpFromRequest } from '@/lib/api-utils';
 
 // POST /api/admin/recalculate — Recalculate all user balances and investment accumulatedRoi from RoiHistory
 // This is a maintenance endpoint to fix any discrepancies between RoiHistory and User totals.
@@ -96,6 +96,7 @@ export async function POST(request: NextRequest) {
         action: 'recalculate',
         entity: 'system',
         description: `Recalculation complete: ${investmentsUpdated} investments, ${usersUpdated} users ROI updated, ${balancesCorrected} balances corrected`,
+        ipAddress: getIpFromRequest(request),
       },
     });
 

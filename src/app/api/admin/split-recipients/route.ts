@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAdmin, d, ds } from '@/lib/auth';
-import { apiError, apiSuccess, handleApiError, BusinessError, sanitizePagination } from '@/lib/api-utils';
+import { apiError, apiSuccess, handleApiError, BusinessError, sanitizePagination, getIpFromRequest } from '@/lib/api-utils';
 
 // GET /api/admin/split-recipients — List all recipients + summary stats
 export async function GET(request: NextRequest) {
@@ -108,6 +108,7 @@ export async function POST(request: NextRequest) {
         entityId: recipient.id,
         newValue: JSON.stringify(recipient),
         description: `Sócio de split criado: ${name} (${pct}%)`,
+        ipAddress: getIpFromRequest(request),
       },
     });
 
@@ -173,6 +174,7 @@ export async function PUT(request: NextRequest) {
         oldValue: JSON.stringify(existing),
         newValue: JSON.stringify(updated),
         description: `Sócio ${isActive === false ? 'desativado' : isActive === true ? 'reativado' : 'atualizado'}: ${updated.name} (${updated.percentage}%)`,
+        ipAddress: getIpFromRequest(request),
       },
     });
 
@@ -213,6 +215,7 @@ export async function DELETE(request: NextRequest) {
         entityId: id,
         oldValue: JSON.stringify(existing),
         description: `Sócio removido: ${existing.name}`,
+        ipAddress: getIpFromRequest(request),
       },
     });
 

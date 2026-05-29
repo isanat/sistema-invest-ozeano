@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAdmin, d } from '@/lib/auth';
-import { apiError, apiSuccess, handleApiError } from '@/lib/api-utils';
+import { apiError, apiSuccess, handleApiError, getIpFromRequest } from '@/lib/api-utils';
 
 // Default rank seeds (Portuguese naming - Bronze/Prata/Ouro)
 const DEFAULT_RANKS = [
@@ -115,6 +115,7 @@ export async function POST(request: NextRequest) {
         entityId: rank.id,
         newValue: JSON.stringify(body),
         description: `Rank de afiliado criado: ${rank.name}`,
+        ipAddress: getIpFromRequest(request),
       },
     });
 
@@ -177,6 +178,7 @@ export async function PUT(request: NextRequest) {
         oldValue: JSON.stringify(existing),
         newValue: JSON.stringify(updateData),
         description: `Rank de afiliado atualizado: ${rank.name}`,
+        ipAddress: getIpFromRequest(request),
       },
     });
 
@@ -216,6 +218,7 @@ export async function DELETE(request: NextRequest) {
         entityId: rank.id,
         oldValue: JSON.stringify(existing),
         description: `Rank de afiliado desativado: ${rank.name}`,
+        ipAddress: getIpFromRequest(request),
       },
     });
 

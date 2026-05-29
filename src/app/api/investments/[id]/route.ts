@@ -32,7 +32,7 @@ export async function GET(
     }
 
     // Check if user owns this investment
-    if (investment.userId !== auth.userId && auth.role !== 'admin') {
+    if (investment.userId !== auth.userId && auth.role !== 'admin' && auth.role !== 'super_admin') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 

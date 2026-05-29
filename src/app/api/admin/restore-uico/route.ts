@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAdmin } from '@/lib/auth';
-import { apiError, apiSuccess, handleApiError } from '@/lib/api-utils';
+import { apiError, apiSuccess, handleApiError, getIpFromRequest } from '@/lib/api-utils';
 import bcrypt from 'bcryptjs';
 
 // ============================================================================
@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
 
     await db.$transaction(async (tx) => {
       // ========== STEP 0: Ensure admin user exists (in case DB was fully reset) ==========
-      const adminCount = await tx.user.count({ where: { role: 'admin' } });
+      const adminCount = await tx.user.count({ where: { role: { in: ['admin', 'super_admin'] } } });
       if (adminCount === 0) {
         console.info('[RESTORE] No admin user found. Creating default admin...');
         const adminPasswordHash = bcrypt.hashSync('Admin@2026!', 12);
@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
             email: 'admin@plataformaroi.com',
             password: adminPasswordHash,
             name: 'Admin ROI',
-            role: 'admin',
+            role: 'super_admin',
             isActive: true,
             balance: '0',
             affiliateBalance: '0',
@@ -393,7 +393,7 @@ export async function POST(request: NextRequest) {
       console.info(`[RESTORE] Created ${transactions.length} transaction records`);
 
       // ========== STEP 7: Log the restore action ==========
-      const logAdminId = adminId || (await tx.user.findFirst({ where: { role: 'admin' } }))?.id;
+      const logAdminId = adminId || (await tx.user.findFirst({ where: { role: { in: ['admin', 'super_admin'] } } }))?.id;
 
       await tx.adminLog.create({
         data: {
@@ -411,6 +411,7 @@ export async function POST(request: NextRequest) {
             investments: 4,
             roiRecords: 4,
           }),
+          ipAddress: getIpFromRequest(request),
         },
       });
     }, { timeout: 30000 });

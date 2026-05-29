@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { requireAdmin } from '@/lib/auth';
-import { apiError, apiSuccess, handleApiError } from '@/lib/api-utils';
+import { apiError, apiSuccess, handleApiError, getIpFromRequest } from '@/lib/api-utils';
 import { db } from '@/lib/db';
 import {
   isBitgetConfigured,
@@ -179,6 +179,7 @@ export async function POST(request: NextRequest) {
         entity: 'bitget_cache',
         description: `Bitget trader cache refreshed: ${totalCached} traders (V2=${isBitgetConfigured()})`,
         newValue: JSON.stringify({ results, errors }),
+        ipAddress: getIpFromRequest(request),
       },
     });
 
@@ -310,6 +311,7 @@ export async function PUT(request: NextRequest) {
         entity: 'bitget_cache',
         description: `Bitget trader cache imported: ${saved} traders for ranking ${ranking}`,
         newValue: JSON.stringify({ count: saved, ranking }),
+        ipAddress: getIpFromRequest(request),
       },
     });
 

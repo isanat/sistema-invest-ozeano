@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAdmin, d } from '@/lib/auth';
-import { apiError, apiSuccess, handleApiError } from '@/lib/api-utils';
+import { apiError, apiSuccess, handleApiError, getIpFromRequest } from '@/lib/api-utils';
 import {
   isNowPaymentsConfigured,
   getNowPaymentsConfig,
@@ -176,6 +176,7 @@ export async function POST(request: NextRequest) {
         entity: 'config',
         description: `Updated NowPayments settings: ${Object.keys(updates).join(', ')}`,
         newValue: JSON.stringify(Object.keys(updates)), // Don't log sensitive values
+        ipAddress: getIpFromRequest(request),
       },
     });
 

@@ -1,7 +1,9 @@
 import { NextRequest } from 'next/server';
 import { db } from '@/lib/db';
-import { requireAdmin } from '@/lib/auth';
-import { apiError, apiSuccess, handleApiError } from '@/lib/api-utils';
+import { requireSuperAdmin } from '@/lib/auth';
+import { apiError, apiSuccess, handleApiError, getIpFromRequest } from '@/lib/api-utils';
+import { verifyAdminPin } from '@/lib/admin-pin';
+import { verifyPinForAction } from '@/lib/admin-pin-middleware';
 
 // ============================================================================
 // ADMIN RESET & SEED - Zero all data except user names, then repopulate
@@ -9,12 +11,30 @@ import { apiError, apiSuccess, handleApiError } from '@/lib/api-utils';
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await requireAdmin();
+    const session = await requireSuperAdmin();
 
     const body = await request.json();
     const confirm = body.confirm === true;
+    const pin = body.pin;
     if (!confirm) {
       return apiError('Confirme a operação enviando { confirm: true }');
+    }
+
+    // Require PIN verification via x-admin-pin header or body PIN
+    const headerPin = request.headers.get('x-admin-pin');
+    if (headerPin) {
+      const pinResult = await verifyPinForAction(request, 'reset_seed');
+      if (!pinResult.success) {
+        return apiError(pinResult.error!, 403);
+      }
+    } else if (pin) {
+      // Fallback to body PIN
+      const pinValid = await verifyAdminPin(session.userId, pin);
+      if (!pinValid) {
+        return apiError('PIN de segurança inválido', 403);
+      }
+    } else {
+      return apiError('PIN de segurança é obrigatório para esta ação', 403);
     }
 
     console.info('[RESET-SEED] Starting database reset...');
@@ -74,8 +94,8 @@ export async function POST(request: NextRequest) {
       await tx.voucher.deleteMany();
 
 
-      // Admin logs
-      await tx.adminLog.deleteMany();
+      // Admin logs — PRESERVE audit trail (do NOT delete AdminLog records)
+      // Old logs survive the reset for accountability
 
 
       // ========== STEP 2: Delete seed/configuration tables ==========
@@ -130,9 +150,9 @@ export async function POST(request: NextRequest) {
       });
 
 
-      // Restore admin users' hasInvested and linkUnlocked so they can manage affiliate system
+      // Restore admin/super_admin users' hasInvested and linkUnlocked so they can manage affiliate system
       await tx.user.updateMany({
-        where: { role: 'admin' },
+        where: { role: { in: ['admin', 'super_admin'] } },
         data: { hasInvested: true, linkUnlocked: true },
       });
 
@@ -588,6 +608,7 @@ export async function POST(request: NextRequest) {
             copyTraders: copyTraders.length,
             tradingPools: tradingPools.length,
           }),
+          ipAddress: getIpFromRequest(request),
         },
       });
     }, { timeout: 60000 }); // 60 second timeout for large operations

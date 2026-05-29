@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAdmin } from '@/lib/auth';
-import { apiError, apiSuccess, handleApiError } from '@/lib/api-utils';
+import { apiError, apiSuccess, handleApiError, getIpFromRequest } from '@/lib/api-utils';
 
 export async function GET(request: NextRequest) {
   try {
@@ -79,6 +79,7 @@ export async function POST(request: NextRequest) {
         entityId: contest.id,
         newValue: JSON.stringify(body),
         description: `Concurso de afiliado criado: ${contest.name}`,
+        ipAddress: getIpFromRequest(request),
       },
     });
 
@@ -137,6 +138,7 @@ export async function PUT(request: NextRequest) {
         oldValue: JSON.stringify(existing),
         newValue: JSON.stringify(updateData),
         description: `Concurso de afiliado atualizado: ${contest.name}`,
+        ipAddress: getIpFromRequest(request),
       },
     });
 
@@ -176,6 +178,7 @@ export async function DELETE(request: NextRequest) {
         entityId: contest.id,
         oldValue: JSON.stringify(existing),
         description: `Concurso de afiliado desativado: ${contest.name}`,
+        ipAddress: getIpFromRequest(request),
       },
     });
 

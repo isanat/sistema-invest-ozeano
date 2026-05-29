@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { db, isPostgres } from '@/lib/db';
 import { requireAdmin, d, ds, dusdt } from '@/lib/auth';
-import { apiError, apiSuccess, handleApiError, sanitizePagination } from '@/lib/api-utils';
+import { apiError, apiSuccess, handleApiError, sanitizePagination, getIpFromRequest } from '@/lib/api-utils';
 
 export async function GET(request: NextRequest) {
   try {
@@ -166,6 +166,7 @@ export async function PUT(request: NextRequest) {
           oldValue: JSON.stringify({ status: 'active' }),
           newValue: JSON.stringify({ status: 'cancelled', source: result.source }),
           description: `Investimento cancelado: ${dusdt(result.investmentAmount)} USDT (ROI pago: ${dusdt(result.totalRoiPaid)} USDT, reembolso: ${dusdt(result.refundAmount)} USDT${result.source === 'voucher' ? ' → voucherBalance' : ''})`,
+          ipAddress: getIpFromRequest(request),
         },
       });
 

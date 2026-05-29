@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { db, isPostgres } from '@/lib/db';
 import { requireAdmin, d, dusdt } from '@/lib/auth';
-import { apiError, apiSuccess, handleApiError, sanitizePagination } from '@/lib/api-utils';
+import { apiError, apiSuccess, handleApiError, sanitizePagination, getIpFromRequest } from '@/lib/api-utils';
 
 // Type defaults based on voucher type
 const VOUCHER_DEFAULTS: Record<string, {
@@ -202,6 +202,7 @@ export async function POST(request: NextRequest) {
           entityId: v.id,
           newValue: JSON.stringify({ userId, amount, type, goalDirectReferrals, goalMinReferralInvest, goalNetworkMultiple, goalDays }),
           description: `Voucher criado: ${dusdt(amount)} USDT para ${user.name} (${user.email})`,
+          ipAddress: getIpFromRequest(request),
         },
       });
 

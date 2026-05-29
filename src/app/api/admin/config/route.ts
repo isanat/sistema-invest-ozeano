@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAdmin, d } from '@/lib/auth';
 import { adminConfigSchema } from '@/lib/validations';
-import { apiError, apiSuccess, handleApiError } from '@/lib/api-utils';
+import { apiError, apiSuccess, handleApiError, getIpFromRequest } from '@/lib/api-utils';
 
 // Keys that should NOT be saved via admin config (managed via Vercel env vars)
 const BLOCKED_CONFIG_KEYS = new Set([
@@ -70,6 +70,7 @@ export async function POST(request: NextRequest) {
         oldValue: oldConfig ? JSON.stringify({ key: oldConfig.key, value: oldConfig.value }) : undefined,
         newValue: JSON.stringify({ key: config.key, value: config.value }),
         description: `Config ${oldConfig ? 'atualizada' : 'criada'}: ${data.key}`,
+        ipAddress: getIpFromRequest(request),
       },
     });
 
@@ -126,6 +127,7 @@ export async function PUT(request: NextRequest) {
             oldValue: oldConfig ? JSON.stringify({ key: oldConfig.key, value: oldConfig.value }) : undefined,
             newValue: JSON.stringify({ key: config.key, value: config.value }),
             description: `Config bulk ${oldConfig ? 'atualizada' : 'criada'}: ${data.key}`,
+            ipAddress: getIpFromRequest(request),
           },
         });
 

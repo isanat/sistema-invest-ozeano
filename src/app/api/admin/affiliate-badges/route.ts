@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAdmin } from '@/lib/auth';
-import { apiError, apiSuccess, handleApiError } from '@/lib/api-utils';
+import { apiError, apiSuccess, handleApiError, getIpFromRequest } from '@/lib/api-utils';
 
 // GET: List all badges
 export async function GET() {
@@ -24,7 +24,7 @@ export async function GET() {
 // POST: Create a new badge
 export async function POST(request: NextRequest) {
   try {
-    await requireAdmin();
+    const session = await requireAdmin();
     const body = await request.json();
 
     const { name, description, icon, color, category, requirement, rewardType, rewardValue, isAuto, sortOrder, isActive } = body;
@@ -56,6 +56,19 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    // Audit log
+    await db.adminLog.create({
+      data: {
+        adminId: session.userId,
+        action: 'create',
+        entity: 'affiliate_badge',
+        entityId: badge.id,
+        newValue: JSON.stringify(body),
+        description: `Badge de afiliado criado: ${badge.name}`,
+        ipAddress: getIpFromRequest(request),
+      },
+    });
+
     return apiSuccess({ badge, message: 'Badge criado com sucesso!' });
   } catch (error) {
     return handleApiError(error);
@@ -65,12 +78,17 @@ export async function POST(request: NextRequest) {
 // PUT: Update a badge
 export async function PUT(request: NextRequest) {
   try {
-    await requireAdmin();
+    const session = await requireAdmin();
     const body = await request.json();
     const { id, ...updates } = body;
 
     if (!id) {
       return apiError('ID do badge é obrigatório');
+    }
+
+    const existing = await db.affiliateBadge.findUnique({ where: { id } });
+    if (!existing) {
+      return apiError('Badge não encontrado', 404);
     }
 
     // Validate requirement if provided
@@ -100,6 +118,20 @@ export async function PUT(request: NextRequest) {
       data,
     });
 
+    // Audit log
+    await db.adminLog.create({
+      data: {
+        adminId: session.userId,
+        action: 'update',
+        entity: 'affiliate_badge',
+        entityId: id,
+        oldValue: JSON.stringify(existing),
+        newValue: JSON.stringify(updates),
+        description: `Badge de afiliado atualizado: ${badge.name}`,
+        ipAddress: getIpFromRequest(request),
+      },
+    });
+
     return apiSuccess({ badge, message: 'Badge atualizado com sucesso!' });
   } catch (error) {
     return handleApiError(error);
@@ -109,7 +141,7 @@ export async function PUT(request: NextRequest) {
 // DELETE: Delete a badge (soft delete by setting isActive=false)
 export async function DELETE(request: NextRequest) {
   try {
-    await requireAdmin();
+    const session = await requireAdmin();
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
 
@@ -117,9 +149,27 @@ export async function DELETE(request: NextRequest) {
       return apiError('ID do badge é obrigatório');
     }
 
+    const existing = await db.affiliateBadge.findUnique({ where: { id } });
+    if (!existing) {
+      return apiError('Badge não encontrado', 404);
+    }
+
     await db.affiliateBadge.update({
       where: { id },
       data: { isActive: false },
+    });
+
+    // Audit log
+    await db.adminLog.create({
+      data: {
+        adminId: session.userId,
+        action: 'delete',
+        entity: 'affiliate_badge',
+        entityId: id,
+        oldValue: JSON.stringify(existing),
+        description: `Badge de afiliado desativado: ${existing.name}`,
+        ipAddress: getIpFromRequest(request),
+      },
     });
 
     return apiSuccess({ message: 'Badge desativado com sucesso!' });

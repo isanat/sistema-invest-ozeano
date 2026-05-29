@@ -1,20 +1,22 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAdmin } from '@/lib/auth';
+import { apiError, apiSuccess, handleApiError, getIpFromRequest } from '@/lib/api-utils';
 
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const adminId = await requireAdmin(request);
-    if (!adminId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
+    const session = await requireAdmin();
     const { id } = await params;
     const body = await request.json();
     const { name, minDirectReferrals, commissionBoost, icon, color } = body;
+
+    const existing = await db.affiliateRank.findUnique({ where: { id } });
+    if (!existing) {
+      return apiError('Rank não encontrado', 404);
+    }
 
     const updateData: Record<string, unknown> = {};
     if (name !== undefined) updateData.name = name;
@@ -28,12 +30,22 @@ export async function PUT(
       data: updateData,
     });
 
-    return NextResponse.json({ rank });
+    // Audit log
+    await db.adminLog.create({
+      data: {
+        adminId: session.userId,
+        action: 'update',
+        entity: 'affiliate_rank',
+        entityId: id,
+        oldValue: JSON.stringify(existing),
+        newValue: JSON.stringify(updateData),
+        description: `Rank de afiliado atualizado: ${rank.name}`,
+        ipAddress: getIpFromRequest(request),
+      },
+    });
+
+    return apiSuccess({ rank });
   } catch (error) {
-    console.error('Admin update affiliate rank error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return handleApiError(error);
   }
 }

@@ -1,7 +1,8 @@
 import { NextRequest } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAdmin, setSessionCookie } from '@/lib/auth';
-import { apiError, apiSuccess, handleApiError } from '@/lib/api-utils';
+import { apiError, apiSuccess, handleApiError, getIpFromRequest } from '@/lib/api-utils';
+import { verifyAdminPin } from '@/lib/admin-pin';
 
 // POST /api/auth/login-as — Admin impersonates a user (no password required)
 export async function POST(request: NextRequest) {
@@ -10,10 +11,19 @@ export async function POST(request: NextRequest) {
     const adminSession = await requireAdmin();
 
     const body = await request.json();
-    const { userId } = body;
+    const { userId, pin } = body;
 
     if (!userId) {
       return apiError('userId é obrigatório', 400);
+    }
+
+    // Require PIN for impersonation
+    if (!pin) {
+      return apiError('PIN de segurança é obrigatório para esta ação', 403);
+    }
+    const pinValid = await verifyAdminPin(adminSession.userId, pin);
+    if (!pinValid) {
+      return apiError('PIN de segurança inválido', 403);
     }
 
     // Find the target user
@@ -49,6 +59,7 @@ export async function POST(request: NextRequest) {
         entity: 'user',
         entityId: user.id,
         description: `Admin ${adminSession.email} logou como usuário ${user.email}`,
+        ipAddress: getIpFromRequest(request),
       },
     });
 

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAdmin, d as parseNum } from '@/lib/auth';
 import { adminAffiliateLevelSchema } from '@/lib/validations';
-import { apiError, apiSuccess, handleApiError, sanitizePagination } from '@/lib/api-utils';
+import { apiError, apiSuccess, handleApiError, sanitizePagination, getIpFromRequest } from '@/lib/api-utils';
 
 export async function GET(request: NextRequest) {
   try {
@@ -179,6 +179,7 @@ export async function PUT(request: NextRequest) {
             oldValue: existing ? JSON.stringify(existing) : undefined,
             newValue: JSON.stringify(data),
             description: `Nível afiliado ${data.level} ${existing ? 'atualizado' : 'criado'}: ${data.percentage}%`,
+            ipAddress: getIpFromRequest(request),
           },
         });
       } catch (logErr) {

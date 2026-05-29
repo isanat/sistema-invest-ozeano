@@ -30,7 +30,7 @@ export async function GET(
     }
 
     // Verify ownership
-    if (payment.userId !== auth.userId && auth.role !== 'admin') {
+    if (payment.userId !== auth.userId && auth.role !== 'admin' && auth.role !== 'super_admin') {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 403 }

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAdmin, d, ds } from '@/lib/auth';
 import { adminPlanSchema } from '@/lib/validations';
-import { apiError, apiSuccess, handleApiError } from '@/lib/api-utils';
+import { apiError, apiSuccess, handleApiError, getIpFromRequest } from '@/lib/api-utils';
 
 // GET /api/admin/plans — List all investment plans (admin)
 export async function GET(request: NextRequest) {
@@ -60,6 +60,7 @@ export async function POST(request: NextRequest) {
         entityId: plan.id,
         newValue: JSON.stringify(data),
         description: `Plano de investimento criado: ${plan.name}`,
+        ipAddress: getIpFromRequest(request),
       },
     });
 
@@ -120,6 +121,7 @@ export async function PUT(request: NextRequest) {
         oldValue: JSON.stringify(existing),
         newValue: JSON.stringify(data),
         description: `Plano de investimento atualizado: ${plan.name}`,
+        ipAddress: getIpFromRequest(request),
       },
     });
 
@@ -167,6 +169,7 @@ export async function DELETE(request: NextRequest) {
           entityId: id,
           oldValue: JSON.stringify(existing),
           description: `Plano de investimento excluído permanentemente: ${existing.name}`,
+          ipAddress: getIpFromRequest(request),
         },
       });
 
@@ -188,6 +191,7 @@ export async function DELETE(request: NextRequest) {
         entityId: plan.id,
         oldValue: JSON.stringify(existing),
         description: `Plano de investimento desativado: ${plan.name}`,
+        ipAddress: getIpFromRequest(request),
       },
     });
 

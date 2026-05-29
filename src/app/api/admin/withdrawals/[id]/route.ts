@@ -1,48 +1,58 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { db } from '@/lib/db';
-import { requireAdmin } from '@/lib/auth';
+import { requireAdmin, d, ds, dusdt } from '@/lib/auth';
+import { apiError, apiSuccess, handleApiError, getIpFromRequest } from '@/lib/api-utils';
+import { verifyPinForAction } from '@/lib/admin-pin-middleware';
+import { verifyAdminPin } from '@/lib/admin-pin';
 
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const adminId = await requireAdmin(request);
-    if (!adminId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
+    const session = await requireAdmin();
     const { id } = await params;
     const body = await request.json();
-    const { status, rejectedReason } = body;
+    const { status, rejectedReason, pin } = body;
 
     if (!status || !['approved', 'rejected', 'processed'].includes(status)) {
-      return NextResponse.json(
-        { error: 'Valid status (approved, rejected, processed) is required' },
-        { status: 400 }
-      );
+      return apiError('Status inválido. Use: approved, rejected ou processed');
+    }
+
+    // Require PIN verification via x-admin-pin header or body PIN
+    const pinAction = status === 'rejected' ? 'withdrawal_reject' as const : 'withdrawal_approve' as const;
+    const headerPin = request.headers.get('x-admin-pin');
+    if (headerPin) {
+      const pinResult = await verifyPinForAction(request, pinAction);
+      if (!pinResult.success) {
+        return apiError(pinResult.error!, 403);
+      }
+    } else if (pin) {
+      // Fallback to body PIN
+      const pinValid = await verifyAdminPin(session.userId, pin);
+      if (!pinValid) {
+        return apiError('PIN de segurança inválido', 403);
+      }
+    } else {
+      return apiError('PIN de segurança é obrigatório para aprovar/rejeitar saques', 403);
     }
 
     const withdrawal = await db.withdrawal.findUnique({ where: { id } });
     if (!withdrawal) {
-      return NextResponse.json(
-        { error: 'Withdrawal not found' },
-        { status: 404 }
-      );
+      return apiError('Saque não encontrado', 404);
     }
 
     if (withdrawal.status !== 'pending') {
-      return NextResponse.json(
-        { error: 'Withdrawal has already been processed' },
-        { status: 400 }
-      );
+      return apiError('Saque já foi processado');
     }
+
+    const ipAddress = getIpFromRequest(request);
 
     // If rejected, return the amount to user balance
     if (status === 'rejected') {
       await db.$transaction(async (tx) => {
         const user = await tx.user.findUnique({ where: { id: withdrawal.userId } });
-        if (!user) throw new Error('User not found');
+        if (!user) throw new Error('Usuário não encontrado');
 
         const newBalance = (parseFloat(user.balance) + parseFloat(withdrawal.amount)).toFixed(8);
         const newTotalWithdrawn = (parseFloat(user.totalWithdrawn) - parseFloat(withdrawal.amount)).toFixed(8);
@@ -69,10 +79,24 @@ export async function PUT(
           data: {
             status: 'rejected',
             rejectedReason: rejectedReason || null,
-            approvedBy: adminId,
+            approvedBy: session.userId,
             approvedAt: new Date(),
           },
         });
+      });
+
+      // Audit log
+      await db.adminLog.create({
+        data: {
+          adminId: session.userId,
+          action: 'reject',
+          entity: 'withdrawal',
+          entityId: id,
+          oldValue: JSON.stringify({ status: 'pending' }),
+          newValue: JSON.stringify({ status: 'rejected', rejectedReason }),
+          description: `Saque rejeitado: ${dusdt(withdrawal.amount)} USDT para ${withdrawal.userId}`,
+          ipAddress,
+        },
       });
     } else {
       // Approve or process
@@ -90,10 +114,24 @@ export async function PUT(
           where: { id },
           data: {
             status,
-            approvedBy: adminId,
+            approvedBy: session.userId,
             approvedAt: new Date(),
           },
         });
+      });
+
+      // Audit log
+      await db.adminLog.create({
+        data: {
+          adminId: session.userId,
+          action: status === 'approved' ? 'approve' : 'complete',
+          entity: 'withdrawal',
+          entityId: id,
+          oldValue: JSON.stringify({ status: 'pending' }),
+          newValue: JSON.stringify({ status }),
+          description: `Saque ${status === 'approved' ? 'aprovado' : 'processado'}: ${dusdt(withdrawal.amount)} USDT para ${withdrawal.userId}`,
+          ipAddress,
+        },
       });
     }
 
@@ -104,12 +142,8 @@ export async function PUT(
       },
     });
 
-    return NextResponse.json({ withdrawal: updatedWithdrawal });
+    return apiSuccess({ withdrawal: updatedWithdrawal });
   } catch (error) {
-    console.error('Admin process withdrawal error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return handleApiError(error);
   }
 }

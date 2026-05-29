@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db, isPostgres } from '@/lib/db';
 import { requireAdmin, d, ds, dusdt, hashPassword } from '@/lib/auth';
 import { adminUserUpdateSchema } from '@/lib/validations';
-import { apiError, apiSuccess, handleApiError, sanitizePagination } from '@/lib/api-utils';
+import { apiError, apiSuccess, handleApiError, sanitizePagination, getClientIp } from '@/lib/api-utils';
+import { verifyAdminPin, requiresPinVerification, getPinActionForUserUpdate } from '@/lib/admin-pin';
+import { verifyPinForAction } from '@/lib/admin-pin-middleware';
 
 export async function GET(request: NextRequest) {
   try {
@@ -63,8 +65,10 @@ export async function GET(request: NextRequest) {
           linkUnlocked: true,
           walletAddress: true,
           pixKey: true,
+          securityPinSetAt: true,
           createdAt: true,
           updatedAt: true,
+          adminPin: { select: { id: true } },
           _count: {
             select: {
               referrals: true,
@@ -76,8 +80,16 @@ export async function GET(request: NextRequest) {
       db.user.count({ where }),
     ]);
 
+    // Add hasPin flag to each user
+    const usersWithPinStatus = users.map(user => ({
+      ...user,
+      hasPin: !!user.securityPinSetAt || !!user.adminPin,
+      securityPinSetAt: undefined,
+      adminPin: undefined,
+    }));
+
     return apiSuccess({
-      users,
+      users: usersWithPinStatus,
       pagination: {
         page,
         limit,
@@ -94,7 +106,7 @@ export async function PUT(request: NextRequest) {
   try {
     const session = await requireAdmin();
     const body = await request.json();
-    const { id, ...updateData } = body;
+    const { id, pin, ...updateData } = body;
 
     if (!id) {
       return apiError('ID do usuário é obrigatório');
@@ -107,6 +119,27 @@ export async function PUT(request: NextRequest) {
 
     const data = adminUserUpdateSchema.parse(updateData);
 
+    // Require PIN for sensitive fields (balance, role changes)
+    if (requiresPinVerification(data, existing)) {
+      // Try x-admin-pin header first (new middleware approach)
+      const headerPin = request.headers.get('x-admin-pin');
+      if (headerPin) {
+        const pinAction = getPinActionForUserUpdate(data, existing) || 'balance_change';
+        const pinResult = await verifyPinForAction(request, pinAction);
+        if (!pinResult.success) {
+          return apiError(pinResult.error!, 403);
+        }
+      } else if (pin) {
+        // Fallback to body PIN (backward compatibility)
+        const pinValid = await verifyAdminPin(session.userId, pin);
+        if (!pinValid) {
+          return apiError('PIN de segurança inválido', 403);
+        }
+      } else {
+        return apiError('PIN de segurança é obrigatório para esta ação', 403);
+      }
+    }
+
     // Hash password if provided
     if (data.newPassword) {
       (data as any).hashedPassword = await hashPassword(data.newPassword);
@@ -114,20 +147,21 @@ export async function PUT(request: NextRequest) {
     }
 
     // Guard: admin cannot change their own role
-    if (id === session.userId && data.role !== undefined && data.role !== 'admin') {
+    if (id === session.userId && data.role !== undefined && data.role !== 'admin' && data.role !== 'super_admin') {
       return apiError('Você não pode alterar seu próprio papel');
     }
 
-    // Guard: cannot demote the last admin
-    if (data.role !== undefined && data.role !== 'admin') {
-      const existing = await db.user.findUnique({ where: { id } });
-      if (existing?.role === 'admin') {
-        const adminCount = await db.user.count({ where: { role: 'admin' } });
+    // Guard: cannot demote the last admin/super_admin
+    if (data.role !== undefined && data.role !== 'admin' && data.role !== 'super_admin') {
+      if (existing.role === 'admin' || existing.role === 'super_admin') {
+        const adminCount = await db.user.count({ where: { role: { in: ['admin', 'super_admin'] } } });
         if (adminCount <= 1) {
           return apiError('Não é possível remover o último administrador do sistema');
         }
       }
     }
+
+    const ipAddress = getClientIp(request);
 
     // Use transaction with row lock for balance changes to create audit trail and prevent race conditions
     const result = await db.$transaction(async (tx) => {
@@ -138,7 +172,21 @@ export async function PUT(request: NextRequest) {
       const lockedUser = await tx.user.findUnique({ where: { id } });
       if (!lockedUser) throw new Error('Usuário não encontrado');
 
-      // Handle balance changes
+      // Create AdminLog first so we can use its ID as referenceId for Transaction records
+      const adminLog = await tx.adminLog.create({
+        data: {
+          adminId: session.userId,
+          action: 'update',
+          entity: 'user',
+          entityId: id,
+          oldValue: JSON.stringify(existing),
+          newValue: JSON.stringify(data),
+          description: `Usuário atualizado: ${existing.name} (${existing.email})`,
+          ipAddress,
+        },
+      });
+
+      // Handle balance changes — link Transaction records to the AdminLog via referenceId
       if (data.balance !== undefined && d(data.balance) !== d(lockedUser.balance)) {
         const diff = d(data.balance) - d(lockedUser.balance);
         await tx.transaction.create({
@@ -149,6 +197,7 @@ export async function PUT(request: NextRequest) {
             status: 'completed',
             description: `Ajuste admin no saldo: ${diff >= 0 ? '+' : ''}${dusdt(diff)} USDT`,
             referenceType: 'AdminAction',
+            referenceId: adminLog.id,
           },
         });
       }
@@ -163,6 +212,7 @@ export async function PUT(request: NextRequest) {
             status: 'completed',
             description: `Ajuste admin no saldo afiliado: ${diff >= 0 ? '+' : ''}${dusdt(diff)} USDT`,
             referenceType: 'AdminAction',
+            referenceId: adminLog.id,
           },
         });
       }
@@ -177,6 +227,7 @@ export async function PUT(request: NextRequest) {
             status: 'completed',
             description: `Ajuste admin no saldo voucher: ${diff >= 0 ? '+' : ''}${dusdt(diff)} USDT`,
             referenceType: 'AdminAction',
+            referenceId: adminLog.id,
           },
         });
       }
@@ -220,19 +271,6 @@ export async function PUT(request: NextRequest) {
       });
 
       return user;
-    });
-
-    // Log
-    await db.adminLog.create({
-      data: {
-        adminId: session.userId,
-        action: 'update',
-        entity: 'user',
-        entityId: id,
-        oldValue: JSON.stringify(existing),
-        newValue: JSON.stringify(data),
-        description: `Usuário atualizado: ${existing.name} (${existing.email})`,
-      },
     });
 
     return apiSuccess({ user: result });

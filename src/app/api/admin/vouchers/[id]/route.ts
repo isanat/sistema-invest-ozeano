@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { db, isPostgres } from '@/lib/db';
 import { requireAdmin, d, dusdt } from '@/lib/auth';
-import { apiError, apiSuccess, handleApiError } from '@/lib/api-utils';
+import { apiError, apiSuccess, handleApiError, getIpFromRequest } from '@/lib/api-utils';
 
 export async function PATCH(
   request: NextRequest,
@@ -65,6 +65,7 @@ export async function PATCH(
           entityId: id,
           newValue: JSON.stringify({ revokeReason, remainingBalance: dusdt(remainingBalance) }),
           description: `Voucher revogado: ${dusdt(voucher.amount)} USDT de ${voucher.user.name} (saldo restante: ${dusdt(remainingBalance)} USDT)`,
+          ipAddress: getIpFromRequest(request),
         },
       });
 
@@ -104,6 +105,7 @@ export async function PATCH(
           entityId: id,
           newValue: JSON.stringify({ extendDays, newDeadline: newDeadline.toISOString() }),
           description: `Voucher estendido por ${extendDays} dias: ${voucher.user.name}`,
+          ipAddress: getIpFromRequest(request),
         },
       });
 
@@ -132,6 +134,7 @@ export async function PATCH(
           entity: 'voucher',
           entityId: id,
           description: `Voucher marcado como completo: ${dusdt(voucher.amount)} USDT de ${voucher.user.name}`,
+          ipAddress: getIpFromRequest(request),
         },
       });
 
@@ -195,6 +198,7 @@ export async function DELETE(
         entityId: id,
         oldValue: JSON.stringify(voucher),
         description: `Voucher excluído: ${dusdt(voucher.amount)} USDT de ${voucher.user.name} (saldo restante removido: ${dusdt(remainingBalance)} USDT)`,
+        ipAddress: getIpFromRequest(request),
       },
     });
 

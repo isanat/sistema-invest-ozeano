@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAdmin, d, ds } from '@/lib/auth';
-import { apiSuccess, handleApiError, BusinessError } from '@/lib/api-utils';
+import { apiSuccess, handleApiError, BusinessError, getIpFromRequest } from '@/lib/api-utils';
 import { createPayout } from '@/lib/nowpayments';
 
 // GET /api/admin/split-payout — List split payout history
@@ -173,6 +173,7 @@ export async function POST(request: NextRequest) {
         action: 'payout',
         entity: 'split_recipient',
         description: `Split payout processado: ${paidCount} sócios, $${totalPaid.toFixed(2)} total${force ? ' (forçado)' : ''}`,
+        ipAddress: getIpFromRequest(request),
       },
     });
 
