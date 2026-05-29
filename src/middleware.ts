@@ -31,6 +31,7 @@ const PUBLIC_API_ROUTES = [
   '/api/bitget/', // Public: Bitget trader ranking/search data (no auth needed)
   '/api/admin/invitations/accept', // Public: Accept invite token
   '/api/admin/invitations/register', // Public: Register via invite token
+  '/api/admin/reset-password', // Public: Secured via CRON_SECRET Bearer token (for admin lockout recovery)
 ];
 
 // Rate limiting: simple in-memory store (per-instance, resets on redeploy)
