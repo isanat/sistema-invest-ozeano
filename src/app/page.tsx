@@ -2987,10 +2987,18 @@ export default function PlataformaROI() {
                       <div className="text-lg font-semibold text-emerald-400">+${daily.toFixed(2)}</div>
                       <div className="text-xs text-zinc-500">{t('landing.tiers.perDay')}</div>
                     </div>
-                    <div className="flex items-center justify-center gap-1 text-green-400 text-sm font-medium">
-                      <TrendingUp className="h-4 w-4" />
-                      {t('common.capitalRecovery')} {breakevenDays} {t('landing.plans.duration')}
-                    </div>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="flex items-center justify-center gap-1 text-green-400 text-sm font-medium cursor-help">
+                          <TrendingUp className="h-4 w-4" />
+                          {t('common.breakeven')}: {breakevenDays} {t('landing.plans.duration')}
+                          <svg className="h-3.5 w-3.5 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom" className="max-w-[220px] text-center">
+                        <p>{t('common.breakevenTooltip')}</p>
+                      </TooltipContent>
+                    </Tooltip>
                   </div>
                 </motion.div>
                 );
