@@ -233,7 +233,8 @@ export async function POST(request: NextRequest) {
     }
 
     // ─── EXECUTE TRANSFER (atomic transaction) ────────────────────
-    const netAmount = transferAmount - fee; // Recipient gets amount minus fee
+    // Fee is charged only to the sender (add-on-top). Recipient receives the full transfer amount.
+    const netAmount = transferAmount; // Recipient gets the full amount
 
     const transfer = await db.$transaction(async (tx) => {
       // Re-read sender balance inside transaction for consistency

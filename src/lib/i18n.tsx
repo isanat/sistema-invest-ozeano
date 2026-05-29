@@ -93,6 +93,14 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
 
   // After hydration, read stored locale from localStorage and apply it
   useEffect(() => {
+    // Migration: check old locale key and map pt-BR → pt
+    const OLD_KEY = 'plataforma-roi-locale';
+    const oldLocale = localStorage.getItem(OLD_KEY) as string | null;
+    if (oldLocale === 'pt-BR') {
+      localStorage.setItem(STORAGE_KEY, 'pt');
+      localStorage.removeItem(OLD_KEY);
+    }
+
     const stored = localStorage.getItem(STORAGE_KEY) as Locale | null;
     if (stored && stored !== DEFAULT_LOCALE && translations[stored]) {
       setLocaleExternal(stored);

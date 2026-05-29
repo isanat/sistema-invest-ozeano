@@ -2991,7 +2991,7 @@ export default function PlataformaROI() {
                       <TooltipTrigger asChild>
                         <div className="flex items-center justify-center gap-1 text-green-400 text-sm font-medium cursor-help">
                           <TrendingUp className="h-4 w-4" />
-                          {t('common.breakeven')}: {breakevenDays} {t('landing.plans.duration')}
+                          {t('common.breakeven')}: {breakevenDays} dias
                           <svg className="h-3.5 w-3.5 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                         </div>
                       </TooltipTrigger>
@@ -5122,7 +5122,7 @@ export default function PlataformaROI() {
                                 <div className="text-xs text-zinc-500 space-y-0.5">
                                   <div>Taxa ({transferConfig.feePct}%): ${((parseFloat(transferAmount) * transferConfig.feePct / 100)).toFixed(2)} USDT</div>
                                   <div>Total debitado: ${(parseFloat(transferAmount) * (1 + transferConfig.feePct / 100)).toFixed(2)} USDT</div>
-                                  <div>Destinatário recebe: ${(parseFloat(transferAmount) * (1 - transferConfig.feePct / 100)).toFixed(2)} USDT</div>
+                                  <div>Destinatário recebe: ${parseFloat(transferAmount).toFixed(2)} USDT</div>
                                 </div>
                               )}
                             </div>
