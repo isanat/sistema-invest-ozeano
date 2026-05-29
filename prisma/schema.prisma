@@ -1,5 +1,5 @@
 // ============================================================================
-// PLATAFORMA ROI - COPY TRADING ROI PLATFORM (PostgreSQL ONLY)
+// ActionCash - COPY TRADING ROI PLATFORM (PostgreSQL ONLY)
 // ============================================================================
 // ⚠️  WARNING: This project uses PostgreSQL EXCLUSIVELY. NEVER change the
 //     datasource provider to "sqlite". A pre-commit hook will reject it.
@@ -45,6 +45,10 @@ model User {
   hasInvested            Boolean  @default(false)
   linkUnlocked           Boolean  @default(false)
 
+  // Security PIN (6-digit, hashed with bcrypt)
+  securityPin       String?   // Hashed 6-digit PIN (bcrypt)
+  securityPinSetAt  DateTime? // When PIN was last set
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -55,10 +59,12 @@ model User {
   referredByUser       User?          @relation("Referrals", fields: [referredBy], references: [id])
   referrals            User[]         @relation("Referrals")
   affiliateCommissions AffiliateCommission[]
+  affiliateCommissionsFrom AffiliateCommission[] @relation("AffiliateCommissionFrom")
   affiliateWithdrawals AffiliateWithdrawal[]
   milestoneClaims      AffiliateMilestoneClaim[]
   badgeAwards          AffiliateBadgeAward[]
   adminLogs            AdminLog[]     @relation("AdminActions")
+  adminPin             AdminPin?
   nowpaymentsSubAccount NowPaymentsSubAccount?
   nowpaymentsDeposits   NowPaymentsDeposit[]
   nowpaymentsPayouts    NowPaymentsPayout[]
@@ -69,6 +75,8 @@ model User {
   daymondPackages      DaymondPackage[]
   transfersSent        Transfer[]       @relation("TransfersSent")
   transfersReceived    Transfer[]       @relation("TransfersReceived")
+  sentInvitations      AdminInvitation[] @relation("AdminInvitationsSent")
+  approvedInvitations  AdminInvitation[] @relation("AdminInvitationsApproved")
 
   @@index([email])
   @@index([affiliateCode])
@@ -230,7 +238,8 @@ model AffiliateCommission {
   createdAt DateTime @default(now())
   paidAt    DateTime?
 
-  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+  user     User @relation(fields: [userId], references: [id], onDelete: Restrict)
+  fromUser User @relation("AffiliateCommissionFrom", fields: [fromUserId], references: [id], onDelete: Restrict)
 
   @@index([userId])
   @@index([fromUserId])
@@ -771,6 +780,51 @@ model Transfer {
   @@index([toUserId])
   @@index([status])
   @@index([createdAt])
+}
+
+// ============================================================================
+// ADMIN SECURITY MODELS — PIN verification, invitation system
+// ============================================================================
+
+// Admin PIN — stores hashed PIN and rate-limit info for each admin
+model AdminPin {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  pinHash      String   // bcrypt-hashed 6-digit PIN
+  failedAttempts Int    @default(0)
+  lockedUntil  DateTime? // When the PIN lockout expires
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// Admin Invitation — secure token-based invite for new admins
+model AdminInvitation {
+  id              String    @id @default(cuid())
+  email           String    // Invitee email
+  name            String?   // Invitee name (pre-filled)
+  token           String    @unique // Secure random token
+  role            String    @default("admin") // Role to assign: admin or super_admin
+  status          String    @default("pending") // pending, accepted, approved, rejected, expired
+  expiresAt       DateTime  // Token expiry (48h)
+  acceptedAt      DateTime? // When invitee accepted (filled in their data + PIN)
+  approvedAt      DateTime? // When super admin approved the invitation
+  approvedBy      String?   // Super admin user ID who approved
+  rejectedAt      DateTime? // When super admin rejected
+  rejectedBy      String?   // Super admin user ID who rejected
+  rejectReason    String?   // Reason for rejection
+  createdById     String?   // Who created the invitation
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  createdBy       User?     @relation("AdminInvitationsSent", fields: [createdById], references: [id], onDelete: SetNull)
+  approvedByUser  User?     @relation("AdminInvitationsApproved", fields: [approvedBy], references: [id], onDelete: SetNull)
+
+  @@index([token])
+  @@index([email])
+  @@index([status])
+  @@index([expiresAt])
 }
 
 // AC-11: Action Daymond — $1000/month virtual investment package
