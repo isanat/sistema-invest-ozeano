@@ -3,7 +3,7 @@ import { db, isPostgres } from '@/lib/db';
 import { requireAdmin, d, ds, dusdt, hashPassword } from '@/lib/auth';
 import { adminUserUpdateSchema } from '@/lib/validations';
 import { apiError, apiSuccess, handleApiError, sanitizePagination, getClientIp } from '@/lib/api-utils';
-import { verifyAdminPin, requiresPinVerification, getPinActionForUserUpdate } from '@/lib/admin-pin';
+import { verifyAdminPin, requiresPinVerification, getPinActionForUserUpdate, adminHasPin } from '@/lib/admin-pin';
 import { verifyPinForAction } from '@/lib/admin-pin-middleware';
 
 export async function GET(request: NextRequest) {
@@ -127,12 +127,21 @@ export async function PUT(request: NextRequest) {
         const pinAction = getPinActionForUserUpdate(data, existing) || 'balance_change';
         const pinResult = await verifyPinForAction(request, pinAction);
         if (!pinResult.success) {
+          // Check if the error is because PIN is not configured
+          if (pinResult.error?.includes('não configurado')) {
+            return apiError('PIN_NOT_CONFIGURED', 423);
+          }
           return apiError(pinResult.error!, 403);
         }
       } else if (pin) {
         // Fallback to body PIN (backward compatibility)
         const pinValid = await verifyAdminPin(session.userId, pin);
         if (!pinValid) {
+          // Check if admin has a PIN set at all
+          const hasPin = await adminHasPin(session.userId);
+          if (!hasPin) {
+            return apiError('PIN_NOT_CONFIGURED', 423);
+          }
           return apiError('PIN de segurança inválido', 403);
         }
       } else {

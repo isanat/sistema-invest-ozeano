@@ -3,7 +3,7 @@ import { db, isPostgres } from '@/lib/db';
 import { requireAdmin, d, ds, dusdt } from '@/lib/auth';
 import { adminWithdrawalActionSchema } from '@/lib/validations';
 import { apiError, apiSuccess, handleApiError, sanitizePagination, getIpFromRequest } from '@/lib/api-utils';
-import { verifyAdminPin } from '@/lib/admin-pin';
+import { verifyAdminPin, adminHasPin } from '@/lib/admin-pin';
 
 export async function GET(request: NextRequest) {
   try {
@@ -74,6 +74,10 @@ export async function PUT(request: NextRequest) {
     }
     const pinValid = await verifyAdminPin(session.userId, pin);
     if (!pinValid) {
+      const hasPin = await adminHasPin(session.userId);
+      if (!hasPin) {
+        return apiError('PIN_NOT_CONFIGURED', 423);
+      }
       return apiError('PIN de segurança inválido', 403);
     }
 

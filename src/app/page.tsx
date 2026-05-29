@@ -1670,11 +1670,14 @@ export default function PlataformaROI() {
 
     setIsLivePolling(true);
 
-    // Poll user balance every 30 seconds to detect new earnings
+    // Poll user balance every 60 seconds to detect new earnings
     const pollInterval = setInterval(async () => {
       try {
-        // Refresh user data
-        const res = await fetch('/api/auth/me');
+        // Refresh user data with abort timeout to prevent hanging connections
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 10000);
+        const res = await fetch('/api/auth/me', { signal: controller.signal });
+        clearTimeout(timeout);
         if (res.ok) {
           const data = await res.json();
           if (data.success && data.user) {
@@ -1707,7 +1710,10 @@ export default function PlataformaROI() {
         }
 
         // Also refresh transactions to show new roi_profit entries
-        const txRes = await fetch('/api/transactions?limit=10');
+        const txController = new AbortController();
+        const txTimeout = setTimeout(() => txController.abort(), 10000);
+        const txRes = await fetch('/api/transactions?limit=10', { signal: txController.signal });
+        clearTimeout(txTimeout);
         if (txRes.ok) {
           const txData = await txRes.json();
           if (txData.success) {
@@ -1717,7 +1723,7 @@ export default function PlataformaROI() {
       } catch {
         // Silent fail for background polling
       }
-    }, 30000); // Every 30 seconds
+    }, 60000); // Every 60 seconds (reduced from 30s to lower server load)
 
     return () => {
       clearInterval(pollInterval);
@@ -2311,7 +2317,14 @@ export default function PlataformaROI() {
       setUserDialog({ open: false });
       fetchAdminData();
     } catch (err: any) {
-      toast.error(err.message);
+      // Handle PIN_NOT_CONFIGURED error from backend
+      if (err.message === 'PIN_NOT_CONFIGURED') {
+        setAdminHasPin(false);
+        setPinSetupOpen(true);
+        toast.error('PIN de segurança não configurado. Configure seu PIN primeiro.');
+      } else {
+        toast.error(err.message);
+      }
     } finally {
       setAdminActionLoading(false);
     }
@@ -2477,7 +2490,13 @@ export default function PlataformaROI() {
       setAdminNotes('');
       fetchAdminData();
     } catch (err: any) {
-      toast.error(err.message);
+      if (err.message === 'PIN_NOT_CONFIGURED') {
+        setAdminHasPin(false);
+        setPinSetupOpen(true);
+        toast.error('PIN de segurança não configurado. Configure seu PIN primeiro.');
+      } else {
+        toast.error(err.message);
+      }
     }
   };
 

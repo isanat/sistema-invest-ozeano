@@ -3,7 +3,7 @@ import { db } from '@/lib/db';
 import { requireAdmin, d, ds, dusdt } from '@/lib/auth';
 import { apiError, apiSuccess, handleApiError, getIpFromRequest } from '@/lib/api-utils';
 import { verifyPinForAction } from '@/lib/admin-pin-middleware';
-import { verifyAdminPin } from '@/lib/admin-pin';
+import { verifyAdminPin, adminHasPin } from '@/lib/admin-pin';
 
 export async function PUT(
   request: NextRequest,
@@ -25,12 +25,19 @@ export async function PUT(
     if (headerPin) {
       const pinResult = await verifyPinForAction(request, pinAction);
       if (!pinResult.success) {
+        if (pinResult.error?.includes('não configurado')) {
+          return apiError('PIN_NOT_CONFIGURED', 423);
+        }
         return apiError(pinResult.error!, 403);
       }
     } else if (pin) {
       // Fallback to body PIN
       const pinValid = await verifyAdminPin(session.userId, pin);
       if (!pinValid) {
+        const hasPin = await adminHasPin(session.userId);
+        if (!hasPin) {
+          return apiError('PIN_NOT_CONFIGURED', 423);
+        }
         return apiError('PIN de segurança inválido', 403);
       }
     } else {
