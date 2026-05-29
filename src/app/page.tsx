@@ -2441,10 +2441,10 @@ export default function PlataformaROI() {
         return Math.max(10, Math.min(50, t + delta));
       }));
 
-      // Increment shares (each investment gets random shares per second)
+      // Increment shares (each investment gets random shares per tick ~10s)
       setLiveShares(prev => prev.map(s => ({
-        valid: s.valid + Math.floor(Math.random() * 8) + 2,
-        invalid: s.invalid + (Math.random() < 0.1 ? 1 : 0),
+        valid: s.valid + Math.floor(Math.random() * 80) + 20,
+        invalid: s.invalid + (Math.random() < 0.3 ? 1 : 0),
       })));
 
       // Random block found event (very rare: ~0.3% chance per tick per investment)
@@ -2456,13 +2456,13 @@ export default function PlataformaROI() {
         setLiveBlocks(blockCounter);
       }
 
-      // Add micro-earning to feed (every ~3-8 seconds for each investment)
+      // Add micro-earning to feed (every ~10 seconds tick)
       feedIdCounter++;
-      const shouldAddEarning = Math.random() < 0.35;
+      const shouldAddEarning = Math.random() < 0.7;
       if (shouldAddEarning && activeInvestments.length > 0) {
         const rentalIdx = Math.floor(Math.random() * activeInvestments.length);
         const investment = activeInvestments[rentalIdx];
-        const microAmount = d(investment.dailyRoi) / 86400 * (3 + Math.random() * 5); // 3-8 seconds worth
+        const microAmount = d(investment.dailyRoi) / 86400 * (8 + Math.random() * 12); // 8-20 seconds worth
         const now = new Date();
         const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
 
@@ -2474,7 +2474,7 @@ export default function PlataformaROI() {
       }
 
       setLiveEarningsCounter(feedIdCounter);
-    }, 1000);
+    }, 10000);
 
     return () => clearInterval(liveInterval);
   }, [mounted, user?.id, activeInvestments.length, accumulatedEarnings]);
