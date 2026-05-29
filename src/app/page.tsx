@@ -2462,7 +2462,7 @@ export default function PlataformaROI() {
       if (shouldAddEarning && activeInvestments.length > 0) {
         const rentalIdx = Math.floor(Math.random() * activeInvestments.length);
         const investment = activeInvestments[rentalIdx];
-        const microAmount = d(investment.dailyReturn) / 86400 * (3 + Math.random() * 5); // 3-8 seconds worth
+        const microAmount = d(investment.dailyRoi) / 86400 * (3 + Math.random() * 5); // 3-8 seconds worth
         const now = new Date();
         const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
 
