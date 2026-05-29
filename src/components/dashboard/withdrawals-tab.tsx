@@ -239,14 +239,14 @@ export function WithdrawalsTab() {
                 </div>
               </div>
 
-              {/* NowPayments Deposit Info */}
+              {/* Blockchain Deposit Info */}
               <div className="glass rounded-xl p-4 border border-cyan-500/10">
                 <div className="flex items-center gap-2 mb-2">
                   <QrCode className="h-4 w-4 text-cyan-400" />
-                  <span className="text-sm font-semibold">NowPayments Integration</span>
+                  <span className="text-sm font-semibold">Blockchain Integration</span>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Deposits and withdrawals are processed securely through NowPayments API.
+                  Deposits and withdrawals are processed securely via Blockchain with end-to-end encryption.
                   USDT TRC-20 is the supported network for all transactions.
                 </p>
               </div>

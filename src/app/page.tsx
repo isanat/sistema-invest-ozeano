@@ -1889,7 +1889,7 @@ export default function PlataformaROI() {
             method: 'POST',
             body: JSON.stringify({ amount, currency: method, destination_address: destination }),
           });
-          toast.success(data.message || 'Saque solicitado via NowPayments');
+          toast.success(data.message || 'Saque solicitado via Blockchain');
           setWithdrawDialog(false);
           fetchDashboardData();
           checkAuth();
@@ -5329,7 +5329,7 @@ export default function PlataformaROI() {
                                   <div className="mt-3 p-3 bg-zinc-800/50 rounded-lg space-y-2">
                                     <div className="flex items-center gap-2 text-xs">
                                       <Globe className="h-3 w-3 text-sky-400" />
-                                      <span className="text-zinc-400">NowPayments</span>
+                                      <span className="text-zinc-400">Blockchain</span>
                                       <Badge className={`text-[10px] px-1.5 py-0 ${
                                         dep.nowpayments.paymentStatus === 'finished' || dep.nowpayments.paymentStatus === 'confirmed' ? 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30' :
                                         dep.nowpayments.paymentStatus === 'waiting' ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' :
@@ -5509,7 +5509,7 @@ export default function PlataformaROI() {
                                   <div className="mt-3 p-3 bg-zinc-800/50 rounded-lg space-y-2">
                                     <div className="flex items-center gap-2 text-xs">
                                       <Globe className="h-3 w-3 text-sky-400" />
-                                      <span className="text-zinc-400">NowPayments Payout</span>
+                                      <span className="text-zinc-400">Blockchain Payout</span>
                                       <Badge className={`text-[10px] px-1.5 py-0 ${
                                         wd.nowpayments.payoutStatus === 'FINISHED' ? 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30' :
                                         wd.nowpayments.payoutStatus === 'FAILED' || wd.nowpayments.payoutStatus === 'REJECTED' ? 'bg-red-500/20 text-red-400 border-red-500/30' :
