@@ -811,14 +811,29 @@ export default function PlataformaROI() {
   const [pinSetupLoading, setPinSetupLoading] = useState(false);
 
   // Request PIN from admin before a sensitive action
-  const requestPin = useCallback((): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      // If admin doesn't have PIN set, prompt setup first
-      if (adminHasPin === false) {
-        setPinSetupOpen(true);
-        reject(new Error('PIN de segurança não configurado. Configure seu PIN primeiro.'));
-        return;
+  const requestPin = useCallback(async (): Promise<string> => {
+    // If PIN status is unknown, check it first
+    let hasPin = adminHasPin;
+    if (hasPin === null) {
+      try {
+        const res: any = await api('/api/admin/pin/status');
+        hasPin = res.hasPin;
+        setAdminHasPin(res.hasPin);
+      } catch {
+        // If check fails, assume no PIN and prompt setup
+        hasPin = false;
+        setAdminHasPin(false);
       }
+    }
+
+    // If admin doesn't have PIN set, prompt setup first
+    if (hasPin === false) {
+      setPinSetupOpen(true);
+      throw new Error('PIN de segurança não configurado. Configure seu PIN primeiro.');
+    }
+
+    // Admin has PIN — show verification modal
+    return new Promise((resolve, reject) => {
       setPinDigits(['', '', '', '', '', '']);
       setPinError('');
       setPinModalOpen(true);
@@ -841,13 +856,22 @@ export default function PlataformaROI() {
       method: 'POST',
       body: JSON.stringify({ pin }),
     }).then((res: any) => {
-      if (res.verified) {
+      if (res.valid) {
         setPinModalOpen(false);
         setPinLoading(false);
         if (pinCallback) pinCallback(pin);
         setPinCallback(null);
+      } else if (res.hasPin === false) {
+        // Admin doesn't have a PIN set — redirect to setup
+        setPinModalOpen(false);
+        setPinLoading(false);
+        setPinCallback(null);
+        setAdminHasPin(false);
+        setPinSetupOpen(true);
+        setPinError('PIN de segurança não configurado. Configure seu PIN primeiro.');
       } else {
-        setPinError('PIN incorreto');
+        const leftMsg = res.attemptsLeft !== undefined ? ` (${res.attemptsLeft} tentativa(s) restante(s))` : '';
+        setPinError(`PIN incorreto${leftMsg}`);
         setPinLoading(false);
       }
     }).catch(() => {
@@ -870,7 +894,7 @@ export default function PlataformaROI() {
     try {
       await api('/api/admin/pin/setup', {
         method: 'POST',
-        body: JSON.stringify({ pin: pinSetupPin, confirmPin: pinSetupConfirm }),
+        body: JSON.stringify({ newPin: pinSetupPin, confirmPin: pinSetupConfirm }),
       });
       toast.success('PIN configurado com sucesso');
       setAdminHasPin(true);

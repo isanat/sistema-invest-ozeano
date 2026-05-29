@@ -773,3 +773,28 @@ Stage Summary:
 - Production DB schema updated with new models and fields
 - Docker build in progress with cache bust to force Prisma client regeneration
 - PIN system will be fully functional once build completes
+
+---
+Task ID: PIN-FIX
+Agent: Main Agent
+Task: Fix admin PIN system — user never set up PIN but verification modal was shown
+
+Work Log:
+- Analyzed user screenshot: "Verificação de Segurança" modal asking for 6-digit PIN, but admin never configured a PIN
+- Found 4 bugs in the PIN system:
+  1. PIN Setup body mismatch: frontend sent `{ pin, confirmPin }` but backend expected `{ newPin, confirmPin }` — PIN setup NEVER worked
+  2. Race condition in `requestPin()`: when `adminHasPin` was `null` (initial state, before status check completed), the function showed the PIN verification modal instead of redirecting to PIN setup
+  3. API response field mismatch: frontend checked `res.verified` but backend returned `res.valid` — PIN verification always appeared to fail
+  4. PIN verification modal didn't handle the case where admin has no PIN set (should redirect to setup)
+
+Fixes applied in `src/app/page.tsx`:
+- Fixed `handlePinSetup`: changed `pin: pinSetupPin` → `newPin: pinSetupPin` in API request body
+- Fixed `requestPin`: changed from synchronous Promise callback to async function that checks PIN status via API if `adminHasPin === null`, then redirects to setup if no PIN exists
+- Fixed `handlePinSubmit`: changed `res.verified` → `res.valid`; added handling for `res.hasPin === false` (redirects to PIN setup dialog); added attempts remaining display
+- Verified page compiles and loads successfully (HTTP 200)
+
+Stage Summary:
+- Admin who never set up a PIN will now see the PIN setup dialog instead of the verification modal
+- PIN setup actually works now (was broken due to body field mismatch)
+- PIN verification correctly reads the `valid` field from API response
+- Remaining attempts shown on incorrect PIN entry
