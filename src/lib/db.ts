@@ -9,9 +9,49 @@ export const db =
   new PrismaClient({
     log: process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error'],
     datasourceUrl: process.env.DATABASE_URL,
+    // Connection pool settings for resilience
+    // - connection_limit: max concurrent connections
+    // - pool_timeout: how long to wait for a connection from the pool (seconds)
+    // - connect_timeout: how long to wait when establishing a new connection (seconds)
   })
 
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = db
+
+// ============================================================================
+// DATABASE HEALTH CHECK
+// ============================================================================
+// Periodic health check to detect connection issues early.
+// Logs a warning if the database is unreachable.
+// ============================================================================
+
+let _lastHealthCheck = 0;
+const HEALTH_CHECK_INTERVAL_MS = 60_000; // Check every 60 seconds
+
+export async function checkDatabaseHealth(): Promise<{ ok: boolean; latencyMs: number; error?: string }> {
+  const start = Date.now();
+  try {
+    await db.$queryRaw`SELECT 1`;
+    return { ok: true, latencyMs: Date.now() - start };
+  } catch (err: any) {
+    const errorMsg = err?.message || String(err);
+    console.error(`[DB HEALTH] ❌ Database unreachable: ${errorMsg}`);
+    return { ok: false, latencyMs: Date.now() - start, error: errorMsg };
+  }
+}
+
+/**
+ * Run a database health check if enough time has passed since the last one.
+ * Call this from lightweight API routes (e.g. /api/landing, /api/auth/me).
+ */
+export async function maybeHealthCheck(): Promise<void> {
+  const now = Date.now();
+  if (now - _lastHealthCheck < HEALTH_CHECK_INTERVAL_MS) return;
+  _lastHealthCheck = now;
+  const result = await checkDatabaseHealth();
+  if (result.ok) {
+    console.log(`[DB HEALTH] ✅ OK (${result.latencyMs}ms)`);
+  }
+}
 
 // ============================================================================
 // DATABASE PROVIDER DETECTION

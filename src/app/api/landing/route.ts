@@ -1,11 +1,13 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { db, maybeHealthCheck } from '@/lib/db';
 import { d } from '@/lib/auth';
 import { apiSuccess, handleApiError } from '@/lib/api-utils';
 import { getUSDTBRLRate } from '@/lib/market-data';
 
 // Public landing page data - no auth required
 export async function GET() {
+  // Run periodic database health check (every 60s)
+  maybeHealthCheck().catch(() => {});
   try {
     // Get all active investment plans with stats and copy traders
     const [plans, traders, affiliateLevels, configs] = await Promise.all([
