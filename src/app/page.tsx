@@ -2303,6 +2303,13 @@ export default function PlataformaROI() {
       const roleSelect = form.querySelector('[name="role"]') as HTMLInputElement;
       if (roleSelect) body.role = roleSelect.value;
 
+      // Capture PIN fields if present (admin/super_admin users only)
+      const newPinEl = (form as any).newPin as HTMLInputElement;
+      const currentPinEl = (form as any).currentPin as HTMLInputElement;
+      const newPinValue = newPinEl?.value?.trim() || '';
+      const currentPinValue = currentPinEl?.value?.trim() || '';
+      const isEditingSelf = userDialog.user?.id === user?.id;
+
       // Check if sensitive fields are being changed — require PIN
       const sensitiveFields = ['balance', 'affiliateBalance', 'voucherBalance', 'totalInvested', 'totalRoi', 'totalWithdrawn', 'totalAffiliateEarnings', 'role'];
       const origUser = userDialog.user;
@@ -2323,6 +2330,30 @@ export default function PlataformaROI() {
       }
 
       await api('/api/admin/users', { method: 'PUT', body: JSON.stringify(body) });
+
+      // Handle PIN change/reset after user update succeeds
+      if (newPinValue && /^\d{6}$/.test(newPinValue)) {
+        try {
+          if (isEditingSelf) {
+            // Changing own PIN — use setup route
+            const pinBody: any = { newPin: newPinValue, confirmPin: newPinValue };
+            if (adminHasPin && currentPinValue) {
+              pinBody.currentPin = currentPinValue;
+            }
+            await api('/api/admin/pin/setup', { method: 'POST', body: JSON.stringify(pinBody) });
+            toast.success('PIN alterado com sucesso');
+            setAdminHasPin(true);
+          } else {
+            // Resetting another admin's PIN — use reset route (requires own PIN verification first)
+            const pin = await requestPin();
+            await api('/api/admin/pin/reset', { method: 'POST', body: JSON.stringify({ userId: userDialog.user.id, newPin: newPinValue, pin }) });
+            toast.success('PIN resetado com sucesso');
+          }
+        } catch (pinErr: any) {
+          toast.error(pinErr.message || 'Erro ao alterar PIN');
+        }
+      }
+
       toast.success(t('toast.adminUserUpdateSuccess'));
       setUserDialog({ open: false });
       fetchAdminData();
@@ -7600,7 +7631,7 @@ export default function PlataformaROI() {
                               <div className="flex items-center gap-3">
                                 <Lock className="h-5 w-5 text-emerald-400" />
                                 <div className="text-sm text-emerald-400">PIN de segurança ativo</div>
-                                <Button variant="outline" size="sm" className="ml-auto border-zinc-700 text-zinc-300 text-xs h-8" onClick={() => setPinSetupOpen(true)}>Alterar PIN</Button>
+                                <div className="text-xs text-zinc-500 ml-2">Altere o PIN ao editar seu usuário</div>
                               </div>
                             </CardContent>
                           </Card>
@@ -9870,7 +9901,7 @@ export default function PlataformaROI() {
                                         )}
                                       </TableCell>
                                       <TableCell className="text-sm text-zinc-400">
-                                        {inv.inviter?.name || '-'}
+                                        {inv.createdBy?.name || '-'}
                                       </TableCell>
                                       <TableCell className="text-right">
                                         <div className="flex items-center justify-end gap-1">
@@ -11146,6 +11177,30 @@ export default function PlataformaROI() {
                 <div className="flex items-end"><p className="text-xs text-zinc-500 pb-2">Mínimo 6 caracteres. Apenas preencha se quiser alterar.</p></div>
               </div>
             </div>
+            {/* PIN de Segurança — only for admin/super_admin users */}
+            {(userDialog.user?.role === 'admin' || userDialog.user?.role === 'super_admin') && (
+              <div className="bg-amber-950/20 border border-amber-700/30 rounded-lg p-3 space-y-3">
+                <div className="text-xs font-semibold text-amber-400 uppercase tracking-wider flex items-center gap-2"><Key className="h-3.5 w-3.5" /> PIN de Segurança</div>
+                {userDialog.user?.id === user?.id ? (
+                  /* Editing yourself — need current PIN to change */
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div><Label className="text-zinc-300 text-xs">PIN Atual (6 dígitos)</Label><Input name="currentPin" type="password" inputMode="numeric" maxLength={6} placeholder={adminHasPin ? '• • • • • •' : 'Nenhum PIN configurado'} className="bg-zinc-800 border-zinc-700 mt-1" /></div>
+                      <div><Label className="text-zinc-300 text-xs">Novo PIN (6 dígitos)</Label><Input name="newPin" type="password" inputMode="numeric" maxLength={6} placeholder="Deixe vazio para manter" className="bg-zinc-800 border-zinc-700 mt-1" /></div>
+                    </div>
+                    <p className="text-xs text-zinc-500">Apenas preencha se quiser alterar o PIN. {adminHasPin ? 'PIN atual é obrigatório para alterar.' : 'Nenhum PIN configurado — preencha apenas o novo PIN.'}</p>
+                  </div>
+                ) : (
+                  /* Editing another admin — super_admin can reset their PIN */
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div><Label className="text-zinc-300 text-xs">Novo PIN (6 dígitos)</Label><Input name="newPin" type="password" inputMode="numeric" maxLength={6} placeholder="Deixe vazio para manter" className="bg-zinc-800 border-zinc-700 mt-1" /></div>
+                      <div className="flex items-end"><p className="text-xs text-zinc-500 pb-2">Resetar PIN deste admin. Apenas preencha se quiser alterar.</p></div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
             {/* Actions */}
             <div className="flex gap-2">
               <Button type="button" variant="outline" className="flex-1 border-cyan-700 text-cyan-400 hover:bg-cyan-500/10 min-h-[44px]" onClick={async () => {

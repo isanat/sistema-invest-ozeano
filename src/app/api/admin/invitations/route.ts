@@ -37,8 +37,8 @@ export async function GET(request: NextRequest) {
         take: limit,
         orderBy: { createdAt: 'desc' },
         include: {
-          inviter: { select: { id: true, name: true, email: true } },
-          approver: { select: { id: true, name: true, email: true } },
+          createdBy: { select: { id: true, name: true, email: true } },
+          approvedByUser: { select: { id: true, name: true, email: true } },
         },
       }),
       db.adminInvitation.count({ where }),
@@ -98,13 +98,13 @@ export async function POST(request: NextRequest) {
         email: data.email,
         name: data.name,
         token,
-        invitedBy: adminId,
+        createdById: adminId,
         role: data.role,
         status: 'pending',
         expiresAt,
       },
       include: {
-        inviter: { select: { id: true, name: true, email: true } },
+        createdBy: { select: { id: true, name: true, email: true } },
       },
     });
 

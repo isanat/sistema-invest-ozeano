@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
     const invitation = await db.adminInvitation.findUnique({
       where: { token },
       include: {
-        inviter: { select: { name: true } },
+        createdBy: { select: { name: true } },
       },
     });
 
@@ -75,7 +75,7 @@ export async function GET(request: NextRequest) {
         name: invitation.name,
         role: invitation.role,
         expiresAt: invitation.expiresAt,
-        inviterName: invitation.inviter?.name || 'Administrador',
+        inviterName: invitation.createdBy?.name || 'Administrador',
       },
     });
   } catch (error) {
@@ -155,14 +155,14 @@ export async function POST(request: NextRequest) {
         where: { id: invitation.id },
         data: {
           status: 'used',
-          usedAt: new Date(),
+          acceptedAt: new Date(),
         },
       });
 
       // Log to AdminLog
       await tx.adminLog.create({
         data: {
-          adminId: invitation.approvedBy || invitation.invitedBy,
+          adminId: invitation.approvedBy || invitation.createdById,
           action: 'create',
           entity: 'user',
           entityId: user.id,

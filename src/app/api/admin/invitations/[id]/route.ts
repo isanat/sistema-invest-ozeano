@@ -75,8 +75,8 @@ export async function PUT(
         approvedAt: data.action === 'approve' ? new Date() : undefined,
       },
       include: {
-        inviter: { select: { id: true, name: true, email: true } },
-        approver: { select: { id: true, name: true, email: true } },
+        createdBy: { select: { id: true, name: true, email: true } },
+        approvedByUser: { select: { id: true, name: true, email: true } },
       },
     });
 

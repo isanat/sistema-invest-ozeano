@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { db } from '@/lib/db';
-import { requireAdmin, apiSuccess, apiError, handleApiError } from '@/lib/api-utils';
+import { requireAdmin, apiSuccess, apiError, handleApiError, getIpFromRequest } from '@/lib/api-utils';
 
 // Auto-migrate: ensures all expected config keys exist in the database.
 // Called by the admin config UI when it detects missing categories.
@@ -87,6 +87,18 @@ export async function POST(request: NextRequest) {
         skipped++;
       }
     }
+
+    // Log
+    await db.adminLog.create({
+      data: {
+        adminId: adminId,
+        action: 'create',
+        entity: 'config',
+        description: `Config auto-migration: ${created} configs created, ${skipped} already existed`,
+        newValue: JSON.stringify({ created, skipped }),
+        ipAddress: getIpFromRequest(request),
+      },
+    });
 
     return apiSuccess({
       message: `Migração concluída: ${created} configs criadas, ${skipped} já existiam`,

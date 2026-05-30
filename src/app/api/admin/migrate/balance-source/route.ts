@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAdmin, d, dusdt } from '@/lib/auth';
-import { apiSuccess, handleApiError } from '@/lib/api-utils';
+import { apiSuccess, handleApiError, getIpFromRequest } from '@/lib/api-utils';
 
 // ============================================================================
 // POST /api/admin/migrate/balance-source
@@ -80,6 +80,18 @@ export async function POST(request: NextRequest) {
         source: 'deposit', // Already the default, but let's verify
       },
       data: { source: 'deposit' },
+    });
+
+    // Log
+    await db.adminLog.create({
+      data: {
+        adminId: session.userId,
+        action: 'update',
+        entity: 'user',
+        description: `Balance source migration: ${results.usersUpdated} users updated, ${results.investmentsUpdated} investments set to source='voucher'`,
+        newValue: JSON.stringify(results),
+        ipAddress: getIpFromRequest(request),
+      },
     });
 
     return apiSuccess({

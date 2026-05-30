@@ -198,9 +198,22 @@ export async function POST(request: NextRequest) {
 // DELETE: Clear cache
 export async function DELETE(request: NextRequest) {
   try {
-    await requireAdmin();
+    const session = await requireAdmin();
 
     const result = await db.bitgetTraderCache.deleteMany({});
+
+    // Log
+    await db.adminLog.create({
+      data: {
+        adminId: session.userId,
+        action: 'delete',
+        entity: 'bitget_cache',
+        description: `Bitget trader cache cleared: ${result.count} traders removidos`,
+        newValue: JSON.stringify({ deletedCount: result.count }),
+        ipAddress: getIpFromRequest(request),
+      },
+    });
+
     return apiSuccess({
       message: `Cache limpo: ${result.count} traders removidos`,
       deleted: result.count,

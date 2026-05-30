@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    await requireAdmin();
+    const session = await requireAdmin();
 
     const body = await request.json();
     const { name, totalAum, dailyVolume, strategy, status } = body;
@@ -30,6 +30,19 @@ export async function POST(request: NextRequest) {
         dailyVolume: dailyVolume || '0',
         strategy: strategy || 'arbitrage',
         status: status || 'active',
+      },
+    });
+
+    // Log
+    await db.adminLog.create({
+      data: {
+        adminId: session.userId,
+        action: 'create',
+        entity: 'trading_pool',
+        entityId: pool.id,
+        description: `Trading pool criado: ${pool.name}`,
+        newValue: JSON.stringify({ name, totalAum: totalAum || '0', dailyVolume: dailyVolume || '0', strategy: strategy || 'arbitrage', status: status || 'active' }),
+        ipAddress: getIpFromRequest(request),
       },
     });
 
