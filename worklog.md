@@ -798,3 +798,30 @@ Stage Summary:
 - PIN setup actually works now (was broken due to body field mismatch)
 - PIN verification correctly reads the `valid` field from API response
 - Remaining attempts shown on incorrect PIN entry
+
+---
+Task ID: pin-403-fix
+Agent: Main Agent
+Task: Fix 403 Forbidden error on PUT /api/admin/users when admin edits users
+
+Work Log:
+- User reported: admin registered PIN but gets 403 when editing users
+- Investigated the full PIN verification flow: frontend → PIN modal → API request → backend verification
+- Found the ROOT CAUSE: `requiresPinVerification()` in src/lib/admin-pin.ts line 163 had:
+  `if (field === 'role') return updateData[field] !== undefined;`
+  This always returned true when role was present in the request body, even if the value hadn't changed
+- The frontend form ALWAYS includes the role field (via Select component), so every user edit triggered PIN requirement on the backend
+- But the frontend's `needsPin` check correctly compared values: `String(body.role) !== String(origUser.role)` — if role hasn't changed, no PIN needed
+- Result: Frontend doesn't show PIN modal → no PIN sent → backend requires PIN → 403 Forbidden
+- Fix: Changed to compare role value like other fields:
+  `String(updateData[field]) !== String(existingData[field] ?? (field === 'role' ? '' : '0'))`
+- Committed as 5698547, pushed, deployed to Coolify
+- Tested in production: non-sensitive update (name + role same) → SUCCESS (was 403 before)
+- Tested: sensitive update (balance changed) without PIN → correctly returns 403 requiring PIN
+- ERR_CONNECTION_CLOSED on /api/auth/me was temporary during previous deploy, server now stable
+
+Stage Summary:
+- Fixed requiresPinVerification() role check bug that caused 403 on ALL user edits
+- Admin can now edit users without changing sensitive fields (no PIN required)
+- PIN is still correctly required when balance/role actually changes
+- Production deployed and verified at actioncash.app

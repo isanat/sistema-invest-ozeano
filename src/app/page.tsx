@@ -808,6 +808,7 @@ export default function PlataformaROI() {
   const [pinSetupOpen, setPinSetupOpen] = useState(false);
   const [pinSetupPin, setPinSetupPin] = useState('');
   const [pinSetupConfirm, setPinSetupConfirm] = useState('');
+  const [pinSetupCurrent, setPinSetupCurrent] = useState('');
   const [pinSetupLoading, setPinSetupLoading] = useState(false);
 
   // Request PIN from admin before a sensitive action
@@ -882,6 +883,10 @@ export default function PlataformaROI() {
 
   // Handle PIN setup
   const handlePinSetup = useCallback(async () => {
+    if (adminHasPin && pinSetupCurrent.length !== 6) {
+      toast.error('PIN atual deve conter 6 dígitos');
+      return;
+    }
     if (pinSetupPin.length !== 6 || pinSetupConfirm.length !== 6) {
       toast.error('PIN deve conter 6 dígitos');
       return;
@@ -892,21 +897,26 @@ export default function PlataformaROI() {
     }
     setPinSetupLoading(true);
     try {
+      const body: any = { newPin: pinSetupPin, confirmPin: pinSetupConfirm };
+      if (adminHasPin) {
+        body.currentPin = pinSetupCurrent;
+      }
       await api('/api/admin/pin/setup', {
         method: 'POST',
-        body: JSON.stringify({ newPin: pinSetupPin, confirmPin: pinSetupConfirm }),
+        body: JSON.stringify(body),
       });
-      toast.success('PIN configurado com sucesso');
+      toast.success(adminHasPin ? 'PIN alterado com sucesso' : 'PIN configurado com sucesso');
       setAdminHasPin(true);
       setPinSetupOpen(false);
       setPinSetupPin('');
       setPinSetupConfirm('');
+      setPinSetupCurrent('');
     } catch (err: any) {
       toast.error(err.message || 'Erro ao configurar PIN');
     } finally {
       setPinSetupLoading(false);
     }
-  }, [pinSetupPin, pinSetupConfirm]);
+  }, [pinSetupPin, pinSetupConfirm, pinSetupCurrent, adminHasPin]);
 
   // Deposits/Payouts/Statement state (for Faturas, Saques, Extrato tabs)
   const [userDeposits, setUserDeposits] = useState<any[]>([]);
@@ -1217,7 +1227,7 @@ export default function PlataformaROI() {
         api<{ success: boolean; deposits: Investment[] }>('/api/admin/deposits'),
         api<{ success: boolean; withdrawals: Investment[] }>('/api/admin/withdrawals'),
         api<{ success: boolean; configs: SystemConfig[] }>('/api/admin/config'),
-        api<{ success: boolean; logs: AdminLog[] }>('/api/admin/logs'),
+        api<{ success: boolean; logs: AdminLog[] }>('/api/admin/logs?limit=100'),
         api<{ success: boolean; levels: AffiliateLevel[]; commissions: any[]; stats: any }>('/api/admin/affiliates?action=stats'),
         api<{ success: boolean; withdrawals: any[] }>('/api/admin/affiliate-withdrawals?limit=50'),
         api<{ success: boolean; ranks: AffiliateRank[] }>('/api/admin/affiliate-ranks'),
@@ -10004,8 +10014,8 @@ export default function PlataformaROI() {
                                         </Badge>
                                       </TableCell>
                                       <TableCell>
-                                        <Badge variant="outline" className="border-zinc-600 text-zinc-400">
-                                          {admin.adminPin ? '✓ Configurado' : '✗ Não configurado'}
+                                        <Badge variant="outline" className={admin.hasPin ? 'border-emerald-600/30 text-emerald-400' : 'border-red-600/30 text-red-400'}>
+                                          {admin.hasPin ? '✓ Configurado' : '✗ Não configurado'}
                                         </Badge>
                                       </TableCell>
                                       <TableCell className="text-sm text-zinc-400 whitespace-nowrap">
@@ -10325,35 +10335,68 @@ export default function PlataformaROI() {
 
                     {/* Admin Logs */}
                     {adminTab === 'logs' && (
-                      <Card className="bg-zinc-900 border-zinc-800">
-                        <CardContent className="p-0 overflow-x-auto">
-                          <Table className="min-w-[600px]">
-                            <TableHeader><TableRow className="border-zinc-800 hover:bg-transparent">
-                              <TableHead className="text-zinc-400">{t('admin.date')}</TableHead><TableHead className="text-zinc-400">{t('admin.admin')}</TableHead>
-                              <TableHead className="text-zinc-400">{t('admin.action')}</TableHead><TableHead className="text-zinc-400">{t('admin.entity')}</TableHead>
-                              <TableHead className="text-zinc-400">{t('admin.description')}</TableHead>
-                            </TableRow></TableHeader>
-                            <TableBody>
-                              {adminLogs.map(log => (
-                                <TableRow key={log.id} className="border-zinc-800">
-                                  <TableCell className="text-sm text-zinc-400 whitespace-nowrap">{fmtDateTime(log.createdAt)}</TableCell>
-                                  <TableCell className="text-sm">{log.admin?.name || '-'}</TableCell>
-                                  <TableCell><Badge variant="outline" className={`text-xs ${
-                                    log.action === 'create' ? 'border-cyan-500/30 text-cyan-400' :
-                                    log.action === 'update' ? 'border-blue-500/30 text-blue-400' :
-                                    log.action === 'delete' ? 'border-red-500/30 text-red-400' :
-                                    log.action === 'approve' ? 'border-cyan-500/30 text-cyan-400' :
-                                    'border-amber-500/30 text-amber-400'
-                                  }`}>{log.action}</Badge></TableCell>
-                                  <TableCell className="text-sm">{log.entity}</TableCell>
-                                  <TableCell className="text-sm text-zinc-400 max-w-[300px] truncate">{log.description}</TableCell>
-                                </TableRow>
-                              ))}
-                              {adminLogs.length === 0 && <TableRow><TableCell colSpan={5} className="text-center text-zinc-500 py-8">{t('admin.logs')}</TableCell></TableRow>}
-                            </TableBody>
-                          </Table>
-                        </CardContent>
-                      </Card>
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-lg font-semibold flex items-center gap-2">
+                            <FileText className="h-5 w-5 text-cyan-400" />
+                            Registros de Atividade
+                          </h3>
+                          <Button variant="outline" size="sm" className="border-zinc-700" onClick={fetchAdminData}>
+                            <RefreshCw className="mr-2 h-4 w-4" /> Atualizar
+                          </Button>
+                        </div>
+                        <Card className="bg-zinc-900 border-zinc-800">
+                          <CardContent className="p-0 overflow-x-auto">
+                            <Table className="min-w-[700px]">
+                              <TableHeader><TableRow className="border-zinc-800 hover:bg-transparent">
+                                <TableHead className="text-zinc-400">{t('admin.date')}</TableHead>
+                                <TableHead className="text-zinc-400">{t('admin.admin')}</TableHead>
+                                <TableHead className="text-zinc-400">{t('admin.action')}</TableHead>
+                                <TableHead className="text-zinc-400">{t('admin.entity')}</TableHead>
+                                <TableHead className="text-zinc-400">{t('admin.description')}</TableHead>
+                                <TableHead className="text-zinc-400">IP</TableHead>
+                              </TableRow></TableHeader>
+                              <TableBody>
+                                {adminLogs.map(log => (
+                                  <TableRow key={log.id} className="border-zinc-800">
+                                    <TableCell className="text-sm text-zinc-400 whitespace-nowrap">{fmtDateTime(log.createdAt)}</TableCell>
+                                    <TableCell className="text-sm">
+                                      <div>{log.admin?.name || '-'}</div>
+                                      <div className="text-xs text-zinc-500">{log.admin?.email || ''}</div>
+                                    </TableCell>
+                                    <TableCell><Badge variant="outline" className={`text-xs ${
+                                      log.action === 'create' ? 'border-cyan-500/30 text-cyan-400' :
+                                      log.action === 'update' ? 'border-blue-500/30 text-blue-400' :
+                                      log.action === 'delete' ? 'border-red-500/30 text-red-400' :
+                                      log.action === 'approve' ? 'border-cyan-500/30 text-cyan-400' :
+                                      log.action === 'reject' ? 'border-orange-500/30 text-orange-400' :
+                                      log.action === 'verify_pin' ? 'border-emerald-500/30 text-emerald-400' :
+                                      log.action === 'verify_pin_failed' ? 'border-red-500/30 text-red-400' :
+                                      log.action === 'login_as' ? 'border-purple-500/30 text-purple-400' :
+                                      log.action === 'password_reset' ? 'border-amber-500/30 text-amber-400' :
+                                      'border-zinc-500/30 text-zinc-400'
+                                    }`}>{log.action}</Badge></TableCell>
+                                    <TableCell className="text-sm">
+                                      <Badge variant="outline" className="text-xs border-zinc-600 text-zinc-300">
+                                        {log.entity === 'admin_pin' ? 'PIN' :
+                                         log.entity === 'user' ? 'Usuário' :
+                                         log.entity === 'config' ? 'Config' :
+                                         log.entity === 'plan' ? 'Plano' :
+                                         log.entity === 'voucher' ? 'Voucher' :
+                                         log.entity === 'system' ? 'Sistema' :
+                                         log.entity}
+                                      </Badge>
+                                    </TableCell>
+                                    <TableCell className="text-sm text-zinc-400 max-w-[300px] truncate">{log.description}</TableCell>
+                                    <TableCell className="text-sm text-zinc-500 font-mono whitespace-nowrap">{(log as any).ipAddress || '-'}</TableCell>
+                                  </TableRow>
+                                ))}
+                                {adminLogs.length === 0 && <TableRow><TableCell colSpan={6} className="text-center text-zinc-500 py-8">Nenhum registro encontrado</TableCell></TableRow>}
+                              </TableBody>
+                            </Table>
+                          </CardContent>
+                        </Card>
+                      </div>
                     )}
                   </div>
                 )}
@@ -11787,15 +11830,30 @@ export default function PlataformaROI() {
       </Dialog>
 
       {/* PIN Setup Dialog */}
-      <Dialog open={pinSetupOpen} onOpenChange={setPinSetupOpen}>
+      <Dialog open={pinSetupOpen} onOpenChange={(open) => { if (!open) { setPinSetupOpen(false); setPinSetupPin(''); setPinSetupConfirm(''); setPinSetupCurrent(''); } }}>
         <DialogContent className="bg-zinc-900 border-zinc-700 max-w-sm">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-amber-400"><Key className="h-5 w-5" /> Configurar PIN de Segurança</DialogTitle>
-            <DialogDescription className="text-zinc-400">Crie um PIN de 6 dígitos para proteger ações sensíveis no painel administrativo</DialogDescription>
+            <DialogTitle className="flex items-center gap-2 text-amber-400"><Key className="h-5 w-5" /> {adminHasPin ? 'Alterar PIN de Segurança' : 'Configurar PIN de Segurança'}</DialogTitle>
+            <DialogDescription className="text-zinc-400">{adminHasPin ? 'Informe seu PIN atual e escolha um novo PIN de 6 dígitos' : 'Crie um PIN de 6 dígitos para proteger ações sensíveis no painel administrativo'}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
+            {adminHasPin && (
+              <div>
+                <Label className="text-zinc-300 text-sm">PIN Atual (6 dígitos)</Label>
+                <Input
+                  type="password"
+                  inputMode="numeric"
+                  maxLength={6}
+                  value={pinSetupCurrent}
+                  onChange={(e) => setPinSetupCurrent(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  className="bg-zinc-800 border-zinc-700 mt-1"
+                  placeholder="• • • • • •"
+                  autoFocus
+                />
+              </div>
+            )}
             <div>
-              <Label className="text-zinc-300 text-sm">Novo PIN (6 dígitos)</Label>
+              <Label className="text-zinc-300 text-sm">{adminHasPin ? 'Novo PIN (6 dígitos)' : 'Novo PIN (6 dígitos)'}</Label>
               <Input
                 type="password"
                 inputMode="numeric"
@@ -11804,6 +11862,7 @@ export default function PlataformaROI() {
                 onChange={(e) => setPinSetupPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
                 className="bg-zinc-800 border-zinc-700 mt-1"
                 placeholder="• • • • • •"
+                autoFocus={!adminHasPin}
               />
             </div>
             <div>
@@ -11823,9 +11882,9 @@ export default function PlataformaROI() {
             )}
           </div>
           <DialogFooter>
-            <Button variant="outline" className="border-zinc-700" onClick={() => setPinSetupOpen(false)}>Cancelar</Button>
-            <Button className="bg-amber-600 hover:bg-amber-700" onClick={handlePinSetup} disabled={pinSetupLoading || pinSetupPin.length !== 6 || pinSetupPin !== pinSetupConfirm}>
-              {pinSetupLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Key className="mr-2 h-4 w-4" />} Configurar PIN
+            <Button variant="outline" className="border-zinc-700" onClick={() => { setPinSetupOpen(false); setPinSetupPin(''); setPinSetupConfirm(''); setPinSetupCurrent(''); }}>Cancelar</Button>
+            <Button className="bg-amber-600 hover:bg-amber-700" onClick={handlePinSetup} disabled={pinSetupLoading || pinSetupPin.length !== 6 || pinSetupPin !== pinSetupConfirm || (adminHasPin ? pinSetupCurrent.length !== 6 : false)}>
+              {pinSetupLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Key className="mr-2 h-4 w-4" />} {adminHasPin ? 'Alterar PIN' : 'Configurar PIN'}
             </Button>
           </DialogFooter>
         </DialogContent>
